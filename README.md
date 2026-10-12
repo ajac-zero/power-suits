@@ -36,6 +36,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew build` | Builds the mod jar into `build/libs/` (put it in a real `mods/` folder, plus GeckoLib) |
 | `node tools/export-model.mjs` | Re-exports model, animations and texture from the open Blockbench project |
 | `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world, saves `run/screenshots/ap_*.png`, quits |
+| `./gradlew runAutopilotTerrain` | Dev tool: drives a suit over real terrain in a **copy** of `run/saves/New World`, logs `run/autopilot_terrain.csv` (speed, height, ground contact, animation, camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`) |
 
 ## Where things live
@@ -67,6 +68,10 @@ src/main/resources/
   ground speeds were measured in Blockbench: walk 5.0, run 9.99, sneak 0.83 blocks/s.
 - The walk and run keep the cannon stabilized (IK on the arm), so it stays steady in the cockpit view.
 - Cockpit feel: the view dips with the hips on each footfall, and the FOV widens a little with speed.
+- Terrain: walking off ledges up to 1.1 blocks steps down instead of falling (keeps speed, no fall
+  pose), and step-ups/downs are eased for the camera and the model over ~6 ticks.
+- Saved suits: Minecraft stores attribute base values with each entity. `readAdditionalSaveData`
+  resets them to the current tuning (`BASE_STATS`), so suits placed with older versions get new speeds.
   If you change `WALK_SPEED` / `SPRINT_MULTIPLIER`, the rates follow automatically.
 - Jumping: holding Space plays `jump_charge` (crouch); release plays `jump` (push-off) and the suit
   launches 2 ticks later, then `fall` loops; `land` plays after ~0.5 s in the air. Other players

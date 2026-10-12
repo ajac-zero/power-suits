@@ -34,6 +34,9 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
             });
         }
         model.getBone("head").ifPresent(head -> head.setHidden(cockpit)); // head + helmet fully hidden
+        if (!isReRender) {
+            poseStack.translate(0, suit.getStepOffset(partialTick), 0); // glide over step-ups/downs
+        }
         super.preRender(poseStack, suit, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, colour);
     }
 

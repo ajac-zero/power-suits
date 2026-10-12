@@ -69,6 +69,12 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'true'
         }
 
+        // Dev tool: drives a suit over real terrain in a COPY of run/saves/New World, logs run/autopilot_terrain.csv.
+        autopilotTerrain {
+            client()
+            systemProperty 'powerarmor.autopilot', 'terrain:New World'
+        }
+
         server {
             server()
             programArgument '--nogui'

@@ -3,6 +3,11 @@ package dev.ajaczero.powerarmor.entity;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import java.util.Map;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -14,7 +19,9 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PlayerRideableJumping;
@@ -62,6 +69,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final double RUN_ANIM_AUTHORED = 9.99;
     private static final double WALK_ANIM_RATE = WALK_SPEED * BLOCKS_PER_SECOND_PER_SPEED / WALK_ANIM_AUTHORED;
     private static final double RUN_ANIM_RATE = WALK_SPEED * SPRINT_MULTIPLIER * BLOCKS_PER_SECOND_PER_SPEED / RUN_ANIM_AUTHORED;
+
+    /** Average hip height (model px) of the jog / run cycles: yHip mean in a_walk.js / a_run.js. */
+    private static final float WALK_HIP_MEAN = -3.6F;
+    private static final float RUN_HIP_MEAN = -4.0F;
+
+    // ---- Terrain ----------------------------------------------------------------------------
+    /** Walking off a ledge up to this high keeps the suit planted (steps down instead of falling). */
+    private static final double STEP_DOWN = 1.1;
+    /** Each tick the eased step offset keeps this fraction (0.65 -> ~6 ticks to settle). */
+    private static final float STEP_EASE = 0.65F;
 
     // ---- Airborne tuning (client-side animation only) ----------------------------------------
     /** Ticks in the air before switching to the fall pose (stepping off one block shouldn't). */
@@ -120,6 +137,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private boolean realigning;
     /** Client only: smoothed horizontal speed in blocks per second, used to pick walk/run/idle. */
     private double visualSpeed;
+    /** Client only: vertical offset (blocks) that eases the camera and model over step-ups/downs. */
+    private float stepOffset, stepOffsetO;
+    private boolean wasOnGroundForSteps;
     /** Client only: airborne bookkeeping for the jump / fall / land animations. */
     private int airTicks;
     private boolean jumped;
@@ -140,14 +160,35 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(JUMP_COUNTER, 0);
     }
 
+    /** Base stats. The single source of truth: also re-applied to suits loaded from old saves. */
+    private static final Map<Holder<Attribute>, Double> BASE_STATS = Map.of(
+            Attributes.MAX_HEALTH, (double) MAX_HEALTH,
+            Attributes.ARMOR, 12.0,
+            Attributes.ARMOR_TOUGHNESS, 4.0,
+            Attributes.KNOCKBACK_RESISTANCE, 1.0,
+            Attributes.MOVEMENT_SPEED, WALK_SPEED,
+            Attributes.STEP_HEIGHT, 1.1); // walks up full blocks without jumping
+
     public static AttributeSupplier.Builder createAttributes() {
-        return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, MAX_HEALTH)
-                .add(Attributes.ARMOR, 12.0)
-                .add(Attributes.ARMOR_TOUGHNESS, 4.0)
-                .add(Attributes.KNOCKBACK_RESISTANCE, 1.0)
-                .add(Attributes.MOVEMENT_SPEED, WALK_SPEED)
-                .add(Attributes.STEP_HEIGHT, 1.1); // walks up full blocks without jumping
+        AttributeSupplier.Builder builder = Mob.createMobAttributes();
+        BASE_STATS.forEach(builder::add);
+        return builder;
+    }
+
+    /**
+     * Minecraft saves an entity's attribute base values with the entity. A suit placed with an
+     * older version of the mod would keep its old speed forever, so after loading we reset the
+     * base values to the current tuning (modifiers from effects etc. are kept).
+     */
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        BASE_STATS.forEach((attribute, value) -> {
+            AttributeInstance instance = this.getAttribute(attribute);
+            if (instance != null) {
+                instance.setBaseValue(value);
+            }
+        });
     }
 
     // =========================================================================================
@@ -305,17 +346,37 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return animStep;
     }
 
+    /** Client/dev: ticks spent airborne (animation bookkeeping). */
+    public int getAirTicks() {
+        return this.airTicks;
+    }
+
+    /** Client/dev: name of the animation the movement controller is playing, or "-". */
+    public String getMovementAnimationName() {
+        var manager = this.animationCache.getManagerForId(this.getId());
+        var controller = manager == null ? null : manager.getAnimationControllers().get("movement");
+        var current = controller == null ? null : controller.getCurrentAnimation();
+        return current == null ? "-" : current.animation().name().replace("animation.power_armor.", "");
+    }
+
     /** Client: smoothed ground speed in blocks/s (for camera effects). */
     public double getVisualSpeed() {
         return this.visualSpeed;
     }
 
-    /** Client: how far the animated hips are below/above their average this frame (model pixels). */
-    private float hipBob, hipBobMean;
+    /** Client: how far the animated hips are below/above the gait's average this frame (model px). */
+    private float hipBob;
 
+    /** Called by the model every frame with the root bone's animated height. Only the jog and run
+     *  cycles bob the camera, measured against their own average hip height (from the specs). */
     public void setHipHeight(float y) {
-        this.hipBobMean += (y - this.hipBobMean) * 0.03F;
-        this.hipBob = y - this.hipBobMean;
+        String anim = this.getMovementAnimationName();
+        float target = switch (anim) {
+            case "walk" -> y - WALK_HIP_MEAN;
+            case "run" -> y - RUN_HIP_MEAN;
+            default -> 0F;
+        };
+        this.hipBob += (target - this.hipBob) * 0.35F; // eases in/out when the gait changes
     }
 
     public float getHipBob() {
@@ -325,6 +386,25 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Client: true while the legs are shuffling round to face the view (plays a step cycle). */
     public boolean isRealigning() {
         return this.realigning;
+    }
+
+    /**
+     * Movement for the controlling client. After vanilla moves us, if we just walked off a small
+     * ledge (and aren't jumping), drop straight onto the ground below: stepping down instead of
+     * falling keeps full speed and avoids a fall pose on every block of a slope.
+     */
+    @Override
+    public void travel(Vec3 travelVector) {
+        boolean wasOnGround = this.onGround();
+        super.travel(travelVector);
+        if (this.isVehicle() && this.isControlledByLocalInstance() && wasOnGround && !this.onGround()
+                && this.getDeltaMovement().y <= 0 && this.pendingJump == 0) {
+            AABB below = this.getBoundingBox().expandTowards(0, -STEP_DOWN, 0);
+            if (!this.level().noCollision(this, below)) {
+                this.move(MoverType.SELF, new Vec3(0, -STEP_DOWN, 0)); // stops at the ground
+                this.setDeltaMovement(this.getDeltaMovement().multiply(1, 0, 1));
+            }
+        }
     }
 
     /** Lets the pilot sprint while inside (vanilla blocks sprinting on most vehicles). */
@@ -467,8 +547,36 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
             double speed = Math.sqrt(dx * dx + dz * dz) * 20.0;
             this.visualSpeed += (speed - this.visualSpeed) * 0.4;
+            tickStepSmoothing();
             tickAirborneAnimationState();
         }
+    }
+
+    /** Step-ups (and snapped step-downs) move us a whole block in one tick. Absorb that jump into an
+     *  offset that eases back to zero, used for the pilot's seat and the rendered model. */
+    private void tickStepSmoothing() {
+        this.stepOffsetO = this.stepOffset;
+        double dy = this.getY() - this.yo;
+        if (this.wasOnGroundForSteps && this.onGround() && Math.abs(dy) > 0.2 && Math.abs(dy) <= STEP_DOWN + 0.1) {
+            this.stepOffset -= (float) dy;
+            this.stepOffsetO -= (float) dy;
+        }
+        this.wasOnGroundForSteps = this.onGround();
+        this.stepOffset = Mth.clamp(this.stepOffset * STEP_EASE, -1.5F, 1.5F);
+        if (Math.abs(this.stepOffset) < 0.01F) {
+            this.stepOffset = 0;
+        }
+    }
+
+    /** Client: eased step offset in blocks for this frame. */
+    public float getStepOffset(float partialTick) {
+        return Mth.lerp(partialTick, this.stepOffsetO, this.stepOffset);
+    }
+
+    /** The pilot rides with the eased step offset, so the camera glides over steps. */
+    @Override
+    protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float partialTick) {
+        return super.getPassengerAttachmentPoint(passenger, dimensions, partialTick).add(0, this.stepOffset, 0);
     }
 
     private void tickAirborneAnimationState() {

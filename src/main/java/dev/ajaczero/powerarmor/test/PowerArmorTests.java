@@ -9,6 +9,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -134,6 +136,22 @@ public final class PowerArmorTests {
             helper.assertItemEntityPresent(Items.IRON_INGOT);
             helper.succeed();
         });
+    }
+
+    /** Regression: suits saved by older versions kept their old (slow) movement speed. */
+    @GameTest(template = PAD)
+    public static void loadedSuitGetsCurrentStats(GameTestHelper helper) {
+        PowerArmorEntity old = spawnSuit(helper);
+        double current = old.getAttributeBaseValue(Attributes.MOVEMENT_SPEED);
+        old.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.036); // the v1 speed
+        CompoundTag saved = new CompoundTag();
+        old.saveWithoutId(saved);
+
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel());
+        loaded.load(saved);
+        double speed = loaded.getAttributeBaseValue(Attributes.MOVEMENT_SPEED);
+        helper.assertTrue(Math.abs(speed - current) < 1e-9, "loaded suit should get the current speed " + current + ", got " + speed);
+        helper.succeed();
     }
 
     private static InteractionResult useOnFloor(GameTestHelper helper, Player player, ItemStack stack, BlockPos floor) {

@@ -42,7 +42,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class AutoPilot {
-    private static final boolean ENABLED = System.getProperty("powerarmor.autopilot") != null;
+    private static final boolean ENABLED = System.getProperty("powerarmor.autopilot") != null && !TerrainPilot.enabled();
     private static final String WORLD_PREFIX = "autopilot-";
 
     private static boolean worldRequested;
