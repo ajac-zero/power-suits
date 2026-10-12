@@ -9,19 +9,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoItem;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -42,9 +36,6 @@ public class PlasmaCannonItem extends Item implements PowerTool, GeoItem {
     /** How far the crosshair is traced to find the aim point. */
     private static final double AIM_RANGE = 96;
 
-    // Muzzle in the torso's frame, in blocks (measured in Blockbench from the muzzle_flash bone):
-    // right of centre, up from the feet, forward. The torso pivot is 1.54 up; the torso pitches with the view.
-    private static final double MUZZLE_RIGHT = 0.95, MUZZLE_UP = 1.73, MUZZLE_FORWARD = 1.71, TORSO_PIVOT_UP = 1.54;
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
@@ -72,9 +63,9 @@ public class PlasmaCannonItem extends Item implements PowerTool, GeoItem {
         if (!(suit.level() instanceof ServerLevel level)) {
             return false;
         }
-        Vec3 muzzle = muzzlePosition(suit, pilot);
+        Vec3 muzzle = SocketAim.muzzlePosition(suit, pilot);
         Vec3 look = pilot.getViewVector(1F);
-        Vec3 direction = aimPoint(suit, pilot).subtract(muzzle).normalize();
+        Vec3 direction = SocketAim.aimPoint(suit, pilot, AIM_RANGE).subtract(muzzle).normalize();
         if (direction.dot(look) < 0.5) {
             direction = look; // the aim point is beside/behind the muzzle (something very close): fire straight
         }
@@ -86,29 +77,6 @@ public class PlasmaCannonItem extends Item implements PowerTool, GeoItem {
         level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.SHULKER_SHOOT, SoundSource.PLAYERS, 0.8F, 0.5F);
         level.sendParticles(ParticleTypes.ELECTRIC_SPARK, muzzle.x, muzzle.y, muzzle.z, 8, 0.1, 0.1, 0.1, 0.25);
         return true;
-    }
-
-    /** Where the muzzle is: the torso faces the pilot's view (yaw) and leans with it (55% of the pitch). */
-    public static Vec3 muzzlePosition(PowerArmorEntity suit, Player pilot) {
-        float yaw = pilot.getYRot() * Mth.DEG_TO_RAD;
-        float lean = Mth.clamp(pilot.getXRot() * 0.55F, -25F, 25F) * Mth.DEG_TO_RAD; // + = looking down
-        double up = MUZZLE_UP - TORSO_PIVOT_UP;
-        double leanedForward = MUZZLE_FORWARD * Mth.cos(lean) + up * Mth.sin(lean);
-        double leanedUp = up * Mth.cos(lean) - MUZZLE_FORWARD * Mth.sin(lean);
-        Vec3 forward = new Vec3(-Mth.sin(yaw), 0, Mth.cos(yaw));
-        Vec3 right = new Vec3(-Mth.cos(yaw), 0, -Mth.sin(yaw));
-        return suit.position().add(0, TORSO_PIVOT_UP + leanedUp, 0).add(forward.scale(leanedForward)).add(right.scale(MUZZLE_RIGHT));
-    }
-
-    /** What's under the pilot's crosshair: the first entity or block along the view, or a far point. */
-    public static Vec3 aimPoint(PowerArmorEntity suit, Player pilot) {
-        Vec3 eye = pilot.getEyePosition();
-        Vec3 end = eye.add(pilot.getViewVector(1F).scale(AIM_RANGE));
-        var blockHit = suit.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, pilot));
-        Vec3 blockEnd = blockHit.getLocation();
-        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(suit.level(), pilot, eye, blockEnd,
-                new AABB(eye, blockEnd).inflate(1), (Entity e) -> e != suit && e != pilot && e.isPickable() && !e.isSpectator());
-        return entityHit != null ? entityHit.getLocation() : blockEnd;
     }
 
     /** On foot it's just a heavy piece of kit: say where it goes. */

@@ -182,18 +182,37 @@ public final class AutoPilot {
             case 1078 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
             case 1085 -> shot(mc, "hand_tp_eat");
             case 1092 -> releaseAll();
+            // ---- EM projector: vacuum up dropped diamonds, then grab a pig, hold it and throw it
+            case 1095 -> { emRangeSetup(mc); yaw = 180; pitch = 15; o.setCameraType(CameraType.THIRD_PERSON_BACK); openEmLog(mc); }
+            case 1110 -> hold(o.keyAttack, true);
+            case 1113, 1118, 1124 -> shot(mc, "em_tp_items_" + t);
+            case 1121 -> pitch = 10; // the next diamonds lie further out
+            case 1128 -> o.setCameraType(CameraType.FIRST_PERSON);
+            case 1132 -> shot(mc, "em_fp_items");
+            case 1140 -> hold(o.keyAttack, false);
+            case 1146, 1149 -> aimAt(mc, emPig);
+            case 1150 -> hold(o.keyAttack, true);
+            case 1156, 1164 -> shot(mc, "em_fp_pig_" + t);
+            case 1166 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 1172 -> shot(mc, "em_tp_pig");
+            case 1174 -> sideCamera(mc);
+            case 1180 -> shot(mc, "em_side_pig");
+            case 1182 -> pitch = -5;
+            case 1186 -> hold(o.keyAttack, false);
+            case 1187, 1189, 1192, 1196 -> shot(mc, "em_side_throw_" + t);
+            case 1205 -> { closeEmLog(); mc.setCameraEntity(mc.player); releaseAll(); }
             // ---- the cannon item on foot: hand (first / third person) and inventory icon
-            case 1095 -> { o.setCameraType(CameraType.FIRST_PERSON); hold(o.keyShift, true); }
-            case 1100 -> { hold(o.keyShift, false); giveCannon(mc); survival(mc, true); yaw = 120; pitch = 10; }
-            case 1110 -> shot(mc, "item_fp");
-            case 1112 -> o.setCameraType(CameraType.THIRD_PERSON_FRONT);
-            case 1120 -> shot(mc, "item_tp_front");
-            case 1122 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1130 -> shot(mc, "item_tp_back");
-            case 1132 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)); }
-            case 1140 -> shot(mc, "item_gui");
-            case 1142 -> mc.setScreen(null);
-            case 1145 -> mc.stop();
+            case 1210 -> { o.setCameraType(CameraType.FIRST_PERSON); hold(o.keyShift, true); }
+            case 1215 -> { hold(o.keyShift, false); giveCannon(mc); survival(mc, true); yaw = 120; pitch = 10; }
+            case 1225 -> shot(mc, "item_fp");
+            case 1227 -> o.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            case 1235 -> shot(mc, "item_tp_front");
+            case 1237 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 1245 -> shot(mc, "item_tp_back");
+            case 1247 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)); }
+            case 1255 -> shot(mc, "item_gui");
+            case 1257 -> mc.setScreen(null);
+            case 1260 -> mc.stop();
             default -> {}
         }
         if (t >= 360 && t < 640) {
@@ -204,6 +223,9 @@ public final class AutoPilot {
         }
         if (t >= 910 && t < 995) {
             logCannon(mc, t);
+        }
+        if (t >= 1095 && t < 1205) {
+            logEm(mc, t);
         }
     }
 
@@ -320,6 +342,76 @@ public final class AutoPilot {
         });
     }
 
+    private static net.minecraft.world.entity.animal.Pig emPig;
+    private static java.io.BufferedWriter emCsv;
+
+    /** Server: EM projector in the socket, 3 diamonds on the ground straight behind (the suit turns round),
+     *  and a pig off to one side. */
+    private static void emRangeSetup(Minecraft mc) {
+        onServer(mc, player -> {
+            if (fuelSuit == null) {
+                return;
+            }
+            fuelSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
+                    new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.EM_PROJECTOR.get()));
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+            var level = player.serverLevel();
+            for (int i = 0; i < 3; i++) {
+                var item = new net.minecraft.world.entity.item.ItemEntity(level, fuelSuit.getX() + 0.3 * i, fuelSuit.getY() + 0.2,
+                        fuelSuit.getZ() - 9 - 2 * i, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND));
+                item.setDeltaMovement(0, 0, 0);
+                level.addFreshEntity(item);
+            }
+            emPig = EntityType.PIG.create(level);
+            emPig.moveTo(fuelSuit.getX() + 4, fuelSuit.getY(), fuelSuit.getZ() - 8, 0, 0);
+            level.addFreshEntity(emPig);
+        });
+    }
+
+    /** Point the pilot's view at an entity's middle (it may have wandered since it was spawned). */
+    private static void aimAt(Minecraft mc, net.minecraft.world.entity.Entity target) {
+        if (target == null) {
+            return;
+        }
+        Vec3 to = target.position().add(0, target.getBbHeight() / 2, 0).subtract(mc.player.getEyePosition());
+        yaw = (float) (net.minecraft.util.Mth.atan2(-to.x, to.z) * net.minecraft.util.Mth.RAD_TO_DEG);
+        pitch = (float) (-net.minecraft.util.Mth.atan2(to.y, to.horizontalDistance()) * net.minecraft.util.Mth.RAD_TO_DEG);
+    }
+
+    private static void openEmLog(Minecraft mc) {
+        try {
+            emCsv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_em.csv"));
+            emCsv.write("tick,beamTarget,energy,diamonds,throws,pigDist,pigY,pigHealth,pigNoGravity\n");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void logEm(Minecraft mc, int t) {
+        if (emCsv == null || fuelSuit == null) {
+            return;
+        }
+        var target = fuelSuit.getBeamTarget();
+        try {
+            emCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%d,%d,%d,%.2f,%.2f,%.1f,%b%n", t,
+                    target == null ? "-" : target.getType().toShortString(), fuelSuit.getTotalEnergy(),
+                    mc.player.getInventory().countItem(net.minecraft.world.item.Items.DIAMOND), fuelSuit.getToolUses(),
+                    emPig == null ? -1 : emPig.distanceTo(fuelSuit), emPig == null ? 0 : emPig.getY() - fuelSuit.getY(),
+                    emPig == null ? 0 : emPig.getHealth(), emPig != null && emPig.isNoGravity()));
+        } catch (IOException e) {
+            PowerArmor.LOGGER.error("[autopilot] em csv", e);
+        }
+    }
+
+    private static void closeEmLog() {
+        try {
+            if (emCsv != null) {
+                emCsv.close();
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
     private static void giveHeld(Minecraft mc, net.minecraft.world.item.ItemStack stack) {
         onServer(mc, player -> player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, stack));
     }
@@ -332,6 +424,7 @@ public final class AutoPilot {
             }
             player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                     new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()));
+            player.getInventory().setItem(1, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.EM_PROJECTOR.get()));
         });
     }
 

@@ -40,7 +40,9 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
         }
         // aimBlend fades the aiming out when the suit powers down and back in after it boots up.
         float aim = suit.getAimBlend();
-        float yaw = Mth.clamp(data.netHeadYaw(), -90F, 90F) * aim;   // look yaw relative to the legs
+        // Look yaw relative to the legs. Wrapped to -180..180 first: yaw angles are unbounded (a pilot who has turned
+        // round twice is at 720), so a raw difference can be +-360 off and would twist the torso the wrong way.
+        float yaw = Mth.clamp(Mth.wrapDegrees(data.netHeadYaw()), -90F, 90F) * aim;
         float pitch = data.headPitch() * aim;                         // + = looking down
         GeoBone torso = getAnimationProcessor().getBone("torso");
         GeoBone head = getAnimationProcessor().getBone("head");

@@ -10,7 +10,10 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import dev.ajaczero.powerarmor.item.EmProjectorItem;
 import dev.ajaczero.powerarmor.item.PlasmaCannonItem;
+import net.minecraft.world.item.Item;
+import software.bernie.geckolib.animatable.GeoItem;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.resources.ResourceLocation;
@@ -28,30 +31,33 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.PLASMA_BOLT.get(), PlasmaBoltRenderer::new);
     }
 
-    /** Items whose model is "builtin/entity" are drawn by code. Point the plasma cannon at GeckoLib's item renderer. */
+    /** Items whose model is "builtin/entity" are drawn by code. Point the socket tools at GeckoLib's item renderer. */
     @SubscribeEvent
     public static void registerItemRenderers(RegisterClientExtensionsEvent event) {
-        event.registerItem(new IClientItemExtensions() {
-            private GeoItemRenderer<PlasmaCannonItem> renderer;
+        event.registerItem(ClientSetup.<PlasmaCannonItem>geoItem("plasma_cannon"), ModItems.PLASMA_CANNON.get());
+        event.registerItem(ClientSetup.<EmProjectorItem>geoItem("em_projector"), ModItems.EM_PROJECTOR.get());
+    }
+
+    /** A GeckoLib item renderer for geo/item/<name>.geo.json, using the suit's texture (tool models are cut from the suit). */
+    private static <T extends Item & GeoItem> IClientItemExtensions geoItem(String name) {
+        return new IClientItemExtensions() {
+            private GeoItemRenderer<T> renderer;
 
             @Override
             public BlockEntityWithoutLevelRenderer getCustomRenderer() {
                 if (this.renderer == null) {
-                    this.renderer = new GeoItemRenderer<>(new DefaultedItemGeoModel<PlasmaCannonItem>(
-                            ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "plasma_cannon")) {
-                        // Same texture as the suit: the cannon's model was cut out of the suit's model.
+                    this.renderer = new GeoItemRenderer<>(new DefaultedItemGeoModel<T>(ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, name)) {
                         @Override
-                        public ResourceLocation getTextureResource(PlasmaCannonItem item) {
+                        public ResourceLocation getTextureResource(T item) {
                             return ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor.png");
                         }
                     });
                 }
                 return this.renderer;
             }
-        }, ModItems.PLASMA_CANNON.get());
+        };
     }
 
-    /** Which screen draws our menu type. The server only knows the menu; clients pick the picture. */
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.POWER_ARMOR.get(), PowerArmorScreen::new);

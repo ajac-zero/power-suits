@@ -17,6 +17,7 @@ SUIT = ASSETS / 'geo/entity/power_armor.geo.json'
 TOOLS = {
     # tool name: (bone subtree, extra bone whose cubes of these sizes are included, bones to drop)
     'plasma_cannon': ('cannon', ('right_forearm', [[9, 11, 10]]), {'muzzle_flash'}),
+    'em_projector': ('em_projector', ('right_forearm', [[9, 11, 10]]), set()),
 }
 
 
@@ -50,11 +51,11 @@ def main():
                 out.append(c)
             return out
 
-        out_bones = [{'name': tool, 'pivot': [0, 0, 0], 'cubes': moved_cubes(extra)}]
+        out_bones = [{'name': tool + '_root', 'pivot': [0, 0, 0], 'cubes': moved_cubes(extra)}]
         for n in keep:
             b = json.loads(json.dumps(bones[n]))
             b['pivot'] = move(b['pivot'])
-            b['parent'] = tool if n == subtree else b['parent']
+            b['parent'] = tool + '_root' if n == subtree else b['parent']
             b['cubes'] = moved_cubes(b.get('cubes', []))
             b.pop('rotation', None) if n == subtree else None
             out_bones.append(b)

@@ -44,12 +44,15 @@ cancel right-click interactions while the suit can't operate; +1.5 block/entity 
 attribute modifier on mount). Tests: 4 new GameTests (28 total); autopilot hand scenario (`ap_hand_*`).
 Not done: bows/crossbows/shields use the plain carry pose; `throw` animation still keys the removed grenade.
 
-## Phase 4: EM tool (push/pull)
-Hold attack: tractor beam on the targeted item entity / mob within ~16 blocks: pull it to a hold
-point in front of the socket (server sets velocity each tick, disables gravity while held), fuel per
-tick. Release / second press: push (launch along the view, damage on impact for mobs). Exclusions:
-bosses (`Tags.EntityTypes.BOSSES`), players, entities with passengers. Beam particles client-side.
-Resolve the OPEN items (blocks? on-foot version?) first.
+## Phase 4: EM projector (DONE 2026-10-12)
+Decisions: items + mobs only, socket only. Built: `PowerTool` continuous lifecycle (`isContinuous`, `holdTick`,
+`release(interrupted)`, `serverTick`) driven by the suit's `tickTool` (releases on trigger up, power loss, pilot
+leaving, tool swap, suit removal), per-suit tool state (`toolData`), `tryUseEnergy`, synced `BEAM_TARGET`;
+`EmProjectorItem` (grab filter, pull/hold steering, item collection via `playerTouch`, throw, tap shove, slam
+damage `powerarmor:em_slam`), `SocketAim` (shared muzzle / aim / entity-in-view), `EmBeamEffects` (twisting
+violet particle beam), `em_projector` bone in the suit model (painted coils/core/prongs), item model, recipe.
+Also fixed: torso twist used an unwrapped yaw difference (twisted the wrong way after yaw passed +-180).
+Tests: 6 new GameTests (34 total); autopilot EM scenario (`ap_em_*`, `run/autopilot_em.csv`).
 
 ## Phase 5: 3x3 drill and chainsaw
 - **Drill**: hold attack; break progress per target block like mining (speed set by tool tier); on
@@ -73,5 +76,6 @@ before every change, save only when the user asks, re-export with `node tools/ex
 - Phase 2 (done): `socket` coupling bone under `right_forearm`, `plasma_shot` overlay; the item model is
   extracted from the suit geo. Walk/run's stabiliser holds the forearm, so it steadies any tool.
 - Phase 3 (done): `left_hand` grip bone, `hold_item` / `use_item` (`a_hand.js`); grenade removed (`throw` unused).
-- Phase 4/5: models for the EM tool, drill, chainsaw (gun-like, sized for the socket) + tool-use
-  overlays (recoil, drill vibration, chainsaw cut).
+- Phase 4 (done): `em_projector` bone (collar, 2 coils, core, 4 prongs; texture at y 98-107, x 166-225).
+- Phase 5: drill, chainsaw bones under `right_forearm` (+ `TOOL_BONES`, `extract-tool-geo.py`) + overlays
+  (drill vibration, chainsaw cut).

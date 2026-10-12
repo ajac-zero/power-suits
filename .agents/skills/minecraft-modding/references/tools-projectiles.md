@@ -71,3 +71,13 @@ Built for the Power Armor plasma cannon. Files: `item/PowerTool.java`, `item/Pla
 - Reach: `EntityMountEvent` (server) -> `addTransientModifier(new AttributeModifier(id, 1.5, ADD_VALUE))` on
   `BLOCK_INTERACTION_RANGE` / `ENTITY_INTERACTION_RANGE`, remove on dismount. Transient = not saved; re-added
   when the saved player re-mounts on load.
+
+## Continuous tools (gravity-gun style)
+- Give the tool interface a lifecycle: `holdTick` every tick while held, `release(interrupted)` when the trigger
+  goes up or anything changes (power, rider, tool swapped, vehicle removed: override `remove()`), `serverTick`
+  for follow-ups (thrown things). Keep per-vehicle state on the vehicle (items are singletons).
+- Hold an entity: `setNoGravity(true)` (restore the original flag), steer with
+  `setDeltaMovement(v*0.3 + clamp((hold-pos)*0.3, 1)*0.7)`, `hurtMarked = true` to sync, `fallDistance = 0`.
+  No-AI mobs never move by velocity. Collect items with `ItemEntity.playerTouch(player)` (+ `setNoPickUpDelay`).
+- Wall slam: remember the thrown mob's speed each tick; when `horizontalCollision` and last speed > threshold, hurt.
+- Sync what the beam holds as an entity id in synced data; clients draw the beam with particles.

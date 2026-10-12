@@ -1,0 +1,186 @@
+{
+ "format_version": "1.12.0",
+ "minecraft:geometry": [
+  {
+   "description": {
+    "identifier": "geometry.em_projector",
+    "texture_width": 256,
+    "texture_height": 128,
+    "visible_bounds_width": 2,
+    "visible_bounds_height": 2,
+    "visible_bounds_offset": [
+     0,
+     0.5,
+     0
+    ]
+   },
+   "bones": [
+    {
+     "name": "em_projector_root",
+     "pivot": [
+      0,
+      0,
+      0
+     ],
+     "cubes": [
+      {
+       "origin": [
+        -4.5,
+        0.0,
+        -5.0
+       ],
+       "size": [
+        9,
+        11,
+        10
+       ],
+       "uv": [
+        0,
+        0
+       ]
+      }
+     ]
+    },
+    {
+     "name": "em_projector",
+     "parent": "em_projector_root",
+     "pivot": [
+      0.0,
+      -3.0,
+      0.0
+     ],
+     "cubes": [
+      {
+       "origin": [
+        -5.5,
+        -2.0,
+        -5.0
+       ],
+       "size": [
+        11,
+        2,
+        10
+       ],
+       "uv": [
+        198,
+        38
+       ]
+      },
+      {
+       "origin": [
+        -4.5,
+        -4.5,
+        -4.5
+       ],
+       "size": [
+        9,
+        1,
+        9
+       ],
+       "uv": [
+        166,
+        98
+       ]
+      },
+      {
+       "origin": [
+        -4.5,
+        -7.5,
+        -4.5
+       ],
+       "size": [
+        9,
+        1,
+        9
+       ],
+       "uv": [
+        166,
+        98
+       ]
+      },
+      {
+       "origin": [
+        -1.5,
+        -9.0,
+        -1.5
+       ],
+       "size": [
+        3,
+        7,
+        3
+       ],
+       "uv": [
+        204,
+        98
+       ]
+      },
+      {
+       "origin": [
+        2.0,
+        -11.0,
+        -4.0
+       ],
+       "size": [
+        2,
+        6,
+        2
+       ],
+       "uv": [
+        218,
+        98
+       ]
+      },
+      {
+       "origin": [
+        -4.0,
+        -11.0,
+        -4.0
+       ],
+       "size": [
+        2,
+        6,
+        2
+       ],
+       "uv": [
+        218,
+        98
+       ]
+      },
+      {
+       "origin": [
+        2.0,
+        -11.0,
+        2.0
+       ],
+       "size": [
+        2,
+        6,
+        2
+       ],
+       "uv": [
+        218,
+        98
+       ]
+      },
+      {
+       "origin": [
+        -4.0,
+        -11.0,
+        2.0
+       ],
+       "size": [
+        2,
+        6,
+        2
+       ],
+       "uv": [
+        218,
+        98
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

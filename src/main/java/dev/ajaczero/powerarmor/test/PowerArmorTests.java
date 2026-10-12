@@ -547,6 +547,140 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
+    // =========================================================================================
+    // EM projector (Phase 4)
+    // =========================================================================================
+
+    /** A fuelled suit at (4,2,1) facing +Z with the EM projector, and a pilot looking at {@code at}. */
+    private static Player emPilotLookingAt(GameTestHelper helper, PowerArmorEntity suit, Vec3 at) {
+        suit.setYRot(0);
+        suit.setYBodyRot(0);
+        Player pilot = boardedPilot(helper, suit);
+        suit.positionRider(pilot);
+        Vec3 to = at.subtract(pilot.getEyePosition());
+        pilot.setYRot((float) (Mth.atan2(-to.x, to.z) * Mth.RAD_TO_DEG));
+        pilot.setXRot((float) (-Mth.atan2(to.y, to.horizontalDistance()) * Mth.RAD_TO_DEG));
+        return pilot;
+    }
+
+    private static PowerArmorEntity emSuit(GameTestHelper helper) {
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 2, 1));
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.EM_PROJECTOR.get()));
+        return suit;
+    }
+
+    /** A normal pig (with AI: Minecraft only moves mobs by velocity while their AI runs). */
+    private static Pig floatingPigTarget(GameTestHelper helper) {
+        return helper.spawn(EntityType.PIG, new BlockPos(4, 2, 7));
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 100)
+    public static void emPullsItemsIntoThePilotsInventory(GameTestHelper helper) {
+        PowerArmorEntity suit = emSuit(helper);
+        var item = helper.spawnItem(Items.DIAMOND, 4.5F, 2.2F, 7.5F);
+        Player pilot = emPilotLookingAt(helper, suit, item.position());
+        int before = suit.getTotalEnergy();
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(2, () -> helper.assertTrue(suit.getBeamTarget() == item, "the beam should lock onto the diamond"));
+        helper.runAfterDelay(60, () -> {
+            helper.assertTrue(item.isRemoved(), "the diamond should have been collected");
+            helper.assertTrue(pilot.getInventory().countItem(Items.DIAMOND) == 1, "the diamond should be in the pilot's inventory");
+            int used = before - suit.getTotalEnergy();
+            helper.assertTrue(used > 0 && used < 200, "pulling costs 2 per tick (+ idle), used " + used);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 80)
+    public static void emHoldsAMobThenThrowsIt(GameTestHelper helper) {
+        PowerArmorEntity suit = emSuit(helper);
+        Pig pig = floatingPigTarget(helper);
+        Player pilot = emPilotLookingAt(helper, suit, pig.position().add(0, 0.45, 0));
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(suit.getBeamTarget() == pig && pig.isNoGravity(), "the pig should float in the beam");
+            helper.assertTrue(pig.distanceTo(suit) < 5.5, "the pig should be pulled in close, distance " + pig.distanceTo(suit));
+            pilot.setXRot(0); // look straight ahead, then let go
+            int before = suit.getTotalEnergy();
+            suit.setTriggerHeld(pilot, false);
+            helper.runAfterDelay(1, () -> {
+                helper.assertTrue(suit.getBeamTarget() == null && !pig.isNoGravity(), "released: gravity back on");
+                helper.assertTrue(before - suit.getTotalEnergy() >= 200, "a throw costs 200");
+                helper.assertTrue(suit.getToolUses() == 1, "one throw");
+                helper.succeed();
+            });
+        });
+    }
+
+    /** Thrown into the test pad's wall: the slam hurts. */
+    @GameTest(template = PAD, timeoutTicks = 80)
+    public static void emThrownMobSlamsIntoTheWall(GameTestHelper helper) {
+        PowerArmorEntity suit = emSuit(helper);
+        Pig pig = floatingPigTarget(helper);
+        Player pilot = emPilotLookingAt(helper, suit, pig.position().add(0, 0.45, 0));
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(25, () -> {
+            pilot.setXRot(0);
+            suit.setTriggerHeld(pilot, false);
+        });
+        helper.runAfterDelay(40, () -> {
+            helper.assertTrue(!pig.isAlive() || pig.getHealth() < pig.getMaxHealth(), "the slam should hurt, health " + pig.getHealth());
+            helper.assertTrue(pig.getLastDamageSource() != null && pig.getLastDamageSource().is(dev.ajaczero.powerarmor.item.EmProjectorItem.EM_SLAM),
+                    "damage should be em_slam, got " + pig.getLastDamageSource());
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void emTapShovesAMobAway(GameTestHelper helper) {
+        PowerArmorEntity suit = emSuit(helper);
+        Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 4)); // room to fly before the pad's wall
+        double startZ = pig.getZ();
+        Player pilot = emPilotLookingAt(helper, suit, pig.position().add(0, 0.45, 0));
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(1, () -> suit.setTriggerHeld(pilot, false));
+        helper.runAfterDelay(3, () -> {
+            helper.assertTrue(suit.getToolUses() == 1, "a tap should shove");
+            helper.assertTrue(pig.getZ() - startZ > 1.5, "the pig should fly away from the suit, moved " + (pig.getZ() - startZ));
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void emLetsGoWhenThePilotLeaves(GameTestHelper helper) {
+        PowerArmorEntity suit = emSuit(helper);
+        Pig pig = floatingPigTarget(helper);
+        Player pilot = emPilotLookingAt(helper, suit, pig.position().add(0, 0.45, 0));
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(pig.isNoGravity(), "held");
+            pilot.stopRiding();
+        });
+        helper.runAfterDelay(13, () -> {
+            helper.assertTrue(!pig.isNoGravity() && suit.getBeamTarget() == null, "the pig must drop when the pilot climbs out");
+            helper.assertTrue(suit.getToolUses() == 0, "climbing out drops, it doesn't throw");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void emOnlyGrabsItemsAndOrdinaryMobs(GameTestHelper helper) {
+        var level = helper.getLevel();
+        java.util.function.Predicate<net.minecraft.world.entity.Entity> grab = dev.ajaczero.powerarmor.item.EmProjectorItem::canGrab;
+        helper.assertTrue(grab.test(helper.spawnItem(Items.DIAMOND, 2, 2, 2)), "dropped items: yes");
+        helper.assertTrue(grab.test(helper.spawn(EntityType.PIG, new BlockPos(2, 2, 6))), "pigs: yes");
+        helper.assertTrue(grab.test(helper.spawn(EntityType.IRON_GOLEM, new BlockPos(6, 2, 6))), "iron golems: yes (heavy but fine)");
+        helper.assertTrue(!grab.test(helper.makeMockPlayer(GameType.SURVIVAL)), "players: never");
+        helper.assertTrue(!grab.test(EntityType.WITHER.create(level)), "bosses: never");
+        helper.assertTrue(!grab.test(EntityType.RAVAGER.create(level)), "too heavy: ravager");
+        helper.assertTrue(!grab.test(spawnSuit(helper)), "other suits: never");
+        Pig statue = helper.spawn(EntityType.PIG, new BlockPos(6, 2, 2));
+        statue.setNoAi(true);
+        helper.assertTrue(!grab.test(statue), "no-AI mobs (map statues): never");
+        helper.succeed();
+    }
+
     private static ItemStack packedSuit(Player player) {
         return player.getInventory().items.stream().filter(s -> s.is(ModItems.POWER_ARMOR.get())).findFirst().orElse(ItemStack.EMPTY);
     }

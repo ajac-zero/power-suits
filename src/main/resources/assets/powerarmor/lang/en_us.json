@@ -15,7 +15,7 @@
   "gui.powerarmor.offline": "NO POWER",
   "gui.powerarmor.no_fuel": "NO FUEL",
   "gui.powerarmor.socket_slot": "Power tool socket",
-  "gui.powerarmor.socket_slot.hint": "Power tools go here, e.g. the Plasma Cannon",
+  "gui.powerarmor.socket_slot.hint": "Power tools go here: Plasma Cannon, EM Projector",
   "gui.powerarmor.fuel_slot": "Fuel",
   "gui.powerarmor.fuel_slot.hint": "Coal or charcoal 1:20, lava bucket 2:40, blaze rod 4:00 of walking each",
   "item.powerarmor.plasma_cannon": "Plasma Cannon",
@@ -27,5 +27,11 @@
   "death.attack.powerarmor.plasma": "%1$s was vaporized",
   "death.attack.powerarmor.plasma.player": "%1$s was vaporized by %2$s",
   "death.attack.powerarmor.plasma.item": "%1$s was vaporized by %2$s using %3$s",
-  "message.powerarmor.hand_unpowered": "No power: the suit's hand won't move."
+  "message.powerarmor.hand_unpowered": "No power: the suit's hand won't move.",
+  "item.powerarmor.em_projector": "EM Projector",
+  "item.powerarmor.em_projector.tooltip": "Power tool: hold attack to pull and hold items or mobs, release to throw them. Pulled items go into your inventory.",
+  "item.powerarmor.em_projector.stats": "%s fuel per second while holding, %s per throw",
+  "death.attack.powerarmor.em_slam": "%1$s was slammed into a wall",
+  "death.attack.powerarmor.em_slam.player": "%1$s was slammed into a wall by %2$s",
+  "death.attack.powerarmor.em_slam.item": "%1$s was slammed into a wall by %2$s using %3$s"
 }

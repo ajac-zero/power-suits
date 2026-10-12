@@ -76,6 +76,13 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **Arm IK has two elbow solutions**; with the wrong seed it picks hyperextension (forearm bent backward).
   On this rig positive forearm X flexes the elbow; seed the solver on that side and reuse one seed for all
   animations that must meet at the same pose.
+- **Wrap yaw differences** (`Mth.wrapDegrees`): yaws are unbounded (720 after two turns) and GeckoLib's
+  `netHeadYaw` is a raw subtraction; unwrapped, the torso twisted 90 deg the wrong way (right pad in the cockpit).
+- **Minecraft doesn't move no-AI mobs by velocity** (`isEffectiveAi` false skips `travel`), so the EM projector
+  ignores them (they're map statues anyway). Use normal mobs in GameTests that move things; give them room
+  before the test pad's barrier walls (a wall hit zeroes the velocity you meant to assert).
+- **Client particles linger** (dust ~1-2 s): ones that drift next to the cockpit camera become huge blobs.
+  Don't spawn them within ~1.3 blocks of the pilot's eye.
 - **Menus can't be opened by GameTest mock players**: `makeMockPlayer` ignores `openMenu`, and
   `makeMockServerPlayerInLevel` throws on NeoForge's `advanced_open_screen` payload. Test menu logic by
   constructing `PowerArmorMenu` directly; check the real screen in the autopilot (`ap_menu_*`).

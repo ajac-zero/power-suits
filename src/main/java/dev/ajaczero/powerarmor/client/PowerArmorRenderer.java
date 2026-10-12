@@ -17,7 +17,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
     /** Bones whose own cubes surround the pilot's camera. */
     private static final String[] SHELL_BONES = {"body", "torso"};
     /** Every tool's bone in the suit model (PowerTool.suitBone). Add new tools here. */
-    private static final String[] TOOL_BONES = {"cannon"};
+    private static final String[] TOOL_BONES = {"cannon", "em_projector"};
 
     public PowerArmorRenderer(EntityRendererProvider.Context context) {
         super(context, new PowerArmorModel());
@@ -38,6 +38,9 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
             });
         }
         model.getBone("head").ifPresent(head -> head.setHidden(cockpit)); // head + helmet fully hidden
+        // The left arm too: in the cockpit the held item is drawn first-person style (FirstPersonLeftHand); the
+        // arm's carry pose would only add a forearm poking into the bottom-left corner next to it.
+        model.getBone("left_arm").ifPresent(arm -> arm.setHidden(cockpit));
         // Socket: show the installed tool's bone and hide the others; the bare coupling only when empty.
         String installed = suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.suitBone() : null;
         for (String toolBone : TOOL_BONES) {

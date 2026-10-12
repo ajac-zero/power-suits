@@ -16,7 +16,7 @@
    },
    "bones": [
     {
-     "name": "plasma_cannon",
+     "name": "plasma_cannon_root",
      "pivot": [
       0,
       0,
@@ -43,7 +43,7 @@
     },
     {
      "name": "cannon",
-     "parent": "plasma_cannon",
+     "parent": "plasma_cannon_root",
      "pivot": [
       0.0,
       -4.0,

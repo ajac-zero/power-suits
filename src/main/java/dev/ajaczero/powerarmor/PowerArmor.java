@@ -43,6 +43,7 @@ public class PowerArmor {
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(ModItems.POWER_ARMOR);
             event.accept(ModItems.PLASMA_CANNON);
+            event.accept(ModItems.EM_PROJECTOR);
         }
     }
 }

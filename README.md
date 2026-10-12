@@ -20,6 +20,7 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
 | Install a tool | Put a power tool (Plasma Cannon) in the menu's socket slot; it appears on the suit's right arm |
 | Use items | Right-click as usual while piloting: the suit's left hand holds your selected item (place blocks, eat, open doors, buckets...). 1.5 blocks extra reach |
+| EM Projector | Hold attack on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 2 fuel/tick while holding, 200 per throw |
 | Fire | Hold attack (left click) while piloting: a plasma bolt every 0.6 s toward your crosshair (300 fuel = 15 s of walking, 5 hearts) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
 
@@ -36,6 +37,11 @@ It does nothing on foot. Bolts fly at 60 blocks/s from the muzzle to whatever is
 targets alight for a second, never break blocks, and fizzle after ~90 blocks or in water. Kills credit you
 ("vaporized by"). While piloting, left click never punches or mines; with an empty socket or no fuel the
 trigger just clicks.
+
+**EM Projector** (crafted: iron ingots in the corners, copper ingots top and bottom middle, redstone either
+side of a lodestone). Grabs dropped items and mobs within 16 blocks, never players, bosses, other suits,
+no-AI "statue" mobs, riders/ridden mobs or very big mobs (a ravager is too heavy, an iron golem is fine).
+Thrown mobs that hit a wall take damage ("slammed into a wall"). Socket only.
 
 **Left hand**: shows your selected hotbar item and carries it forward (`hold_item`), reaching out each time
 you use it (`use_item`). In first person the item is drawn at the lower left like vanilla's off-hand (the
@@ -65,7 +71,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew runGameTestServer` | Runs the automated in-game tests headless, prints pass/fail |
 | `./gradlew build` | Builds the mod jar into `build/libs/` (put it in a real `mods/` folder, plus GeckoLib) |
 | `node tools/export-model.mjs` | Re-exports model, animations and texture from the open Blockbench project |
-| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (pool, running out of fuel, cannon range, cannon item on foot), saves `run/screenshots/ap_*.png`, `run/autopilot_{water,fuel,cannon}.csv`, quits |
+| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (pool, running out of fuel, cannon range, left hand, EM projector, tool items on foot), saves `run/screenshots/ap_*.png`, `run/autopilot_{water,fuel,cannon,em}.csv`, quits |
 | `./gradlew runAutopilotTerrain` | Dev tool: drives a suit over real terrain in a **copy** of `run/saves/New World`, logs `run/autopilot_terrain.csv` (speed, height, ground contact, animation, camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`, `fuel`, `menu`) |
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
@@ -86,7 +92,10 @@ src/main/java/dev/ajaczero/powerarmor/
   menu/PowerArmorMenu.java   menu logic: fuel + socket slots, shift-click, Pack up button
   item/SuitLoadout.java      fuel/tool/half-burnt item carried by a packed suit item
   item/PowerTool.java        what a socket tool is: fuel per use, cooldown, model bone, use()
-  item/PlasmaCannonItem.java the first tool: muzzle + aim point, spawns the bolt (also a GeckoLib item)
+  item/PlasmaCannonItem.java the first tool: spawns the bolt toward the crosshair (also a GeckoLib item)
+  item/EmProjectorItem.java  the second tool: grab / hold / collect / throw, slam damage (per-suit state in Beam)
+  item/SocketAim.java        muzzle position, crosshair aim point, entity under the crosshair
+  entity/EmBeamEffects.java  client-side violet beam particles
   entity/PlasmaBolt.java     the projectile (flight, hit, damage, impact effects)
   network/ToolTriggerPayload.java  client -> server "attack pressed/released"
   item/PowerArmorItem.java   deploying / packing / repairing
@@ -108,9 +117,10 @@ src/main/java/dev/ajaczero/powerarmor/
 src/main/resources/
   assets/powerarmor/geo|animations|textures/entity/   exported from Blockbench
   assets/powerarmor/textures/gui/power_armor.png      suit menu background (tools/make-gui.py)
-  assets/powerarmor/geo/item/plasma_cannon.geo.json   cut out of the suit model (tools/extract-tool-geo.py)
+  assets/powerarmor/geo/item/plasma_cannon|em_projector.geo.json   cut out of the suit model (tools/extract-tool-geo.py)
   assets/powerarmor/models/item/plasma_cannon.json    how the cannon sits in your hand / inventory
   data/powerarmor/damage_type/plasma.json             "vaporized" damage type (+ minecraft is_projectile tag)
+  data/powerarmor/damage_type/em_slam.json            "slammed into a wall" (EM throws)
   data/powerarmor/recipe/power_armor.json             crafting recipe
   data/powerarmor/structure/test_pad.nbt              floor used by the GameTests
 ```
@@ -138,7 +148,7 @@ src/main/resources/
   already off when they came into view, `startup` (1.4 s, movement blocked meanwhile) when fuel returns.
   The torso stops following the view while powered down. Spec: `starcraft_marine_anim/a_power.js`.
 - Socket: the forearm block is the socket housing; `socket` (coupling plate) shows when empty, the installed
-  tool's bone (`cannon`) otherwise (`PowerArmorRenderer`). `plasma_shot` (0.5 s overlay, `a_plasma_shot.js`)
+  tool's bone (`cannon`, `em_projector`) otherwise (`PowerArmorRenderer`). The EM push reuses `plasma_shot` as `tool_recoil`. `plasma_shot` (0.5 s overlay, `a_plasma_shot.js`)
   is triggered per shot; it must stay shorter than the cooldown because GeckoLib won't restart a running one.
 - Left hand: `left_hand` grip bone (replaced the grenade prop) and a third GeckoLib controller that owns the
   left arm while you hold something; `use_item` is triggered on every swing of the pilot's arm (`a_hand.js`).
