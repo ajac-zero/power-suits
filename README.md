@@ -41,7 +41,8 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `node tools/export-model.mjs` | Re-exports model, animations and texture from the open Blockbench project |
 | `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (incl. a pool), saves `run/screenshots/ap_*.png` and `run/autopilot_water.csv`, quits |
 | `./gradlew runAutopilotTerrain` | Dev tool: drives a suit over real terrain in a **copy** of `run/saves/New World`, logs `run/autopilot_terrain.csv` (speed, height, ground contact, animation, camera) |
-| `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`) |
+| `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`) |
+| `python3 tools/terrain-report.py` | Summarizes `run/autopilot_terrain.csv` per leg (speed, air time, drops, step-ups, animations) |
 
 ## Where things live
 
