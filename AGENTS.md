@@ -1,0 +1,58 @@
+# Working on Power Armor
+
+A NeoForge 1.21.1 + GeckoLib 4.9.3 Minecraft mod: an enterable power-armor suit. Start with
+`docs/design.md` (spec), `docs/implementation-plan.md` (next phases) and `README.md` (controls, files).
+
+## The user
+- First Minecraft mod. Explain concepts briefly as you go (client vs server, registries, events,
+  synced data, menus, packets...). Keep explanations concrete and tied to the change you just made.
+- Plays in `run/saves/New World` (creative test world). **Never open or modify it.** Automated runs use
+  a copy (see `runAutopilotTerrain`). A sorted md5 listing of it is in `.scratch/world_baseline.txt`.
+- The art lives in Blockbench: `~/Developer/Models/starcraft_marine.bbmodel`. Checkpoint before edits,
+  only save it when the user asks.
+
+## Setup
+Java 21 from Homebrew is keg-only. Every shell needs:
+```sh
+export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
+```
+
+## Verification loop (do this for every change)
+| Command | Use |
+|---|---|
+| `./gradlew build` | compile + jar |
+| `./gradlew runGameTestServer` | headless GameTests in `src/main/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
+| `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool). Screenshots `run/screenshots/ap_*.png`, water log `run/autopilot_water.csv`. Quits by itself (~30 s). |
+| `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv`; summarize with `python3 tools/terrain-report.py` |
+| `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
+| `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000) |
+macOS has no `timeout`; run game tasks in the background and poll the log for completion.
+Extend the autopilot scripts (`client/dev/AutoPilot.java`, `TerrainPilot.java`) with a scenario for each
+new feature and log numbers to CSV: measuring beat guessing every time in this project.
+
+## Lessons learned (each cost a debugging round)
+- **Saved attributes outlive code changes.** Entities store attribute base values in NBT; tuning lives in
+  `BASE_STATS` and is re-applied in `readAdditionalSaveData`. Do the same for any new persisted tuning.
+- **Ridden movement is client-authoritative.** `travel`/`tickRidden` run on the pilot's client for a
+  piloted suit and on the server for an empty one. Gate movement on synced state (e.g. powered).
+- **Speed constant is measured, not derived**: 42.14 blocks/s per movement-speed point (autopilot log).
+- **GeckoLib animation speed multiplies the whole elapsed time**: changing it smoothly mid-loop makes the
+  animation jump; use constant rates per state. Controllers added later override earlier ones per bone.
+  `setCustomAnimations` runs after keyframes: add to bone values, don't replace them.
+- **GeckoLib draws both faces** (`entityCutoutNoCull`): coplanar same-direction faces flicker
+  (z-fighting); fix in Blockbench with `inflate` 0.1 (keeps box UVs). Scan with
+  `~/Developer/Models/.agents/skills/blockbench-mcp/scripts/zfight.mjs`. The cockpit uses back-face culling.
+- **Animation state flicker** comes from states toggling every few ticks (e.g. run/fall on slopes); check the
+  `anim` column of the terrain CSV for rapid switches.
+- **GameTest structures sit one block above the test origin** (floor at relative y=1, stand at y=2) and are
+  sealed by an invisible barrier box the size of the structure (`test_pad` is 9x10x9); tests run side by
+  side, so search for entities near your own position only.
+- **Vanilla keeps sprinting after the sprint key is released**; call `setSprinting(false)` in scripts.
+- Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
+  `~/Developer/Models/starcraft_marine_anim/` (walk/run carry a cannon `stabilize()` wrapper). Measure gait
+  ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.
+
+## Code map (see README for the full list)
+`entity/PowerArmorEntity.java` holds riding, movement, terrain/water, jump, turning, animation state;
+`client/` holds rendering + camera; `PilotProtection.java` redirects damage; `registry/` registers things.
+Comment the "why" for anything non-obvious; the user reads the code to learn.

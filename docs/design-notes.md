@@ -1,3 +1,5 @@
+> History of the design discussion. The current spec is `docs/design.md`; the plan is `docs/implementation-plan.md`.
+
 # Design notes
 
 ## Current state (2026-10-12)
