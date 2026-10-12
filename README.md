@@ -10,7 +10,7 @@ Fallout / Titanfall style. Model and animations come from `~/Developer/Models/st
 | Get the suit | Creative tab *Tools & Utilities*, or craft it (iron blocks, iron helmet/chestplate/boots, pistons) |
 | Deploy | Right-click the ground with the item (needs a 3-block-tall space) |
 | Climb in | Right-click the suit |
-| Walk / run | WASD (3.5 blocks/s) / sprint (8.5 blocks/s; double-tap W or Ctrl) |
+| Walk / run | WASD (5 blocks/s jog) / sprint (10 blocks/s; double-tap W or Ctrl) |
 | Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
 | Pack it up | Shift + right-click an empty suit (keeps its damage) |
@@ -64,7 +64,9 @@ src/main/resources/
 ## Notes
 
 - Animation playback rates are tied to movement speed so the feet don't slide. The authored
-  ground speeds were measured in Blockbench: walk 3.54, run 8.52, sneak 0.83 blocks/s.
+  ground speeds were measured in Blockbench: walk 5.0, run 9.99, sneak 0.83 blocks/s.
+- The walk and run keep the cannon stabilized (IK on the arm), so it stays steady in the cockpit view.
+- Cockpit feel: the view dips with the hips on each footfall, and the FOV widens a little with speed.
   If you change `WALK_SPEED` / `SPRINT_MULTIPLIER`, the rates follow automatically.
 - Jumping: holding Space plays `jump_charge` (crouch); release plays `jump` (push-off) and the suit
   launches 2 ticks later, then `fall` loops; `land` plays after ~0.5 s in the air. Other players

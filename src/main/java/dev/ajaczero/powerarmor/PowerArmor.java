@@ -16,6 +16,7 @@ import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 @Mod(PowerArmor.MODID)
 public class PowerArmor {
     public static final String MODID = "powerarmor";
+    public static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
     public PowerArmor(IEventBus modBus) {
         // Registries: tell Minecraft our entity type and item exist.

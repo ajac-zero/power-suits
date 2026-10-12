@@ -8,6 +8,9 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.CalculateDetachedCameraDistanceEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ComputeFovModifierEvent;
+import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import net.neoforged.neoforge.client.event.RenderLivingEvent;
 
@@ -44,6 +47,25 @@ public final class PilotView {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && mc.player.getVehicle() instanceof PowerArmorEntity suit) {
             suit.setClientJumpCharge(mc.options.keyJump.isDown() ? Math.max(0.01F, mc.player.getJumpRidingScale()) : 0F);
+        }
+    }
+
+    /** Cockpit stomp: dip the view with the mech's hips on every footfall (first person only). */
+    @SubscribeEvent
+    public static void cockpitBob(ViewportEvent.ComputeCameraAngles event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && mc.player.getVehicle() instanceof PowerArmorEntity suit && mc.options.getCameraType().isFirstPerson()) {
+            // hipBob is in model pixels; ~0.6 degrees per pixel of drop, capped.
+            event.setPitch(event.getPitch() - Mth.clamp(suit.getHipBob() * 0.6F, -2.5F, 2.5F));
+        }
+    }
+
+    /** Widen the view a little with speed, on top of vanilla's sprint FOV. */
+    @SubscribeEvent
+    public static void speedFov(ComputeFovModifierEvent event) {
+        if (event.getPlayer().getVehicle() instanceof PowerArmorEntity suit) {
+            float speed01 = (float) Mth.clamp(suit.getVisualSpeed() / 10.0, 0.0, 1.0);
+            event.setNewFovModifier(event.getNewFovModifier() * (1.0F + 0.08F * speed01));
         }
     }
 

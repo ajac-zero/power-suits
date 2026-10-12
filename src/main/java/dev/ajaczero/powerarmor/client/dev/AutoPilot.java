@@ -92,9 +92,9 @@ public final class AutoPilot {
             case 0 -> { o.hideGui = true; o.setCameraType(CameraType.FIRST_PERSON); }
             case 10 -> shot(mc, "fp_idle");
             case 15 -> hold(o.keyUp, true);
-            case 40, 41, 42, 43 -> shot(mc, "fp_walk_" + t);
+            case 40, 41, 42, 43 -> { shot(mc, "fp_walk_" + t); logSpeed(mc, "walk"); }
             case 55 -> hold(o.keySprint, true);
-            case 75, 76, 77 -> shot(mc, "fp_run_" + t);
+            case 75, 76, 77 -> { shot(mc, "fp_run_" + t); logSpeed(mc, "run"); }
             case 85 -> releaseAll();
             case 90 -> yaw = 60;
             case 92 -> shot(mc, "fp_look_right_now");
@@ -124,6 +124,12 @@ public final class AutoPilot {
             case 355 -> mc.stop();
             default -> {}
         }
+    }
+
+    private static void logSpeed(Minecraft mc, String what) {
+        var suit = mc.player.getVehicle();
+        double v = Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20.0;
+        PowerArmor.LOGGER.info("[autopilot] {} speed {} blocks/s", what, String.format("%.2f", v));
     }
 
     private static void hold(KeyMapping key, boolean down) {

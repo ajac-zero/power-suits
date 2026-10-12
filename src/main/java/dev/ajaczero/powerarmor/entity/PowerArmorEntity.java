@@ -50,16 +50,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public static final int MAX_HEALTH = 100;
 
     // ---- Movement tuning -----------------------------------------------------------------
-    // Attribute speed -> blocks per second on flat ground is about x42.3 for ridden entities
-    // (0.98 input x friction 0.546 terminal velocity x 20 ticks).
-    private static final double BLOCKS_PER_SECOND_PER_SPEED = 42.3;
-    private static final double WALK_SPEED = 0.0837;      // ~3.54 blocks/s (a player walks at 4.3)
-    private static final float SPRINT_MULTIPLIER = 2.41F; // ~8.5 blocks/s (a player sprints at 5.6)
+    // Attribute speed -> blocks per second on flat ground for ridden entities. Measured in game with
+    // ./gradlew runAutopilot (speed 0.1158 gave 4.88 blocks/s), so x42.14.
+    private static final double BLOCKS_PER_SECOND_PER_SPEED = 42.14;
+    private static final double WALK_SPEED = 0.11865;     // ~5.0 blocks/s jog (a player walks at 4.3)
+    private static final float SPRINT_MULTIPLIER = 2.0F;  // ~10 blocks/s (a player sprints at 5.6)
 
     // The ground speed each Blockbench animation was authored for (blocks/s, measured from the
     // planted foot). Playing them at movementSpeed / authoredSpeed keeps the feet from sliding.
-    private static final double WALK_ANIM_AUTHORED = 3.54;
-    private static final double RUN_ANIM_AUTHORED = 8.52;
+    private static final double WALK_ANIM_AUTHORED = 5.0;
+    private static final double RUN_ANIM_AUTHORED = 9.99;
     private static final double WALK_ANIM_RATE = WALK_SPEED * BLOCKS_PER_SECOND_PER_SPEED / WALK_ANIM_AUTHORED;
     private static final double RUN_ANIM_RATE = WALK_SPEED * SPRINT_MULTIPLIER * BLOCKS_PER_SECOND_PER_SPEED / RUN_ANIM_AUTHORED;
 
@@ -303,6 +303,23 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.yBodyRot = look - Math.signum(twist) * MAX_TWIST;
         }
         return animStep;
+    }
+
+    /** Client: smoothed ground speed in blocks/s (for camera effects). */
+    public double getVisualSpeed() {
+        return this.visualSpeed;
+    }
+
+    /** Client: how far the animated hips are below/above their average this frame (model pixels). */
+    private float hipBob, hipBobMean;
+
+    public void setHipHeight(float y) {
+        this.hipBobMean += (y - this.hipBobMean) * 0.03F;
+        this.hipBob = y - this.hipBobMean;
+    }
+
+    public float getHipBob() {
+        return this.hipBob;
     }
 
     /** Client: true while the legs are shuffling round to face the view (plays a step cycle). */
