@@ -1,0 +1,86 @@
+package dev.ajaczero.powerarmor.item;
+
+import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.registry.ModEntities;
+import dev.ajaczero.powerarmor.registry.ModItems;
+import java.util.List;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.UseOnContext;
+
+/**
+ * The suit in item form. Right-click a block to deploy it. The item's durability *is* the suit's
+ * health: damage carries over both ways, and you can repair it in an anvil with iron ingots.
+ */
+public class PowerArmorItem extends Item {
+    public PowerArmorItem(Properties properties) {
+        super(properties);
+    }
+
+    @Override
+    public InteractionResult useOn(UseOnContext context) {
+        if (!(context.getLevel() instanceof ServerLevel level)) {
+            return InteractionResult.SUCCESS; // client: just play the arm swing
+        }
+        PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+        if (suit == null) {
+            return InteractionResult.FAIL;
+        }
+
+        // Stand it on the clicked face, turned to face the player who placed it.
+        BlockPos pos = context.getClickedPos().relative(context.getClickedFace());
+        Player player = context.getPlayer();
+        float yaw = player != null ? player.getYRot() + 180.0F : 0.0F;
+        suit.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, yaw, 0.0F);
+        suit.setYBodyRot(yaw);
+        suit.setYHeadRot(yaw);
+
+        if (!level.noCollision(suit, suit.getBoundingBox())) {
+            if (player != null) {
+                player.displayClientMessage(Component.translatable("message.powerarmor.no_room"), true);
+            }
+            return InteractionResult.FAIL;
+        }
+
+        ItemStack stack = context.getItemInHand();
+        suit.setHealth(Math.max(1.0F, suit.getMaxHealth() - stack.getDamageValue()));
+        if (stack.has(DataComponents.CUSTOM_NAME)) {
+            suit.setCustomName(stack.getHoverName()); // name tags / anvil names carry over
+        }
+        level.addFreshEntity(suit);
+        level.playSound(null, suit.getX(), suit.getY(), suit.getZ(), SoundEvents.ANVIL_PLACE, SoundSource.NEUTRAL, 0.7F, 0.6F);
+        stack.consume(1, player);
+        return InteractionResult.CONSUME;
+    }
+
+    /** Turns a deployed suit back into an item, keeping its damage and name. */
+    public static ItemStack fromSuit(PowerArmorEntity suit) {
+        ItemStack stack = new ItemStack(ModItems.POWER_ARMOR.get());
+        stack.setDamageValue(Math.round(suit.getMaxHealth() - suit.getHealth()));
+        if (suit.hasCustomName()) {
+            stack.set(DataComponents.CUSTOM_NAME, suit.getCustomName());
+        }
+        return stack;
+    }
+
+    @Override
+    public boolean isValidRepairItem(ItemStack stack, ItemStack repairCandidate) {
+        return repairCandidate.is(Items.IRON_INGOT);
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.translatable("item.powerarmor.power_armor.tooltip").withStyle(ChatFormatting.GRAY));
+    }
+}

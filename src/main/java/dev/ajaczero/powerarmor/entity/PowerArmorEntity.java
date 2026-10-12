@@ -1,0 +1,370 @@
+package dev.ajaczero.powerarmor.entity;
+
+import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.PlayerRideableJumping;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.vehicle.DismountHelper;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animation.AnimationController;
+import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.RawAnimation;
+import software.bernie.geckolib.util.GeckoLibUtil;
+
+/**
+ * The power armor suit. It is a living entity (it has health and armor and can die) that a player
+ * can ride. While ridden, the player steers it like a horse, and the player's model is hidden.
+ *
+ * Minecraft runs every entity twice: on the server (the real game state) and on each client
+ * (a copy used for rendering). {@code level().isClientSide()} tells you which one you are in.
+ */
+public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJumping {
+    public static final int MAX_HEALTH = 100;
+
+    // ---- Movement tuning -----------------------------------------------------------------
+    // Attribute speed -> blocks per second on flat ground is about x43 for ridden entities.
+    private static final double WALK_SPEED = 0.036;      // ~1.55 blocks/s
+    private static final float SPRINT_MULTIPLIER = 2.6F; // ~4.0 blocks/s
+
+    // The ground speed each Blockbench animation was authored for (blocks/s, measured from the
+    // planted foot). Playing them at movementSpeed / authoredSpeed keeps the feet from sliding.
+    private static final double WALK_ANIM_AUTHORED = 1.21;
+    private static final double RUN_ANIM_AUTHORED = 3.35;
+    private static final double WALK_ANIM_RATE = WALK_SPEED * 43.2 / WALK_ANIM_AUTHORED;
+    private static final double RUN_ANIM_RATE = WALK_SPEED * SPRINT_MULTIPLIER * 43.2 / RUN_ANIM_AUTHORED;
+
+    /** Ticks to stay around after dying so the death animation (2.68 s) can finish. */
+    private static final int DEATH_TICKS = 60;
+
+    // ---- Animations (names from the exported Blockbench animation file) --------------------
+    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.power_armor.idle");
+    private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.power_armor.walk");
+    private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_armor.run");
+    private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.power_armor.death");
+    private static final RawAnimation HIT = RawAnimation.begin().thenPlay("animation.power_armor.hit");
+
+    private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
+
+    /** Pending jump strength 0..1, set by the jump bar when the pilot releases space. */
+    private float pendingJump;
+    /** Client only: smoothed horizontal speed in blocks per second, used to pick walk/run/idle. */
+    private double visualSpeed;
+
+    public PowerArmorEntity(EntityType<? extends PowerArmorEntity> type, Level level) {
+        super(type, level);
+    }
+
+    public static AttributeSupplier.Builder createAttributes() {
+        return Mob.createMobAttributes()
+                .add(Attributes.MAX_HEALTH, MAX_HEALTH)
+                .add(Attributes.ARMOR, 12.0)
+                .add(Attributes.ARMOR_TOUGHNESS, 4.0)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 1.0)
+                .add(Attributes.MOVEMENT_SPEED, WALK_SPEED)
+                .add(Attributes.STEP_HEIGHT, 1.1); // walks up full blocks without jumping
+    }
+
+    // =========================================================================================
+    // Getting in and out
+    // =========================================================================================
+
+    @Override
+    protected InteractionResult mobInteract(Player player, InteractionHand hand) {
+        if (this.isVehicle() || this.isDeadOrDying()) {
+            return InteractionResult.PASS;
+        }
+        if (!this.level().isClientSide()) {
+            if (player.isSecondaryUseActive()) {
+                // Sneak + right-click: pack the empty suit back into an item (keeps its damage).
+                ItemStack stack = PowerArmorItem.fromSuit(this);
+                if (!player.addItem(stack)) {
+                    this.spawnAtLocation(stack);
+                }
+                this.playSound(SoundEvents.ARMOR_EQUIP_IRON.value(), 1.0F, 0.8F);
+                this.discard();
+            } else {
+                player.startRiding(this);
+                this.playSound(SoundEvents.IRON_DOOR_CLOSE, 1.0F, 0.7F);
+            }
+        }
+        return InteractionResult.sidedSuccess(this.level().isClientSide());
+    }
+
+    /** The first player passenger drives the suit. */
+    @Nullable
+    @Override
+    public LivingEntity getControllingPassenger() {
+        return this.getFirstPassenger() instanceof Player player ? player : null;
+    }
+
+    /** When the pilot gets out, put them behind the suit (or beside it) instead of on its head. */
+    @Override
+    public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
+        for (float angle : new float[] {180F, 90F, -90F, 0F}) {
+            Vec3 offset = getCollisionHorizontalEscapeVector(this.getBbWidth(), passenger.getBbWidth(), this.getYRot() + angle);
+            Vec3 spot = findDismountSpot(this.getX() + offset.x, this.getZ() + offset.z, passenger);
+            if (spot != null) {
+                return spot;
+            }
+        }
+        return super.getDismountLocationForPassenger(passenger);
+    }
+
+    @Nullable
+    private Vec3 findDismountSpot(double x, double z, LivingEntity passenger) {
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, this.getBoundingBox().minY, z);
+        double maxY = this.getBoundingBox().minY + 1.5;
+        for (Pose pose : passenger.getDismountPoses()) {
+            pos.setY((int) Math.floor(this.getBoundingBox().minY));
+            for (; pos.getY() < maxY; pos.move(Direction.UP)) {
+                double floor = this.level().getBlockFloorHeight(pos);
+                if (DismountHelper.isBlockFloorValid(floor)) {
+                    Vec3 spot = new Vec3(x, pos.getY() + floor, z);
+                    AABB box = passenger.getLocalBoundsForPose(pose).move(spot);
+                    if (DismountHelper.canDismountTo(this.level(), passenger, box)) {
+                        passenger.setPose(pose);
+                        return spot;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    // =========================================================================================
+    // Driving: vanilla calls these while a player controls the entity (same hooks horses use)
+    // =========================================================================================
+
+    @Override
+    protected Vec3 getRiddenInput(Player player, Vec3 travelVector) {
+        float strafe = player.xxa * 0.5F;  // A/D
+        float forward = player.zza;        // W/S
+        if (forward < 0) {
+            forward *= 0.5F;               // backing up is slow
+        }
+        return new Vec3(strafe, 0, forward);
+    }
+
+    @Override
+    protected float getRiddenSpeed(Player player) {
+        float speed = (float) this.getAttributeValue(Attributes.MOVEMENT_SPEED);
+        return player.isSprinting() ? speed * SPRINT_MULTIPLIER : speed;
+    }
+
+    @Override
+    protected void tickRidden(Player player, Vec3 travelVector) {
+        super.tickRidden(player, travelVector);
+        // Face wherever the pilot looks. Pitch is halved so the head nods instead of snapping.
+        this.setRot(player.getYRot(), player.getXRot() * 0.5F);
+        this.yRotO = this.yBodyRot = this.yHeadRot = this.getYRot();
+
+        if (this.isControlledByLocalInstance() && this.onGround() && this.pendingJump > 0) {
+            Vec3 motion = this.getDeltaMovement();
+            this.setDeltaMovement(motion.x, 0.42 + 0.3 * this.pendingJump, motion.z); // up to ~2.3 blocks
+            this.hasImpulse = true;
+            this.playSound(SoundEvents.PISTON_EXTEND, 0.8F, 0.6F);
+        }
+        this.pendingJump = 0;
+    }
+
+    /** Lets the pilot sprint while inside (vanilla blocks sprinting on most vehicles). */
+    @Override
+    public boolean canSprint() {
+        return true;
+    }
+
+    // Jumping uses the horse jump bar: hold space to charge, release to jump.
+    @Override
+    public void onPlayerJump(int jumpPower) {
+        if (jumpPower > 0) {
+            this.pendingJump = jumpPower >= 90 ? 1.0F : 0.4F + 0.6F * jumpPower / 90.0F;
+        }
+    }
+
+    @Override
+    public boolean canJump() {
+        return this.isAlive();
+    }
+
+    @Override
+    public void handleStartJump(int jumpPower) {}
+
+    @Override
+    public void handleStopJump() {}
+
+    // =========================================================================================
+    // Toughness, damage, death
+    // =========================================================================================
+
+    /** Nobody can click the suit while it's occupied. Otherwise the pilot's camera, which sits
+     *  inside the suit's hitbox, would always "look at" the suit and couldn't mine blocks.
+     *  Hits meant for the suit land on the pilot instead and get redirected (PilotProtection). */
+    @Override
+    public boolean isPickable() {
+        return !this.isVehicle() && super.isPickable();
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        boolean damaged = super.hurt(source, amount);
+        if (damaged && !this.level().isClientSide() && this.isAlive()) {
+            this.triggerAnim("action", "hit"); // play the flinch on every client
+        }
+        return damaged;
+    }
+
+    @Override
+    public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
+        if (fallDistance > 3) {
+            this.playSound(SoundEvents.ANVIL_LAND, 0.6F, 0.5F); // heavy landing, no damage
+        }
+        return false;
+    }
+
+    @Override
+    public boolean isPushable() {
+        return false; // a ton of steel doesn't get shoved around
+    }
+
+    @Override
+    public void die(DamageSource source) {
+        super.die(source);
+        this.ejectPassengers();
+    }
+
+    @Override
+    protected void tickDeath() {
+        this.deathTime++;
+        if (this.deathTime >= DEATH_TICKS && !this.level().isClientSide() && !this.isRemoved()) {
+            this.level().broadcastEntityEvent(this, (byte) 60); // poof particles
+            this.remove(RemovalReason.KILLED);
+        }
+    }
+
+    @Override
+    protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
+        super.dropCustomDeathLoot(level, source, recentlyHit);
+        this.spawnAtLocation(new ItemStack(Items.IRON_INGOT, 4 + this.random.nextInt(5)));
+    }
+
+    // A placed suit stays forever (mobs normally despawn when far from players).
+    @Override
+    public boolean requiresCustomPersistence() {
+        return true;
+    }
+
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        return false;
+    }
+
+    // =========================================================================================
+    // Sounds
+    // =========================================================================================
+
+    @Override
+    protected void playStepSound(BlockPos pos, BlockState state) {
+        this.playSound(SoundEvents.IRON_GOLEM_STEP, 0.8F, 0.9F);
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(DamageSource source) {
+        return SoundEvents.IRON_GOLEM_HURT;
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return SoundEvents.IRON_GOLEM_DEATH;
+    }
+
+    // =========================================================================================
+    // Animation (GeckoLib). This only runs on the client.
+    // =========================================================================================
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (this.level().isClientSide()) {
+            // Measure how fast we actually move (blocks/s) and smooth it to avoid flicker
+            // between idle and walk.
+            double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
+            double speed = Math.sqrt(dx * dx + dz * dz) * 20.0;
+            this.visualSpeed += (speed - this.visualSpeed) * 0.4;
+        }
+    }
+
+    private boolean isRunning() {
+        return this.getControllingPassenger() instanceof Player pilot && pilot.isSprinting();
+    }
+
+    private boolean isWalking() {
+        return this.visualSpeed > 0.3;
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        // Controller 1: full-body locomotion. 5 ticks of blending between animations.
+        controllers.add(new AnimationController<>(this, "movement", 5, this::movementAnimation)
+                .setAnimationSpeedHandler(suit -> suit.movementAnimationRate()));
+        // Controller 2: one-shot upper-body reactions, started from the server with triggerAnim().
+        // It is added after "movement", so for the bones it animates it wins; legs keep walking.
+        controllers.add(new AnimationController<>(this, "action", 2, state -> PlayState.STOP)
+                .triggerableAnim("hit", HIT));
+    }
+
+    private PlayState movementAnimation(AnimationState<PowerArmorEntity> state) {
+        if (this.isDeadOrDying()) {
+            return state.setAndContinue(DEATH);
+        }
+        if (!this.isVehicle()) {
+            return PlayState.STOP; // empty suit: powered down, frozen in its rest pose
+        }
+        if (this.isWalking()) {
+            return state.setAndContinue(this.isRunning() ? RUN : WALK);
+        }
+        return state.setAndContinue(IDLE);
+    }
+
+    /** Fixed rate per gait. GeckoLib scales the whole elapsed time by this, so changing it
+     *  smoothly mid-loop would make the animation jump; constant values avoid that. */
+    private double movementAnimationRate() {
+        if (this.isDeadOrDying() || !this.isVehicle() || !this.isWalking()) {
+            return 1.0;
+        }
+        return this.isRunning() ? RUN_ANIM_RATE : WALK_ANIM_RATE;
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.animationCache;
+    }
+
+    /** Used by the renderer to know whether this suit is carrying the given entity. */
+    public boolean isPilotedBy(@Nullable Entity entity) {
+        return entity != null && this.hasPassenger(entity);
+    }
+}

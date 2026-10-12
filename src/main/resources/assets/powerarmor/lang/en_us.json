@@ -1,0 +1,6 @@
+{
+  "item.powerarmor.power_armor": "Power Armor",
+  "item.powerarmor.power_armor.tooltip": "Place it, right-click to climb in. Shift to climb out. Sneak + right-click an empty suit to pack it up.",
+  "entity.powerarmor.power_armor": "Power Armor",
+  "message.powerarmor.no_room": "Not enough room to deploy the suit here"
+}
