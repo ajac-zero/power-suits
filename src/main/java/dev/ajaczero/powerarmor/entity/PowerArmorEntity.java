@@ -22,6 +22,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MoverType;
+import net.neoforged.neoforge.fluids.FluidType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PlayerRideableJumping;
@@ -79,6 +80,19 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final double STEP_DOWN = 1.1;
     /** Each tick the eased step offset keeps this fraction (0.65 -> ~6 ticks to settle). */
     private static final float STEP_EASE = 0.65F;
+
+    // ---- Water (Fallout-style: the suit sinks and walks along the bottom) ----------------------
+    /** Speed on the bottom relative to dry land. */
+    private static final float UNDERWATER_SPEED = 0.5F;
+    /** Steering while sinking / rising, relative to UNDERWATER_SPEED. */
+    private static final float UNDERWATER_AIR_CONTROL = 0.3F;
+    /** Downward acceleration per tick and the vertical drag: terminal sink ~2.8 blocks/s. */
+    private static final double SINK_ACCEL = 0.025;
+    private static final double WATER_DRAG_Y = 0.85;
+    /** Horizontal drag per tick on the bottom (same as dry ground, so it feels like walking). */
+    private static final double WATER_DRAG_XZ = 0.546;
+    /** Jumps underwater are pushing off against water. */
+    private static final double UNDERWATER_JUMP_SCALE = 0.6;
 
     // ---- Airborne tuning (client-side animation only) ----------------------------------------
     /** Ticks in the air before switching to the fall pose (stepping off one block shouldn't). */
@@ -292,7 +306,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             } else {
                 if (this.onGround()) {
                     Vec3 motion = this.getDeltaMovement();
-                    this.setDeltaMovement(motion.x, 0.42 + 0.3 * this.pendingJump, motion.z); // up to ~2.3 blocks
+                    double launch = (0.42 + 0.3 * this.pendingJump) * (this.isInWater() ? UNDERWATER_JUMP_SCALE : 1.0);
+                    this.setDeltaMovement(motion.x, launch, motion.z); // up to ~2.3 blocks on land
                     this.hasImpulse = true;
                     this.playSound(SoundEvents.PISTON_EXTEND, 0.8F, 0.6F);
                 }
@@ -395,6 +410,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      */
     @Override
     public void travel(Vec3 travelVector) {
+        if (this.isInWater() && this.isControlledByLocalInstance()) {
+            this.travelUnderwater(travelVector);
+            return;
+        }
         boolean wasOnGround = this.onGround();
         super.travel(travelVector);
         if (this.isVehicle() && this.isControlledByLocalInstance() && wasOnGround && !this.onGround()
@@ -405,6 +424,37 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 this.setDeltaMovement(this.getDeltaMovement().multiply(1, 0, 1));
             }
         }
+    }
+
+    /**
+     * Vanilla makes living things float and paddle in water. The suit is a ton of steel instead:
+     * no buoyancy, it sinks to the bottom and walks there at reduced speed. Runs on whichever side
+     * controls the suit (the pilot's client, or the server for an empty suit).
+     */
+    private void travelUnderwater(Vec3 input) {
+        float speed = this.getSpeed() * UNDERWATER_SPEED * (this.onGround() ? 1.0F : UNDERWATER_AIR_CONTROL);
+        this.moveRelative(speed, input);
+        this.move(MoverType.SELF, this.getDeltaMovement());
+        Vec3 v = this.getDeltaMovement();
+        double vy = (v.y - SINK_ACCEL) * WATER_DRAG_Y;
+        // Vanilla's "climb out at the edge" help: pushing into a bank near the surface lifts us over.
+        if (this.horizontalCollision && this.isFree(v.x, v.y + 0.6 - this.getY() + this.yo, v.z)) {
+            vy = 0.3;
+        }
+        this.setDeltaMovement(v.x * WATER_DRAG_XZ, vy, v.z * WATER_DRAG_XZ);
+        this.calculateEntityAnimation(false);
+    }
+
+    /** The suit itself is a sealed machine and never runs out of air (its pilot can, though). */
+    @Override
+    public boolean canDrownInFluidType(FluidType type) {
+        return false;
+    }
+
+    /** Too heavy for currents and bubble columns to push around. */
+    @Override
+    public boolean isPushedByFluid() {
+        return false;
     }
 
     /** Lets the pilot sprint while inside (vanilla blocks sprinting on most vehicles). */
@@ -671,10 +721,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 || this.airTicks >= FALL_POSE_AFTER_TICKS || this.landTicks > 0) {
             return 1.0;
         }
+        double water = this.isInWater() ? UNDERWATER_SPEED : 1.0; // slow-motion steps on the bottom
         if (!this.isWalking()) {
-            return this.realigning ? 0.6 : 1.0; // turning on the spot: a slower step cycle
+            return (this.realigning ? 0.6 : 1.0) * water; // turning on the spot: a slower step cycle
         }
-        return this.isRunning() ? RUN_ANIM_RATE : WALK_ANIM_RATE;
+        return (this.isRunning() ? RUN_ANIM_RATE : WALK_ANIM_RATE) * water;
     }
 
     @Override

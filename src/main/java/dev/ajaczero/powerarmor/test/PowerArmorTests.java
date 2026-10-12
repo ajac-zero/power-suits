@@ -27,7 +27,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Automated in-game tests. Run them headless with:  ./gradlew runGameTestServer
- * Each test builds the "test_pad" structure, runs, and must call succeed(). GameTest places the
+ * Each test builds the "test_pad" structure (9x10x9, stone floor), runs, and must call succeed(). GameTest places the
  * structure one block above the test origin, so the floor is at relative y=1 and you stand at y=2.
  * They only register in development / when game tests are enabled, so players never see them.
  */
@@ -152,6 +152,28 @@ public final class PowerArmorTests {
         double speed = loaded.getAttributeBaseValue(Attributes.MOVEMENT_SPEED);
         helper.assertTrue(Math.abs(speed - current) < 1e-9, "loaded suit should get the current speed " + current + ", got " + speed);
         helper.succeed();
+    }
+
+    /** Fallout-style water: an empty suit sinks to the bottom of a pool and doesn't drown. */
+    @GameTest(template = PAD, timeoutTicks = 200)
+    public static void suitSinksAndDoesNotDrown(GameTestHelper helper) {
+        // Stone-walled pool on the pad: water from y=2 to y=6 inside x/z 2..6 (5 deep).
+        for (int x = 1; x <= 7; x++) {
+            for (int z = 1; z <= 7; z++) {
+                for (int y = 2; y <= 6; y++) {
+                    boolean wall = x == 1 || x == 7 || z == 1 || z == 7;
+                    helper.setBlock(new BlockPos(x, y, z), wall ? Blocks.STONE : Blocks.WATER);
+                }
+            }
+        }
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 5, 4));
+        helper.runAfterDelay(150, () -> {
+            double depth = suit.getY() - helper.absolutePos(new BlockPos(4, 2, 4)).getY();
+            helper.assertTrue(suit.isInWater(), "suit should be in the water");
+            helper.assertTrue(depth < 0.1, "suit should rest on the pool floor, " + depth + " above it");
+            helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "suit must not drown, health " + suit.getHealth());
+            helper.succeed();
+        });
     }
 
     private static InteractionResult useOnFloor(GameTestHelper helper, Player player, ItemStack stack, BlockPos floor) {

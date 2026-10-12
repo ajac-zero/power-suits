@@ -4,6 +4,7 @@ import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import java.io.File;
+import net.minecraft.core.BlockPos;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -120,9 +121,20 @@ public final class AutoPilot {
             case 288, 294 -> shot(mc, "side_charge_" + t);
             case 298 -> hold(o.keyJump, false);
             case 299, 300, 301, 302, 304, 306, 310, 316, 324, 334, 342 -> shot(mc, "side_jump_" + t);
-            case 350 -> { mc.setCameraEntity(mc.player); o.hideGui = false; }
-            case 355 -> mc.stop();
+            // ---- water: walk off a lip into a 6-deep pool, along the bottom, up stairs on the far side
+            case 350 -> { mc.setCameraEntity(mc.player); releaseAll(); yaw = 0; pitch = 15; o.setCameraType(CameraType.THIRD_PERSON_BACK); buildPool(mc); }
+            case 360 -> { openWaterLog(mc); hold(o.keyUp, true); }
+            case 385, 400, 415, 430 -> shot(mc, "water_tp_" + t);
+            case 440 -> { o.setCameraType(CameraType.FIRST_PERSON); o.hideGui = false; }
+            case 450, 470 -> shot(mc, "water_fp_" + t);
+            case 480 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); o.hideGui = true; }
+            case 500, 520, 540, 560, 590 -> shot(mc, "water_tp_" + t);
+            case 640 -> { releaseAll(); closeWaterLog(); survival(mc, false); o.hideGui = false; }
+            case 645 -> mc.stop();
             default -> {}
+        }
+        if (t >= 360 && t < 640) {
+            logWater(mc, t);
         }
     }
 
@@ -130,6 +142,98 @@ public final class AutoPilot {
         var suit = mc.player.getVehicle();
         double v = Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20.0;
         PowerArmor.LOGGER.info("[autopilot] {} speed {} blocks/s", what, String.format("%.2f", v));
+    }
+
+    private static java.io.BufferedWriter waterCsv;
+
+    private static void openWaterLog(Minecraft mc) {
+        try {
+            waterCsv = java.nio.file.Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_water.csv"));
+            waterCsv.write("tick,dz,y,speed,vy,onGround,inWater,eyeInWater,air,health,anim,suitHealth\n");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static double waterStartZ = Double.NaN;
+
+    private static void logWater(Minecraft mc, int t) {
+        if (!(mc.player.getVehicle() instanceof PowerArmorEntity suit) || waterCsv == null) {
+            return;
+        }
+        if (Double.isNaN(waterStartZ)) {
+            waterStartZ = suit.getZ();
+        }
+        try {
+            waterCsv.write(String.format(java.util.Locale.ROOT, "%d,%.2f,%.3f,%.2f,%.2f,%b,%b,%b,%d,%.1f,%s,%.1f%n", t, suit.getZ() - waterStartZ,
+                    suit.getY(), Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20, (suit.getY() - suit.yo) * 20,
+                    suit.onGround(), suit.isInWater(), mc.player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER),
+                    mc.player.getAirSupply(), mc.player.getHealth(), suit.getMovementAnimationName(), suit.getHealth()));
+        } catch (IOException e) {
+            PowerArmor.LOGGER.error("[autopilot] water csv", e);
+        }
+    }
+
+    private static void closeWaterLog() {
+        try {
+            if (waterCsv != null) {
+                waterCsv.close();
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static void survival(Minecraft mc, boolean on) {
+        IntegratedServer server = mc.getSingleplayerServer();
+        var uuid = mc.player.getUUID();
+        server.execute(() -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+            if (player != null) {
+                player.setGameMode(on ? GameType.SURVIVAL : GameType.CREATIVE);
+            }
+        });
+    }
+
+    /** Pool in front of the suit (it faces +Z): 3 steps up onto a lip, 6 blocks of water, stairs out. */
+    private static void buildPool(Minecraft mc) {
+        IntegratedServer server = mc.getSingleplayerServer();
+        var uuid = mc.player.getUUID();
+        server.execute(() -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+            if (player == null || !(player.getVehicle() instanceof PowerArmorEntity suit)) {
+                return;
+            }
+            player.setGameMode(GameType.SURVIVAL);
+            var level = player.serverLevel();
+            BlockPos base = suit.blockPosition(); // g = base.y (the suit stands on top of base.y - 1)
+            int g = base.getY();
+            var stone = net.minecraft.world.level.block.Blocks.STONE.defaultBlockState();
+            var glass = net.minecraft.world.level.block.Blocks.GLASS.defaultBlockState();
+            var water = net.minecraft.world.level.block.Blocks.WATER.defaultBlockState();
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dz = 3; dz <= 17; dz++) {
+                    for (int y = g - 3; y <= g + 2; y++) {
+                        BlockPos p = base.offset(dx, 0, dz).atY(y);
+                        boolean side = Math.abs(dx) == 4;
+                        int top; // highest stone y in this column (stairs), or none
+                        if (dz <= 5) {
+                            top = g + (dz - 3);          // outside stairs up: tops at g+1, g+2, g+3
+                        } else if (dz >= 12) {
+                            top = g - 3 + (dz - 12);     // inside stairs out: g-3 ... g+2 at the far wall
+                        } else {
+                            top = Integer.MIN_VALUE;
+                        }
+                        if (y <= top) {
+                            level.setBlock(p, stone, 3);
+                        } else if (dz >= 6 && dz <= 17) {
+                            level.setBlock(p, side ? glass : water, 3);
+                        } else if (y < g) {
+                            level.setBlock(p, stone, 3);
+                        }
+                    }
+                }
+            }
+        });
     }
 
     private static void hold(KeyMapping key, boolean down) {

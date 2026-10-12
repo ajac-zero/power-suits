@@ -19,6 +19,10 @@ Fallout / Titanfall style. Model and animations come from `~/Developer/Models/st
 While inside: the suit takes hits instead of you, it has no fall damage, steps up full blocks,
 and the camera pulls back in third person (F5).
 
+Water (Fallout-style): the suit sinks and walks along the bottom at half speed. It never runs out
+of air, but you do: once your head is under, your air bar drains and you drown in survival. Walk out
+up a slope or stairs, or jump (weaker underwater).
+
 ## Developing
 
 Java 21 is installed with Homebrew but not on the PATH by default. Every terminal needs:
@@ -35,7 +39,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew runGameTestServer` | Runs the automated in-game tests headless, prints pass/fail |
 | `./gradlew build` | Builds the mod jar into `build/libs/` (put it in a real `mods/` folder, plus GeckoLib) |
 | `node tools/export-model.mjs` | Re-exports model, animations and texture from the open Blockbench project |
-| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world, saves `run/screenshots/ap_*.png`, quits |
+| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (incl. a pool), saves `run/screenshots/ap_*.png` and `run/autopilot_water.csv`, quits |
 | `./gradlew runAutopilotTerrain` | Dev tool: drives a suit over real terrain in a **copy** of `run/saves/New World`, logs `run/autopilot_terrain.csv` (speed, height, ground contact, animation, camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`) |
 
