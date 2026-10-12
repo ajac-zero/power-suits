@@ -44,3 +44,19 @@ which restrictions to use.
   sputtering when power is low.
 - Tech: render the mounted grav gun and right-arm tool as item models attached to arm bones
   (GeckoLib bone item layer), so tools are swappable; split the cannon out of the suit model.
+
+## Decisions (2026-10-12)
+- **Power = fuel tank.** Burns furnace fuels (coal, charcoal, blaze rods, lava buckets...).
+- **Empty tank = shutdown.** The suit freezes in place; the pilot can still climb out.
+- **Right arm = one power socket.** Suit-only power tools plug in and draw fuel: plasma cannon,
+  3x3 drill, tree-felling chainsaw (grav gun: TBD). Only one tool installed at a time.
+- **Left arm = a real hand** that holds and uses normal items.
+
+## Proposed mechanics (pending user OK)
+- Controls in the suit: attack button (left click) = socket tool; use button (right click) = left-hand
+  item. The left hand cannot break blocks (that's what tools are for).
+- Suit screen (sneak + right-click a parked suit): fuel slot + tank gauge, socket slot, "pack up".
+- Exhaust smoke scales with engine load; sputters black when fuel is low; stops on shutdown.
+- Shutdown: power-down sound + slump pose; restarts when refuelled.
+- Model: replace the cannon forearm with a socket coupling; tools are separate item models attached to
+  the socket bone; left hand renders the held item; grenade prop removed.
