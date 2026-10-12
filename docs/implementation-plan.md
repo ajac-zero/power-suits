@@ -33,14 +33,16 @@ For the next tools: add the tool's bone to the suit model (child of `right_forea
 `PowerArmorRenderer.TOOL_BONES` and `extract-tool-geo.py`, implement `PowerTool`, register the item + client
 extension, add a `models/item/<tool>.json`.
 
-## Phase 3: left hand holds and uses items
-1. Render the pilot's main-hand item at the suit's left hand bone (`hand_l`) with the item layer.
-2. Use (right-click) stays vanilla (the player uses their item). Block breaking and attacking with the
-   hand are blocked while piloting (Phase 2's attack interception already routes attack to the tool;
-   also cancel `PlayerInteractEvent.LeftClickBlock` / `AttackEntityEvent` server-side for pilots).
-3. Left-arm use animation (overlay) when the pilot uses an item. Remove the grenade prop.
-4. **Check reach**: the pilot's eye is inside the suit at the visor; block/entity reach from there
-   should feel right (maybe `Attributes.BLOCK_INTERACTION_RANGE` bonus while piloting).
+## Phase 3: left hand holds and uses items (DONE 2026-10-12)
+Decision: the left hand may not attack mobs, even with a sword. Built: `left_hand` grip bone (grenade
+removed), `hold_item` / `use_item` left-arm overlays (`a_hand.js`, arm IK; an at-the-chin eat pose was
+dropped because the forearm covered the visor), a third GeckoLib controller `left_hand` (hold while the
+pilot holds something and the suit can operate; `use_item` on each swing), `client/HeldItemLayer`
+(third person), `client/FirstPersonLeftHand` (cockpit: vanilla first-person transforms mirrored to the left,
+incl. swing and eat bob), `PilotHands` (cancel AttackEntity / LeftClickBlock / BreakEvent for pilots;
+cancel right-click interactions while the suit can't operate; +1.5 block/entity reach as a transient
+attribute modifier on mount). Tests: 4 new GameTests (28 total); autopilot hand scenario (`ap_hand_*`).
+Not done: bows/crossbows/shields use the plain carry pose; `throw` animation still keys the removed grenade.
 
 ## Phase 4: EM tool (push/pull)
 Hold attack: tractor beam on the targeted item entity / mob within ~16 blocks: pull it to a hold
@@ -70,6 +72,6 @@ before every change, save only when the user asks, re-export with `node tools/ex
 - Phase 1 (done): `shutdown`, `powered_off`, `startup` (`a_power.js`, planted feet IK).
 - Phase 2 (done): `socket` coupling bone under `right_forearm`, `plasma_shot` overlay; the item model is
   extracted from the suit geo. Walk/run's stabiliser holds the forearm, so it steadies any tool.
-- Phase 3: left-hand grip pose that holds an item; remove the grenade bone and update `throw` or retire it.
+- Phase 3 (done): `left_hand` grip bone, `hold_item` / `use_item` (`a_hand.js`); grenade removed (`throw` unused).
 - Phase 4/5: models for the EM tool, drill, chainsaw (gun-like, sized for the socket) + tool-use
   overlays (recoil, drill vibration, chainsaw cut).

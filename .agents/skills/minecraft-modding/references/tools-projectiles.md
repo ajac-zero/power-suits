@@ -53,3 +53,21 @@ Built for the Power Armor plasma cannon. Files: `item/PowerTool.java`, `item/Pla
   barrel and the top should point, build the rotation matrix, brute-force Euler angles in 5° steps
   (numpy). In hand / first person, -Z is forward; in GUI the camera looks along -Z. Verify with autopilot
   screenshots: GUI slot, first person, third person front.
+
+## Held items in a vehicle's hand
+- `BlockAndItemGeoLayer` subclass on the vehicle renderer: return the rider's main-hand stack for the grip
+  bone, then in `renderStackForBone` copy vanilla `ItemInHandLayer`'s grip (`XP -90`, `YP 180`,
+  translate `(-1/16, 0.125, 0)` at a bone placed at the grip, not the shoulder), scale for the bigger hand,
+  `renderStatic(entity, stack, THIRD_PERSON_LEFT_HAND, true, ...)`. Skip it in the rider's own first-person view.
+- First person: cancel `RenderHandEvent` and redraw the item with vanilla's first-person math mirrored
+  (`applyItemArmTransform`, `applyItemArmAttackTransform`, swing translate, `applyEatTransform` are private:
+  copy their few lines), `ItemInHandRenderer.renderItem(player, stack, FIRST_PERSON_LEFT_HAND, true, ...)`.
+- Swing reaction: watch the rider's `swinging` rising edge on the client (other players' swings arrive as
+  packets) and `triggerAnim` locally; hold pose = a controller added after the gait controller (it owns the
+  bones it animates while playing). Return STOP when the vehicle is off so the slump pose wins.
+- Rules for the rider: cancel `AttackEntityEvent`, `PlayerInteractEvent.LeftClickBlock`, `BlockEvent.BreakEvent`;
+  `RightClickBlock/RightClickItem/EntityInteract(Specific)` when unpowered. Test with
+  `CommonHooks.onLeftClickBlock/onRightClickBlock(...).isCanceled()` and `player.attack(mob)` in GameTests.
+- Reach: `EntityMountEvent` (server) -> `addTransientModifier(new AttributeModifier(id, 1.5, ADD_VALUE))` on
+  `BLOCK_INTERACTION_RANGE` / `ENTITY_INTERACTION_RANGE`, remove on dismount. Transient = not saved; re-added
+  when the saved player re-mounts on load.

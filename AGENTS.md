@@ -70,6 +70,12 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   columns can lead the screenshots.
 - **The game can't start while the Mac's display sleeps** ("Failed to locate a primary monitor"; Gradle then
   hangs). Run game tasks under `caffeinate -d -u -i`; if it hangs, kill the gradlew client process.
+- **The suit's arm is too short to show an item in the cockpit view without blocking it** (a hand target in
+  view folded the forearm across the visor). Third person uses the 3D hand; first person draws the item
+  vanilla-style (`FirstPersonLeftHand`). Check new poses from the cockpit camera, not only from outside.
+- **Arm IK has two elbow solutions**; with the wrong seed it picks hyperextension (forearm bent backward).
+  On this rig positive forearm X flexes the elbow; seed the solver on that side and reuse one seed for all
+  animations that must meet at the same pose.
 - **Menus can't be opened by GameTest mock players**: `makeMockPlayer` ignores `openMenu`, and
   `makeMockServerPlayerInLevel` throws on NeoForge's `advanced_open_screen` payload. Test menu logic by
   constructing `PowerArmorMenu` directly; check the real screen in the autopilot (`ap_menu_*`).

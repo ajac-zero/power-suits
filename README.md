@@ -19,6 +19,7 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Climb out | Shift |
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
 | Install a tool | Put a power tool (Plasma Cannon) in the menu's socket slot; it appears on the suit's right arm |
+| Use items | Right-click as usual while piloting: the suit's left hand holds your selected item (place blocks, eat, open doors, buckets...). 1.5 blocks extra reach |
 | Fire | Hold attack (left click) while piloting: a plasma bolt every 0.6 s toward your crosshair (300 fuel = 15 s of walking, 5 hearts) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
 
@@ -35,6 +36,11 @@ It does nothing on foot. Bolts fly at 60 blocks/s from the muzzle to whatever is
 targets alight for a second, never break blocks, and fizzle after ~90 blocks or in water. Kills credit you
 ("vaporized by"). While piloting, left click never punches or mines; with an empty socket or no fuel the
 trigger just clicks.
+
+**Left hand**: shows your selected hotbar item and carries it forward (`hold_item`), reaching out each time
+you use it (`use_item`). In first person the item is drawn at the lower left like vanilla's off-hand (the
+suit's arm hangs below the cockpit view). The hand never attacks or mines (left click is the tool's), and a
+powered-down suit's hand can't use anything.
 
 While inside: the suit takes hits instead of you, it has no fall damage, steps up full blocks,
 and the camera pulls back in third person (F5).
@@ -85,6 +91,7 @@ src/main/java/dev/ajaczero/powerarmor/
   network/ToolTriggerPayload.java  client -> server "attack pressed/released"
   item/PowerArmorItem.java   deploying / packing / repairing
   PilotProtection.java       redirects damage from the pilot to the suit
+  PilotHands.java            no punching/mining from inside, hand needs power, +1.5 reach
   client/                    rendering only (never loaded on servers)
     PowerArmorModel.java     points GeckoLib at the asset files, head follows your view
     PowerArmorRenderer.java  hides the head in first person
@@ -92,6 +99,8 @@ src/main/java/dev/ajaczero/powerarmor/
     PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
     FuelGauge.java           HUD fuel gauge + low-fuel beep
     ToolInput.java           attack button -> socket tool (cancels vanilla punching while piloting)
+    HeldItemLayer.java       draws the pilot's selected item in the suit's left hand (third person)
+    FirstPersonLeftHand.java draws it vanilla-style at the lower left in the cockpit
     PlasmaBoltRenderer.java  the glowing bolt (camera-facing quad)
     ClientSetup.java         registers the renderer
     dev/AutoPilot.java       scripted screenshot test drive (only with -Dpowerarmor.autopilot)
@@ -131,4 +140,6 @@ src/main/resources/
 - Socket: the forearm block is the socket housing; `socket` (coupling plate) shows when empty, the installed
   tool's bone (`cannon`) otherwise (`PowerArmorRenderer`). `plasma_shot` (0.5 s overlay, `a_plasma_shot.js`)
   is triggered per shot; it must stay shorter than the cooldown because GeckoLib won't restart a running one.
-- Unused animations so far: attack (3-round burst), throw, stim, electrified, idle_fidget, sneakwalk.
+- Left hand: `left_hand` grip bone (replaced the grenade prop) and a third GeckoLib controller that owns the
+  left arm while you hold something; `use_item` is triggered on every swing of the pilot's arm (`a_hand.js`).
+- Unused animations so far: attack (3-round burst), throw (lost its grenade prop), stim, electrified, idle_fidget, sneakwalk.

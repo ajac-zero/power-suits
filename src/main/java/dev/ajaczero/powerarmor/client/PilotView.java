@@ -25,11 +25,16 @@ public final class PilotView {
         }
     }
 
-    /** No floating first-person hand while piloting. */
+    /** No floating first-person hand while piloting; the selected item is drawn on the left instead
+     *  (the suit's left hand holds it; the cannon is on the right). */
     @SubscribeEvent
     public static void hideHand(RenderHandEvent event) {
-        if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.getVehicle() instanceof PowerArmorEntity) {
+        var player = Minecraft.getInstance().player;
+        if (player != null && player.getVehicle() instanceof PowerArmorEntity) {
             event.setCanceled(true);
+            if (event.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND) {
+                FirstPersonLeftHand.render(event, player);
+            }
         }
     }
 

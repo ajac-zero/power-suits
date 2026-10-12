@@ -17,6 +17,7 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
 | Entering | Right-click empty suit = climb in. Shift = climb out (behind/beside the suit). Sneak + right-click empty suit = suit menu. |
 | Fuel + power (Phase 1) | Furnace-style fuel slot, drain by load, shutdown/startup animations + sounds, exhaust smoke by load, HUD gauge, low-fuel warning. See section 4. |
 | Socket + plasma cannon (Phase 2) | `PowerTool` items in the socket; hold attack to use. Plasma cannon: bolt to the crosshair, 10 damage, 300 energy, 0.6 s cooldown, `plasma_shot` animation, 3D item (cut from the suit model), recipe. See section 3. |
+| Left hand (Phase 3) | Holds the pilot's selected item (3D in third person, vanilla-style lower-left in first person); right-click uses it as normal; carry + reach animations; no attacking or mining; needs power; +1.5 reach. See section 3. |
 | Suit menu (Phase 1) | Socket slot (power tools only), fuel slot, live suit preview, burn flame, hull/fuel/status display, Pack up button. See section 5. |
 | Movement | Jog 5 blocks/s, sprint 10 (players: 4.3 / 5.6). Steps up 1 block, steps down up to 2 without falling; step changes eased for camera + model. Jump: hold Space (crouch wind-up, horse jump bar), release; launch 2 ticks later. |
 | Turning | Legs face the direction of travel; torso + arms twist up to 90 deg and lean to face the pilot's view. |
@@ -31,7 +32,10 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
   (rendered in the suit's left hand). The **use** button (right-click) works as normal for that item:
   place blocks, eat, open doors, use buckets, throw potions...
   - The left hand does **not** break blocks: the attack button belongs to the socket tool.
-  - **OPEN:** may the left hand attack mobs with a held sword? (Default: no, attack = socket tool.)
+  - **Decided 2026-10-12: no**, the left hand never attacks mobs, even with a sword (attack = socket tool).
+  - Built (Phase 3): the item is drawn at the suit's `left_hand` bone; in the cockpit it's drawn like
+    vanilla's off-hand item instead, because the arm can't reach into the view without blocking it.
+    A powered-down suit's hand does nothing. Reach +1.5 blocks (block and entity interaction range).
 - **Right arm = power socket.** Exactly one **power tool** item can be installed. Tools only work when
   installed in a powered suit (they do nothing on foot) and draw fuel per use.
   - The **attack** button (left-click, hold for continuous tools) uses the installed tool.

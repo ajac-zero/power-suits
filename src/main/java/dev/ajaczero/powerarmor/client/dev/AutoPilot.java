@@ -160,20 +160,40 @@ public final class AutoPilot {
             case 945, 946, 947, 949 -> shot(mc, "cannon_tp_" + t);
             case 958 -> { yaw = -12; sideCamera(mc); }
             case 969, 970, 971, 973, 976 -> shot(mc, "cannon_side_" + t);
-            case 985 -> { releaseAll(); pitch = 20; }
-            case 990 -> shot(mc, "cannon_empty_trigger");
+            case 985 -> releaseAll();
+            // ---- left hand: hold and place stone bricks from inside, then eat a golden apple
+            case 995 -> { closeCannonLog(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON);
+                          giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); yaw = 0; pitch = 40; }
+            case 1003 -> shot(mc, "hand_fp_hold");
+            case 1005, 1026, 1042 -> hold(o.keyUse, true);
+            case 1006, 1007, 1008, 1009, 1010, 1011 -> shot(mc, "hand_fp_use_" + t);
+            case 1016 -> { hold(o.keyUse, false); o.setCameraType(CameraType.THIRD_PERSON_BACK); pitch = 25; }
+            case 1024 -> shot(mc, "hand_tp_hold");
+            case 1027, 1028, 1029, 1031 -> shot(mc, "hand_tp_use_" + t);
+            case 1034 -> { hold(o.keyUse, false); yaw = -90; pitch = 20;
+                           giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.TORCH, 16)); }
+            case 1038 -> frontCamera(mc);
+            case 1040 -> shot(mc, "hand_front_hold");
+            case 1043, 1044, 1045, 1047 -> shot(mc, "hand_front_use_" + t);
+            case 1050 -> { hold(o.keyUse, false); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 10;
+                           giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE, 4)); }
+            case 1055 -> hold(o.keyUse, true);
+            case 1062, 1075 -> shot(mc, "hand_fp_eat_" + t);
+            case 1078 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 1085 -> shot(mc, "hand_tp_eat");
+            case 1092 -> releaseAll();
             // ---- the cannon item on foot: hand (first / third person) and inventory icon
-            case 995 -> { closeCannonLog(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); hold(o.keyShift, true); }
-            case 1000 -> { hold(o.keyShift, false); giveCannon(mc); survival(mc, true); yaw = 120; pitch = 10; }
-            case 1010 -> shot(mc, "item_fp");
-            case 1012 -> o.setCameraType(CameraType.THIRD_PERSON_FRONT);
-            case 1020 -> shot(mc, "item_tp_front");
-            case 1022 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1030 -> shot(mc, "item_tp_back");
-            case 1032 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)); }
-            case 1040 -> shot(mc, "item_gui");
-            case 1042 -> mc.setScreen(null);
-            case 1045 -> mc.stop();
+            case 1095 -> { o.setCameraType(CameraType.FIRST_PERSON); hold(o.keyShift, true); }
+            case 1100 -> { hold(o.keyShift, false); giveCannon(mc); survival(mc, true); yaw = 120; pitch = 10; }
+            case 1110 -> shot(mc, "item_fp");
+            case 1112 -> o.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            case 1120 -> shot(mc, "item_tp_front");
+            case 1122 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 1130 -> shot(mc, "item_tp_back");
+            case 1132 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)); }
+            case 1140 -> shot(mc, "item_gui");
+            case 1142 -> mc.setScreen(null);
+            case 1145 -> mc.stop();
             default -> {}
         }
         if (t >= 360 && t < 640) {
@@ -298,6 +318,10 @@ public final class AutoPilot {
                 pigs.add(pig);
             }
         });
+    }
+
+    private static void giveHeld(Minecraft mc, net.minecraft.world.item.ItemStack stack) {
+        onServer(mc, player -> player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, stack));
     }
 
     private static void giveCannon(Minecraft mc) {
@@ -455,6 +479,25 @@ public final class AutoPilot {
 
     private static void shot(Minecraft mc, String name) {
         Screenshot.grab(mc.gameDirectory, "ap_" + name + ".png", mc.getMainRenderTarget(), msg -> {});
+    }
+
+    /** A client-only camera in front of the suit and to its left (its torso faces the pilot's yaw), looking back at it. */
+    private static void frontCamera(Minecraft mc) {
+        var suit = mc.player.getVehicle();
+        float yawRad = yaw * net.minecraft.util.Mth.DEG_TO_RAD;
+        Vec3 forward = new Vec3(-net.minecraft.util.Mth.sin(yawRad), 0, net.minecraft.util.Mth.cos(yawRad));
+        Vec3 left = new Vec3(forward.z, 0, -forward.x);
+        Vec3 pos = suit.position().add(forward.scale(4.5)).add(left.scale(2.5)).add(0, 0.6, 0);
+        Vec3 look = suit.position().add(0, 1.7, 0).subtract(pos);
+        float camYaw = (float) (net.minecraft.util.Mth.atan2(-look.x, look.z) * net.minecraft.util.Mth.RAD_TO_DEG);
+        float camPitch = (float) (-net.minecraft.util.Mth.atan2(look.y, look.horizontalDistance()) * net.minecraft.util.Mth.RAD_TO_DEG);
+        sideCamera = new ArmorStand(EntityType.ARMOR_STAND, mc.level);
+        sideCamera.setPos(pos);
+        sideCamera.xo = pos.x; sideCamera.yo = pos.y; sideCamera.zo = pos.z;
+        sideCamera.setYRot(camYaw); sideCamera.yRotO = camYaw;
+        sideCamera.setYHeadRot(camYaw); sideCamera.yHeadRotO = camYaw;
+        sideCamera.setXRot(camPitch); sideCamera.xRotO = camPitch;
+        mc.setCameraEntity(sideCamera);
     }
 
     /** A client-only camera 8 blocks to the side of the suit, looking at it. */

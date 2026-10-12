@@ -1281,31 +1281,12 @@
      ]
     },
     {
-     "name": "grenade",
+     "name": "left_hand",
      "parent": "left_forearm",
      "pivot": [
-      12.5,
-      15.625,
-      0
-     ],
-     "cubes": [
-      {
-       "origin": [
-        11,
-        16.125,
-        -1
-       ],
-       "size": [
-        2,
-        2,
-        2
-       ],
-       "inflate": 0.4,
-       "uv": [
-        74,
-        96
-       ]
-      }
+      12,
+      14.5,
+      -0.5
      ]
     },
     {

@@ -22,6 +22,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
     public PowerArmorRenderer(EntityRendererProvider.Context context) {
         super(context, new PowerArmorModel());
         this.shadowRadius = 0.9F;
+        this.addRenderLayer(new HeldItemLayer(this)); // the pilot's selected item in the left hand
     }
 
     @Override
@@ -50,7 +51,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
     }
 
     /** True when we're drawing the suit the local player sits in, from inside (first person). */
-    private static boolean isCockpitView(PowerArmorEntity suit) {
+    static boolean isCockpitView(PowerArmorEntity suit) {
         Minecraft mc = Minecraft.getInstance();
         return suit.isPilotedBy(mc.player) && mc.options.getCameraType().isFirstPerson();
     }

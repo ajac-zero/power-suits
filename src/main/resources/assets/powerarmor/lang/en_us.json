@@ -26,5 +26,6 @@
   "entity.powerarmor.plasma_bolt": "Plasma Bolt",
   "death.attack.powerarmor.plasma": "%1$s was vaporized",
   "death.attack.powerarmor.plasma.player": "%1$s was vaporized by %2$s",
-  "death.attack.powerarmor.plasma.item": "%1$s was vaporized by %2$s using %3$s"
+  "death.attack.powerarmor.plasma.item": "%1$s was vaporized by %2$s using %3$s",
+  "message.powerarmor.hand_unpowered": "No power: the suit's hand won't move."
 }

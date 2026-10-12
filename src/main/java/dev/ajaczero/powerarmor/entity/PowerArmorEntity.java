@@ -175,6 +175,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private int toolCooldown;
     /** Server: how many times the socket tool has been used (tests and dev logs). */
     private int toolUses;
+    /** Client: the pilot's arm was mid-swing last tick (to catch the start of each swing). */
+    private boolean pilotWasSwinging;
     /** Client: 0..1, how much the torso follows the pilot's view (eases out on shutdown, in after startup). */
     private float aimBlend;
 
@@ -197,6 +199,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final RawAnimation POWERED_OFF = RawAnimation.begin().thenPlayAndHold("animation.power_armor.powered_off");
     private static final RawAnimation STARTUP = RawAnimation.begin().thenPlay("animation.power_armor.startup");
     private static final RawAnimation PLASMA_SHOT = RawAnimation.begin().thenPlay("animation.power_armor.plasma_shot");
+    // Left hand (a_hand.js): carry pose while the pilot holds something, quick reach on every use.
+    private static final RawAnimation HOLD_ITEM = RawAnimation.begin().thenLoop("animation.power_armor.hold_item");
+    private static final RawAnimation USE_ITEM = RawAnimation.begin().thenPlay("animation.power_armor.use_item");
 
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
 
@@ -955,6 +960,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             float aimTarget = this.isVehicle() && this.canOperate() ? 1F : 0F;
             this.aimBlend += (aimTarget - this.aimBlend) * 0.2F;
             ExhaustSmoke.tick(this);
+            this.tickLeftHandSwing();
             // Measure how fast we actually move (blocks/s) and smooth it to avoid flicker
             // between idle and walk.
             double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
@@ -1047,6 +1053,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         controllers.add(new AnimationController<>(this, "action", 2, state -> PlayState.STOP)
                 .triggerableAnim("hit", HIT)
                 .triggerableAnim("plasma_shot", PLASMA_SHOT));
+        // Controller 3: the left hand. Added last, so while it plays it owns the left arm (the gait's arm
+        // swing pauses, like a person carrying a torch). Stops when there's nothing to hold or no power.
+        controllers.add(new AnimationController<>(this, "left_hand", 4, this::leftHandAnimation)
+                .triggerableAnim("use_item", USE_ITEM));
     }
 
     private PlayState movementAnimation(AnimationState<PowerArmorEntity> state) {
@@ -1084,6 +1094,25 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             return state.setAndContinue(this.isRunning() ? RUN : WALK);
         }
         return state.setAndContinue(IDLE);
+    }
+
+    private PlayState leftHandAnimation(AnimationState<PowerArmorEntity> state) {
+        if (this.isDeadOrDying() || !this.canOperate() || !(this.getControllingPassenger() instanceof Player pilot)
+                || pilot.getMainHandItem().isEmpty()) {
+            return PlayState.STOP;
+        }
+        return state.setAndContinue(HOLD_ITEM);
+    }
+
+    /** Client: the pilot swung their hand (placed a block, used an item on something): reach with the suit's hand.
+     *  Swings of other players arrive as packets, so everyone sees it. */
+    private void tickLeftHandSwing() {
+        boolean swinging = this.getControllingPassenger() instanceof Player pilot && pilot.swinging
+                && pilot.swingingArm == InteractionHand.MAIN_HAND;
+        if (swinging && !this.pilotWasSwinging && this.canOperate()) {
+            this.triggerAnim("left_hand", "use_item");
+        }
+        this.pilotWasSwinging = swinging;
     }
 
     /** Fixed rate per gait. GeckoLib scales the whole elapsed time by this, so changing it

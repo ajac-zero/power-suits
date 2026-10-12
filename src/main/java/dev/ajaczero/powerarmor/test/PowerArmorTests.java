@@ -484,6 +484,69 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
+    // =========================================================================================
+    // Left hand (Phase 3)
+    // =========================================================================================
+
+    /** Decided: left click is the socket tool's; the hand never attacks, even holding a sword. */
+    @GameTest(template = PAD)
+    public static void pilotCannotPunchEvenWithASword(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player pilot = boardedPilot(helper, suit);
+        pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
+        Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 6));
+        pilot.attack(pig);
+        helper.assertTrue(pig.getHealth() == pig.getMaxHealth(), "the pilot must not hit mobs, pig health " + pig.getHealth());
+        helper.succeed();
+    }
+
+    @GameTest(template = PAD)
+    public static void pilotCannotMine(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player pilot = boardedPilot(helper, suit);
+        BlockPos block = helper.absolutePos(new BlockPos(4, 1, 6));
+        var event = net.neoforged.neoforge.common.CommonHooks.onLeftClickBlock(pilot, block, Direction.UP,
+                net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK);
+        helper.assertTrue(event.isCanceled(), "starting to mine from inside the suit must be cancelled");
+        helper.succeed();
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void handNeedsPower(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY); // no fuel: powered down
+        Player pilot = boardedPilot(helper, suit);
+        BlockPos block = helper.absolutePos(new BlockPos(4, 1, 6));
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(block).add(0, 0.5, 0), Direction.UP, block, false);
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(net.neoforged.neoforge.common.CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, block, hit).isCanceled(),
+                    "a powered-down suit's hand can't use things");
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL));
+        });
+        helper.runAfterDelay(35, () -> { // fuel -> startup (1.4 s) -> hand works
+            helper.assertTrue(suit.canOperate(), "suit should be running again");
+            helper.assertTrue(!net.neoforged.neoforge.common.CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, block, hit).isCanceled(),
+                    "a running suit's hand uses items normally");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void suitArmReachesFurther(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        double blocks = player.blockInteractionRange(), entities = player.entityInteractionRange();
+        player.moveTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        suit.interact(player, InteractionHand.MAIN_HAND);
+        helper.assertTrue(player.getVehicle() == suit, "should be inside");
+        helper.assertTrue(Math.abs(player.blockInteractionRange() - blocks - dev.ajaczero.powerarmor.PilotHands.EXTRA_REACH) < 1e-6,
+                "block reach should grow by 1.5, got " + player.blockInteractionRange());
+        helper.assertTrue(Math.abs(player.entityInteractionRange() - entities - dev.ajaczero.powerarmor.PilotHands.EXTRA_REACH) < 1e-6,
+                "entity reach should grow by 1.5");
+        player.stopRiding();
+        helper.assertTrue(player.blockInteractionRange() == blocks && player.entityInteractionRange() == entities, "climbing out removes the bonus");
+        helper.succeed();
+    }
+
     private static ItemStack packedSuit(Player player) {
         return player.getInventory().items.stream().filter(s -> s.is(ModItems.POWER_ARMOR.get())).findFirst().orElse(ItemStack.EMPTY);
     }
