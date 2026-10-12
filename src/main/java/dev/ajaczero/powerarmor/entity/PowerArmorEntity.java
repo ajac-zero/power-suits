@@ -76,8 +76,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final float RUN_HIP_MEAN = -4.0F;
 
     // ---- Terrain ----------------------------------------------------------------------------
-    /** Walking off a ledge up to this high keeps the suit planted (steps down instead of falling). */
-    private static final double STEP_DOWN = 1.1;
+    /** Walking off a ledge up to this high keeps the suit planted (steps down instead of falling).
+     *  2 blocks: a 3-block-tall mech steps down mountain terraces; the step easing smooths it. */
+    private static final double STEP_DOWN = 2.1;
     /** Each tick the eased step offset keeps this fraction (0.65 -> ~6 ticks to settle). */
     private static final float STEP_EASE = 0.65F;
 
@@ -96,7 +97,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     // ---- Airborne tuning (client-side animation only) ----------------------------------------
     /** Ticks in the air before switching to the fall pose (stepping off one block shouldn't). */
-    private static final int FALL_POSE_AFTER_TICKS = 4;
+    private static final int FALL_POSE_AFTER_TICKS = 6;
     /** Ticks in the air needed to play the heavy landing (a jump, or a drop of ~2+ blocks). */
     private static final int LAND_AFTER_TICKS = 10;
     /** Length of the land animation (0.6 s), and how much of it to keep when walking away. */
@@ -612,7 +613,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.stepOffsetO -= (float) dy;
         }
         this.wasOnGroundForSteps = this.onGround();
-        this.stepOffset = Mth.clamp(this.stepOffset * STEP_EASE, -1.5F, 1.5F);
+        this.stepOffset = Mth.clamp(this.stepOffset * STEP_EASE, -2.5F, 2.5F);
         if (Math.abs(this.stepOffset) < 0.01F) {
             this.stepOffset = 0;
         }
