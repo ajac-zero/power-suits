@@ -10,7 +10,7 @@ Fallout / Titanfall style. Model and animations come from `~/Developer/Models/st
 | Get the suit | Creative tab *Tools & Utilities*, or craft it (iron blocks, iron helmet/chestplate/boots, pistons) |
 | Deploy | Right-click the ground with the item (needs a 3-block-tall space) |
 | Climb in | Right-click the suit |
-| Walk / run | WASD / sprint (double-tap W or Ctrl) |
+| Walk / run | WASD (2.35 blocks/s) / sprint (6.35 blocks/s; double-tap W or Ctrl) |
 | Jump | Hold Space to charge (horse jump bar), release |
 | Climb out | Shift |
 | Pack it up | Shift + right-click an empty suit (keeps its damage) |
@@ -61,6 +61,9 @@ src/main/resources/
 ## Notes
 
 - Animation playback rates are tied to movement speed so the feet don't slide. The authored
-  ground speeds were measured in Blockbench: walk 1.21, run 3.35, sneak 0.83 blocks/s.
+  ground speeds were measured in Blockbench: walk 2.35, run 6.36, sneak 0.83 blocks/s.
   If you change `WALK_SPEED` / `SPRINT_MULTIPLIER`, the rates follow automatically.
+- Airborne: `jump` (push-off) flows into the `fall` loop; `land` plays after ~0.5 s in the air.
+- First person hides the suit's head, torso and hip shell (cockpit view: arms, pads, cannon stay).
+- Animation sources (procedural specs) live in `~/Developer/Models/starcraft_marine_anim/`.
 - Unused animations so far: attack, throw, stim, electrified, idle_fidget, sneakwalk.

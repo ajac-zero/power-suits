@@ -46,16 +46,27 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public static final int MAX_HEALTH = 100;
 
     // ---- Movement tuning -----------------------------------------------------------------
-    // Attribute speed -> blocks per second on flat ground is about x43 for ridden entities.
-    private static final double WALK_SPEED = 0.036;      // ~1.55 blocks/s
-    private static final float SPRINT_MULTIPLIER = 2.6F; // ~4.0 blocks/s
+    // Attribute speed -> blocks per second on flat ground is about x42.3 for ridden entities
+    // (0.98 input x friction 0.546 terminal velocity x 20 ticks).
+    private static final double BLOCKS_PER_SECOND_PER_SPEED = 42.3;
+    private static final double WALK_SPEED = 0.0556;     // ~2.35 blocks/s (a player walks at 4.3)
+    private static final float SPRINT_MULTIPLIER = 2.7F; // ~6.35 blocks/s (a player sprints at 5.6)
 
     // The ground speed each Blockbench animation was authored for (blocks/s, measured from the
     // planted foot). Playing them at movementSpeed / authoredSpeed keeps the feet from sliding.
-    private static final double WALK_ANIM_AUTHORED = 1.21;
-    private static final double RUN_ANIM_AUTHORED = 3.35;
-    private static final double WALK_ANIM_RATE = WALK_SPEED * 43.2 / WALK_ANIM_AUTHORED;
-    private static final double RUN_ANIM_RATE = WALK_SPEED * SPRINT_MULTIPLIER * 43.2 / RUN_ANIM_AUTHORED;
+    private static final double WALK_ANIM_AUTHORED = 2.35;
+    private static final double RUN_ANIM_AUTHORED = 6.36;
+    private static final double WALK_ANIM_RATE = WALK_SPEED * BLOCKS_PER_SECOND_PER_SPEED / WALK_ANIM_AUTHORED;
+    private static final double RUN_ANIM_RATE = WALK_SPEED * SPRINT_MULTIPLIER * BLOCKS_PER_SECOND_PER_SPEED / RUN_ANIM_AUTHORED;
+
+    // ---- Airborne tuning (client-side animation only) ----------------------------------------
+    /** Ticks in the air before switching to the fall pose (stepping off one block shouldn't). */
+    private static final int FALL_POSE_AFTER_TICKS = 4;
+    /** Ticks in the air needed to play the heavy landing (a jump, or a drop of ~2+ blocks). */
+    private static final int LAND_AFTER_TICKS = 10;
+    /** Length of the land animation (0.6 s), and how much of it to keep when walking away. */
+    private static final int LAND_TICKS = 12;
+    private static final int LAND_TICKS_WHILE_MOVING = 5;
 
     /** Ticks to stay around after dying so the death animation (2.68 s) can finish. */
     private static final int DEATH_TICKS = 60;
@@ -66,6 +77,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_armor.run");
     private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.power_armor.death");
     private static final RawAnimation HIT = RawAnimation.begin().thenPlay("animation.power_armor.hit");
+    // jump plays once (push-off + tuck) and flows straight into the airborne loop
+    private static final RawAnimation JUMP = RawAnimation.begin().thenPlay("animation.power_armor.jump").thenLoop("animation.power_armor.fall");
+    private static final RawAnimation FALL = RawAnimation.begin().thenLoop("animation.power_armor.fall");
+    private static final RawAnimation LAND = RawAnimation.begin().thenPlay("animation.power_armor.land");
 
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
 
@@ -73,6 +88,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private float pendingJump;
     /** Client only: smoothed horizontal speed in blocks per second, used to pick walk/run/idle. */
     private double visualSpeed;
+    /** Client only: airborne bookkeeping for the jump / fall / land animations. */
+    private int airTicks;
+    private boolean jumped;
+    private int landTicks;
 
     public PowerArmorEntity(EntityType<? extends PowerArmorEntity> type, Level level) {
         super(type, level);
@@ -314,6 +333,27 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
             double speed = Math.sqrt(dx * dx + dz * dz) * 20.0;
             this.visualSpeed += (speed - this.visualSpeed) * 0.4;
+            tickAirborneAnimationState();
+        }
+    }
+
+    private void tickAirborneAnimationState() {
+        if (this.landTicks > 0) {
+            this.landTicks--;
+        }
+        if (!this.onGround()) {
+            if (this.airTicks == 0) {
+                // Just left the ground. Rising fast means a jump (stepping up a block keeps us on the
+                // ground, so it never gets here).
+                this.jumped = this.getY() - this.yo > 0.15;
+            }
+            this.airTicks++;
+        } else {
+            if (this.airTicks >= LAND_AFTER_TICKS) {
+                this.landTicks = LAND_TICKS;
+            }
+            this.airTicks = 0;
+            this.jumped = false;
         }
     }
 
@@ -343,6 +383,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (!this.isVehicle()) {
             return PlayState.STOP; // empty suit: powered down, frozen in its rest pose
         }
+        if (this.jumped) {
+            return state.setAndContinue(JUMP);
+        }
+        if (this.airTicks >= FALL_POSE_AFTER_TICKS) {
+            return state.setAndContinue(FALL);
+        }
+        boolean landing = this.landTicks > 0 && !(this.isWalking() && this.landTicks <= LAND_TICKS - LAND_TICKS_WHILE_MOVING);
+        if (landing) {
+            return state.setAndContinue(LAND);
+        }
         if (this.isWalking()) {
             return state.setAndContinue(this.isRunning() ? RUN : WALK);
         }
@@ -352,7 +402,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Fixed rate per gait. GeckoLib scales the whole elapsed time by this, so changing it
      *  smoothly mid-loop would make the animation jump; constant values avoid that. */
     private double movementAnimationRate() {
-        if (this.isDeadOrDying() || !this.isVehicle() || !this.isWalking()) {
+        if (this.isDeadOrDying() || !this.isVehicle() || !this.isWalking() || this.jumped
+                || this.airTicks >= FALL_POSE_AFTER_TICKS || this.landTicks > 0) {
             return 1.0;
         }
         return this.isRunning() ? RUN_ANIM_RATE : WALK_ANIM_RATE;
