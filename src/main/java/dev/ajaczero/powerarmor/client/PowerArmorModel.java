@@ -38,8 +38,10 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
         if (root != null) {
             suit.setHipHeight(root.getPosY()); // the gait's hip bob, used for the cockpit camera bob
         }
-        float yaw = Mth.clamp(data.netHeadYaw(), -90F, 90F);   // look yaw relative to the legs
-        float pitch = data.headPitch();                         // + = looking down
+        // aimBlend fades the aiming out when the suit powers down and back in after it boots up.
+        float aim = suit.getAimBlend();
+        float yaw = Mth.clamp(data.netHeadYaw(), -90F, 90F) * aim;   // look yaw relative to the legs
+        float pitch = data.headPitch() * aim;                         // + = looking down
         GeoBone torso = getAnimationProcessor().getBone("torso");
         GeoBone head = getAnimationProcessor().getBone("head");
         if (torso != null) {

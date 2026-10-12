@@ -1,7 +1,12 @@
 package dev.ajaczero.powerarmor.entity;
 
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import dev.ajaczero.powerarmor.item.SuitLoadout;
+import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
@@ -127,6 +132,45 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final EntityDataAccessor<Integer> JUMP_COUNTER =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
 
+    // ---- Fuel (works like a furnace, see SuitFuel) ---------------------------------------------
+    public static final int FUEL_SLOT = 0, SOCKET_SLOT = 1;
+    /** Energy burnt per tick while piloted. Walking = 1, so SuitFuel values read as ticks of walking. */
+    private static final float DRAIN_IDLE = 0.25F, DRAIN_MOVING = 1.0F, DRAIN_SPRINT = 2.0F;
+    /** Extra energy for each jump (the legs' pistons). */
+    private static final int JUMP_ENERGY = 20;
+    /** Below this much energy left (30 s of walking) the suit warns: dark sputtering smoke, flashing gauge. */
+    public static final int LOW_FUEL = 600;
+    /** Length of the startup animation (1.4 s): the suit can't move until it has stood up. */
+    private static final int STARTUP_TICKS = 28;
+
+    /** True while the engine has energy. Movement, jumping and (later) tools need it. */
+    private static final EntityDataAccessor<Boolean> POWERED =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Energy left in the item that is burning now, and what that item started with (for the gauge). */
+    private static final EntityDataAccessor<Integer> BURN_LEFT =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> BURN_TOTAL =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
+    /** Copies of the two slots, so clients can show the fuel left and (Phase 2) draw the socket tool. */
+    private static final EntityDataAccessor<ItemStack> FUEL_ITEM =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
+    private static final EntityDataAccessor<ItemStack> SOCKET_ITEM =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
+
+    /** The suit's own two slots: fuel and the right-arm socket. Real contents only exist on the server. */
+    private final SimpleContainer inventory = new SimpleContainer(2);
+    /** Server: energy left in the burning item (fractional, idle drains 0.25 per tick). */
+    private float burnLeft;
+    private int burnTotal;
+    /** Both sides: power transitions seen, for animations, sounds and smoke. */
+    private boolean seenPower;
+    private boolean lastPowered;
+    /** The suit was already off when we first saw it: hold the slumped pose instead of playing the slump. */
+    private boolean wasOffWhenLoaded;
+    private int startupTicks;
+    /** Client: 0..1, how much the torso follows the pilot's view (eases out on shutdown, in after startup). */
+    private float aimBlend;
+
     /** Ticks to stay around after dying so the death animation (2.68 s) can finish. */
     private static final int DEATH_TICKS = 60;
 
@@ -141,6 +185,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final RawAnimation FALL = RawAnimation.begin().thenLoop("animation.power_armor.fall");
     private static final RawAnimation LAND = RawAnimation.begin().thenPlay("animation.power_armor.land");
     private static final RawAnimation JUMP_CHARGE = RawAnimation.begin().thenPlayAndHold("animation.power_armor.jump_charge");
+    // Out of fuel: slump and hold. powered_off is the last frame of shutdown, for suits that were already off.
+    private static final RawAnimation SHUTDOWN = RawAnimation.begin().thenPlayAndHold("animation.power_armor.shutdown");
+    private static final RawAnimation POWERED_OFF = RawAnimation.begin().thenPlayAndHold("animation.power_armor.powered_off");
+    private static final RawAnimation STARTUP = RawAnimation.begin().thenPlay("animation.power_armor.startup");
 
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
 
@@ -167,12 +215,19 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     public PowerArmorEntity(EntityType<? extends PowerArmorEntity> type, Level level) {
         super(type, level);
+        // Whenever the slots change on the server, copy them into the synced data for clients.
+        this.inventory.addListener(container -> this.syncSlots());
     }
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(JUMP_COUNTER, 0);
+        builder.define(POWERED, false);
+        builder.define(BURN_LEFT, 0);
+        builder.define(BURN_TOTAL, 0);
+        builder.define(FUEL_ITEM, ItemStack.EMPTY);
+        builder.define(SOCKET_ITEM, ItemStack.EMPTY);
     }
 
     /** Base stats. The single source of truth: also re-applied to suits loaded from old saves. */
@@ -204,6 +259,224 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 instance.setBaseValue(value);
             }
         });
+        this.inventory.clearContent();
+        ContainerHelper.loadAllItems(tag.getCompound("Inventory"), this.inventory.getItems(), this.registryAccess());
+        this.burnLeft = tag.getFloat("BurnLeft");
+        this.burnTotal = tag.getInt("BurnTotal");
+        this.syncSlots();
+        this.syncBurn();
+        this.entityData.set(POWERED, this.hasEnergy());
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        // Slot numbers are saved with each item, so an empty fuel slot doesn't shift the socket tool into it.
+        tag.put("Inventory", ContainerHelper.saveAllItems(new CompoundTag(), this.inventory.getItems(), this.registryAccess()));
+        tag.putFloat("BurnLeft", this.burnLeft);
+        tag.putInt("BurnTotal", this.burnTotal);
+    }
+
+    // =========================================================================================
+    // Fuel, power, inventory
+    // =========================================================================================
+
+    /** Server: one tick of the engine. Only a piloted suit burns fuel; a parked one is switched off. */
+    private void tickFuel() {
+        Player pilot = this.getControllingPassenger() instanceof Player p ? p : null;
+        if (pilot != null) {
+            if (this.burnLeft <= 0) {
+                this.igniteNextItem();
+            }
+            if (this.burnLeft > 0) {
+                this.burnLeft = Math.max(0, this.burnLeft - drainPerTick(pilot));
+                if (this.burnLeft <= 0) {
+                    this.igniteNextItem(); // hand over to the next item without a gap, like a furnace
+                }
+            }
+        }
+        this.setPowered(this.hasEnergy());
+        this.syncBurn();
+    }
+
+    private void syncBurn() {
+        this.entityData.set(BURN_LEFT, Mth.ceil(this.burnLeft));
+        this.entityData.set(BURN_TOTAL, this.burnTotal);
+    }
+
+    /** Load on the engine. The server learns the pilot's WASD from the input packet vanilla sends for
+     *  every passenger (that's how a boat knows you're paddling). */
+    private static float drainPerTick(Player pilot) {
+        boolean moving = pilot.zza != 0 || pilot.xxa != 0;
+        if (!moving) {
+            return DRAIN_IDLE;
+        }
+        return pilot.isSprinting() ? DRAIN_SPRINT : DRAIN_MOVING;
+    }
+
+    /** Takes one item from the fuel slot and starts burning it. Lava leaves its bucket behind. */
+    private void igniteNextItem() {
+        ItemStack stack = this.inventory.getItem(FUEL_SLOT);
+        int energy = SuitFuel.energyOf(stack);
+        if (energy <= 0) {
+            return;
+        }
+        ItemStack remainder = stack.getCraftingRemainingItem();
+        stack.shrink(1);
+        if (stack.isEmpty()) {
+            this.inventory.setItem(FUEL_SLOT, remainder);
+        } else {
+            this.inventory.setChanged();
+            if (!remainder.isEmpty()) {
+                this.spawnAtLocation(remainder);
+            }
+        }
+        this.burnLeft += energy;
+        this.burnTotal = energy;
+    }
+
+    /** Energy available right now: the burning item, or an item waiting in the slot. */
+    private boolean hasEnergy() {
+        return this.burnLeft > 0 || SuitFuel.isFuel(this.inventory.getItem(FUEL_SLOT));
+    }
+
+    private void setPowered(boolean powered) {
+        if (powered == this.entityData.get(POWERED)) {
+            return;
+        }
+        this.entityData.set(POWERED, powered);
+        if (powered) {
+            this.playSound(SoundEvents.BEACON_ACTIVATE, 1.0F, 1.4F);
+            this.playSound(SoundEvents.PISTON_EXTEND, 0.8F, 0.5F);
+        } else {
+            this.playSound(SoundEvents.BEACON_DEACTIVATE, 1.0F, 0.6F);
+            this.playSound(SoundEvents.IRON_GOLEM_DAMAGE, 0.6F, 0.5F);
+            if (this.getControllingPassenger() instanceof Player pilot) {
+                pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.out_of_fuel"), true);
+            }
+        }
+    }
+
+    private void syncSlots() {
+        if (!this.level().isClientSide()) {
+            this.entityData.set(FUEL_ITEM, this.inventory.getItem(FUEL_SLOT).copy());
+            this.entityData.set(SOCKET_ITEM, this.inventory.getItem(SOCKET_SLOT).copy());
+        }
+    }
+
+    /** Both sides: the engine has energy (synced from the server). */
+    public boolean isPowered() {
+        return this.entityData.get(POWERED);
+    }
+
+    /** Powered and finished standing up: allowed to move, jump and use tools. */
+    public boolean canOperate() {
+        return this.isPowered() && this.startupTicks == 0;
+    }
+
+    /** Both sides: energy in the burning item (rounded up). */
+    public int getBurnLeft() {
+        return this.entityData.get(BURN_LEFT);
+    }
+
+    public int getBurnTotal() {
+        return this.entityData.get(BURN_TOTAL);
+    }
+
+    /** Both sides: the fuel slot's contents (a synced copy on clients). */
+    public ItemStack getFuelStack() {
+        return this.entityData.get(FUEL_ITEM);
+    }
+
+    public ItemStack getSocketStack() {
+        return this.entityData.get(SOCKET_ITEM);
+    }
+
+    /** Both sides: all energy on board, burning item + everything in the fuel slot. */
+    public int getTotalEnergy() {
+        ItemStack fuel = this.getFuelStack();
+        return this.getBurnLeft() + fuel.getCount() * SuitFuel.energyOf(fuel);
+    }
+
+    public boolean isLowOnFuel() {
+        return this.getTotalEnergy() < LOW_FUEL;
+    }
+
+    /** Server: the real slots (used by the menu and tests). */
+    public SimpleContainer getInventory() {
+        return this.inventory;
+    }
+
+    /** Server/tests: set the burning item's energy directly. */
+    public void setBurn(float left, int total) {
+        this.burnLeft = left;
+        this.burnTotal = total;
+        this.syncBurn();
+    }
+
+    public float getBurnLeftExact() {
+        return this.burnLeft;
+    }
+
+    /** What a packed suit item keeps: both slots and the half-burnt item. */
+    public SuitLoadout getLoadout() {
+        return new SuitLoadout(this.inventory.getItem(FUEL_SLOT).copy(), this.inventory.getItem(SOCKET_SLOT).copy(),
+                Mth.ceil(this.burnLeft), this.burnTotal);
+    }
+
+    public void applyLoadout(SuitLoadout loadout) {
+        this.inventory.setItem(FUEL_SLOT, loadout.fuel().copy());
+        this.inventory.setItem(SOCKET_SLOT, loadout.socket().copy());
+        this.burnLeft = loadout.burnLeft();
+        this.burnTotal = loadout.burnTotal();
+        this.syncBurn();
+        this.entityData.set(POWERED, this.hasEnergy());
+    }
+
+    /** Server: turn this parked suit back into an item (with its fuel and tool) for the player. */
+    public void packUp(Player player) {
+        ItemStack stack = PowerArmorItem.fromSuit(this);
+        this.inventory.clearContent(); // they're inside the item now; don't drop them too
+        if (!player.addItem(stack)) {
+            this.spawnAtLocation(stack);
+        }
+        this.playSound(SoundEvents.ARMOR_EQUIP_IRON.value(), 1.0F, 0.8F);
+        this.discard();
+    }
+
+    /** Both sides: watch the synced power flag change, to start the slump / stand-up animations. */
+    private void tickPowerTransitions() {
+        boolean powered = this.isPowered();
+        if (!this.seenPower) {
+            // First tick we know about this suit (just spawned, loaded, or came into view).
+            this.seenPower = true;
+            this.lastPowered = powered;
+            this.wasOffWhenLoaded = !powered;
+        } else if (powered != this.lastPowered) {
+            this.lastPowered = powered;
+            this.wasOffWhenLoaded = false;
+            this.startupTicks = powered ? STARTUP_TICKS : 0;
+            if (powered && this.level().isClientSide()) {
+                ExhaustSmoke.startupBurst(this);
+            }
+        }
+        if (this.startupTicks > 0) {
+            this.startupTicks--;
+        }
+        if (!this.canOperate()) {
+            this.pendingJump = 0;
+        }
+    }
+
+    /** Client: 0..1 weight of the torso following the pilot's view. */
+    public float getAimBlend() {
+        return this.aimBlend;
+    }
+
+    /** Sneak + right-click on a parked suit: open its inventory. Server only. */
+    private void openMenu(Player player) {
+        player.openMenu(new SimpleMenuProvider((id, playerInventory, p) -> new PowerArmorMenu(id, playerInventory, this.inventory, this),
+                this.getDisplayName()), buf -> buf.writeVarInt(this.getId()));
     }
 
     // =========================================================================================
@@ -217,13 +490,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         if (!this.level().isClientSide()) {
             if (player.isSecondaryUseActive()) {
-                // Sneak + right-click: pack the empty suit back into an item (keeps its damage).
-                ItemStack stack = PowerArmorItem.fromSuit(this);
-                if (!player.addItem(stack)) {
-                    this.spawnAtLocation(stack);
-                }
-                this.playSound(SoundEvents.ARMOR_EQUIP_IRON.value(), 1.0F, 0.8F);
-                this.discard();
+                // Sneak + right-click: open the suit's menu (fuel, socket, pack up), like a horse's inventory.
+                this.openMenu(player);
             } else {
                 player.startRiding(this);
                 this.playSound(SoundEvents.IRON_DOOR_CLOSE, 1.0F, 0.7F);
@@ -279,6 +547,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     @Override
     protected Vec3 getRiddenInput(Player player, Vec3 travelVector) {
+        if (!this.canOperate()) {
+            return Vec3.ZERO; // out of fuel (or still booting): the legs don't move
+        }
         float strafe = player.xxa * 0.5F;  // A/D
         float forward = player.zza;        // W/S
         if (forward < 0) {
@@ -296,6 +567,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     @Override
     protected void tickRidden(Player player, Vec3 travelVector) {
         super.tickRidden(player, travelVector);
+        if (!this.canOperate()) {
+            return; // powered down: the torso stays put while the pilot looks around the cockpit
+        }
         // yRot/xRot/yHeadRot = where the pilot looks. WASD moves relative to yRot, and the model's
         // torso aims along it. yBodyRot (the legs) is handled separately in tickHeadTurn().
         this.setRot(player.getYRot(), player.getXRot());
@@ -477,7 +751,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     @Override
     public boolean canJump() {
-        return this.isAlive();
+        return this.isAlive() && this.canOperate();
     }
 
     /** No charging while airborne or while a launch is already pending. */
@@ -490,6 +764,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     @Override
     public void handleStartJump(int jumpPower) {
         this.entityData.set(JUMP_COUNTER, this.entityData.get(JUMP_COUNTER) + 1);
+        this.burnLeft = Math.max(0, this.burnLeft - JUMP_ENERGY);
     }
 
     /** Client: the local pilot's jump bar charge (0 = not charging). */
@@ -553,6 +828,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
         super.dropCustomDeathLoot(level, source, recentlyHit);
         this.spawnAtLocation(new ItemStack(Items.IRON_INGOT, 4 + this.random.nextInt(5)));
+        for (ItemStack stack : this.inventory.removeAllItems()) {
+            this.spawnAtLocation(stack); // the fuel and the socket tool survive the wreck
+        }
     }
 
     // A placed suit stays forever (mobs normally despawn when far from players).
@@ -592,7 +870,14 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     @Override
     public void tick() {
         super.tick();
+        if (!this.level().isClientSide() && this.isAlive()) {
+            this.tickFuel();
+        }
+        this.tickPowerTransitions();
         if (this.level().isClientSide()) {
+            float aimTarget = this.isVehicle() && this.canOperate() ? 1F : 0F;
+            this.aimBlend += (aimTarget - this.aimBlend) * 0.2F;
+            ExhaustSmoke.tick(this);
             // Measure how fast we actually move (blocks/s) and smooth it to avoid flicker
             // between idle and walk.
             double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
@@ -690,8 +975,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (this.isDeadOrDying()) {
             return state.setAndContinue(DEATH);
         }
+        if (!this.isPowered()) {
+            state.getController().transitionLength(4);
+            return state.setAndContinue(this.wasOffWhenLoaded ? POWERED_OFF : SHUTDOWN);
+        }
+        if (this.startupTicks > 0) {
+            state.getController().transitionLength(2);
+            return state.setAndContinue(STARTUP);
+        }
         if (!this.isVehicle()) {
-            return PlayState.STOP; // empty suit: powered down, frozen in its rest pose
+            return PlayState.STOP; // parked: engine idle, standing in its rest pose
         }
         // Jump states blend fast (the charge crouch ends exactly where the jump starts).
         boolean jumpState = this.jumpAnimTicks > 0 || this.jumped || (this.clientJumpCharge > 0 && this.onGround());
@@ -718,7 +1011,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Fixed rate per gait. GeckoLib scales the whole elapsed time by this, so changing it
      *  smoothly mid-loop would make the animation jump; constant values avoid that. */
     private double movementAnimationRate() {
-        if (this.isDeadOrDying() || !this.isVehicle() || this.jumped || this.jumpAnimTicks > 0
+        if (this.isDeadOrDying() || !this.isVehicle() || !this.canOperate() || this.jumped || this.jumpAnimTicks > 0
                 || this.airTicks >= FALL_POSE_AFTER_TICKS || this.landTicks > 0) {
             return 1.0;
         }

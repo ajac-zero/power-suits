@@ -1,0 +1,54 @@
+# Entity inventory, menu, screen, item data, HUD (NeoForge 21.1)
+
+Built for the Power Armor suit menu (fuel + tool socket, Pack up button) and fuel gauge. Files:
+`menu/PowerArmorMenu.java`, `client/PowerArmorScreen.java`, `client/FuelGauge.java`,
+`item/SuitLoadout.java`, `registry/ModMenus.java`, `registry/ModDataComponents.java`.
+
+## Entity inventory
+- `SimpleContainer inventory = new SimpleContainer(n)` field; `inventory.addListener(c -> sync())` in the
+  constructor to mirror slots into `EntityDataAccessor<ItemStack>` (`EntityDataSerializers.ITEM_STACK`) when
+  clients need them (gauge, rendering). Only the server's container is real.
+- Save with slot indices: `ContainerHelper.saveAllItems(new CompoundTag(), inventory.getItems(), registryAccess())`
+  / `loadAllItems(tag, inventory.getItems(), registryAccess())`. (`SimpleContainer.fromTag` loses indices.)
+- Refresh every synced copy wherever the server value changes (load, setters), not only in `tick()`.
+- Furnace-style consumption: `stack.getCraftingRemainingItem()` (lava bucket -> bucket), `stack.shrink(1)`,
+  then `setItem` / `setChanged()` so listeners fire.
+
+## Menu (logic, both sides)
+- Register: `DeferredRegister.create(Registries.MENU, MODID)` +
+  `IMenuTypeExtension.create((id, inv, buf) -> ...)` so the server can send extra data (the entity id).
+- Open on the server: `player.openMenu(new SimpleMenuProvider((id, inv, p) -> new MyMenu(id, inv, container, this), name),
+  buf -> buf.writeVarInt(getId()))`. Client factory: read the id, `level().getEntity(id)`, use a fresh
+  `SimpleContainer(n)` (slot contents arrive by vanilla sync).
+- `Slot` subclasses override `mayPlace` / `getMaxStackSize`. Write `quickMoveStack` explicitly (suit slots
+  -> player; player -> matching suit slot; inventory <-> hotbar).
+- `stillValid`: entity alive, not ridden, within 8 blocks.
+- **Buttons without custom packets**: screen calls `minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id)`,
+  the server runs `menu.clickMenuButton(player, id)`.
+
+## Screen (client)
+- `AbstractContainerScreen<M>`; register in `RegisterMenuScreensEvent` (`event.register(type, Screen::new)`).
+- Background: generate from a vanilla GUI with Pillow (`tools/make-gui.py` reads furnace.png from
+  `build/moddev/artifacts/*client-extra*.jar`). Vanilla sprites: `container/furnace/lit_progress` via
+  `blitSprite(id, 14, 14, 0, 14 - h, x, y + 14 - h, 14, h)`.
+- Live entity preview: `InventoryScreen.renderEntityInInventoryFollowsMouse(g, x1, y1, x2, y2, scale, 0, mx, my, entity)`
+  (scissors itself; scale 15 fits a 3-block mob in a 52 px box).
+- Read live numbers from the entity's synced data in `renderLabels` (coordinates are relative to the panel).
+
+## Item data component (1.21 replacement for item NBT)
+- `DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MODID)
+  .registerComponentType("loadout", b -> b.persistent(CODEC).networkSynchronized(STREAM_CODEC))`.
+- Record with `ItemStack.OPTIONAL_CODEC.optionalFieldOf("x", ItemStack.EMPTY)` and
+  `StreamCodec.composite(ItemStack.OPTIONAL_STREAM_CODEC, ...)`. Override `equals`/`hashCode` with
+  `ItemStack.matches` / `hashItemAndComponents` (ItemStack has no equals).
+
+## HUD layer
+- `RegisterGuiLayersEvent.registerAbove(VanillaGuiLayers.HOTBAR, id, (graphics, delta) -> ...)`; skip when
+  `options.hideGui` or not relevant. Hotbar right edge: `guiWidth()/2 + 91`. `renderItem` + `renderItemDecorations`
+  draw an item with its count. Local-only sounds: `SimpleSoundInstance.forUI(sound, pitch, volume)`.
+
+## Particles
+- Visual only: spawn on the client in the entity's tick (`level.addParticle`), from synced state. Put a
+  fixed model point into the world with the yaw the bone follows (`forward = (-sin yaw, 0, cos yaw)`);
+  symmetric pairs (two pipes) make GeckoLib's X mirroring irrelevant. `LARGE_SMOKE` is big: one every
+  other tick per source is already a thick trail.

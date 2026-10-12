@@ -2,6 +2,10 @@ package dev.ajaczero.powerarmor.test;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.SuitFuel;
+import dev.ajaczero.powerarmor.item.SuitLoadout;
+import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
+import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import java.util.List;
@@ -84,11 +88,10 @@ public final class PowerArmorTests {
         int expectedDamage = Math.round(suit.getMaxHealth() - suit.getHealth());
 
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.setShiftKeyDown(true); // sneak + right-click packs it up
-        suit.interact(player, InteractionHand.MAIN_HAND);
+        suit.packUp(player); // what the menu's Pack up button does
 
         helper.assertTrue(suit.isRemoved(), "suit entity should be gone");
-        ItemStack packed = player.getInventory().items.stream().filter(s -> s.is(ModItems.POWER_ARMOR.get())).findFirst().orElse(ItemStack.EMPTY);
+        ItemStack packed = packedSuit(player);
         helper.assertTrue(!packed.isEmpty(), "player should receive the suit item");
         helper.assertTrue(packed.getDamageValue() == expectedDamage, "item damage " + packed.getDamageValue() + " != " + expectedDamage);
         helper.succeed();
@@ -127,6 +130,7 @@ public final class PowerArmorTests {
     @GameTest(template = PAD, timeoutTicks = 120)
     public static void destroyedSuitEjectsPilotAndDropsScrap(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 3));
         Player pilot = boardedPilot(helper, suit);
         suit.hurt(helper.getLevel().damageSources().genericKill(), 1000.0F);
         helper.assertTrue(pilot.getVehicle() == null, "pilot should be thrown out when the suit dies");
@@ -134,6 +138,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(70, () -> {
             helper.assertTrue(suit.isRemoved(), "suit should be removed after the death animation");
             helper.assertItemEntityPresent(Items.IRON_INGOT);
+            helper.assertItemEntityPresent(Items.BLAZE_ROD); // the fuel survives the wreck
             helper.succeed();
         });
     }
@@ -174,6 +179,181 @@ public final class PowerArmorTests {
             helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "suit must not drown, health " + suit.getHealth());
             helper.succeed();
         });
+    }
+
+    // =========================================================================================
+    // Fuel (Phase 1)
+    // =========================================================================================
+
+    private static PowerArmorEntity fueledSuit(GameTestHelper helper, ItemStack fuel) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, fuel);
+        return suit;
+    }
+
+    @GameTest(template = PAD)
+    public static void fuelTiersCoalShortestBlazeRodLongest(GameTestHelper helper) {
+        int coal = SuitFuel.energyOf(new ItemStack(Items.COAL));
+        int lava = SuitFuel.energyOf(new ItemStack(Items.LAVA_BUCKET));
+        int blaze = SuitFuel.energyOf(new ItemStack(Items.BLAZE_ROD));
+        helper.assertTrue(coal > 0 && coal < lava && lava < blaze, "expected coal < lava < blaze rod, got " + coal + " " + lava + " " + blaze);
+        helper.assertTrue(SuitFuel.energyOf(new ItemStack(Items.CHARCOAL)) == coal, "charcoal should match coal");
+        helper.assertTrue(!SuitFuel.isFuel(new ItemStack(Items.OAK_PLANKS)), "planks are furnace fuel but not suit fuel");
+        helper.succeed();
+    }
+
+    /** Furnace-style: one item at a time is burnt; idle, walking and sprinting drain 0.25 / 1 / 2 per tick. */
+    @GameTest(template = PAD, timeoutTicks = 120)
+    public static void pilotedSuitBurnsOneItemAtATime(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 3));
+        Player pilot = boardedPilot(helper, suit);
+        helper.runAfterDelay(20, () -> {
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 2, "one coal should be burning, two waiting");
+            float idle = 1600 - suit.getBurnLeftExact();
+            helper.assertTrue(idle > 4 && idle < 6, "idle should burn ~0.25/tick (5 in 20 ticks), burnt " + idle);
+            float before = suit.getBurnLeftExact();
+            pilot.zza = 1; // holding W
+            helper.runAfterDelay(20, () -> {
+                float walk = before - suit.getBurnLeftExact();
+                helper.assertTrue(walk > 18 && walk < 22, "walking should burn ~1/tick (20), burnt " + walk);
+                float before2 = suit.getBurnLeftExact();
+                pilot.setSprinting(true);
+                helper.runAfterDelay(20, () -> {
+                    float sprint = before2 - suit.getBurnLeftExact();
+                    helper.assertTrue(sprint > 36 && sprint < 44, "sprinting should burn ~2/tick (40), burnt " + sprint);
+                    helper.assertTrue(suit.isPowered(), "suit should still be powered");
+                    helper.succeed();
+                });
+            });
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void lavaLeavesItsBucket(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.LAVA_BUCKET));
+        boardedPilot(helper, suit);
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.BUCKET), "an empty bucket should stay in the fuel slot");
+            helper.assertTrue(suit.getBurnLeftExact() > 3190, "lava should give 3200 energy, got " + suit.getBurnLeftExact());
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 60)
+    public static void emptyTankShutsDown(GameTestHelper helper) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        suit.setBurn(10, 1600); // half a second of walking left, nothing in the slot
+        Player pilot = boardedPilot(helper, suit);
+        pilot.zza = 1;
+        helper.runAfterDelay(2, () -> helper.assertTrue(suit.isPowered(), "should still run on the last bit of fuel"));
+        helper.runAfterDelay(15, () -> {
+            helper.assertTrue(!suit.isPowered(), "suit should power down when the fuel runs out");
+            helper.assertTrue(!suit.canOperate() && !suit.canJump(), "a powered-down suit can't move or jump");
+            pilot.stopRiding();
+            helper.assertTrue(pilot.getVehicle() == null, "the pilot can still climb out");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 80)
+    public static void parkedSuitDoesNotBurnAndRefuelRestarts(GameTestHelper helper) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(!suit.isPowered(), "a suit without fuel is off");
+            suit.setBurn(500, 1600);
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
+        });
+        helper.runAfterDelay(4, () -> helper.assertTrue(suit.isPowered(), "fuel should power it back on"));
+        helper.runAfterDelay(44, () -> {
+            helper.assertTrue(suit.getBurnLeftExact() == 500, "a parked suit must not burn fuel, left " + suit.getBurnLeftExact());
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 2, "no coal used while parked");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void saveAndLoadKeepFuelAndSocket(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.CHARCOAL, 5));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(Items.STICK)); // stand-in tool
+        suit.setBurn(123.5F, 1600);
+        CompoundTag saved = new CompoundTag();
+        suit.saveWithoutId(saved);
+
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel());
+        loaded.load(saved);
+        helper.assertTrue(loaded.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 5, "fuel slot should survive saving");
+        helper.assertTrue(loaded.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(Items.STICK), "socket should survive saving");
+        helper.assertTrue(loaded.getBurnLeftExact() == 123.5F && loaded.getBurnTotal() == 1600, "burning item should survive saving");
+        helper.assertTrue(loaded.isPowered(), "a loaded suit with fuel is powered");
+        helper.succeed();
+    }
+
+    @GameTest(template = PAD)
+    public static void packAndDeployKeepLoadout(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 7));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(Items.STICK));
+        suit.setBurn(900, 1600);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        suit.packUp(player);
+        ItemStack packed = packedSuit(player);
+        SuitLoadout loadout = packed.get(ModDataComponents.LOADOUT.get());
+        helper.assertTrue(loadout != null && loadout.fuel().getCount() == 7 && loadout.burnLeft() == 900, "item should carry the fuel, got " + loadout);
+        helper.assertTrue(helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                new AABB(helper.absolutePos(SUIT_POS)).inflate(4)).isEmpty(), "packing must not drop the fuel on the floor");
+
+        player.getInventory().removeItem(packed);
+        player.setItemInHand(InteractionHand.MAIN_HAND, packed);
+        useOnFloor(helper, player, packed, new BlockPos(4, 1, 4));
+        PowerArmorEntity deployed = suitsInTest(helper).stream().filter(s -> s != suit).findFirst().orElseThrow();
+        helper.assertTrue(deployed.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 7, "deployed suit should get its coal back");
+        helper.assertTrue(deployed.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(Items.STICK), "deployed suit should get its tool back");
+        helper.assertTrue(deployed.getBurnLeftExact() == 900, "deployed suit should keep its half-burnt coal");
+        helper.succeed();
+    }
+
+    @GameTest(template = PAD)
+    public static void sneakRightClickDoesNotClimbIn(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.moveTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
+        player.setShiftKeyDown(true);
+        InteractionResult result = suit.interact(player, InteractionHand.MAIN_HAND);
+        // (A mock player can't receive the open-screen packet; the autopilot run checks the real screen.)
+        helper.assertTrue(result.consumesAction(), "sneak + right-click should be handled by the suit");
+        helper.assertTrue(player.getVehicle() == null, "sneak + right-click must not climb in");
+        helper.assertTrue(!suit.isRemoved(), "sneak + right-click no longer packs the suit (the menu button does)");
+        helper.succeed();
+    }
+
+    @GameTest(template = PAD)
+    public static void menuSlotsAndPackButton(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.moveTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
+        PowerArmorMenu menu = new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit);
+        helper.assertTrue(menu.stillValid(player), "menu should be usable next to a parked suit");
+        helper.assertTrue(menu.getSlot(1).mayPlace(new ItemStack(Items.BLAZE_ROD)), "fuel slot takes blaze rods");
+        helper.assertTrue(!menu.getSlot(1).mayPlace(new ItemStack(Items.DIRT)), "fuel slot refuses dirt");
+        helper.assertTrue(!menu.getSlot(0).mayPlace(new ItemStack(Items.COAL)), "socket only takes power tools");
+        helper.assertTrue(menu.getSlot(1).getItem().getCount() == 4, "menu shows the suit's fuel");
+
+        // Shift-click coal from the player's inventory: it joins the coal in the fuel slot.
+        player.getInventory().setItem(9, new ItemStack(Items.COAL, 10));
+        menu.quickMoveStack(player, 2); // menu slot 2 = player inventory slot 9
+        helper.assertTrue(menu.getSlot(1).getItem().getCount() == 14, "shift-click should move coal into the fuel slot, got " + menu.getSlot(1).getItem());
+
+        Player pilot = boardedPilot(helper, suit);
+        helper.assertTrue(!menu.stillValid(player), "menu closes when someone climbs in");
+        pilot.stopRiding();
+
+        menu.clickMenuButton(player, PowerArmorMenu.BUTTON_PACK);
+        helper.assertTrue(suit.isRemoved(), "Pack up should remove the suit");
+        helper.assertTrue(!packedSuit(player).isEmpty(), "Pack up should give the item");
+        helper.succeed();
+    }
+
+    private static ItemStack packedSuit(Player player) {
+        return player.getInventory().items.stream().filter(s -> s.is(ModItems.POWER_ARMOR.get())).findFirst().orElse(ItemStack.EMPTY);
     }
 
     private static InteractionResult useOnFloor(GameTestHelper helper, Player player, ItemStack stack, BlockPos floor) {

@@ -1,8 +1,10 @@
 package dev.ajaczero.powerarmor;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
+import dev.ajaczero.powerarmor.registry.ModMenus;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -22,6 +24,8 @@ public class PowerArmor {
         // Registries: tell Minecraft our entity type and item exist.
         ModEntities.ENTITIES.register(modBus);
         ModItems.ITEMS.register(modBus);
+        ModDataComponents.COMPONENTS.register(modBus); // the fuel/tool data a packed suit item carries
+        ModMenus.MENUS.register(modBus);               // the suit's inventory screen
 
         // Every living entity needs a set of attributes (health, armor, speed...).
         modBus.addListener(PowerArmor::registerAttributes);

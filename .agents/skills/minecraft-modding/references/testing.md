@@ -22,6 +22,13 @@ public final class MyTests {
   position, never `inflate(12)`.
 - `helper.makeMockPlayer(GameType.SURVIVAL)` is not in the world and does not tick: good for
   `interact`, `startRiding`, `hurt`, inventories; not for air/movement over time.
+- **Menus**: a mock `Player` silently ignores `openMenu`, and `helper.makeMockServerPlayerInLevel()` throws
+  `Payload neoforge:advanced_open_screen may not be sent to the client` (its fake connection never negotiated
+  NeoForge channels). Construct the menu directly (`new MyMenu(id, player.getInventory(), container, entity)`)
+  and test `mayPlace`, `quickMoveStack`, `stillValid`, `clickMenuButton`; check the real screen in the autopilot
+  (open it server-side with `entity.interact(serverPlayer, hand)` while `setShiftKeyDown(true)`, then screenshot).
+- Things that tick on the server (fuel burn, timers) work with a mock pilot: set `pilot.zza = 1` /
+  `setSprinting(true)` to simulate WASD (the server reads the same fields from the input packet).
 - Build scenes with `helper.setBlock`; use `helper.absolutePos/absoluteVec` for world coordinates.
 - Trace a mystery failure by sampling state every few ticks (`runAfterDelay` loop) and putting it in the
   assertion message; `getLastDamageSource()` forgets after 40 ticks.
@@ -72,3 +79,6 @@ Crop + upscale regions when the subject is small.
 | "Feels slow" = stale saved speed attribute (1.52 instead of 5 blocks/s) | terrain CSV + NBT inspection (`uv run --with nbtlib`) |
 | Camera popping a block per step; fall pose on every slope block; arm flicker on descents | terrain CSV (eye y, anim switches) |
 | Speed constant off by ~2% | autopilot speed log |
+| Synced burn numbers stale after loading a saved suit | GameTest (save -> load -> compare) |
+| Sprint exhaust plume too thick; HUD placement | autopilot screenshots (`ap_tp_run`, `ap_fuel_fp_hud`) |
+| Terrain drive "stuck": the saved player was already riding an old unfuelled suit | terrain report (`powered_off` in every leg) |

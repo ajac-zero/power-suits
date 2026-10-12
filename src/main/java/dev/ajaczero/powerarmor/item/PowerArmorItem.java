@@ -1,6 +1,8 @@
 package dev.ajaczero.powerarmor.item;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.SuitFuel;
+import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import java.util.List;
@@ -58,18 +60,23 @@ public class PowerArmorItem extends Item {
         if (stack.has(DataComponents.CUSTOM_NAME)) {
             suit.setCustomName(stack.getHoverName()); // name tags / anvil names carry over
         }
+        suit.applyLoadout(stack.getOrDefault(ModDataComponents.LOADOUT.get(), SuitLoadout.EMPTY)); // fuel + tool
         level.addFreshEntity(suit);
         level.playSound(null, suit.getX(), suit.getY(), suit.getZ(), SoundEvents.ANVIL_PLACE, SoundSource.NEUTRAL, 0.7F, 0.6F);
         stack.consume(1, player);
         return InteractionResult.CONSUME;
     }
 
-    /** Turns a deployed suit back into an item, keeping its damage and name. */
+    /** Turns a deployed suit back into an item, keeping its damage, name, fuel and socket tool. */
     public static ItemStack fromSuit(PowerArmorEntity suit) {
         ItemStack stack = new ItemStack(ModItems.POWER_ARMOR.get());
         stack.setDamageValue(Math.round(suit.getMaxHealth() - suit.getHealth()));
         if (suit.hasCustomName()) {
             stack.set(DataComponents.CUSTOM_NAME, suit.getCustomName());
+        }
+        SuitLoadout loadout = suit.getLoadout();
+        if (!loadout.equals(SuitLoadout.EMPTY)) {
+            stack.set(ModDataComponents.LOADOUT.get(), loadout);
         }
         return stack;
     }
@@ -82,5 +89,25 @@ public class PowerArmorItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.powerarmor.power_armor.tooltip").withStyle(ChatFormatting.GRAY));
+        SuitLoadout loadout = stack.get(ModDataComponents.LOADOUT.get());
+        if (loadout != null) {
+            int energy = loadout.burnLeft() + loadout.fuel().getCount() * SuitFuel.energyOf(loadout.fuel());
+            if (!loadout.fuel().isEmpty()) {
+                tooltip.add(Component.translatable("item.powerarmor.power_armor.fuel", loadout.fuel().getCount(), loadout.fuel().getHoverName())
+                        .withStyle(ChatFormatting.GOLD));
+            }
+            if (energy > 0) {
+                tooltip.add(Component.translatable("item.powerarmor.power_armor.range", formatWalkTime(energy)).withStyle(ChatFormatting.GOLD));
+            }
+            if (!loadout.socket().isEmpty()) {
+                tooltip.add(Component.translatable("item.powerarmor.power_armor.socket", loadout.socket().getHoverName()).withStyle(ChatFormatting.AQUA));
+            }
+        }
+    }
+
+    /** Energy -> "m:ss" of walking (walking burns 1 energy per tick, 20 per second). */
+    public static String formatWalkTime(int energy) {
+        int seconds = energy / 20;
+        return String.format("%d:%02d", seconds / 60, seconds % 60);
     }
 }

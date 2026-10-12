@@ -7,38 +7,17 @@ concepts as you go).
 
 Confirm the **OPEN** items in `docs/design.md` with the user before building the parts they affect.
 
-## Phase 1: fuel tank, suit menu, shutdown, smoke, gauge
-1. **Suit storage** in `PowerArmorEntity`: `fuel` (int units), a 2-slot `SimpleContainer`
-   (0 = fuel, 1 = socket). Save/load in `addAdditionalSaveData` / `readAdditionalSaveData`
-   (1.21 item saving needs the registry provider: `ContainerHelper.saveAllItems(tag, items, registryAccess())`).
-   Sync to clients with `EntityDataAccessor`s: `FUEL` (int), `SOCKET_ITEM` (ItemStack serializer, for
-   rendering), `POWERED` (boolean).
-2. **Fuel logic (server + controlling client)**: drain per tick by state (idle/moving/sprinting),
-   refill from the fuel slot (`stack.getBurnTime(RecipeType.SMELTING)` in NeoForge 1.21.1; keep the
-   container item, e.g. empty bucket). Movement code runs on the pilot's client (client-authoritative
-   riding), so the client must also refuse to move when unpowered: gate `getRiddenInput`, jumping and
-   `travel` on the synced `POWERED` flag.
-3. **Shutdown/startup**: transitions fire sounds and (client) `shutdown` / `startup` animations
-   (new Blockbench animations, see Art below). While shut down: zero input, no jump, no tools,
-   `isPickable` unchanged, pilot can dismount.
-4. **Menu**: `MenuType` registered with `IMenuTypeExtension.create((id, inv, buf) -> ...)`
-   (buf carries the suit entity id); `PowerArmorMenu extends AbstractContainerMenu` with fuel slot,
-   socket slot (accepts only items tagged/implementing `PowerTool`), player inventory, `ContainerData`
-   for fuel/capacity; `PowerArmorScreen extends AbstractContainerScreen` (gauge, Pack up button ->
-   custom payload to server). Register the screen in `RegisterMenuScreensEvent`. `stillValid` = suit
-   alive, empty, within 8 blocks.
-5. **Interaction change**: right-click = climb in; sneak + right-click = open menu (pending the OPEN
-   gesture decision); packing moves to the button. Packing writes fuel + socket item into the item
-   (`DataComponents.CUSTOM_DATA` or a small custom data component) and deploying restores them.
-6. **Exhaust particles** (client): every tick, for each pipe top, compute its world position (GeckoLib:
-   `bone.setTrackingMatrices(true)` once, then `bone.getWorldPosition()` after render, or compute from
-   the entity transform + bone pivots) and spawn `SMOKE` / `CAMPFIRE_COSY_SMOKE` / `LARGE_SMOKE`
-   by load; dark sputter when fuel < 10%.
-7. **HUD gauge**: register a GUI layer (`RegisterGuiLayersEvent`) drawn only while piloting.
-8. **Tests**: fuel item -> units (incl. bucket returned), drain over N ticks, shutdown blocks travel input,
-   save/load keeps fuel + socket item, pack/deploy keeps them, menu slot accepts only tools.
-   Autopilot: add a "run out of fuel" scenario (low tank, walk until shutdown, screenshot the slump +
-   no smoke), log fuel per tick.
+## Phase 1: fuel, suit menu, shutdown, smoke, gauge (DONE 2026-10-12)
+Built as specified in `docs/design.md` sections 4-6, with the user's decisions: furnace-style fuel
+(item by item, coal shortest, blaze rod longest, no tank) and sneak + right-click for the menu.
+Where things are: `SuitFuel` (fuel table), `PowerArmorEntity` (`tickFuel`, power flag + transitions,
+inventory, save/load, `packUp`, animation states), `ExhaustSmoke`, `menu/PowerArmorMenu`,
+`client/PowerArmorScreen` + `tools/make-gui.py`, `client/FuelGauge`, `item/SuitLoadout` +
+`ModDataComponents`, `item/PowerTool` (empty marker). Animations `shutdown` / `powered_off` / `startup`
+from `starcraft_marine_anim/a_power.js`. Tests: 9 new GameTests (17 total); autopilot fuel scenario
+(`ap_fuel_*`, `ap_menu_*`, `run/autopilot_fuel.csv`).
+Not done: hoppers into the fuel slot; exhaust pipe bone positions are computed from the entity transform
+(`ExhaustSmoke.PIPE_*`), not tracked GeckoLib bones (ignores the torso lean, looks right in game).
 
 ## Phase 2: socket + plasma cannon (first power tool)
 1. `PowerTool` interface (or abstract item class): fuel cost, cooldown, `use(suit, pilot, hit)` on
@@ -91,8 +70,7 @@ Sounds (engine loop pitched by load), recipes for every tool and fuel balance pa
 ## Art (Blockbench, `~/Developer/Models/starcraft_marine.bbmodel`)
 Use the `blockbench-mcp` skill (`~/Developer/Models/.agents/skills/blockbench-mcp/`), checkpoint
 before every change, save only when the user asks, re-export with `node tools/export-model.mjs`.
-- Phase 1: `shutdown` (slump to a kneel/sag, hold) and `startup` animations (planted feet IK, see
-  `ANIMATION.md`); confirm exhaust pipe top positions.
+- Phase 1 (done): `shutdown`, `powered_off`, `startup` (`a_power.js`, planted feet IK).
 - Phase 2: split the cannon (`cannon`, `muzzle_flash` bones and the cannon cubes on `right_forearm`)
   into its own model file for the plasma-cannon item; add a socket coupling on `right_forearm`;
   re-check `walk`/`run` (they keep the cannon stabilised: with no cannon the stabiliser should now

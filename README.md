@@ -12,11 +12,21 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Get the suit | Creative tab *Tools & Utilities*, or craft it (iron blocks, iron helmet/chestplate/boots, pistons) |
 | Deploy | Right-click the ground with the item (needs a 3-block-tall space) |
 | Climb in | Right-click the suit |
+| Suit menu | Sneak + right-click an empty suit: fuel slot, tool socket, status, **Pack up** |
+| Fuel | Put coal/charcoal (1:20 of walking each), lava buckets (2:40, the bucket stays) or blaze rods (4:00) in the fuel slot |
 | Walk / run | WASD (5 blocks/s jog) / sprint (10 blocks/s; double-tap W or Ctrl) |
 | Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
-| Pack it up | Shift + right-click an empty suit (keeps its damage) |
+| Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
+
+Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It only burns
+while someone is inside: standing still uses a quarter of the walking rate, sprinting double, and each
+jump a little extra. The gauge right of the hotbar shows the flame of the burning item, what's left in
+the slot and how long that lasts at walking pace. Under 30 seconds left it flashes and beeps and the
+exhaust coughs dark smoke. At zero the suit powers down and slumps; climb out, refuel it in the menu
+and it stands back up (1.4 s). Fuel is needed in creative mode too. Suits from before this version
+start empty: give them some coal.
 
 While inside: the suit takes hits instead of you, it has no fall damage, steps up full blocks,
 and the camera pulls back in third person (F5).
@@ -41,9 +51,10 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew runGameTestServer` | Runs the automated in-game tests headless, prints pass/fail |
 | `./gradlew build` | Builds the mod jar into `build/libs/` (put it in a real `mods/` folder, plus GeckoLib) |
 | `node tools/export-model.mjs` | Re-exports model, animations and texture from the open Blockbench project |
-| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (incl. a pool), saves `run/screenshots/ap_*.png` and `run/autopilot_water.csv`, quits |
+| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (incl. a pool and running out of fuel), saves `run/screenshots/ap_*.png`, `run/autopilot_water.csv` and `run/autopilot_fuel.csv`, quits |
 | `./gradlew runAutopilotTerrain` | Dev tool: drives a suit over real terrain in a **copy** of `run/saves/New World`, logs `run/autopilot_terrain.csv` (speed, height, ground contact, animation, camera) |
-| `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`) |
+| `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`, `fuel`, `menu`) |
+| `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
 | `python3 tools/terrain-report.py` | Summarizes `run/autopilot_terrain.csv` per leg (speed, air time, drops, step-ups, animations) |
 
 ## Where things live
@@ -53,18 +64,27 @@ src/main/java/dev/ajaczero/powerarmor/
   PowerArmor.java            entry point: registers everything
   registry/ModEntities.java  the entity type (hitbox size, pilot seat height)
   registry/ModItems.java     the item
-  entity/PowerArmorEntity.java  the suit: riding, movement, damage, death, animation choice
+  registry/ModMenus.java     the suit menu type; ModDataComponents.java: the loadout stored on a packed item
+  entity/PowerArmorEntity.java  the suit: riding, movement, fuel/power, damage, death, animation choice
+  entity/SuitFuel.java       which items burn and for how long
+  entity/ExhaustSmoke.java   client-side smoke from the back pipes
+  menu/PowerArmorMenu.java   menu logic: fuel + socket slots, shift-click, Pack up button
+  item/SuitLoadout.java      fuel/tool/half-burnt item carried by a packed suit item
+  item/PowerTool.java        marker for socket tools (Phase 2)
   item/PowerArmorItem.java   deploying / packing / repairing
   PilotProtection.java       redirects damage from the pilot to the suit
   client/                    rendering only (never loaded on servers)
     PowerArmorModel.java     points GeckoLib at the asset files, head follows your view
     PowerArmorRenderer.java  hides the head in first person
     PilotView.java           hides the pilot and hand, pulls the camera back
+    PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
+    FuelGauge.java           HUD fuel gauge + low-fuel beep
     ClientSetup.java         registers the renderer
     dev/AutoPilot.java       scripted screenshot test drive (only with -Dpowerarmor.autopilot)
   test/PowerArmorTests.java  GameTests
 src/main/resources/
   assets/powerarmor/geo|animations|textures/entity/   exported from Blockbench
+  assets/powerarmor/textures/gui/power_armor.png      suit menu background (tools/make-gui.py)
   data/powerarmor/recipe/power_armor.json             crafting recipe
   data/powerarmor/structure/test_pad.nbt              floor used by the GameTests
 ```
@@ -88,4 +108,7 @@ src/main/resources/
 - First person: the eye sits at the visor (0.55 forward), the head/torso/hip shell is hidden and the
   suit is drawn with back-face culling, so no insides of cubes show.
 - Animation sources (procedural specs) live in `~/Developer/Models/starcraft_marine_anim/`.
+- Power: `shutdown` (slump, hold) when the fuel runs out, `powered_off` (its last frame) for suits that were
+  already off when they came into view, `startup` (1.4 s, movement blocked meanwhile) when fuel returns.
+  The torso stops following the view while powered down. Spec: `starcraft_marine_anim/a_power.js`.
 - Unused animations so far: attack, throw, stim, electrified, idle_fidget, sneakwalk.

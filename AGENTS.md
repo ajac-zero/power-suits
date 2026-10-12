@@ -10,7 +10,9 @@ The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is
 - First Minecraft mod. Explain concepts briefly as you go (client vs server, registries, events,
   synced data, menus, packets...). Keep explanations concrete and tied to the change you just made.
 - Plays in `run/saves/New World` (creative test world). **Never open or modify it.** Automated runs use
-  a copy (see `runAutopilotTerrain`). A sorted md5 listing of it is in `.scratch/world_baseline.txt`.
+  a copy (see `runAutopilotTerrain`). A sorted md5 listing of it is in `.scratch/world_baseline.txt`
+  (`find . -type f ! -name session.lock -exec md5 -r {} \; | sort -k2`); the user plays it between
+  sessions, so check file mtimes before blaming a run, and refresh the baseline at the start of a session.
 - The art lives in Blockbench: `~/Developer/Models/starcraft_marine.bbmodel`. Checkpoint before edits,
   only save it when the user asks.
 
@@ -25,7 +27,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 |---|---|
 | `./gradlew build` | compile + jar |
 | `./gradlew runGameTestServer` | headless GameTests in `src/main/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
-| `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool). Screenshots `run/screenshots/ap_*.png`, water log `run/autopilot_water.csv`. Quits by itself (~30 s). |
+| `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_water.csv`, `run/autopilot_fuel.csv`. Quits by itself (~45 s). |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv`; summarize with `python3 tools/terrain-report.py` |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000) |
@@ -51,11 +53,20 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   sealed by an invisible barrier box the size of the structure (`test_pad` is 9x10x9); tests run side by
   side, so search for entities near your own position only.
 - **Vanilla keeps sprinting after the sprint key is released**; call `setSprinting(false)` in scripts.
+- **Suits need fuel now.** Anything that spawns or boards a suit (autopilots, tests that move) must put fuel in
+  `FUEL_SLOT`, or the suit sits slumped (`powered_off`). The user's world contains old unfuelled suits and
+  the saved player may already sit in one: `TerrainPilot.fuelVehicle` fuels whatever suit you're in.
+- **Synced entity data must be refreshed wherever the server field changes**, not only in `tick()`: loading,
+  `applyLoadout`, test setters (a GameTest caught a stale `BURN_TOTAL` after load). See `syncBurn()`/`syncSlots()`.
+- **Menus can't be opened by GameTest mock players**: `makeMockPlayer` ignores `openMenu`, and
+  `makeMockServerPlayerInLevel` throws on NeoForge's `advanced_open_screen` payload. Test menu logic by
+  constructing `PowerArmorMenu` directly; check the real screen in the autopilot (`ap_menu_*`).
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
   `~/Developer/Models/starcraft_marine_anim/` (walk/run carry a cannon `stabilize()` wrapper). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.
 
 ## Code map (see README for the full list)
-`entity/PowerArmorEntity.java` holds riding, movement, terrain/water, jump, turning, animation state;
+`entity/PowerArmorEntity.java` holds riding, movement, terrain/water, jump, turning, fuel/power, inventory, animation state;
+`menu/` the suit menu logic, `client/PowerArmorScreen` + `FuelGauge` its picture and the HUD;
 `client/` holds rendering + camera; `PilotProtection.java` redirects damage; `registry/` registers things.
 Comment the "why" for anything non-obvious; the user reads the code to learn.

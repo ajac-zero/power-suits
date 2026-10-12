@@ -1,6 +1,21 @@
 {
   "item.powerarmor.power_armor": "Power Armor",
-  "item.powerarmor.power_armor.tooltip": "Place it, right-click to climb in. Shift to climb out. Sneak + right-click an empty suit to pack it up.",
+  "item.powerarmor.power_armor.tooltip": "Place it, right-click to climb in, Shift to climb out. Sneak + right-click an empty suit for its fuel, tool socket and Pack up.",
   "entity.powerarmor.power_armor": "Power Armor",
-  "message.powerarmor.no_room": "Not enough room to deploy the suit here"
+  "message.powerarmor.no_room": "Not enough room to deploy the suit here",
+  "item.powerarmor.power_armor.fuel": "Fuel: %s x %s",
+  "item.powerarmor.power_armor.range": "Range: %s of walking",
+  "item.powerarmor.power_armor.socket": "Socket: %s",
+  "message.powerarmor.out_of_fuel": "Out of fuel! Climb out (Shift), then sneak + right-click the suit to refuel.",
+  "gui.powerarmor.pack_up": "Pack up",
+  "gui.powerarmor.pack_up.tooltip": "Turn the suit back into an item. Fuel and tool stay inside.",
+  "gui.powerarmor.hull": "Hull %s/%s",
+  "gui.powerarmor.range": "Fuel %s",
+  "gui.powerarmor.online": "ONLINE",
+  "gui.powerarmor.offline": "NO POWER",
+  "gui.powerarmor.no_fuel": "NO FUEL",
+  "gui.powerarmor.socket_slot": "Power tool socket",
+  "gui.powerarmor.socket_slot.hint": "Right-arm tools go here (coming soon)",
+  "gui.powerarmor.fuel_slot": "Fuel",
+  "gui.powerarmor.fuel_slot.hint": "Coal or charcoal 1:20, lava bucket 2:40, blaze rod 4:00 of walking each"
 }

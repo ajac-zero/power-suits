@@ -65,7 +65,13 @@ public final class TerrainPilot {
                 suitRequested = true;
                 boardSuit(mc);
             }
-            if (mc.player.getVehicle() instanceof PowerArmorEntity suit && mc.player.tickCount > 60) {
+            if (mc.player.getVehicle() instanceof PowerArmorEntity && !fueled) {
+                // The save may already have the player inside one of their own (unfuelled) suits.
+                fueled = true;
+                fuelVehicle(mc);
+            }
+            // Start once the suit has fuel and finished its 1.4 s startup.
+            if (mc.player.getVehicle() instanceof PowerArmorEntity suit && suit.canOperate() && mc.player.tickCount > 60) {
                 tick = 0;
                 startYaw = mc.player.getYRot();
                 lastX = suit.getX(); lastY = suit.getY(); lastZ = suit.getZ();
@@ -146,9 +152,25 @@ public final class TerrainPilot {
             var level = player.serverLevel();
             level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+            // A full stack of blaze rods (~4 hours of walking): enough for any scripted drive.
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64));
             suit.moveTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 0);
             level.addFreshEntity(suit);
             player.startRiding(suit);
+        });
+    }
+
+    private static boolean fueled;
+
+    /** Server: fill the fuel slot of whatever suit the player sits in (only ever in the copied world). */
+    private static void fuelVehicle(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        var uuid = mc.player.getUUID();
+        server.execute(() -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+            if (player != null && player.getVehicle() instanceof PowerArmorEntity suit) {
+                suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64));
+            }
         });
     }
 

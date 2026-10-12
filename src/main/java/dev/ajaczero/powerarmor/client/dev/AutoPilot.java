@@ -129,12 +129,37 @@ public final class AutoPilot {
             case 450, 470 -> shot(mc, "water_fp_" + t);
             case 480 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); o.hideGui = true; }
             case 500, 520, 540, 560, 590 -> shot(mc, "water_tp_" + t);
-            case 640 -> { releaseAll(); closeWaterLog(); survival(mc, false); o.hideGui = false; }
-            case 645 -> mc.stop();
+            case 640 -> { releaseAll(); closeWaterLog(); survival(mc, false); }
+            // ---- fuel: nearly empty tank, walk until the engine dies, refuel through the menu
+            case 650 -> { o.hideGui = false; o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 0; pitch = 15; fuelScenarioSetup(mc); }
+            case 660 -> { openFuelLog(mc); hold(o.keyUp, true); }
+            case 675 -> shot(mc, "fuel_tp_low");
+            case 690 -> o.setCameraType(CameraType.FIRST_PERSON);
+            case 700 -> shot(mc, "fuel_fp_hud");
+            case 712 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 720, 724 -> shot(mc, "fuel_tp_sputter_" + t);
+            case 732 -> sideCamera(mc);
+            // the engine dies at ~ t=738 (80 energy, walking burns 1 per tick); the slump plays for 1.6 s
+            case 736, 742, 750, 760, 785 -> shot(mc, "fuel_side_shutdown_" + t);
+            case 790 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); }
+            case 795 -> shot(mc, "fuel_fp_out_of_fuel");
+            case 800 -> { releaseAll(); hold(o.keyShift, true); }      // climb out
+            case 805 -> hold(o.keyShift, false);
+            case 815 -> openSuitMenu(mc);                             // sneak + right-click on the server side
+            case 825 -> shot(mc, "menu_empty");
+            case 830 -> refuel(mc);
+            case 836 -> shot(mc, "menu_fueled");
+            case 845 -> { mc.player.closeContainer(); sideCamera(mc); }
+            case 850, 858, 866, 874, 890 -> shot(mc, "fuel_side_startup_" + t);
+            case 900 -> { closeFuelLog(); mc.setCameraEntity(mc.player); }
+            case 905 -> mc.stop();
             default -> {}
         }
         if (t >= 360 && t < 640) {
             logWater(mc, t);
+        }
+        if (t >= 660 && t < 900) {
+            logFuel(mc, t);
         }
     }
 
@@ -178,6 +203,89 @@ public final class AutoPilot {
         try {
             if (waterCsv != null) {
                 waterCsv.close();
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
+    // ---- fuel scenario helpers -------------------------------------------------------------
+
+    private static PowerArmorEntity fuelSuit;
+    private static java.io.BufferedWriter fuelCsv;
+
+    /** Server: move to fresh flat ground 40 blocks east, empty the fuel slot and leave 3 s of walking. */
+    private static void fuelScenarioSetup(Minecraft mc) {
+        onServer(mc, player -> {
+            if (!(player.getVehicle() instanceof PowerArmorEntity suit)) {
+                return;
+            }
+            fuelSuit = suit;
+            player.stopRiding();
+            suit.moveTo(suit.getX() + 40, suit.getY(), suit.getZ() - 30, 0, 0);
+            player.startRiding(suit, true);
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, net.minecraft.world.item.ItemStack.EMPTY);
+            suit.setBurn(80, 1600);
+        });
+    }
+
+    private static void openSuitMenu(Minecraft mc) {
+        onServer(mc, player -> {
+            if (fuelSuit != null) {
+                player.setShiftKeyDown(true);
+                fuelSuit.interact(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+                player.setShiftKeyDown(false);
+            }
+        });
+    }
+
+    private static void refuel(Minecraft mc) {
+        onServer(mc, player -> {
+            if (fuelSuit != null) {
+                fuelSuit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 16));
+            }
+        });
+    }
+
+    private static void onServer(Minecraft mc, java.util.function.Consumer<ServerPlayer> action) {
+        IntegratedServer server = mc.getSingleplayerServer();
+        var uuid = mc.player.getUUID();
+        server.execute(() -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+            if (player != null) {
+                action.accept(player);
+            }
+        });
+    }
+
+    private static void openFuelLog(Minecraft mc) {
+        try {
+            fuelCsv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_fuel.csv"));
+            fuelCsv.write("tick,burnLeft,total,fuelItem,powered,canOperate,speed,anim,piloted\n");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /** Client view of the suit (synced data), one row per tick. */
+    private static void logFuel(Minecraft mc, int t) {
+        PowerArmorEntity suit = mc.level.getEntitiesOfClass(PowerArmorEntity.class, mc.player.getBoundingBox().inflate(8)).stream().findFirst().orElse(null);
+        if (suit == null || fuelCsv == null) {
+            return;
+        }
+        try {
+            fuelCsv.write(String.format(java.util.Locale.ROOT, "%d,%d,%d,%s,%b,%b,%.2f,%s,%b%n", t, suit.getBurnLeft(), suit.getTotalEnergy(),
+                    suit.getFuelStack().getCount() + "x" + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(suit.getFuelStack().getItem()).getPath(),
+                    suit.isPowered(), suit.canOperate(), Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20, suit.getMovementAnimationName(),
+                    suit.isPilotedBy(mc.player)));
+        } catch (IOException e) {
+            PowerArmor.LOGGER.error("[autopilot] fuel csv", e);
+        }
+    }
+
+    private static void closeFuelLog() {
+        try {
+            if (fuelCsv != null) {
+                fuelCsv.close();
             }
         } catch (IOException ignored) {
         }
@@ -253,7 +361,9 @@ public final class AutoPilot {
 
     /** A client-only camera 8 blocks to the side of the suit, looking at it. */
     private static void sideCamera(Minecraft mc) {
-        Vec3 suit = mc.player.getVehicle().position();
+        var target = mc.player.getVehicle() != null ? mc.player.getVehicle()
+                : mc.level.getEntitiesOfClass(PowerArmorEntity.class, mc.player.getBoundingBox().inflate(8)).stream().findFirst().orElseThrow();
+        Vec3 suit = target.position();
         sideCamera = new ArmorStand(EntityType.ARMOR_STAND, mc.level);
         Vec3 pos = suit.add(7, -0.4, 0);
         sideCamera.setPos(pos);
@@ -280,6 +390,8 @@ public final class AutoPilot {
             level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false, server);
             level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+            // A full stack of blaze rods (~4 hours of walking): enough for any scripted drive.
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64));
             suit.moveTo(player.getX() + 0.5, player.getY(), player.getZ() + 0.5, 0, 0);
             level.addFreshEntity(suit);
             player.startRiding(suit);

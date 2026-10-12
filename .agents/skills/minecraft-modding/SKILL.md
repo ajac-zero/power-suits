@@ -13,7 +13,8 @@ model) with a user who had never modded before. Read the reference that matches 
 | [references/setup.md](references/setup.md) | new project, Java/Gradle setup, finding the real API (sources jars), commands |
 | [references/geckolib.md](references/geckolib.md) | Blockbench model -> GeckoLib entity, animation controllers, rendering, flicker |
 | [references/rideable-entity.md](references/rideable-entity.md) | vehicles/mechs: riding, movement, camera, damage, terrain, water, saved data |
-| [references/testing.md](references/testing.md) | GameTests, the autopilot client harness, measuring in-game, protecting user worlds |
+| [references/testing.md](references/testing.md) | GameTests (incl. menus), the autopilot client harness, measuring in-game, protecting user worlds |
+| [references/menus-hud.md](references/menus-hud.md) | entity inventories, menus + screens, menu buttons, item data components, synced entity data, HUD layers, particles |
 
 Scripts (run from anywhere, paths relative to this skill): `scripts/make_test_structure.py`
 (GameTest floor .nbt without NBT libraries), `scripts/contact_sheet.py` (tile screenshots),
