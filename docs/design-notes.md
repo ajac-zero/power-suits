@@ -31,3 +31,16 @@ Suggested order: (1) standalone gauntlet with placeholder art, (2) suit integrat
 
 Open questions: glove vs. gun shape; what each version can lift; off-hand any item or a whitelist;
 which restrictions to use.
+
+## Revised direction (2026-10-12, still under discussion)
+- **Grav gun = a gun-shaped item.** Big in a player's hands, small when mounted on the suit. Used on
+  foot, and locked onto the suit's **left arm** (utility hand).
+- **Right arm = hardpoint for suit-only tools** (cannot be used on foot):
+  - Plasma cannon: weapon. Reuses the current cannon art, attack animation and muzzle flash.
+  - Drill: digs 3x3.
+  - Chainsaw: fells a whole tree from the bottom log.
+- **Power cells** limit sessions: walking/sprinting drains a little, tools and the grav gun drain more.
+- **Exhaust particles** from the two back exhaust pipes: idle puffs, more smoke with throttle/sprint,
+  sputtering when power is low.
+- Tech: render the mounted grav gun and right-arm tool as item models attached to arm bones
+  (GeckoLib bone item layer), so tools are swappable; split the cannon out of the suit model.
