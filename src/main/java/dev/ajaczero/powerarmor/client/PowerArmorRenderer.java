@@ -5,7 +5,9 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
@@ -24,8 +26,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
                           @Nullable VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, int colour) {
         // In first person the camera sits inside the helmet. For our own suit, hide the shell around
         // the camera (hips, torso, head+helmet) but keep the arms, shoulder pads and legs, like a cockpit.
-        Minecraft mc = Minecraft.getInstance();
-        boolean cockpit = suit.isPilotedBy(mc.player) && mc.options.getCameraType().isFirstPerson();
+        boolean cockpit = isCockpitView(suit);
         for (String shell : SHELL_BONES) {
             model.getBone(shell).ifPresent(bone -> {
                 bone.setHidden(cockpit);         // hides this bone's own cubes (and children by default)
@@ -34,6 +35,22 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
         }
         model.getBone("head").ifPresent(head -> head.setHidden(cockpit)); // head + helmet fully hidden
         super.preRender(poseStack, suit, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, colour);
+    }
+
+    /** True when we're drawing the suit the local player sits in, from inside (first person). */
+    private static boolean isCockpitView(PowerArmorEntity suit) {
+        Minecraft mc = Minecraft.getInstance();
+        return suit.isPilotedBy(mc.player) && mc.options.getCameraType().isFirstPerson();
+    }
+
+    /** GeckoLib draws both sides of every face by default. From inside the suit that exposes the
+     *  insides of overlapping cubes (which flicker as parts move), so cull back faces there. */
+    @Override
+    public RenderType getRenderType(PowerArmorEntity suit, ResourceLocation texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
+        if (isCockpitView(suit)) {
+            return RenderType.entityCutout(texture);
+        }
+        return super.getRenderType(suit, texture, bufferSource, partialTick);
     }
 
     /** Vanilla tips dying mobs onto their side; our death animation handles the fall. */

@@ -5,6 +5,7 @@ import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -18,8 +19,9 @@ public final class ModEntities {
                     .sized(1.4F, 3.0F)
                     .eyeHeight(2.6F)
                     // Where the pilot is mounted. The player's own vehicle offset is 0.6, and their
-                    // eyes sit 1.62 above their feet, so 1.58 puts the camera at the visor (~2.6).
-                    .passengerAttachments(1.58F)
+                    // eyes sit 1.62 above their feet, so y=1.58 puts the camera at visor height (~2.6).
+                    // z=0.55 moves it forward to the visor, so the shoulder pads sit beside/behind the view.
+                    .passengerAttachments(new Vec3(0, 1.58, 0.55))
                     .clientTrackingRange(10)
                     .build("power_armor"));
 

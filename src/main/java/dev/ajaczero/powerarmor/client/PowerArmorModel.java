@@ -20,17 +20,30 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
         super(ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "power_armor"));
     }
 
-    /** Runs every frame after the keyframe animations: tilt the head with the pilot's view. */
+    /**
+     * Runs every frame after the keyframe animations. The legs face yBodyRot; here the torso (and with
+     * it the arms, pads and cannon) twists and leans to face where the pilot looks, and the head adds
+     * a little extra pitch. Values are added on top of the animation, which sets these bones every frame.
+     */
     @Override
     public void setCustomAnimations(PowerArmorEntity suit, long instanceId, AnimationState<PowerArmorEntity> state) {
         if (!suit.isVehicle() || suit.isDeadOrDying()) {
             return;
         }
-        GeoBone head = getAnimationProcessor().getBone("head");
         EntityModelData data = state.getData(DataTickets.ENTITY_MODEL_DATA);
-        if (head != null && data != null) {
-            // Added on top of the animation (which sets the head every frame) instead of replacing it.
-            head.setRotX(head.getRotX() + Mth.clamp(data.headPitch(), -30F, 30F) * Mth.DEG_TO_RAD);
+        if (data == null) {
+            return;
+        }
+        float yaw = Mth.clamp(data.netHeadYaw(), -90F, 90F);   // look yaw relative to the legs
+        float pitch = data.headPitch();                         // + = looking down
+        GeoBone torso = getAnimationProcessor().getBone("torso");
+        GeoBone head = getAnimationProcessor().getBone("head");
+        if (torso != null) {
+            torso.setRotY(torso.getRotY() + yaw * Mth.DEG_TO_RAD);
+            torso.setRotX(torso.getRotX() + Mth.clamp(pitch * 0.55F, -25F, 25F) * Mth.DEG_TO_RAD);
+        }
+        if (head != null) {
+            head.setRotX(head.getRotX() + Mth.clamp(pitch * 0.35F, -20F, 20F) * Mth.DEG_TO_RAD);
         }
     }
 }

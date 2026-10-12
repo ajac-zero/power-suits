@@ -10,8 +10,8 @@ Fallout / Titanfall style. Model and animations come from `~/Developer/Models/st
 | Get the suit | Creative tab *Tools & Utilities*, or craft it (iron blocks, iron helmet/chestplate/boots, pistons) |
 | Deploy | Right-click the ground with the item (needs a 3-block-tall space) |
 | Climb in | Right-click the suit |
-| Walk / run | WASD (2.35 blocks/s) / sprint (6.35 blocks/s; double-tap W or Ctrl) |
-| Jump | Hold Space to charge (horse jump bar), release |
+| Walk / run | WASD (3.5 blocks/s) / sprint (8.5 blocks/s; double-tap W or Ctrl) |
+| Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
 | Pack it up | Shift + right-click an empty suit (keeps its damage) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
@@ -35,6 +35,8 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew runGameTestServer` | Runs the automated in-game tests headless, prints pass/fail |
 | `./gradlew build` | Builds the mod jar into `build/libs/` (put it in a real `mods/` folder, plus GeckoLib) |
 | `node tools/export-model.mjs` | Re-exports model, animations and texture from the open Blockbench project |
+| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world, saves `run/screenshots/ap_*.png`, quits |
+| `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`) |
 
 ## Where things live
 
@@ -51,6 +53,7 @@ src/main/java/dev/ajaczero/powerarmor/
     PowerArmorRenderer.java  hides the head in first person
     PilotView.java           hides the pilot and hand, pulls the camera back
     ClientSetup.java         registers the renderer
+    dev/AutoPilot.java       scripted screenshot test drive (only with -Dpowerarmor.autopilot)
   test/PowerArmorTests.java  GameTests
 src/main/resources/
   assets/powerarmor/geo|animations|textures/entity/   exported from Blockbench
@@ -61,9 +64,14 @@ src/main/resources/
 ## Notes
 
 - Animation playback rates are tied to movement speed so the feet don't slide. The authored
-  ground speeds were measured in Blockbench: walk 2.35, run 6.36, sneak 0.83 blocks/s.
+  ground speeds were measured in Blockbench: walk 3.54, run 8.52, sneak 0.83 blocks/s.
   If you change `WALK_SPEED` / `SPRINT_MULTIPLIER`, the rates follow automatically.
-- Airborne: `jump` (push-off) flows into the `fall` loop; `land` plays after ~0.5 s in the air.
-- First person hides the suit's head, torso and hip shell (cockpit view: arms, pads, cannon stay).
+- Jumping: holding Space plays `jump_charge` (crouch); release plays `jump` (push-off) and the suit
+  launches 2 ticks later, then `fall` loops; `land` plays after ~0.5 s in the air. Other players
+  see the jump via a synced counter bumped by the server.
+- Turning: legs (`yBodyRot`) follow the direction of travel; the torso (with arms and cannon) twists
+  up to 90 degrees and leans to face where the pilot looks (`PowerArmorModel.setCustomAnimations`).
+- First person: the eye sits at the visor (0.55 forward), the head/torso/hip shell is hidden and the
+  suit is drawn with back-face culling, so no insides of cubes show.
 - Animation sources (procedural specs) live in `~/Developer/Models/starcraft_marine_anim/`.
 - Unused animations so far: attack, throw, stim, electrified, idle_fidget, sneakwalk.
