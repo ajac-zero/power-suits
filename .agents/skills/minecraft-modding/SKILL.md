@@ -1,0 +1,62 @@
+---
+name: minecraft-modding
+description: Use when building or changing a Minecraft Java mod with NeoForge 1.21.x and GeckoLib, especially animated Blockbench models as entities, rideable/enterable vehicles or mechs, GameTests, scripted in-game autopilot verification (screenshots, CSV logs), camera/HUD tweaks, water/terrain movement, saved-data migration, or teaching a first-time modder. Covers project setup on macOS, the Blockbench -> GeckoLib export pipeline, vanilla riding hooks, verification loops and the pitfalls that cost real debugging rounds on the Power Armor mod.
+---
+
+# Minecraft modding (NeoForge + GeckoLib)
+
+Learned while building Power Armor (`~/Developer/PowerArmor`, an enterable mech suit from a Blockbench
+model) with a user who had never modded before. Read the reference that matches the task:
+
+| Reference | Read when |
+|---|---|
+| [references/setup.md](references/setup.md) | new project, Java/Gradle setup, finding the real API (sources jars), commands |
+| [references/geckolib.md](references/geckolib.md) | Blockbench model -> GeckoLib entity, animation controllers, rendering, flicker |
+| [references/rideable-entity.md](references/rideable-entity.md) | vehicles/mechs: riding, movement, camera, damage, terrain, water, saved data |
+| [references/testing.md](references/testing.md) | GameTests, the autopilot client harness, measuring in-game, protecting user worlds |
+
+Scripts (run from anywhere, paths relative to this skill): `scripts/make_test_structure.py`
+(GameTest floor .nbt without NBT libraries), `scripts/contact_sheet.py` (tile screenshots),
+`scripts/export_model.mjs` (export geo/animations/texture from the open Blockbench project via MCP).
+For model and animation work use the Blockbench skill:
+`~/Developer/Models/.agents/skills/blockbench-mcp/SKILL.md` (+ `ANIMATION.md`).
+
+## Workflow that worked
+1. **Pin versions and read real sources.** Never guess an API from memory: extract the NeoForge
+   sources jar (`build/moddev/artifacts/*-sources.jar`) and the GeckoLib `-sources.jar`, then `grep`
+   for signatures before writing code (setup.md). This avoided nearly all compile errors.
+2. **Build the smallest playable slice first** (place item -> entity -> ride -> animate), then iterate
+   on the user's play feedback.
+3. **Verify every change three ways:** `./gradlew build`, headless GameTests for logic, and an
+   **autopilot** client run that drives the real game, takes screenshots and logs numbers (testing.md).
+   Screenshots found the cockpit flicker; CSV logs found that "slow" was a stale saved attribute.
+4. **Measure, then change.** When feedback is vague ("feels slow", "arms flicker"), log the relevant
+   state per tick (speed, ground contact, animation name, camera height) and look for the pattern.
+   When a calculation and a measurement disagree, trust the measurement.
+5. **Protect the user's things.** Never open their world (copy it, checksum the original), checkpoint
+   Blockbench before edits, save only when asked, commit after each verified step.
+6. **Teach as you go** (first-time modders): after each change explain one concept in plain words:
+   client vs server, registries, events, synced data, why a bug happened. Comment the "why" in code.
+7. **Before handing off**, write `docs/design.md` (spec with OPEN questions), `docs/implementation-plan.md`
+   (phases, files, APIs, tests) and `AGENTS.md` (setup, verification loop, lessons). Check that every API
+   the plan names exists in the pinned versions.
+
+## Pitfalls (each cost a round of debugging)
+- **Saved data outlives code.** Entities save attribute base values in NBT; a suit placed in an early
+  version kept its old speed forever. Re-apply tuning in `readAdditionalSaveData` (rideable-entity.md).
+- **Riding is client-authoritative.** For a piloted vehicle, `travel`/`tickRidden` run on the pilot's
+  client; the server only receives positions. Gate movement on synced state.
+- **The pilot's eye inside the vehicle's hitbox** makes the crosshair always hit the vehicle (can't mine).
+  Return `!isVehicle()` from `isPickable()`.
+- **GeckoLib animation speed multiplies total elapsed time**: changing it smoothly mid-loop makes
+  animations jump. Use one constant rate per state.
+- **GeckoLib draws both sides of faces**: coplanar faces z-fight, and the cockpit sees the insides of cubes.
+  Inflate cubes by 0.1 in Blockbench; cull back faces for the first-person view.
+- **State flicker**: states that toggle every few ticks (run/fall on slopes) look like flickering parts.
+  Add hysteresis (minimum ticks) and remove the cause (step-down snapping).
+- **GameTest coordinates**: the structure sits one block above the test origin and is sealed by an
+  invisible barrier box its own size; tall entities near the top take suffocation damage.
+- **Vanilla quirks**: sprinting continues after the key is released; a freshly spawned `ArmorStand` used as
+  a camera needs `yHeadRot` set (the camera follows head yaw); macOS has no `timeout` command.
+- **Tool caching**: the image `read` tool may return a cached image for a path it read before; write
+  regenerated images to a new filename.

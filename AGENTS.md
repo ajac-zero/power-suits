@@ -2,6 +2,9 @@
 
 A NeoForge 1.21.1 + GeckoLib 4.9.3 Minecraft mod: an enterable power-armor suit. Start with
 `docs/design.md` (spec), `docs/implementation-plan.md` (next phases) and `README.md` (controls, files).
+The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is the project skill
+`.agents/skills/minecraft-modding/SKILL.md`; model/animation work uses
+`~/Developer/Models/.agents/skills/blockbench-mcp/SKILL.md`.
 
 ## The user
 - First Minecraft mod. Explain concepts briefly as you go (client vs server, registries, events,
