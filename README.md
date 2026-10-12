@@ -18,6 +18,8 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
+| Install a tool | Put a power tool (Plasma Cannon) in the menu's socket slot; it appears on the suit's right arm |
+| Fire | Hold attack (left click) while piloting: a plasma bolt every 0.6 s toward your crosshair (300 fuel = 15 s of walking, 5 hearts) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
 
 Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It only burns
@@ -27,6 +29,12 @@ the slot and how long that lasts at walking pace. Under 30 seconds left it flash
 exhaust coughs dark smoke. At zero the suit powers down and slumps; climb out, refuel it in the menu
 and it stands back up (1.4 s). Fuel is needed in creative mode too. Suits from before this version
 start empty: give them some coal.
+
+**Plasma Cannon** (crafted: iron ingots top and bottom rows, blaze rod + diamond + glass in the middle).
+It does nothing on foot. Bolts fly at 60 blocks/s from the muzzle to whatever is under your crosshair, set
+targets alight for a second, never break blocks, and fizzle after ~90 blocks or in water. Kills credit you
+("vaporized by"). While piloting, left click never punches or mines; with an empty socket or no fuel the
+trigger just clicks.
 
 While inside: the suit takes hits instead of you, it has no fall damage, steps up full blocks,
 and the camera pulls back in third person (F5).
@@ -51,10 +59,11 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew runGameTestServer` | Runs the automated in-game tests headless, prints pass/fail |
 | `./gradlew build` | Builds the mod jar into `build/libs/` (put it in a real `mods/` folder, plus GeckoLib) |
 | `node tools/export-model.mjs` | Re-exports model, animations and texture from the open Blockbench project |
-| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (incl. a pool and running out of fuel), saves `run/screenshots/ap_*.png`, `run/autopilot_water.csv` and `run/autopilot_fuel.csv`, quits |
+| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (pool, running out of fuel, cannon range, cannon item on foot), saves `run/screenshots/ap_*.png`, `run/autopilot_{water,fuel,cannon}.csv`, quits |
 | `./gradlew runAutopilotTerrain` | Dev tool: drives a suit over real terrain in a **copy** of `run/saves/New World`, logs `run/autopilot_terrain.csv` (speed, height, ground contact, animation, camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`, `fuel`, `menu`) |
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
+| `python3 tools/extract-tool-geo.py` | Rebuilds the tool item models from the suit model (run after `export-model.mjs`) |
 | `python3 tools/terrain-report.py` | Summarizes `run/autopilot_terrain.csv` per leg (speed, air time, drops, step-ups, animations) |
 
 ## Where things live
@@ -70,7 +79,10 @@ src/main/java/dev/ajaczero/powerarmor/
   entity/ExhaustSmoke.java   client-side smoke from the back pipes
   menu/PowerArmorMenu.java   menu logic: fuel + socket slots, shift-click, Pack up button
   item/SuitLoadout.java      fuel/tool/half-burnt item carried by a packed suit item
-  item/PowerTool.java        marker for socket tools (Phase 2)
+  item/PowerTool.java        what a socket tool is: fuel per use, cooldown, model bone, use()
+  item/PlasmaCannonItem.java the first tool: muzzle + aim point, spawns the bolt (also a GeckoLib item)
+  entity/PlasmaBolt.java     the projectile (flight, hit, damage, impact effects)
+  network/ToolTriggerPayload.java  client -> server "attack pressed/released"
   item/PowerArmorItem.java   deploying / packing / repairing
   PilotProtection.java       redirects damage from the pilot to the suit
   client/                    rendering only (never loaded on servers)
@@ -79,12 +91,17 @@ src/main/java/dev/ajaczero/powerarmor/
     PilotView.java           hides the pilot and hand, pulls the camera back
     PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
     FuelGauge.java           HUD fuel gauge + low-fuel beep
+    ToolInput.java           attack button -> socket tool (cancels vanilla punching while piloting)
+    PlasmaBoltRenderer.java  the glowing bolt (camera-facing quad)
     ClientSetup.java         registers the renderer
     dev/AutoPilot.java       scripted screenshot test drive (only with -Dpowerarmor.autopilot)
   test/PowerArmorTests.java  GameTests
 src/main/resources/
   assets/powerarmor/geo|animations|textures/entity/   exported from Blockbench
   assets/powerarmor/textures/gui/power_armor.png      suit menu background (tools/make-gui.py)
+  assets/powerarmor/geo/item/plasma_cannon.geo.json   cut out of the suit model (tools/extract-tool-geo.py)
+  assets/powerarmor/models/item/plasma_cannon.json    how the cannon sits in your hand / inventory
+  data/powerarmor/damage_type/plasma.json             "vaporized" damage type (+ minecraft is_projectile tag)
   data/powerarmor/recipe/power_armor.json             crafting recipe
   data/powerarmor/structure/test_pad.nbt              floor used by the GameTests
 ```
@@ -111,4 +128,7 @@ src/main/resources/
 - Power: `shutdown` (slump, hold) when the fuel runs out, `powered_off` (its last frame) for suits that were
   already off when they came into view, `startup` (1.4 s, movement blocked meanwhile) when fuel returns.
   The torso stops following the view while powered down. Spec: `starcraft_marine_anim/a_power.js`.
-- Unused animations so far: attack, throw, stim, electrified, idle_fidget, sneakwalk.
+- Socket: the forearm block is the socket housing; `socket` (coupling plate) shows when empty, the installed
+  tool's bone (`cannon`) otherwise (`PowerArmorRenderer`). `plasma_shot` (0.5 s overlay, `a_plasma_shot.js`)
+  is triggered per shot; it must stay shorter than the cooldown because GeckoLib won't restart a running one.
+- Unused animations so far: attack (3-round burst), throw, stim, electrified, idle_fidget, sneakwalk.

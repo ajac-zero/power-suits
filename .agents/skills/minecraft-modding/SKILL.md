@@ -14,6 +14,7 @@ model) with a user who had never modded before. Read the reference that matches 
 | [references/geckolib.md](references/geckolib.md) | Blockbench model -> GeckoLib entity, animation controllers, rendering, flicker |
 | [references/rideable-entity.md](references/rideable-entity.md) | vehicles/mechs: riding, movement, camera, damage, terrain, water, saved data |
 | [references/testing.md](references/testing.md) | GameTests (incl. menus), the autopilot client harness, measuring in-game, protecting user worlds |
+| [references/tools-projectiles.md](references/tools-projectiles.md) | vehicle-mounted tools, hold-to-use input packets, aiming from a muzzle, projectiles, damage types, tool bones, GeckoLib items cut from an entity model |
 | [references/menus-hud.md](references/menus-hud.md) | entity inventories, menus + screens, menu buttons, item data components, synced entity data, HUD layers, particles |
 
 Scripts (run from anywhere, paths relative to this skill): `scripts/make_test_structure.py`
@@ -59,5 +60,7 @@ For model and animation work use the Blockbench skill:
   invisible barrier box its own size; tall entities near the top take suffocation damage.
 - **Vanilla quirks**: sprinting continues after the key is released; a freshly spawned `ArmorStand` used as
   a camera needs `yHeadRot` set (the camera follows head yaw); macOS has no `timeout` command.
+- **Damage source argument order**: `damageSources().source(key, projectile, shooter)`; names in the signature are misleading.
+- **Display asleep = game won't start** on macOS ("Failed to locate a primary monitor"); run under `caffeinate -d -u -i`.
 - **Tool caching**: the image `read` tool may return a cached image for a path it read before; write
   regenerated images to a new filename.

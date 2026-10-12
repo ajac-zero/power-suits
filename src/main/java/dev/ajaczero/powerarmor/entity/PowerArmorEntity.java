@@ -1,6 +1,7 @@
 package dev.ajaczero.powerarmor.entity;
 
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import dev.ajaczero.powerarmor.item.PowerTool;
 import dev.ajaczero.powerarmor.item.SuitLoadout;
 import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
 import net.minecraft.core.BlockPos;
@@ -168,6 +169,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** The suit was already off when we first saw it: hold the slumped pose instead of playing the slump. */
     private boolean wasOffWhenLoaded;
     private int startupTicks;
+    /** Server: the pilot is holding attack (sent by the client, see ToolTriggerPayload). */
+    private boolean triggerHeld;
+    /** Server: ticks until the socket tool may be used again. */
+    private int toolCooldown;
+    /** Server: how many times the socket tool has been used (tests and dev logs). */
+    private int toolUses;
     /** Client: 0..1, how much the torso follows the pilot's view (eases out on shutdown, in after startup). */
     private float aimBlend;
 
@@ -189,6 +196,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final RawAnimation SHUTDOWN = RawAnimation.begin().thenPlayAndHold("animation.power_armor.shutdown");
     private static final RawAnimation POWERED_OFF = RawAnimation.begin().thenPlayAndHold("animation.power_armor.powered_off");
     private static final RawAnimation STARTUP = RawAnimation.begin().thenPlay("animation.power_armor.startup");
+    private static final RawAnimation PLASMA_SHOT = RawAnimation.begin().thenPlay("animation.power_armor.plasma_shot");
 
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
 
@@ -400,6 +408,74 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     public boolean isLowOnFuel() {
         return this.getTotalEnergy() < LOW_FUEL;
+    }
+
+    // ---- Socket tool ---------------------------------------------------------------------------
+
+    /** Server: the pilot pressed or released attack. Anyone else (or a forged packet) is ignored. */
+    public void setTriggerHeld(Player who, boolean down) {
+        if (who != this.getControllingPassenger()) {
+            return;
+        }
+        if (down && !this.triggerHeld && !(this.getSocketTool() != null && this.canOperate())) {
+            // Nothing in the socket, or no power: the trigger just clicks.
+            this.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F);
+        }
+        this.triggerHeld = down;
+    }
+
+    /** Server: while the trigger is held, use the tool each time it's ready and there's fuel for it. */
+    private void tickTool() {
+        if (this.toolCooldown > 0) {
+            this.toolCooldown--;
+        }
+        if (!(this.getControllingPassenger() instanceof Player pilot)) {
+            this.triggerHeld = false; // the pilot left with the button down
+            return;
+        }
+        PowerTool tool = this.getSocketTool();
+        if (!this.triggerHeld || tool == null || this.toolCooldown > 0 || !this.canOperate()) {
+            return;
+        }
+        int cost = tool.energyPerUse();
+        if (!this.hasEnergyFor(cost)) {
+            this.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F); // not enough fuel for a shot
+            this.toolCooldown = tool.cooldownTicks();
+            return;
+        }
+        if (tool.use(this, pilot, this.inventory.getItem(SOCKET_SLOT))) {
+            this.consumeEnergy(cost);
+            this.toolCooldown = tool.cooldownTicks();
+            this.toolUses++;
+        }
+    }
+
+    @Nullable
+    private PowerTool getSocketTool() {
+        return this.inventory.getItem(SOCKET_SLOT).getItem() instanceof PowerTool tool ? tool : null;
+    }
+
+    /** Server: is there this much energy on board (burning item + fuel slot)? */
+    private boolean hasEnergyFor(int amount) {
+        ItemStack fuel = this.inventory.getItem(FUEL_SLOT);
+        return this.burnLeft + (float) fuel.getCount() * SuitFuel.energyOf(fuel) >= amount;
+    }
+
+    /** Server: take energy, lighting more fuel items if the burning one hasn't got enough left. */
+    private void consumeEnergy(int amount) {
+        while (this.burnLeft < amount && SuitFuel.isFuel(this.inventory.getItem(FUEL_SLOT))) {
+            this.igniteNextItem();
+        }
+        this.burnLeft = Math.max(0, this.burnLeft - amount);
+        this.syncBurn();
+    }
+
+    public int getToolUses() {
+        return this.toolUses;
+    }
+
+    public boolean isTriggerHeld() {
+        return this.triggerHeld;
     }
 
     /** Server: the real slots (used by the menu and tests). */
@@ -872,6 +948,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         super.tick();
         if (!this.level().isClientSide() && this.isAlive()) {
             this.tickFuel();
+            this.tickTool();
         }
         this.tickPowerTransitions();
         if (this.level().isClientSide()) {
@@ -968,7 +1045,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         // Controller 2: one-shot upper-body reactions, started from the server with triggerAnim().
         // It is added after "movement", so for the bones it animates it wins; legs keep walking.
         controllers.add(new AnimationController<>(this, "action", 2, state -> PlayState.STOP)
-                .triggerableAnim("hit", HIT));
+                .triggerableAnim("hit", HIT)
+                .triggerableAnim("plasma_shot", PLASMA_SHOT));
     }
 
     private PlayState movementAnimation(AnimationState<PowerArmorEntity> state) {

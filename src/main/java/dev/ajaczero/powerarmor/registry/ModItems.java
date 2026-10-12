@@ -2,6 +2,7 @@ package dev.ajaczero.powerarmor.registry;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.PlasmaCannonItem;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
@@ -16,6 +17,10 @@ public final class ModItems {
             () -> new PowerArmorItem(new Item.Properties()
                     .durability(PowerArmorEntity.MAX_HEALTH)
                     .rarity(Rarity.UNCOMMON)));
+
+    /** First power tool for the suit's socket. */
+    public static final DeferredItem<PlasmaCannonItem> PLASMA_CANNON = ITEMS.register("plasma_cannon",
+            () -> new PlasmaCannonItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
 
     private ModItems() {}
 }

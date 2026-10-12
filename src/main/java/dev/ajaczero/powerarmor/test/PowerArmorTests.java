@@ -1,6 +1,7 @@
 package dev.ajaczero.powerarmor.test;
 
 import dev.ajaczero.powerarmor.PowerArmor;
+import dev.ajaczero.powerarmor.entity.PlasmaBolt;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.SuitFuel;
 import dev.ajaczero.powerarmor.item.SuitLoadout;
@@ -17,6 +18,9 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -335,6 +339,10 @@ public final class PowerArmorTests {
         helper.assertTrue(menu.getSlot(1).mayPlace(new ItemStack(Items.BLAZE_ROD)), "fuel slot takes blaze rods");
         helper.assertTrue(!menu.getSlot(1).mayPlace(new ItemStack(Items.DIRT)), "fuel slot refuses dirt");
         helper.assertTrue(!menu.getSlot(0).mayPlace(new ItemStack(Items.COAL)), "socket only takes power tools");
+        helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(ModItems.PLASMA_CANNON.get())), "socket takes the plasma cannon");
+        player.getInventory().setItem(10, new ItemStack(ModItems.PLASMA_CANNON.get()));
+        menu.quickMoveStack(player, 3); // menu slot 3 = player inventory slot 10
+        helper.assertTrue(menu.getSlot(0).getItem().is(ModItems.PLASMA_CANNON.get()), "shift-click should install the cannon");
         helper.assertTrue(menu.getSlot(1).getItem().getCount() == 4, "menu shows the suit's fuel");
 
         // Shift-click coal from the player's inventory: it joins the coal in the fuel slot.
@@ -349,6 +357,130 @@ public final class PowerArmorTests {
         menu.clickMenuButton(player, PowerArmorMenu.BUTTON_PACK);
         helper.assertTrue(suit.isRemoved(), "Pack up should remove the suit");
         helper.assertTrue(!packedSuit(player).isEmpty(), "Pack up should give the item");
+        helper.succeed();
+    }
+
+    // =========================================================================================
+    // Socket tools (Phase 2)
+    // =========================================================================================
+
+    private static PowerArmorEntity armedSuit(GameTestHelper helper, BlockPos pos, ItemStack fuel) {
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), pos);
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, fuel);
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.PLASMA_CANNON.get()));
+        return suit;
+    }
+
+    /** Holding attack fires every 12 ticks, 300 energy a shot; releasing stops. */
+    @GameTest(template = PAD, timeoutTicks = 80)
+    public static void cannonFiresOnCooldownAndCostsFuel(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2)); // 9600 energy
+        Player pilot = boardedPilot(helper, suit);
+        suit.positionRider(pilot);
+        helper.runAfterDelay(2, () -> suit.setTriggerHeld(pilot, true));
+        helper.runAfterDelay(6, () -> {
+            helper.assertTrue(suit.getToolUses() == 1, "first shot should fire at once, uses " + suit.getToolUses());
+            int used = 9600 - suit.getTotalEnergy();
+            helper.assertTrue(used >= 300 && used < 310, "a shot costs 300 energy (+ idle), used " + used);
+        });
+        helper.runAfterDelay(12, () -> helper.assertTrue(suit.getToolUses() == 1, "cooldown: no second shot yet"));
+        helper.runAfterDelay(20, () -> {
+            helper.assertTrue(suit.getToolUses() == 2, "second shot after the 12-tick cooldown, uses " + suit.getToolUses());
+            suit.setTriggerHeld(pilot, false);
+        });
+        helper.runAfterDelay(50, () -> {
+            helper.assertTrue(suit.getToolUses() == 2, "releasing attack stops firing, uses " + suit.getToolUses());
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void shotLightsTheNextFuelItem(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.COAL, 1));
+        suit.setBurn(100, 1600); // not enough for a shot by itself
+        Player pilot = boardedPilot(helper, suit);
+        suit.positionRider(pilot);
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(3, () -> {
+            helper.assertTrue(suit.getToolUses() == 1, "should fire using the next coal");
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).isEmpty(), "the coal should have been lit");
+            float left = suit.getBurnLeftExact();
+            helper.assertTrue(left > 1390 && left <= 1400, "100 + 1600 - 300 = 1400 left (minus idle), got " + left);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void emptySocketDoesNothing(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player pilot = boardedPilot(helper, suit);
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(20, () -> {
+            helper.assertTrue(suit.getToolUses() == 0, "no tool, no shots");
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 3, "only the idle burn uses fuel");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void unpoweredCannonDoesNotFire(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, ItemStack.EMPTY);
+        Player pilot = boardedPilot(helper, suit);
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(20, () -> {
+            helper.assertTrue(suit.getToolUses() == 0, "no fuel, no shots");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void onlyThePilotCanPullTheTrigger(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.COAL, 4));
+        boardedPilot(helper, suit);
+        Player stranger = helper.makeMockPlayer(GameType.SURVIVAL);
+        suit.setTriggerHeld(stranger, true); // e.g. a forged packet from another player
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(!suit.isTriggerHeld() && suit.getToolUses() == 0, "a non-pilot must not fire the suit");
+            helper.succeed();
+        });
+    }
+
+    /** The bolt flies from the muzzle to what the pilot looks at and hurts it with plasma damage. */
+    @GameTest(template = PAD, timeoutTicks = 60)
+    public static void plasmaBoltHitsWhatThePilotAimsAt(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, new BlockPos(4, 2, 1), new ItemStack(Items.COAL, 4));
+        suit.setYRot(0); // facing +Z (south), toward the pig
+        suit.setYBodyRot(0);
+        Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 7));
+        pig.setNoAi(true);
+        Player pilot = boardedPilot(helper, suit);
+        suit.positionRider(pilot);
+        Vec3 toPig = pig.position().add(0, pig.getBbHeight() / 2, 0).subtract(pilot.getEyePosition());
+        pilot.setYRot((float) (Mth.atan2(-toPig.x, toPig.z) * Mth.RAD_TO_DEG));
+        pilot.setXRot((float) (-Mth.atan2(toPig.y, toPig.horizontalDistance()) * Mth.RAD_TO_DEG));
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(1, () -> suit.setTriggerHeld(pilot, false));
+        helper.runAfterDelay(15, () -> {
+            helper.assertTrue(suit.getToolUses() == 1, "one shot");
+            helper.assertTrue(pig.getHealth() < pig.getMaxHealth(), "the pig should be hit, health " + pig.getHealth());
+            helper.assertTrue(pig.getLastDamageSource() != null && pig.getLastDamageSource().is(PlasmaBolt.PLASMA),
+                    "damage should be plasma, got " + pig.getLastDamageSource());
+            helper.assertTrue(pig.getLastDamageSource().getEntity() == pilot, "the pilot gets the credit (the bolt is the direct cause), got " + pig.getLastDamageSource().getEntity());
+            helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "the bolt must not hit its own suit");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void cannonDoesNothingOnFoot(GameTestHelper helper) {
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.moveTo(helper.absoluteVec(new Vec3(4.5, 2, 4.5)));
+        ItemStack cannon = new ItemStack(ModItems.PLASMA_CANNON.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, cannon);
+        var result = cannon.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+        helper.assertTrue(!result.getResult().consumesAction(), "using it on foot should do nothing");
+        helper.assertTrue(helper.getLevel().getEntitiesOfClass(PlasmaBolt.class, new AABB(helper.absolutePos(SUIT_POS)).inflate(5)).isEmpty(),
+                "no bolt on foot");
         helper.succeed();
     }
 

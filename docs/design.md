@@ -16,6 +16,7 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
 | Item | `power_armor` item deploys the suit (needs 3-block clearance). Durability bar = suit health; anvil + iron ingots repairs. Crafted from iron blocks, iron helmet/chestplate/boots, pistons. Packed items keep fuel, socket tool and the half-burnt item (`powerarmor:loadout` component; shown in the tooltip). |
 | Entering | Right-click empty suit = climb in. Shift = climb out (behind/beside the suit). Sneak + right-click empty suit = suit menu. |
 | Fuel + power (Phase 1) | Furnace-style fuel slot, drain by load, shutdown/startup animations + sounds, exhaust smoke by load, HUD gauge, low-fuel warning. See section 4. |
+| Socket + plasma cannon (Phase 2) | `PowerTool` items in the socket; hold attack to use. Plasma cannon: bolt to the crosshair, 10 damage, 300 energy, 0.6 s cooldown, `plasma_shot` animation, 3D item (cut from the suit model), recipe. See section 3. |
 | Suit menu (Phase 1) | Socket slot (power tools only), fuel slot, live suit preview, burn flame, hull/fuel/status display, Pack up button. See section 5. |
 | Movement | Jog 5 blocks/s, sprint 10 (players: 4.3 / 5.6). Steps up 1 block, steps down up to 2 without falling; step changes eased for camera + model. Jump: hold Space (crouch wind-up, horse jump bar), release; launch 2 ticks later. |
 | Turning | Legs face the direction of travel; torso + arms twist up to 90 deg and lean to face the pilot's view. |
@@ -36,13 +37,18 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
   - The **attack** button (left-click, hold for continuous tools) uses the installed tool.
   - Empty socket: attack does nothing (maybe a dry "clunk" sound).
   - The suit is crafted/deployed with an **empty socket**.
-- The model's built-in cannon is removed from the suit; the right forearm ends in a **socket
-  coupling**. Each tool is its own small model attached to the socket bone.
+- Built (Phase 2): the forearm block stays as the **socket housing**; a `socket` coupling plate (cyan pins)
+  shows when the socket is empty. Each tool is a bone in the suit model (`cannon` for the plasma cannon),
+  shown only while installed, so tools can have their own animated parts. The hand-held item model is
+  cut from the same bones by `tools/extract-tool-geo.py`.
+- Firing: the client cancels vanilla attack while piloting and sends "trigger down/up"; the server checks
+  the sender is the pilot, the suit can operate, the tool's cooldown and fuel (lighting more fuel items if
+  needed). Empty socket / no fuel: a dry click.
 
 ### Power tools
 | Tool | Primary action (attack) | Fuel cost (initial guess) | Notes |
 |---|---|---|---|
-| **Plasma cannon** | Fires a plasma bolt (projectile, impact damage + small knockback, no block damage). Cooldown ~0.6 s. | 300 per shot | Reuses the existing cannon art, `attack` animation and `muzzle_flash` bone. First tool to build. |
+| **Plasma cannon** (built) | Fires a plasma bolt from the muzzle toward the crosshair (60 blocks/s, no gravity, ~90 block range): 10 damage, vanilla knockback, 1 s of fire, no block damage, fizzles in water. Cooldown 0.6 s while held. | 300 per shot (balance later) | Reuses the cannon art + `muzzle_flash`; single-shot `plasma_shot` overlay. Damage type `powerarmor:plasma` ("vaporized"). Recipe: iron ingots, blaze rod, diamond, glass. |
 | **3x3 drill** | Hold to drill: breaks the targeted block plus the 8 around it in the plane facing the pilot. Respects harvest tier (diamond-equivalent?), never unbreakable blocks, drops items normally. | 60 per block | Fire `BlockEvent.BreakEvent` for every block so claim/protection mods can veto. |
 | **Chainsaw** | Hold on a log: cuts it; when the bottom log of a tree is cut, fells the whole tree (connected logs, cap ~256). | 40 per log | "Natural tree" heuristic: connected logs with leaves attached, so log cabins aren't eaten. |
 | **EM tool** (electromagnetic) | Hold = **pull** the targeted item entity / mob toward the suit; release / second press = **push** it away. | 2 per tick held, 200 per push | Replaces the earlier "gravity gun". **OPEN:** blocks too, or only items + mobs? **OPEN:** also usable on foot in a weaker form (it was originally a gun-like handheld)? Default: socket-only like the other tools. Never bosses or players (unless a PvP config allows). |

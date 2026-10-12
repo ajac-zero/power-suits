@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.PowerTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -15,6 +16,8 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
     /** Bones whose own cubes surround the pilot's camera. */
     private static final String[] SHELL_BONES = {"body", "torso"};
+    /** Every tool's bone in the suit model (PowerTool.suitBone). Add new tools here. */
+    private static final String[] TOOL_BONES = {"cannon"};
 
     public PowerArmorRenderer(EntityRendererProvider.Context context) {
         super(context, new PowerArmorModel());
@@ -34,6 +37,12 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
             });
         }
         model.getBone("head").ifPresent(head -> head.setHidden(cockpit)); // head + helmet fully hidden
+        // Socket: show the installed tool's bone and hide the others; the bare coupling only when empty.
+        String installed = suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.suitBone() : null;
+        for (String toolBone : TOOL_BONES) {
+            model.getBone(toolBone).ifPresent(bone -> bone.setHidden(!toolBone.equals(installed)));
+        }
+        model.getBone("socket").ifPresent(bone -> bone.setHidden(installed != null));
         if (!isReRender) {
             poseStack.translate(0, suit.getStepOffset(partialTick), 0); // glide over step-ups/downs
         }

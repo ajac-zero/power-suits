@@ -151,8 +151,29 @@ public final class AutoPilot {
             case 836 -> shot(mc, "menu_fueled");
             case 845 -> { mc.player.closeContainer(); sideCamera(mc); }
             case 850, 858, 866, 874, 890 -> shot(mc, "fuel_side_startup_" + t);
-            case 900 -> { closeFuelLog(); mc.setCameraEntity(mc.player); }
-            case 905 -> mc.stop();
+            // ---- plasma cannon: climb back in, shoot three pigs 12 blocks ahead and a wall behind them
+            case 900 -> { closeFuelLog(); mc.setCameraEntity(mc.player); yaw = 0; pitch = 9; cannonRangeSetup(mc); }
+            case 910 -> { o.setCameraType(CameraType.FIRST_PERSON); openCannonLog(mc); }
+            case 920 -> hold(o.keyAttack, true);
+            case 921, 922, 923, 924, 925, 926, 927, 928, 929, 930, 931, 932 -> shot(mc, "cannon_fp_" + t);
+            case 940 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 12; }
+            case 945, 946, 947, 949 -> shot(mc, "cannon_tp_" + t);
+            case 958 -> { yaw = -12; sideCamera(mc); }
+            case 969, 970, 971, 973, 976 -> shot(mc, "cannon_side_" + t);
+            case 985 -> { releaseAll(); pitch = 20; }
+            case 990 -> shot(mc, "cannon_empty_trigger");
+            // ---- the cannon item on foot: hand (first / third person) and inventory icon
+            case 995 -> { closeCannonLog(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); hold(o.keyShift, true); }
+            case 1000 -> { hold(o.keyShift, false); giveCannon(mc); survival(mc, true); yaw = 120; pitch = 10; }
+            case 1010 -> shot(mc, "item_fp");
+            case 1012 -> o.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            case 1020 -> shot(mc, "item_tp_front");
+            case 1022 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 1030 -> shot(mc, "item_tp_back");
+            case 1032 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)); }
+            case 1040 -> shot(mc, "item_gui");
+            case 1042 -> mc.setScreen(null);
+            case 1045 -> mc.stop();
             default -> {}
         }
         if (t >= 360 && t < 640) {
@@ -160,6 +181,9 @@ public final class AutoPilot {
         }
         if (t >= 660 && t < 900) {
             logFuel(mc, t);
+        }
+        if (t >= 910 && t < 995) {
+            logCannon(mc, t);
         }
     }
 
@@ -244,6 +268,80 @@ public final class AutoPilot {
                 fuelSuit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 16));
             }
         });
+    }
+
+    // ---- cannon scenario helpers -----------------------------------------------------------
+
+    private static final java.util.List<net.minecraft.world.entity.animal.Pig> pigs = new java.util.ArrayList<>();
+    private static java.io.BufferedWriter cannonCsv;
+
+    /** Server: back into the suit (facing +Z), three pigs 12 blocks ahead, a stone wall at 18. */
+    private static void cannonRangeSetup(Minecraft mc) {
+        onServer(mc, player -> {
+            if (fuelSuit == null) {
+                return;
+            }
+            player.startRiding(fuelSuit, true);
+            fuelSuit.setYRot(0);
+            var level = player.serverLevel();
+            BlockPos base = fuelSuit.blockPosition();
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dy = 0; dy < 5; dy++) {
+                    level.setBlock(base.offset(dx, dy, 18), net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                }
+            }
+            for (int i = -1; i <= 1; i++) {
+                var pig = EntityType.PIG.create(level);
+                pig.setNoAi(true);
+                pig.moveTo(fuelSuit.getX() + i * 2.5, fuelSuit.getY(), fuelSuit.getZ() + 12, 180, 0);
+                level.addFreshEntity(pig);
+                pigs.add(pig);
+            }
+        });
+    }
+
+    private static void giveCannon(Minecraft mc) {
+        // Take the cannon out of the suit (the shot shows the bare socket coupling) and into the player's hand.
+        onServer(mc, player -> {
+            if (fuelSuit != null) {
+                fuelSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, net.minecraft.world.item.ItemStack.EMPTY);
+            }
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                    new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()));
+        });
+    }
+
+    private static void openCannonLog(Minecraft mc) {
+        try {
+            cannonCsv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_cannon.csv"));
+            cannonCsv.write("tick,shots,energy,triggerHeld,pigHealth,anim\n");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /** Reads the server's suit (shots, trigger) and pigs: fine for a dev log in singleplayer. */
+    private static void logCannon(Minecraft mc, int t) {
+        if (cannonCsv == null || fuelSuit == null) {
+            return;
+        }
+        String health = pigs.stream().map(p -> p.isAlive() ? String.format(java.util.Locale.ROOT, "%.0f", p.getHealth()) : "dead")
+                .reduce((a, b) -> a + "/" + b).orElse("");
+        try {
+            cannonCsv.write(String.format(java.util.Locale.ROOT, "%d,%d,%d,%b,%s,%s%n", t, fuelSuit.getToolUses(), fuelSuit.getTotalEnergy(),
+                    fuelSuit.isTriggerHeld(), health, mc.player.getVehicle() instanceof PowerArmorEntity s ? s.getMovementAnimationName() : "-"));
+        } catch (IOException e) {
+            PowerArmor.LOGGER.error("[autopilot] cannon csv", e);
+        }
+    }
+
+    private static void closeCannonLog() {
+        try {
+            if (cannonCsv != null) {
+                cannonCsv.close();
+            }
+        } catch (IOException ignored) {
+        }
     }
 
     private static void onServer(Minecraft mc, java.util.function.Consumer<ServerPlayer> action) {
@@ -392,6 +490,7 @@ public final class AutoPilot {
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
             // A full stack of blaze rods (~4 hours of walking): enough for any scripted drive.
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64));
+            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()));
             suit.moveTo(player.getX() + 0.5, player.getY(), player.getZ() + 0.5, 0, 0);
             level.addFreshEntity(suit);
             player.startRiding(suit);

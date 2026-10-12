@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "III",
+    "BDG",
+    "III"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "B": { "item": "minecraft:blaze_rod" },
+    "D": { "item": "minecraft:diamond" },
+    "G": { "item": "minecraft:glass" }
+  },
+  "result": { "id": "powerarmor:plasma_cannon", "count": 1 }
+}

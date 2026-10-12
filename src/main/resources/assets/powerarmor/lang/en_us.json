@@ -15,7 +15,16 @@
   "gui.powerarmor.offline": "NO POWER",
   "gui.powerarmor.no_fuel": "NO FUEL",
   "gui.powerarmor.socket_slot": "Power tool socket",
-  "gui.powerarmor.socket_slot.hint": "Right-arm tools go here (coming soon)",
+  "gui.powerarmor.socket_slot.hint": "Power tools go here, e.g. the Plasma Cannon",
   "gui.powerarmor.fuel_slot": "Fuel",
-  "gui.powerarmor.fuel_slot.hint": "Coal or charcoal 1:20, lava bucket 2:40, blaze rod 4:00 of walking each"
+  "gui.powerarmor.fuel_slot.hint": "Coal or charcoal 1:20, lava bucket 2:40, blaze rod 4:00 of walking each",
+  "item.powerarmor.plasma_cannon": "Plasma Cannon",
+  "item.powerarmor.plasma_cannon.tooltip": "Power tool: fires plasma bolts where you aim.",
+  "item.powerarmor.power_tool.stats": "%s hearts per shot, %s fuel, every %s s",
+  "item.powerarmor.power_tool.install": "Install it in a Power Armor's socket (sneak + right-click a parked suit). Hold attack to use.",
+  "message.powerarmor.tool_on_foot": "Too heavy to use on foot. Install it in a Power Armor's socket.",
+  "entity.powerarmor.plasma_bolt": "Plasma Bolt",
+  "death.attack.powerarmor.plasma": "%1$s was vaporized",
+  "death.attack.powerarmor.plasma.player": "%1$s was vaporized by %2$s",
+  "death.attack.powerarmor.plasma.item": "%1$s was vaporized by %2$s using %3$s"
 }

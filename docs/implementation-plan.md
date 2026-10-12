@@ -19,22 +19,19 @@ from `starcraft_marine_anim/a_power.js`. Tests: 9 new GameTests (17 total); auto
 Not done: hoppers into the fuel slot; exhaust pipe bone positions are computed from the entity transform
 (`ExhaustSmoke.PIPE_*`), not tracked GeckoLib bones (ignores the torso lean, looks right in game).
 
-## Phase 2: socket + plasma cannon (first power tool)
-1. `PowerTool` interface (or abstract item class): fuel cost, cooldown, `use(suit, pilot, hit)` on
-   the server, animation names, model id. Items do nothing on foot (tooltip says "Install in a Power
-   Armor socket").
-2. **Input**: while piloting, intercept the attack key on the client
-   (`InputEvent.InteractionKeyMappingTriggered` for attack: cancel vanilla, no arm swing) and send a
-   custom payload (`RegisterPayloadHandlersEvent`, `CustomPacketPayload`) "tool start/stop".
-   Server validates (pilot is controlling passenger, suit powered, cooldown, fuel) and runs the tool.
-3. **Plasma cannon**: projectile entity (or hitscan + particles) from the muzzle, damage + knockback,
-   fuel 300/shot, cooldown ~12 ticks; trigger the `attack` animation (has recoil + `muzzle_flash`)
-   on the suit's "action" controller via `triggerAnim`.
-4. **Rendering**: tool model attached to the socket bone with GeckoLib's `BlockAndItemGeoLayer`
-   (or a custom `GeoRenderLayer`) using the synced `SOCKET_ITEM`; tools are GeckoLib items
-   (`GeoItem`) or plain item models.
-5. **Tests**: firing consumes fuel and respects cooldown; no fire when unpowered / empty socket;
-   projectile damages a mob; tool does nothing on foot.
+## Phase 2: socket + plasma cannon (DONE 2026-10-12)
+Built: `PowerTool` (energyPerUse, cooldownTicks, suitBone, use), `PlasmaCannonItem` (muzzle position from
+measured bone offsets + torso lean, aim point by ray-tracing the pilot's view, GeckoLib item), `PlasmaBolt`
+(+ `PlasmaBoltRenderer`, `powerarmor:plasma` damage type), `ToolTriggerPayload` + `client/ToolInput`
+(attack intercepted, state sent on change), suit `tickTool` / `consumeEnergy`, renderer tool-bone
+visibility, `socket` coupling in the model, `plasma_shot` animation (`a_plasma_shot.js`),
+`tools/extract-tool-geo.py`, item display transforms, recipe. Tests: 7 new GameTests (24 total); autopilot
+cannon range + item views (`ap_cannon_*`, `ap_item_*`, `run/autopilot_cannon.csv`).
+Not done: muzzle position is computed from constants, not the animated bone (fine at the bolt's speed);
+no glowmask (emissive) texture yet; fuel cost per shot to be balanced (user: later).
+For the next tools: add the tool's bone to the suit model (child of `right_forearm`), its name to
+`PowerArmorRenderer.TOOL_BONES` and `extract-tool-geo.py`, implement `PowerTool`, register the item + client
+extension, add a `models/item/<tool>.json`.
 
 ## Phase 3: left hand holds and uses items
 1. Render the pilot's main-hand item at the suit's left hand bone (`hand_l`) with the item layer.
@@ -71,10 +68,8 @@ Sounds (engine loop pitched by load), recipes for every tool and fuel balance pa
 Use the `blockbench-mcp` skill (`~/Developer/Models/.agents/skills/blockbench-mcp/`), checkpoint
 before every change, save only when the user asks, re-export with `node tools/export-model.mjs`.
 - Phase 1 (done): `shutdown`, `powered_off`, `startup` (`a_power.js`, planted feet IK).
-- Phase 2: split the cannon (`cannon`, `muzzle_flash` bones and the cannon cubes on `right_forearm`)
-  into its own model file for the plasma-cannon item; add a socket coupling on `right_forearm`;
-  re-check `walk`/`run` (they keep the cannon stabilised: with no cannon the stabiliser should now
-  stabilise the socket/tool, see `stabilize()` in `starcraft_marine_anim/a_walk.js`).
+- Phase 2 (done): `socket` coupling bone under `right_forearm`, `plasma_shot` overlay; the item model is
+  extracted from the suit geo. Walk/run's stabiliser holds the forearm, so it steadies any tool.
 - Phase 3: left-hand grip pose that holds an item; remove the grenade bone and update `throw` or retire it.
 - Phase 4/5: models for the EM tool, drill, chainsaw (gun-like, sized for the socket) + tool-use
   overlays (recoil, drill vibration, chainsaw cut).

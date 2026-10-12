@@ -27,7 +27,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 |---|---|
 | `./gradlew build` | compile + jar |
 | `./gradlew runGameTestServer` | headless GameTests in `src/main/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
-| `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_water.csv`, `run/autopilot_fuel.csv`. Quits by itself (~45 s). |
+| `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, plasma cannon range, cannon item on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon}.csv`. Quits by itself (~55 s). |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv`; summarize with `python3 tools/terrain-report.py` |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000) |
@@ -58,6 +58,18 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   the saved player may already sit in one: `TerrainPilot.fuelVehicle` fuels whatever suit you're in.
 - **Synced entity data must be refreshed wherever the server field changes**, not only in `tick()`: loading,
   `applyLoadout`, test setters (a GameTest caught a stale `BURN_TOTAL` after load). See `syncBurn()`/`syncSlots()`.
+- **`damageSources().source(key, a, b)` takes (projectile, shooter)** despite its parameter names
+  (vanilla: `source(FIREBALL, fireball, thrower)`). Swapped, kills credit the bolt instead of the pilot.
+- **GeckoLib won't restart a triggered animation that is still playing**: per-use animations must be shorter
+  than the tool's cooldown (`plasma_shot` 0.5 s vs 0.6 s).
+- **GeckoLib items are not hooked up automatically on NeoForge**: register a `GeoItemRenderer` through
+  `RegisterClientExtensionsEvent` (see `ClientSetup`), model JSON parent `builtin/entity`. Centre the item
+  geo on the origin (GeckoLib adds the half-block offset) or rotations swing it out of the slot.
+- **Server and client tick independently in the autopilot**: a server-side event can show up a few client
+  ticks later; screenshot every tick around an event instead of guessing the frame. Server-side CSV
+  columns can lead the screenshots.
+- **The game can't start while the Mac's display sleeps** ("Failed to locate a primary monitor"; Gradle then
+  hangs). Run game tasks under `caffeinate -d -u -i`; if it hangs, kill the gradlew client process.
 - **Menus can't be opened by GameTest mock players**: `makeMockPlayer` ignores `openMenu`, and
   `makeMockServerPlayerInLevel` throws on NeoForge's `advanced_open_screen` payload. Test menu logic by
   constructing `PowerArmorMenu` directly; check the real screen in the autopilot (`ap_menu_*`).

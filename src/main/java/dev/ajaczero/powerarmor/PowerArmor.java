@@ -31,6 +31,8 @@ public class PowerArmor {
         modBus.addListener(PowerArmor::registerAttributes);
         // Show the item in a creative inventory tab.
         modBus.addListener(PowerArmor::addToCreativeTab);
+        // Network messages (client -> server: attack pressed/released for the socket tool).
+        modBus.addListener(dev.ajaczero.powerarmor.network.ToolTriggerPayload::register);
     }
 
     private static void registerAttributes(EntityAttributeCreationEvent event) {
@@ -40,6 +42,7 @@ public class PowerArmor {
     private static void addToCreativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(ModItems.POWER_ARMOR);
+            event.accept(ModItems.PLASMA_CANNON);
         }
     }
 }
