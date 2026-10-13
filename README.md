@@ -198,7 +198,8 @@ src/main/resources/
 - Power: `shutdown` (slump, hold) when the fuel runs out, `powered_off` (its last frame) for suits that were
   already off when they came into view, `startup` (1.4 s, movement blocked meanwhile) when fuel returns.
   The torso stops following the view while powered down. Spec: `starcraft_marine_anim/a_power.js`.
-- Socket: the left arm ends in an elbow socket and the installed tool is the forearm; `socket` (coupling plate) shows when empty, the installed
+- Socket: the left arm ends in an elbow socket and the installed tool is the forearm, carried at the hip (rest pose:
+  upper arm 18 deg forward, elbow 62 deg); `socket` (coupling plate) shows when empty, the installed
   tool's bone (`cannon`, `em_projector`, `drill`, `chainsaw`) otherwise (`PowerArmorRenderer`). The EM push reuses `plasma_shot` as `tool_recoil`. `plasma_shot` (0.5 s overlay, `a_plasma_shot.js`)
   is triggered per shot; it must stay shorter than the cooldown because GeckoLib won't restart a running one.
 - Mining tools: while a continuous tool runs, the suit syncs `TOOL_RUNNING` and a fourth controller (`tool`)

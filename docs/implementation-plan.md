@@ -101,3 +101,9 @@ before every change, save it with every mod commit that changes the art (user's 
   (cubes, rest poses, all keyframes, left/right names; checkpoint "before arm swap mirror"), verified exact against
   the live bone matrices of every animation. Phase notes above use the old side names. Specs stay authored for the
   old rig: `starcraft_marine_anim/kit.json` makes `bb.mjs` mirror them on bake.
+- Tool arm hip carry + shoulder fix (2026-10-13, done): the tool arm's rest pose went from raised forward (upper arm
+  46 deg, elbow 38 deg: always looked extended) to a hip carry beside the body (upper arm 18 deg, elbow 62 deg, tool
+  still pointing forward); walk/run re-baked (their cannon stabiliser depends on the rest pose; speeds unchanged),
+  the other animations are offsets on top of the rest pose and follow. `SocketAim` muzzle re-measured. The
+  `shoulder_joint` blocks moved down 1.25 px: the pads' inner edge rolled onto them in walk/run and they poked up
+  through the pad tops (up to 0.85 px in run, now 0 in every animation).
