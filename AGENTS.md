@@ -19,15 +19,13 @@ The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is
   touches the art or animations** (user's rule since Phase 5) and commit it with them, so the model and the
   exported files never drift. If Blockbench still has it open from the old place, set
   `Project.save_path` to this file before saving.
-- When the user says "I like it" (or similar approval) about a change, commit it (and save the model if it changed).
 
 ## Layout
 - `src/` the mod; `tools/` export / art / test helpers; `docs/` design + plan; `run/` dev game (not in git).
 - `model/` the Blockbench source: `starcraft_marine.bbmodel`, `anim/` procedural animation specs (bake with
   `.agents/skills/blockbench-mcp/scripts/run.mjs`, see `model/anim/README.md`), `art/` one-off texture/part scripts.
 - `.pi/mcp.json` connects pi to Blockbench's MCP server (`localhost:3000/bb-mcp`): start sessions here.
-- `.agents/skills/`: `minecraft-modding` (this mod's how-to) and `blockbench-mcp` (a copy of the one in
-  `~/Developer/Models`; keep both in step when you improve it).
+- `.agents/skills/`: `minecraft-modding` (this mod's how-to) and `blockbench-mcp` (Blockbench work).
 
 ## Setup
 Java 21 from Homebrew is keg-only. Every shell needs:
