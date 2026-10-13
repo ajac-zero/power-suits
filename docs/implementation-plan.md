@@ -88,7 +88,7 @@ config screen (`ap_config`). Not done: sounds are vanilla re-pitches chosen with
 would replace them in `sounds.json` only.
 
 ## Phase 7: dieselpunk identity (decided 2026-10-13, see design sec. 0)
-1. Identity pass (DONE 2026-10-13): `chest_core` -> 8x5 `firebox` cube, porthole visor, ember vent slits; glowing pixels
+1. Identity pass (DONE 2026-10-13): `chest_core` -> 8x5 `firebox` cube (steel frame), whole visor as glass, ember vent slits; glowing pixels
    painted in reserved dark colours, `tools/make-glowmasks.py` -> `power_armor_glow_fire/visor.png`; `SuitGlowLayer`
    redraws the model with each mask in `RenderType.eyes`, tinted per frame from `PowerArmorEntity.tickLights`; item
    icon patched; autopilot night scene `ap_lights_*` (piloted, tool, hit, parked, shutdown, off).

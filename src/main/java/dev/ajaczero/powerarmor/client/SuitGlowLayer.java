@@ -16,7 +16,7 @@ import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 import software.bernie.geckolib.util.RenderUtil;
 
 /**
- * The suit's lights: the firebox fire and the porthole visor, drawn on top of the model at full brightness so they glow
+ * The suit's lights: the firebox fire and the visor, drawn on top of the model at full brightness so they glow
  * in the dark. Like GeckoLib's AutoGlowingGeoLayer, the whole model is drawn again with a glowmask texture (black
  * everywhere except the glowing pixels, made by tools/make-glowmasks.py) in vanilla's "eyes" render type (the one
  * spider and enderman eyes use): it ignores light and adds its colour on top. Unlike AutoGlowingGeoLayer, each mask

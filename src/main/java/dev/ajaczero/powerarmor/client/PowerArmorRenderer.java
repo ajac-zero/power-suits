@@ -21,7 +21,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
         super(context, new PowerArmorModel());
         this.shadowRadius = 0.9F;
         this.addRenderLayer(new HeldItemLayer(this)); // the pilot's selected item in the right hand
-        this.addRenderLayer(new SuitGlowLayer(this)); // firebox + porthole visor lights
+        this.addRenderLayer(new SuitGlowLayer(this)); // firebox + visor lights
     }
 
     @Override

@@ -6,7 +6,7 @@ Glowing parts are painted in Blockbench with RESERVED colours: dark, so a powere
 dark glass. Each reserved colour maps to a bright colour in one glowmask; everything else is transparent black,
 which adds nothing (SuitGlowLayer draws the masks full-bright and additively, tinted per frame):
   power_armor_glow_fire.png   the firebox coals (yellow at the bottom -> red at the top) and the ember vent slits
-  power_armor_glow_visor.png  the porthole glass, white (tinted green / amber / red by the suit's state)
+  power_armor_glow_visor.png  the visor glass, white (tinted green / amber / red by the suit's state)
 The script refuses to run if a reserved colour turns up outside the expected amount (someone painted with it).
 """
 from pathlib import Path
@@ -22,11 +22,11 @@ GLOW = {
     H('371d19'): ('fire', H('ff9632')),   # coal, middle: orange
     H('2f1a17'): ('fire', H('d24619')),   # coal, top: red
     H('281614'): ('fire', H('963714')),   # vent slits under the firebox: dim ember
-    H('262c34'): ('visor', H('ebebeb')),  # porthole glass
-    H('1e232a'): ('visor', H('a0a0a0')),  # porthole glass, edge
-    H('46505c'): ('visor', H('ffffff')),  # porthole glass, highlight
+    H('262c34'): ('visor', H('ebebeb')),  # visor glass
+    H('1e232a'): ('visor', H('a0a0a0')),  # visor glass, edge
+    H('46505c'): ('visor', H('ffffff')),  # visor glass, highlight
 }
-EXPECTED = {'fire': 15, 'visor': 15}       # pixels per mask (firebox 12 + 3 slits; visor glass 15)
+EXPECTED = {'fire': 15, 'visor': 35}       # pixels per mask (firebox 12 + 3 slits; the whole 7x5 visor)
 
 
 def main():

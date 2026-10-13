@@ -4,13 +4,15 @@ Status: agreed direction as of 2026-10-12. Items marked **OPEN** need the user's
 they are built. `docs/design-notes.md` keeps the history of how we got here.
 
 ## 0. Identity (decided 2026-10-13)
-**A coal-fired, steam-and-diesel diving suit, not sci-fi.** Inspired by BioShock's Big Daddies: riveted plates,
-porthole lights, a drill, a rivet gun. Everything it does is powered by the firebox burning your fuel; the glow comes
+**A coal-fired, steam-and-diesel machine, not sci-fi.** Inspirations, not targets: Fallout's power armor and
+BioShock's Big Daddies (heavy plates, a glowing visor, a drill, a rivet gun); don't replicate either. Everything it does is powered by the firebox burning your fuel; the glow comes
 from fire, hot metal, redstone and sparks, never from futuristic energy. Keep the blue paint for now.
-- Built 2026-10-13 (step 1): firebox, glowmask layer (`SuitGlowLayer`), porthole visor states.
+- **Material palette: blue paint, grey steel, dark iron; light only from fire and glow.** No small accents in a new
+  material (brass trim on the visor and firebox was tried 2026-10-13 and dropped: it read as stuck on).
+- Built 2026-10-13 (step 1): firebox, glowmask layer (`SuitGlowLayer`), visor states.
 - Chest: the blue core becomes a **firebox** (grated window, orange glow, flickers with load, fades with fuel, dark
   when off). Glow is drawn from glowmask textures (full-bright, tinted per frame).
-- Visor: **porthole lights that show the suit's state**: green = parked with power (free to climb in), amber =
+- Visor: **the whole visor glows and shows the suit's state** (the helmet's own steel is its frame): green = parked with power (free to climb in), amber =
   piloted, red = tool in use or just hit, dark = powered off, flickering while starting up, shutting down or low on fuel.
 - Plasma cannon -> **rivet gun**: fires red-hot rivets using **iron nuggets from the pilot's inventory** (like a bow
   uses arrows; creative: free) plus fuel for steam pressure. Rivets **stick in blocks** (not mobs) for a while and
@@ -121,7 +123,7 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
   the animated torso).
 - **HUD gauge** while piloting (built): burn flame, fuel slot item + count, time left at walking pace, right of
   the hotbar. Phase 2 may add the tool's name/cooldown.
-- **Lights** (built 2026-10-13): firebox glow (load, low fuel, embers after shutdown) and porthole visor state colours,
+- **Lights** (built 2026-10-13): firebox glow (load, low fuel, embers after shutdown) and visor state colours,
   see section 0.
 - Sounds (built, Phase 6): engine loop while piloted + powered, pitch/volume by load; drill and chainsaw loops while
   running; power-down/up, shots, EM hum and grinding one-shots. All in `sounds.json` (re-pitched vanilla for now).

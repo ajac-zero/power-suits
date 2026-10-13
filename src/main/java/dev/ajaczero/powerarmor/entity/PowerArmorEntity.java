@@ -832,7 +832,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return t * t * (3 - 2 * t);
     }
 
-    // ---- Lights (client): the firebox and the porthole visor, drawn by SuitGlowLayer -----------------------------
+    // ---- Lights (client): the firebox and the visor, drawn by SuitGlowLayer -----------------------------
 
     private static final float[] VISOR_GREEN = {0.35F, 1F, 0.45F}, VISOR_AMBER = {1F, 0.68F, 0.22F}, VISOR_RED = {1F, 0.12F, 0.08F};
 

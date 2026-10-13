@@ -90,7 +90,7 @@ has nothing to do, right click goes to the socket tool instead, exactly like van
 shield in your off hand (your real off-hand item isn't used while piloting). A powered-down suit's hand can't do anything.
 
 **Lights**: the firebox in the chest glows through its grate while the engine runs (brighter under load,
-dimmer when fuel runs low, embers dying out after shutdown), and the porthole visor shows the suit's state:
+dimmer when fuel runs low, embers dying out after shutdown), and the visor shows the suit's state:
 **green** = parked with power (free to climb in), **amber** = piloted, **red** = a tool in use or just hit,
 **dark** = powered off; it stutters while starting up or shutting down and drops out now and then on low fuel.
 
@@ -165,7 +165,7 @@ src/main/java/dev/ajaczero/powerarmor/
     FuelGauge.java           HUD fuel gauge + low-fuel beep
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
-    SuitGlowLayer.java       firebox + porthole visor lights (glowmasks, tinted per frame)
+    SuitGlowLayer.java       firebox + visor lights (glowmasks, tinted per frame)
     PlasmaBoltRenderer.java  the glowing bolt (camera-facing quad)
     ClientSetup.java         registers the renderer
     PowerArmorClient.java    client-only @Mod entry: the in-game config screen
