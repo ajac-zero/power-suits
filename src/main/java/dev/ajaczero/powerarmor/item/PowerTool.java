@@ -55,6 +55,12 @@ public interface PowerTool {
         return null;
     }
 
+    /** Continuous tools: a looping sound played (client side, see SuitSounds) while the tool runs, or null. */
+    @Nullable
+    default net.minecraft.sounds.SoundEvent runSound() {
+        return null;
+    }
+
     /** Server: keep the run animation going after the trigger is released (a tree still coming down). */
     default boolean keepsRunning(PowerArmorEntity suit) {
         return false;

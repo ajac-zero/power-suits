@@ -72,9 +72,20 @@ Autopilot: drill into a rock face with ores and fell a feature-grown oak (`ap_dr
 `run/autopilot_mine.csv`). Not done: tool sounds (Phase 6), leaves of felled trees decay at vanilla speed,
 fuel costs unbalanced (user: later).
 
-## Phase 6: polish
-Sounds (engine loop pitched by load), recipes for every tool and fuel balance pass, a config file
-(`ModConfigSpec`) for balance knobs, README + in-game tooltips.
+## Phase 6: polish (DONE 2026-10-12)
+Built: `PowerArmorConfig` (COMMON `ModConfigSpec`, `config/powerarmor-common.toml`, hot-reloaded; fuel energies,
+drain rates, jump, low-fuel level, cannon energy/cooldown/damage, EM energies/range/slam, drill energy/pause,
+chainsaw energy/max logs/felling speed) read at the moment of use everywhere; in-game config screen
+(`client/PowerArmorClient`, a client-only `@Mod` with `ConfigurationScreen`, labels + tooltips in lang);
+balance pass (cannon 300 -> 120 per shot, EM 2 -> 1 per tick and 200 -> 80 per throw, drill 60 -> 20 per
+block, chainsaw 40 -> 15 per log; fuels and drain unchanged); `ModSounds` + `sounds.json` (engine, drill,
+chainsaw: re-pitched vanilla loops with subtitles) and `client/SuitSounds` (tickable loops that follow the
+suit, engine pitch/volume by `engineLoad()`, fade in/out); `PowerTool.runSound()`; fuel tooltips on coal,
+charcoal, lava and blaze rods (`client/FuelTooltip`); walking-time display follows the configured drain.
+Recipes exist for the suit and all 4 tools. Tests: config-aware fuel assertions, `runningToolIsSynced...`
+(43 total). Autopilot logs the active loops (`loops` column of `autopilot_mine.csv`) and screenshots the
+config screen (`ap_config`). Not done: sounds are vanilla re-pitches chosen without listening; real recordings
+would replace them in `sounds.json` only.
 
 ## Art (Blockbench, `~/Developer/Models/starcraft_marine.bbmodel`)
 Use the `blockbench-mcp` skill (`~/Developer/Models/.agents/skills/blockbench-mcp/`), checkpoint

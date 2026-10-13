@@ -7,7 +7,9 @@ import dev.ajaczero.powerarmor.registry.ModItems;
 import dev.ajaczero.powerarmor.registry.ModMenus;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 
@@ -20,12 +22,15 @@ public class PowerArmor {
     public static final String MODID = "powerarmor";
     public static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
-    public PowerArmor(IEventBus modBus) {
+    public PowerArmor(IEventBus modBus, ModContainer container) {
+        // Balance knobs: config/powerarmor-common.toml (see PowerArmorConfig).
+        container.registerConfig(ModConfig.Type.COMMON, PowerArmorConfig.SPEC);
         // Registries: tell Minecraft our entity type and item exist.
         ModEntities.ENTITIES.register(modBus);
         ModItems.ITEMS.register(modBus);
         ModDataComponents.COMPONENTS.register(modBus); // the fuel/tool data a packed suit item carries
         ModMenus.MENUS.register(modBus);               // the suit's inventory screen
+        dev.ajaczero.powerarmor.registry.ModSounds.SOUNDS.register(modBus); // engine + tool loops (sounds.json)
 
         // Every living entity needs a set of attributes (health, armor, speed...).
         modBus.addListener(PowerArmor::registerAttributes);

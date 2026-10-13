@@ -52,3 +52,26 @@ Built for the Power Armor suit menu (fuel + tool socket, Pack up button) and fue
   fixed model point into the world with the yaw the bone follows (`forward = (-sin yaw, 0, cos yaw)`);
   symmetric pairs (two pipes) make GeckoLib's X mirroring irrelevant. `LARGE_SMOKE` is big: one every
   other tick per source is already a thick trail.
+
+## Config files + in-game config screen (NeoForge 21.1)
+- `ModConfigSpec.Builder`: `B.comment(..).translation(key).push("section")`, `defineInRange(name, def, min, max)`,
+  `B.pop()`, `SPEC = B.build()`. Register in the `@Mod` constructor: `container.registerConfig(ModConfig.Type.COMMON, SPEC)`
+  (needs a `ModContainer` constructor parameter). COMMON = one file for the game (`config/<modid>-common.toml`),
+  written with comments on first launch, reloaded when the file changes; SERVER = per world, synced to clients.
+- Read values with `.get()` at the moment of use (cached by NeoForge, refreshed on reload). Section labels need
+  `.translation()` *before* `push`.
+- Config screen: a second `@Mod(value = MODID, dist = Dist.CLIENT)` class whose constructor calls
+  `container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new)`. Labels: the value's
+  translation key, tooltips: `<key>.tooltip`, title `<modid>.configuration.title`. With one config file it opens
+  the section directly.
+- Tooltips on other mods'/vanilla items: `ItemTooltipEvent` (client, game bus), `event.getToolTip().add(...)`.
+
+## Looping sounds
+- `DeferredRegister<SoundEvent>` + `SoundEvent.createVariableRangeEvent(id)`; `assets/<modid>/sounds.json` maps each
+  event to files or to other events (`{"name": "minecraft:entity.bee.loop_aggressive", "type": "event", "pitch": 0.75}`;
+  pitch/volume multiply, final pitch is clamped to 0.5-2.0) plus a `subtitle` lang key.
+- Client: `AbstractTickableSoundInstance` with `looping = true`, `delay = 0`, `canStartSilent() = true`; in `tick()`
+  follow the entity (`x/y/z`), ease `volume`/`pitch`, `stop()` after fading out. Start them from a client tick
+  handler that scans nearby entities and keeps one instance per entity id (drop stopped ones).
+- Good vanilla loops to re-pitch: `entity.minecart.inside` / `entity.minecart.riding` (rumble / whir),
+  `entity.bee.loop(_aggressive)` (buzz), `entity.guardian.attack` (whine), `item.elytra.flying` (wind).

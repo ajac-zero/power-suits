@@ -1,9 +1,11 @@
 package dev.ajaczero.powerarmor.test;
 
 import dev.ajaczero.powerarmor.PowerArmor;
+import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PlasmaBolt;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.SuitFuel;
+import dev.ajaczero.powerarmor.item.PowerTool;
 import dev.ajaczero.powerarmor.item.SuitLoadout;
 import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
 import dev.ajaczero.powerarmor.registry.ModDataComponents;
@@ -210,6 +212,11 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
+    /** Within 10% (+-1): tick timing in tests is a tick or so off either way. */
+    private static boolean near(double actual, double expected) {
+        return Math.abs(actual - expected) <= expected * 0.1 + 1;
+    }
+
     /** Furnace-style: one item at a time is burnt; idle, walking and sprinting drain 0.25 / 1 / 2 per tick. */
     @GameTest(template = PAD, timeoutTicks = 120)
     public static void pilotedSuitBurnsOneItemAtATime(GameTestHelper helper) {
@@ -217,18 +224,18 @@ public final class PowerArmorTests {
         Player pilot = boardedPilot(helper, suit);
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 2, "one coal should be burning, two waiting");
-            float idle = 1600 - suit.getBurnLeftExact();
-            helper.assertTrue(idle > 4 && idle < 6, "idle should burn ~0.25/tick (5 in 20 ticks), burnt " + idle);
+            float idle = PowerArmorConfig.COAL_ENERGY.get() - suit.getBurnLeftExact();
+            helper.assertTrue(near(idle, 20 * PowerArmorConfig.DRAIN_IDLE.get()), "idle should burn ~0.25/tick (5 in 20 ticks), burnt " + idle);
             float before = suit.getBurnLeftExact();
             pilot.zza = 1; // holding W
             helper.runAfterDelay(20, () -> {
                 float walk = before - suit.getBurnLeftExact();
-                helper.assertTrue(walk > 18 && walk < 22, "walking should burn ~1/tick (20), burnt " + walk);
+                helper.assertTrue(near(walk, 20 * PowerArmorConfig.DRAIN_WALK.get()), "walking should burn ~1/tick (20), burnt " + walk);
                 float before2 = suit.getBurnLeftExact();
                 pilot.setSprinting(true);
                 helper.runAfterDelay(20, () -> {
                     float sprint = before2 - suit.getBurnLeftExact();
-                    helper.assertTrue(sprint > 36 && sprint < 44, "sprinting should burn ~2/tick (40), burnt " + sprint);
+                    helper.assertTrue(near(sprint, 20 * PowerArmorConfig.DRAIN_SPRINT.get()), "sprinting should burn ~2/tick (40), burnt " + sprint);
                     helper.assertTrue(suit.isPowered(), "suit should still be powered");
                     helper.succeed();
                 });
@@ -242,7 +249,7 @@ public final class PowerArmorTests {
         boardedPilot(helper, suit);
         helper.runAfterDelay(2, () -> {
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.BUCKET), "an empty bucket should stay in the fuel slot");
-            helper.assertTrue(suit.getBurnLeftExact() > 3190, "lava should give 3200 energy, got " + suit.getBurnLeftExact());
+            helper.assertTrue(suit.getBurnLeftExact() > PowerArmorConfig.LAVA_ENERGY.get() - 10, "lava should give its energy, got " + suit.getBurnLeftExact());
             helper.succeed();
         });
     }
@@ -375,7 +382,7 @@ public final class PowerArmorTests {
         return suit;
     }
 
-    /** Holding attack fires every 12 ticks, 300 energy a shot; releasing stops. */
+    /** Holding attack fires every cooldown (12 ticks by default), paying the configured energy per shot; releasing stops. */
     @GameTest(template = PAD, timeoutTicks = 80)
     public static void cannonFiresOnCooldownAndCostsFuel(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2)); // 9600 energy
@@ -384,8 +391,8 @@ public final class PowerArmorTests {
         helper.runAfterDelay(2, () -> suit.setTriggerHeld(pilot, true));
         helper.runAfterDelay(6, () -> {
             helper.assertTrue(suit.getToolUses() == 1, "first shot should fire at once, uses " + suit.getToolUses());
-            int used = 9600 - suit.getTotalEnergy();
-            helper.assertTrue(used >= 300 && used < 310, "a shot costs 300 energy (+ idle), used " + used);
+            int used = 2 * PowerArmorConfig.BLAZE_ENERGY.get() - suit.getTotalEnergy(), shot = PowerArmorConfig.CANNON_ENERGY.get();
+            helper.assertTrue(used >= shot && used < shot + 10, "a shot costs " + shot + " energy (+ idle), used " + used);
         });
         helper.runAfterDelay(12, () -> helper.assertTrue(suit.getToolUses() == 1, "cooldown: no second shot yet"));
         helper.runAfterDelay(20, () -> {
@@ -408,8 +415,8 @@ public final class PowerArmorTests {
         helper.runAfterDelay(3, () -> {
             helper.assertTrue(suit.getToolUses() == 1, "should fire using the next coal");
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).isEmpty(), "the coal should have been lit");
-            float left = suit.getBurnLeftExact();
-            helper.assertTrue(left > 1390 && left <= 1400, "100 + 1600 - 300 = 1400 left (minus idle), got " + left);
+            float left = suit.getBurnLeftExact(), expected = 100 + PowerArmorConfig.COAL_ENERGY.get() - PowerArmorConfig.CANNON_ENERGY.get();
+            helper.assertTrue(left > expected - 10 && left <= expected, "100 + coal - shot = " + expected + " left (minus idle), got " + left);
             helper.succeed();
         });
     }
@@ -591,7 +598,8 @@ public final class PowerArmorTests {
             helper.assertTrue(item.isRemoved(), "the diamond should have been collected");
             helper.assertTrue(pilot.getInventory().countItem(Items.DIAMOND) == 1, "the diamond should be in the pilot's inventory");
             int used = before - suit.getTotalEnergy();
-            helper.assertTrue(used > 0 && used < 200, "pulling costs 2 per tick (+ idle), used " + used);
+            int max = 60 * (PowerArmorConfig.EM_HOLD_ENERGY.get() + 1);
+            helper.assertTrue(used > 0 && used < max, "pulling costs energy per tick (+ idle), used " + used);
             helper.succeed();
         });
     }
@@ -610,7 +618,7 @@ public final class PowerArmorTests {
             suit.setTriggerHeld(pilot, false);
             helper.runAfterDelay(1, () -> {
                 helper.assertTrue(suit.getBeamTarget() == null && !pig.isNoGravity(), "released: gravity back on");
-                helper.assertTrue(before - suit.getTotalEnergy() >= 200, "a throw costs 200");
+                helper.assertTrue(before - suit.getTotalEnergy() >= PowerArmorConfig.EM_THROW_ENERGY.get(), "a throw costs the throw energy");
                 helper.assertTrue(suit.getToolUses() == 1, "one throw");
                 helper.succeed();
             });
@@ -752,8 +760,8 @@ public final class PowerArmorTests {
             helper.assertTrue(wallLeft(helper) == 0, "all 9 blocks of the face should be gone, left " + wallLeft(helper));
             helper.assertBlockPresent(Blocks.OBSIDIAN, new BlockPos(4, 3, 6));
             helper.assertTrue(dropped(helper, Items.COBBLESTONE) == 9, "9 cobblestone should drop, got " + dropped(helper, Items.COBBLESTONE));
-            int used = before - suit.getTotalEnergy();
-            helper.assertTrue(used >= 9 * 60 && used < 9 * 60 + 40, "60 fuel per block (+ idle), used " + used);
+            int used = before - suit.getTotalEnergy(), face = 9 * PowerArmorConfig.DRILL_ENERGY.get();
+            helper.assertTrue(used >= face && used < face + 40, "9 blocks' fuel (+ idle), used " + used);
             helper.succeed();
         });
     }
@@ -837,8 +845,8 @@ public final class PowerArmorTests {
                 helper.assertBlockNotPresent(Blocks.OAK_LOG, new BlockPos(4, y, 5));
             }
             helper.assertTrue(dropped(helper, Items.OAK_LOG) == 5, "5 logs should drop, got " + dropped(helper, Items.OAK_LOG));
-            int used = before - suit.getTotalEnergy();
-            helper.assertTrue(used >= 5 * 40 && used < 5 * 40 + 30, "40 fuel per log (+ idle), used " + used);
+            int used = before - suit.getTotalEnergy(), tree = 5 * PowerArmorConfig.CHAINSAW_ENERGY.get();
+            helper.assertTrue(used >= tree && used < tree + 30, "fuel per log x 5 (+ idle), used " + used);
             helper.succeed();
         });
     }
@@ -869,6 +877,25 @@ public final class PowerArmorTests {
         suit.setTriggerHeld(pilot, true);
         helper.runAfterDelay(40, () -> {
             helper.assertTrue(wallLeft(helper) == 9 && suit.getToolUses() == 0, "the chainsaw must not cut stone");
+            helper.succeed();
+        });
+    }
+
+    /** TOOL_RUNNING (synced) drives the tool's loop animation and sound on every client. */
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void runningToolIsSyncedForAnimationAndSound(GameTestHelper helper) {
+        PowerArmorEntity suit = toolSuit(helper);
+        Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
+        PowerTool drill = (PowerTool) ModItems.DRILL.get();
+        helper.assertTrue(drill.runAnimation() != null && drill.runSound() != null, "the drill has a loop animation and sound");
+        helper.assertTrue(((PowerTool) ModItems.CHAINSAW.get()).runSound() != null, "so does the chainsaw");
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(suit.isToolRunning(), "held: running (spinning even in the air)");
+            suit.setTriggerHeld(pilot, false);
+        });
+        helper.runAfterDelay(4, () -> {
+            helper.assertTrue(!suit.isToolRunning(), "released: stopped");
             helper.succeed();
         });
     }

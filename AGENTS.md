@@ -95,6 +95,11 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   [0,0]). Transparent net corners belong to nobody, but a transparent face can be part of a net.
 - **Tree canopies next to the suit pull the third-person camera into the model** (camera collision): keep leaves
   out of the camera path in autopilot scenes and grow the tree only when it's needed.
+- **Balance values live in `PowerArmorConfig`** (COMMON config, hot-reloaded): read `.get()` where used, never
+  cache in static fields; GameTests must compare against the config, not literal numbers (the dev `run/config`
+  file is shared by the client, the GameTest server and the user's edits).
+- **Looping sounds are client side** (`SuitSounds`): the server only syncs state (powered, piloted, `TOOL_RUNNING`);
+  one-shots still use `playSound` on the server. Sounds are re-pitched vanilla events in `sounds.json`.
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
   `~/Developer/Models/starcraft_marine_anim/` (walk/run carry a cannon `stabilize()` wrapper). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.

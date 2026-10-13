@@ -1,6 +1,7 @@
 package dev.ajaczero.powerarmor.item;
 
 import dev.ajaczero.powerarmor.PowerArmor;
+import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,17 +44,17 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * Like all tools it only works in a powered suit's socket.
  */
 public class EmProjectorItem extends Item implements PowerTool, GeoItem {
-    public static final int ENERGY_PER_TICK = 2;     // while holding something
-    public static final int ENERGY_PER_PUSH = 200;
-    public static final double RANGE = 16, KEEP_RANGE = 24;
+    // Fuel per tick while holding, per throw, grab range and slam damage: PowerArmorConfig.
+    /** Held things get away beyond this many times the grab range. */
+    private static final double KEEP_RANGE_FACTOR = 1.5;
     /** Held things float this far in front of the projector's tip. */
     private static final double HOLD_DISTANCE = 3.5;
     /** Launch speeds, blocks per tick (x20 = blocks per second). */
     public static final double MOB_PUSH = 1.6, ITEM_PUSH = 1.2;
     /** Mobs bigger than this (width x width x height, blocks^3) are too heavy: an iron golem (5.3) is fine, a ravager (8.4) isn't. */
     private static final double MAX_VOLUME = 6.0;
-    /** Wall impacts faster than this (blocks per tick) hurt: damage = (speed - this) * SLAM_DAMAGE. */
-    private static final double SLAM_SPEED = 0.5, SLAM_DAMAGE = 12;
+    /** Wall impacts faster than this (blocks per tick) hurt: damage = (speed - this) * config slam damage. */
+    private static final double SLAM_SPEED = 0.5;
     private static final int COOLDOWN_TICKS = 8;
     /** "powerarmor:em_slam" (data/powerarmor/damage_type/em_slam.json): "slammed into a wall". */
     public static final ResourceKey<DamageType> EM_SLAM = ResourceKey.create(Registries.DAMAGE_TYPE,
@@ -118,7 +119,7 @@ public class EmProjectorItem extends Item implements PowerTool, GeoItem {
 
     @Override
     public int energyPerUse() {
-        return ENERGY_PER_PUSH;
+        return PowerArmorConfig.EM_THROW_ENERGY.get();
     }
 
     @Override
@@ -143,14 +144,15 @@ public class EmProjectorItem extends Item implements PowerTool, GeoItem {
             if (!suit.isToolReady()) {
                 return;
             }
-            Entity found = SocketAim.entityInView(suit, pilot, RANGE, EmProjectorItem::canGrab, 0.6F);
-            if (found != null && suit.tryUseEnergy(ENERGY_PER_TICK)) {
+            Entity found = SocketAim.entityInView(suit, pilot, PowerArmorConfig.EM_RANGE.get(), EmProjectorItem::canGrab, 0.6F);
+            if (found != null && suit.tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
                 grab(suit, beam, found);
             }
             return;
         }
         Entity target = beam.target;
-        if (!canGrab(target) || target.distanceTo(suit) > KEEP_RANGE || !suit.tryUseEnergy(ENERGY_PER_TICK)) {
+        if (!canGrab(target) || target.distanceTo(suit) > PowerArmorConfig.EM_RANGE.get() * KEEP_RANGE_FACTOR
+                || !suit.tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
             drop(suit, beam); // died, got away, or out of fuel
             return;
         }
@@ -189,7 +191,7 @@ public class EmProjectorItem extends Item implements PowerTool, GeoItem {
         if (target == null) {
             return;
         }
-        if (interrupted || pilot == null || !suit.tryUseEnergy(ENERGY_PER_PUSH)) {
+        if (interrupted || pilot == null || !suit.tryUseEnergy(PowerArmorConfig.EM_THROW_ENERGY.get())) {
             drop(suit, beam);
             return;
         }
@@ -224,7 +226,7 @@ public class EmProjectorItem extends Item implements PowerTool, GeoItem {
             }
             double speed = t.entity.getDeltaMovement().length();
             if (t.ticks > 1 && t.entity.horizontalCollision && t.lastSpeed > SLAM_SPEED) {
-                float damage = (float) ((t.lastSpeed - SLAM_SPEED) * SLAM_DAMAGE);
+                float damage = (float) ((t.lastSpeed - SLAM_SPEED) * PowerArmorConfig.EM_SLAM_DAMAGE.get());
                 t.entity.hurt(suit.damageSources().source(EM_SLAM, suit, t.thrower), damage); // (direct, causing)
                 return true;
             }
@@ -265,7 +267,7 @@ public class EmProjectorItem extends Item implements PowerTool, GeoItem {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.powerarmor.em_projector.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("item.powerarmor.em_projector.stats", ENERGY_PER_TICK * 20, ENERGY_PER_PUSH)
+        tooltip.add(Component.translatable("item.powerarmor.em_projector.stats", PowerArmorConfig.EM_HOLD_ENERGY.get() * 20, PowerArmorConfig.EM_THROW_ENERGY.get())
                 .withStyle(ChatFormatting.DARK_AQUA));
         tooltip.add(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }

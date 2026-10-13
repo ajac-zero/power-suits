@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,11 +37,9 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * axe blocks are the chainsaw's job. The 9 blocks break together, as slowly as the hardest of them.
  */
 public class DrillItem extends Item implements PowerTool, GeoItem {
-    public static final int ENERGY_PER_BLOCK = 60;
+    // Fuel per block and the pause after each 3x3: PowerArmorConfig.
     /** Mining speed of a diamond pickaxe / shovel (no enchantments). */
     public static final float SPEED = 8F;
-    /** Pause after each 3x3 before the next one starts (vanilla mining has a 5-tick delay between blocks). */
-    public static final int BREAK_DELAY = 4;
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_armor.drill_run");
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
@@ -85,12 +84,12 @@ public class DrillItem extends Item implements PowerTool, GeoItem {
 
     @Override
     public int energyPerUse() {
-        return ENERGY_PER_BLOCK;
+        return PowerArmorConfig.DRILL_ENERGY.get();
     }
 
     @Override
     public int cooldownTicks() {
-        return BREAK_DELAY;
+        return PowerArmorConfig.DRILL_PAUSE.get();
     }
 
     @Override
@@ -101,6 +100,11 @@ public class DrillItem extends Item implements PowerTool, GeoItem {
     @Override
     public RawAnimation runAnimation() {
         return RUN;
+    }
+
+    @Override
+    public net.minecraft.sounds.SoundEvent runSound() {
+        return dev.ajaczero.powerarmor.registry.ModSounds.DRILL.get();
     }
 
     @Override
@@ -140,26 +144,27 @@ public class DrillItem extends Item implements PowerTool, GeoItem {
             state.showCracks(level, blocks);
             return;
         }
-        // Done: break them all, 60 fuel each, as far as the fuel goes.
+        // Done: break them all, paying per block, as far as the fuel goes.
+        int cost = PowerArmorConfig.DRILL_ENERGY.get();
         ItemStack bit = new ItemStack(Items.DIAMOND_PICKAXE);
         ItemStack shovel = new ItemStack(Items.DIAMOND_SHOVEL);
         int broken = 0;
         for (BlockPos p : blocks) {
-            if (!suit.hasEnergyFor(ENERGY_PER_BLOCK)) {
+            if (!suit.hasEnergyFor(cost)) {
                 suit.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F);
                 break;
             }
             // Loot tables check the tool: dig dirt "with a shovel" so e.g. snow layers drop snowballs.
             ItemStack as = level.getBlockState(p).is(BlockTags.MINEABLE_WITH_PICKAXE) ? bit : shovel;
             if (ToolMining.breakBlock(level, p, pilot, as)) {
-                suit.tryUseEnergy(ENERGY_PER_BLOCK);
+                suit.tryUseEnergy(cost);
                 broken++;
             }
         }
         state.clear(level);
         if (broken > 0) {
             suit.countToolUse();
-            suit.setToolCooldown(BREAK_DELAY);
+            suit.setToolCooldown(PowerArmorConfig.DRILL_PAUSE.get()); // vanilla mining pauses 5 ticks between blocks
         }
     }
 
@@ -183,7 +188,7 @@ public class DrillItem extends Item implements PowerTool, GeoItem {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.powerarmor.drill.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("item.powerarmor.drill.stats", ENERGY_PER_BLOCK).withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.add(Component.translatable("item.powerarmor.drill.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.add(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 

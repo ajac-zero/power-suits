@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PlasmaBolt;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import java.util.List;
@@ -30,9 +31,10 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * It's a GeckoLib item (GeoItem) so it can use the same 3D model in your hand as on the suit's arm.
  */
 public class PlasmaCannonItem extends Item implements PowerTool, GeoItem {
-    public static final int ENERGY_PER_SHOT = 300;
-    public static final int COOLDOWN_TICKS = 12;   // 0.6 s; the shot animation is 0.5 s
-    public static final float DAMAGE = 10.0F;       // 5 hearts
+    // Fuel per shot, cooldown (default 0.6 s; the shot animation is 0.5 s) and damage: PowerArmorConfig.
+    public static float damage() {
+        return PowerArmorConfig.CANNON_DAMAGE.get().floatValue();
+    }
     /** How far the crosshair is traced to find the aim point. */
     private static final double AIM_RANGE = 96;
 
@@ -45,12 +47,12 @@ public class PlasmaCannonItem extends Item implements PowerTool, GeoItem {
 
     @Override
     public int energyPerUse() {
-        return ENERGY_PER_SHOT;
+        return PowerArmorConfig.CANNON_ENERGY.get();
     }
 
     @Override
     public int cooldownTicks() {
-        return COOLDOWN_TICKS;
+        return PowerArmorConfig.CANNON_COOLDOWN.get();
     }
 
     @Override
@@ -91,8 +93,8 @@ public class PlasmaCannonItem extends Item implements PowerTool, GeoItem {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.powerarmor.plasma_cannon.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("item.powerarmor.power_tool.stats", (int) DAMAGE / 2, ENERGY_PER_SHOT,
-                String.format("%.1f", COOLDOWN_TICKS / 20.0)).withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.add(Component.translatable("item.powerarmor.power_tool.stats", String.format("%.1f", damage() / 2), this.energyPerUse(),
+                String.format("%.1f", this.cooldownTicks() / 20.0)).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.add(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 

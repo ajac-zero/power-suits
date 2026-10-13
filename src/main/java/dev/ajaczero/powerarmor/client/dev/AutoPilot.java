@@ -237,7 +237,11 @@ public final class AutoPilot {
             case 1377 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)); }
             case 1385 -> shot(mc, "item_gui");
             case 1387 -> mc.setScreen(null);
-            case 1390 -> mc.stop();
+            case 1390 -> mc.setScreen(new net.neoforged.neoforge.client.gui.ConfigurationScreen(
+                    net.neoforged.fml.ModList.get().getModContainerById(PowerArmor.MODID).orElseThrow(), null));
+            case 1396 -> shot(mc, "config");
+            case 1398 -> mc.setScreen(null);
+            case 1400 -> mc.stop();
             default -> {}
         }
         if (t >= 360 && t < 640) {
@@ -516,7 +520,7 @@ public final class AutoPilot {
     private static void openMineLog(Minecraft mc) {
         try {
             mineCsv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_mine.csv"));
-            mineCsv.write("tick,tool,uses,energy,faceLeft,logsLeft,drops,anim,crosshair,toolAnim\n");
+            mineCsv.write("tick,tool,uses,energy,faceLeft,logsLeft,drops,anim,crosshair,toolAnim,loops\n");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -545,10 +549,10 @@ public final class AutoPilot {
                     toolAnim = controller.getAnimationState() + ":" + controller.getCurrentAnimation().animation().name();
                 }
             }
-            mineCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%s,%s,%s%n", t,
+            mineCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s%n", t,
                     net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(fuelSuit.getSocketStack().getItem()).getPath(),
                     fuelSuit.getToolUses(), fuelSuit.getTotalEnergy(), face, logs, drops,
-                    mc.player.getVehicle() instanceof PowerArmorEntity s ? s.getMovementAnimationName() : "-", aimed, toolAnim));
+                    mc.player.getVehicle() instanceof PowerArmorEntity s ? s.getMovementAnimationName() : "-", aimed, toolAnim, dev.ajaczero.powerarmor.client.SuitSounds.activeLoops()));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] mine csv", e);
         }

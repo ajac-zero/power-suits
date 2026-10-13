@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -41,14 +42,12 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * leaves (not placed by a player) attached, so log cabins and wooden builds only lose the block you cut.
  */
 public class ChainsawItem extends Item implements PowerTool, GeoItem {
-    public static final int ENERGY_PER_LOG = 40;
+    // Fuel per log, the biggest tree it fells (default 256 logs; the biggest vanilla trees have ~200) and the
+    // felling speed: PowerArmorConfig.
     public static final float SPEED = 8F;          // diamond axe
     public static final int BREAK_DELAY = 4;
-    /** Biggest tree it fells in one go (the biggest vanilla trees have ~200 logs). */
-    public static final int MAX_LOGS = 256;
     /** A tree needs at least this many natural leaf blocks touching its logs. */
     private static final int MIN_LEAVES = 4;
-    private static final int LOGS_PER_TICK = 3;
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_armor.chainsaw_run");
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
@@ -91,7 +90,7 @@ public class ChainsawItem extends Item implements PowerTool, GeoItem {
         todo.add(cut);
         int leaves = 0;
         Set<BlockPos> leavesSeen = new HashSet<>();
-        while (!todo.isEmpty() && logs.size() < MAX_LOGS) {
+        while (!todo.isEmpty() && logs.size() < PowerArmorConfig.CHAINSAW_MAX_LOGS.get()) {
             BlockPos pos = todo.poll();
             for (Direction d : Direction.values()) {
                 BlockPos n = pos.relative(d);
@@ -124,7 +123,7 @@ public class ChainsawItem extends Item implements PowerTool, GeoItem {
 
     @Override
     public int energyPerUse() {
-        return ENERGY_PER_LOG;
+        return PowerArmorConfig.CHAINSAW_ENERGY.get();
     }
 
     @Override
@@ -140,6 +139,11 @@ public class ChainsawItem extends Item implements PowerTool, GeoItem {
     @Override
     public RawAnimation runAnimation() {
         return RUN;
+    }
+
+    @Override
+    public net.minecraft.sounds.SoundEvent runSound() {
+        return dev.ajaczero.powerarmor.registry.ModSounds.CHAINSAW.get();
     }
 
     @Override
@@ -181,14 +185,15 @@ public class ChainsawItem extends Item implements PowerTool, GeoItem {
             return;
         }
         state.clear(level);
-        if (!suit.hasEnergyFor(ENERGY_PER_LOG)) {
+        int cost = this.energyPerUse();
+        if (!suit.hasEnergyFor(cost)) {
             suit.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F);
             return;
         }
         // Look for the tree before the cut: afterwards the log that joins it all is gone.
         List<BlockPos> tree = block.is(BlockTags.LOGS) ? treeAbove(level, pos) : List.of();
         if (ToolMining.breakBlock(level, pos, pilot, new ItemStack(Items.DIAMOND_AXE))) {
-            suit.tryUseEnergy(ENERGY_PER_LOG);
+            suit.tryUseEnergy(cost);
             suit.countToolUse();
             suit.setToolCooldown(BREAK_DELAY);
             if (!tree.isEmpty()) {
@@ -219,18 +224,19 @@ public class ChainsawItem extends Item implements PowerTool, GeoItem {
             return;
         }
         ItemStack axe = new ItemStack(Items.DIAMOND_AXE);
-        for (int i = 0; i < LOGS_PER_TICK && !state.falling.isEmpty(); i++) {
+        int cost = PowerArmorConfig.CHAINSAW_ENERGY.get();
+        for (int i = 0; i < PowerArmorConfig.CHAINSAW_LOGS_PER_TICK.get() && !state.falling.isEmpty(); i++) {
             BlockPos pos = state.falling.poll();
             if (!level.getBlockState(pos).is(BlockTags.LOGS)) {
                 continue; // someone else took it meanwhile
             }
-            if (!suit.hasEnergyFor(ENERGY_PER_LOG)) {
+            if (!suit.hasEnergyFor(cost)) {
                 state.falling.clear();
                 suit.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F);
                 return;
             }
             if (ToolMining.breakBlock(level, pos, feller, axe)) {
-                suit.tryUseEnergy(ENERGY_PER_LOG);
+                suit.tryUseEnergy(cost);
             }
         }
     }
@@ -248,7 +254,7 @@ public class ChainsawItem extends Item implements PowerTool, GeoItem {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.powerarmor.chainsaw.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("item.powerarmor.chainsaw.stats", ENERGY_PER_LOG).withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.add(Component.translatable("item.powerarmor.chainsaw.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.add(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 

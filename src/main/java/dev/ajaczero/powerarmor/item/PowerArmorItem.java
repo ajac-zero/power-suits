@@ -105,9 +105,9 @@ public class PowerArmorItem extends Item {
         }
     }
 
-    /** Energy -> "m:ss" of walking (walking burns 1 energy per tick, 20 per second). */
+    /** Energy -> "m:ss" of walking (by default walking burns 1 energy per tick, 20 per second). */
     public static String formatWalkTime(int energy) {
-        int seconds = energy / 20;
+        int seconds = (int) (energy / (20 * Math.max(0.01, dev.ajaczero.powerarmor.PowerArmorConfig.DRAIN_WALK.get())));
         return String.format("%d:%02d", seconds / 60, seconds % 60);
     }
 }

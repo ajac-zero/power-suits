@@ -13,6 +13,7 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
 ## 2. What exists today (shipped, tested)
 | Area | Behaviour |
 |---|---|
+| Config + sounds (Phase 6) | Balance file + in-game config screen; engine/drill/chainsaw sound loops; fuel tooltips. See sections 6-7. |
 | Item | `power_armor` item deploys the suit (needs 3-block clearance). Durability bar = suit health; anvil + iron ingots repairs. Crafted from iron blocks, iron helmet/chestplate/boots, pistons. Packed items keep fuel, socket tool and the half-burnt item (`powerarmor:loadout` component; shown in the tooltip). |
 | Entering | Right-click empty suit = climb in. Shift = climb out (behind/beside the suit). Sneak + right-click empty suit = suit menu. |
 | Fuel + power (Phase 1) | Furnace-style fuel slot, drain by load, shutdown/startup animations + sounds, exhaust smoke by load, HUD gauge, low-fuel warning. See section 4. |
@@ -54,10 +55,10 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
 ### Power tools
 | Tool | Primary action (attack) | Fuel cost (initial guess) | Notes |
 |---|---|---|---|
-| **Plasma cannon** (built) | Fires a plasma bolt from the muzzle toward the crosshair (60 blocks/s, no gravity, ~90 block range): 10 damage, vanilla knockback, 1 s of fire, no block damage, fizzles in water. Cooldown 0.6 s while held. | 300 per shot (balance later) | Reuses the cannon art + `muzzle_flash`; single-shot `plasma_shot` overlay. Damage type `powerarmor:plasma` ("vaporized"). Recipe: iron ingots, blaze rod, diamond, glass. |
-| **3x3 drill** (built) | Hold on a block within reach (6 in the suit): the block + the 8 around it in the plane of the hit face crack together and break together, at diamond pickaxe/shovel speed (8) for the hardest of them, then a 4-tick pause. **Decided 2026-10-12:** diamond tier (obsidian yes, bedrock/unbreakable no), **pickaxe + shovel blocks** (axe blocks are the chainsaw's), model with a visible diamond tip. Drops via the block's loot table for a diamond pickaxe (shovel for shovel blocks), XP from ores; none in creative (vanilla). | 60 per block | `BlockEvent.BreakEvent` for every block so claim/protection mods can veto (`ToolMining`, exempt from the pilot's no-mining rule). `drill_run` loop: bit spins 4 turns/s. Recipe: diamonds, iron, piston. |
-| **Chainsaw** (built) | Hold on an axe block (logs, planks, wooden things) or leaves: cuts it at diamond-axe speed. A cut log of a natural tree fells every connected log (26-neighbourhood, cap 256) **at or above the cut**, top first, 3 per tick; it keeps falling after release while the suit has power + fuel. Leaves are left to decay normally. | 40 per log | "Natural tree" = connected logs touching >= 4 non-persistent leaves, so log cabins only lose the cut block. `chainsaw_run` loop (chain shimmer). Recipe: iron, shears, piston. |
-| **EM projector** (built) | Hold on a dropped item / mob (within 16 blocks): pulled in and held 3.5 blocks in front of the projector; items that arrive go into the pilot's inventory (vacuum: keep holding to grab the next). Release: launch along the view (mobs 32 blocks/s, items 24). Tap: shove. Thrown mobs hitting a wall take (speed - 0.5) x 12 damage. Drops (no throw) when power/pilot/tool is lost. | 2 per tick while holding, 200 per throw | **Decided 2026-10-12:** items + mobs only (no blocks), socket only (no on-foot version). Never players, bosses, other suits, no-AI mobs, riders/ridden, volume > 6 blocks^3. Recipe: iron, copper, redstone, lodestone. |
+| **Plasma cannon** (built) | Fires a plasma bolt from the muzzle toward the crosshair (60 blocks/s, no gravity, ~90 block range): 10 damage, vanilla knockback, 1 s of fire, no block damage, fizzles in water. Cooldown 0.6 s while held. | 120 per shot (Phase 6; was 300) | Reuses the cannon art + `muzzle_flash`; single-shot `plasma_shot` overlay. Damage type `powerarmor:plasma` ("vaporized"). Recipe: iron ingots, blaze rod, diamond, glass. |
+| **3x3 drill** (built) | Hold on a block within reach (6 in the suit): the block + the 8 around it in the plane of the hit face crack together and break together, at diamond pickaxe/shovel speed (8) for the hardest of them, then a 4-tick pause. **Decided 2026-10-12:** diamond tier (obsidian yes, bedrock/unbreakable no), **pickaxe + shovel blocks** (axe blocks are the chainsaw's), model with a visible diamond tip. Drops via the block's loot table for a diamond pickaxe (shovel for shovel blocks), XP from ores; none in creative (vanilla). | 20 per block (Phase 6; was 60) | `BlockEvent.BreakEvent` for every block so claim/protection mods can veto (`ToolMining`, exempt from the pilot's no-mining rule). `drill_run` loop: bit spins 4 turns/s. Recipe: diamonds, iron, piston. |
+| **Chainsaw** (built) | Hold on an axe block (logs, planks, wooden things) or leaves: cuts it at diamond-axe speed. A cut log of a natural tree fells every connected log (26-neighbourhood, cap 256) **at or above the cut**, top first, 3 per tick; it keeps falling after release while the suit has power + fuel. Leaves are left to decay normally. | 15 per log (Phase 6; was 40) | "Natural tree" = connected logs touching >= 4 non-persistent leaves, so log cabins only lose the cut block. `chainsaw_run` loop (chain shimmer). Recipe: iron, shears, piston. |
+| **EM projector** (built) | Hold on a dropped item / mob (within 16 blocks): pulled in and held 3.5 blocks in front of the projector; items that arrive go into the pilot's inventory (vacuum: keep holding to grab the next). Release: launch along the view (mobs 32 blocks/s, items 24). Tap: shove. Thrown mobs hitting a wall take (speed - 0.5) x 12 damage. Drops (no throw) when power/pilot/tool is lost. | 1 per tick while holding, 80 per throw (Phase 6; was 2 / 200) | **Decided 2026-10-12:** items + mobs only (no blocks), socket only (no on-foot version). Never players, bosses, other suits, no-AI mobs, riders/ridden, volume > 6 blocks^3. Recipe: iron, copper, redstone, lodestone. |
 
 ## 4. Fuel and shutdown (built in Phase 1)
 - **Decided 2026-10-12: works like a furnace**, no big tank. The fuel slot holds a stack; the engine burns
@@ -92,11 +93,14 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
   the animated torso).
 - **HUD gauge** while piloting (built): burn flame, fuel slot item + count, time left at walking pace, right of
   the hotbar. Phase 2 may add the tool's name/cooldown.
-- Sounds: engine idle loop pitched by load (nice-to-have), power-down/up, tool sounds.
+- Sounds (built, Phase 6): engine loop while piloted + powered, pitch/volume by load; drill and chainsaw loops while
+  running; power-down/up, shots, EM hum and grinding one-shots. All in `sounds.json` (re-pitched vanilla for now).
 
-## 7. Balance knobs (all constants in code, later a config)
-Fuel energy per item, drain per state, low-fuel threshold, tool costs, tool cooldowns, drill harvest tier, chainsaw cap, EM range
-and strength, cannon damage.
+## 7. Balance knobs (built, Phase 6: `config/powerarmor-common.toml`, in-game config screen)
+Fuel energy per item, drain per state, jump cost, low-fuel threshold, tool costs, cannon cooldown + damage, EM range + slam
+damage, drill pause, chainsaw cap + felling speed. Not configurable (decided design): drill harvest tier (diamond).
+Default costs per coal (1600): 80 s walking, 13 cannon shots, 80 s of EM holding or 20 throws, ~9 drill faces,
+~20 felled oaks.
 
 ## 8. Out of scope for now
 Wearable armor, multiple sockets, upgrade trees, multiplayer permissions beyond "never grab players".

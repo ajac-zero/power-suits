@@ -1,6 +1,7 @@
 package dev.ajaczero.powerarmor.entity;
 
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.item.PowerTool;
 import dev.ajaczero.powerarmor.item.SuitLoadout;
 import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
@@ -135,12 +136,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     // ---- Fuel (works like a furnace, see SuitFuel) ---------------------------------------------
     public static final int FUEL_SLOT = 0, SOCKET_SLOT = 1;
-    /** Energy burnt per tick while piloted. Walking = 1, so SuitFuel values read as ticks of walking. */
-    private static final float DRAIN_IDLE = 0.25F, DRAIN_MOVING = 1.0F, DRAIN_SPRINT = 2.0F;
-    /** Extra energy for each jump (the legs' pistons). */
-    private static final int JUMP_ENERGY = 20;
-    /** Below this much energy left (30 s of walking) the suit warns: dark sputtering smoke, flashing gauge. */
-    public static final int LOW_FUEL = 600;
+    // Drain per tick (idle / walking / sprinting), energy per jump and the low-fuel warning level are balance
+    // knobs in PowerArmorConfig. Walking = 1 per tick, so SuitFuel values read as ticks of walking.
     /** Length of the startup animation (1.4 s): the suit can't move until it has stood up. */
     private static final int STARTUP_TICKS = 28;
 
@@ -336,9 +333,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static float drainPerTick(Player pilot) {
         boolean moving = pilot.zza != 0 || pilot.xxa != 0;
         if (!moving) {
-            return DRAIN_IDLE;
+            return PowerArmorConfig.DRAIN_IDLE.get().floatValue();
         }
-        return pilot.isSprinting() ? DRAIN_SPRINT : DRAIN_MOVING;
+        return (pilot.isSprinting() ? PowerArmorConfig.DRAIN_SPRINT : PowerArmorConfig.DRAIN_WALK).get().floatValue();
     }
 
     /** Takes one item from the fuel slot and starts burning it. Lava leaves its bucket behind. */
@@ -426,7 +423,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     public boolean isLowOnFuel() {
-        return this.getTotalEnergy() < LOW_FUEL;
+        return this.getTotalEnergy() < PowerArmorConfig.LOW_FUEL.get();
     }
 
     // ---- Socket tool ---------------------------------------------------------------------------
@@ -816,6 +813,17 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return current == null ? "-" : current.animation().name().replace("animation.power_armor.", "");
     }
 
+    /** Both sides: a continuous socket tool is running (synced). */
+    public boolean isToolRunning() {
+        return this.entityData.get(TOOL_RUNNING);
+    }
+
+    /** Client: how hard the engine works, 0 idle .. 1 sprinting, +0.3 while a tool runs (engine sound). */
+    public float engineLoad() {
+        float load = this.isWalking() ? (this.isRunning() ? 1F : 0.55F) : 0F;
+        return this.isToolRunning() ? load + 0.3F : load;
+    }
+
     /** Client: smoothed ground speed in blocks/s (for camera effects). */
     public double getVisualSpeed() {
         return this.visualSpeed;
@@ -931,7 +939,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     @Override
     public void handleStartJump(int jumpPower) {
         this.entityData.set(JUMP_COUNTER, this.entityData.get(JUMP_COUNTER) + 1);
-        this.burnLeft = Math.max(0, this.burnLeft - JUMP_ENERGY);
+        this.burnLeft = Math.max(0, this.burnLeft - PowerArmorConfig.JUMP_ENERGY.get());
     }
 
     /** Client: the local pilot's jump bar charge (0 = not charging). */
@@ -1188,7 +1196,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     private PlayState toolAnimation(AnimationState<PowerArmorEntity> state) {
-        if (this.entityData.get(TOOL_RUNNING) && this.getSocketStack().getItem() instanceof PowerTool tool && tool.runAnimation() != null) {
+        if (this.isToolRunning() && this.getSocketStack().getItem() instanceof PowerTool tool && tool.runAnimation() != null) {
             return state.setAndContinue(tool.runAnimation());
         }
         return PlayState.STOP;

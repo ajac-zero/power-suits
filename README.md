@@ -20,11 +20,33 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
 | Install a tool | Put a power tool (Plasma Cannon, EM Projector, Mining Drill, Chainsaw) in the menu's socket slot; it appears on the suit's right arm |
 | Use items | Right-click as usual while piloting: the suit's left hand holds your selected item (place blocks, eat, open doors, buckets...). 1.5 blocks extra reach |
-| EM Projector | Hold attack on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 2 fuel/tick while holding, 200 per throw |
-| Mining Drill | Hold attack on a block: digs it and the 8 around it (a 3x3 face of a wall, floor or ceiling) like a diamond pickaxe + shovel. 60 fuel per block |
-| Chainsaw | Hold attack on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 40 fuel per log |
-| Fire | Hold attack (left click) while piloting: a plasma bolt every 0.6 s toward your crosshair (300 fuel = 15 s of walking, 5 hearts) |
+| EM Projector | Hold attack on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 1 fuel/tick while holding, 80 per throw |
+| Mining Drill | Hold attack on a block: digs it and the 8 around it (a 3x3 face of a wall, floor or ceiling) like a diamond pickaxe + shovel. 20 fuel per block |
+| Chainsaw | Hold attack on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 15 fuel per log |
+| Fire | Hold attack (left click) while piloting: a plasma bolt every 0.6 s toward your crosshair (120 fuel = 6 s of walking, 5 hearts) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
+
+### Balance and config
+Everything that costs fuel, plus damage, ranges and speeds, is in `config/powerarmor-common.toml` (in the
+game folder, `run/config/` when developing) and in game under **Mods > Power Armor > Config**. Changes apply
+at once. Fuel is counted in energy: walking burns 1 per tick, so 20 energy = 1 s of walking. Defaults (Phase 6
+balance pass), with what one piece of coal (1600) buys:
+
+| Use | Cost | Per coal |
+|---|---|---|
+| Walking / standing / sprinting | 1 / 0.25 / 2 per tick | 80 s / 5:20 / 40 s |
+| Jump | 20 | 80 jumps |
+| Plasma Cannon | 120 per shot (5 hearts, every 0.6 s) | 13 shots |
+| EM Projector | 1 per tick holding, 80 per throw | 80 s of holding, or 20 throws |
+| Mining Drill | 20 per block (180 per 3x3) | ~9 faces (80 blocks) |
+| Chainsaw | 15 per log | ~20 oaks (5 logs each) |
+
+Coal and charcoal 1600, lava bucket 3200, blaze rod 4800. Hover over any of them for its walking time.
+
+### Sounds
+The engine rumbles while someone pilots a powered suit, louder and higher as it works harder (walking,
+sprinting, a tool running); the drill whirs and the chainsaw buzzes while they run (subtitles included).
+They are vanilla sounds re-pitched in `assets/powerarmor/sounds.json`: swap in your own `.ogg` files there.
 
 Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It only burns
 while someone is inside: standing still uses a quarter of the walking rate, sprinting double, and each
@@ -56,7 +78,7 @@ like vanilla, creative mode breaks without drops.
 **Chainsaw** (crafted: iron ingots around shears and a piston). Cuts axe blocks (logs, planks, wooden
 things) and leaves one at a time at diamond-axe speed. A cut log that belongs to a natural tree (logs
 touching leaves that grew, not placed ones) brings down every connected log at or above the cut, top first,
-3 logs per tick, 40 fuel each; leaves are left to decay as usual. Log cabins and other builds only lose the
+3 logs per tick, 15 fuel each; leaves are left to decay as usual. Log cabins and other builds only lose the
 block you cut. Both mining tools post Minecraft's block-break event for every block, so land-claim mods can
 protect blocks from them.
 
@@ -121,6 +143,8 @@ src/main/java/dev/ajaczero/powerarmor/
   item/PowerArmorItem.java   deploying / packing / repairing
   PilotProtection.java       redirects damage from the pilot to the suit
   PilotHands.java            no punching/mining from inside, hand needs power, +1.5 reach
+  PowerArmorConfig.java      balance knobs (config/powerarmor-common.toml)
+  registry/ModSounds.java    engine + tool loop sound events (audio picked in assets/powerarmor/sounds.json)
   client/                    rendering only (never loaded on servers)
     PowerArmorModel.java     points GeckoLib at the asset files, head follows your view
     PowerArmorRenderer.java  hides the head in first person
@@ -132,6 +156,9 @@ src/main/java/dev/ajaczero/powerarmor/
     FirstPersonLeftHand.java draws it vanilla-style at the lower left in the cockpit
     PlasmaBoltRenderer.java  the glowing bolt (camera-facing quad)
     ClientSetup.java         registers the renderer
+    PowerArmorClient.java    client-only @Mod entry: the in-game config screen
+    SuitSounds.java          engine + tool loops (tickable sounds that follow the suit)
+    FuelTooltip.java         "Power Armor fuel: 1:20 of walking" on coal, lava, blaze rods
     dev/AutoPilot.java       scripted screenshot test drive (only with -Dpowerarmor.autopilot)
   test/PowerArmorTests.java  GameTests
 src/main/resources/

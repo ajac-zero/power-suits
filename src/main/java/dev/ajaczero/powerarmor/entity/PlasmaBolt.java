@@ -93,7 +93,7 @@ public class PlasmaBolt extends Projectile {
         Entity target = result.getEntity();
         // Careful: despite the parameter names, vanilla passes (projectile, shooter), e.g. source(FIREBALL, fireball, thrower).
         DamageSource source = this.damageSources().source(PLASMA, this, this.getOwner());
-        target.hurt(source, PlasmaCannonItem.DAMAGE);
+        target.hurt(source, PlasmaCannonItem.damage());
         if (target instanceof LivingEntity living) {
             living.setRemainingFireTicks(Math.max(living.getRemainingFireTicks(), 20)); // scorched for a second
         }
