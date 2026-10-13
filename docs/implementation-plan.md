@@ -87,6 +87,15 @@ Recipes exist for the suit and all 4 tools. Tests: config-aware fuel assertions,
 config screen (`ap_config`). Not done: sounds are vanilla re-pitches chosen without listening; real recordings
 would replace them in `sounds.json` only.
 
+## Phase 7: dieselpunk identity (decided 2026-10-13, see design sec. 0)
+1. Identity pass (DONE 2026-10-13): `chest_core` -> 8x5 `firebox` cube, porthole visor, ember vent slits; glowing pixels
+   painted in reserved dark colours, `tools/make-glowmasks.py` -> `power_armor_glow_fire/visor.png`; `SuitGlowLayer`
+   redraws the model with each mask in `RenderType.eyes`, tinted per frame from `PowerArmorEntity.tickLights`; item
+   icon patched; autopilot night scene `ap_lights_*` (piloted, tool, hit, parked, shutdown, off).
+2. Rivet gun: model (replaces the cannon; no flash block), raise transformation, rivet projectile that sticks in
+   blocks and drops a nugget, iron-nugget ammo from the inventory, steam/piston sounds and particles.
+3. EM projector redstone restyle: model/texture, red-dust beam + sparks.
+
 ## Art (Blockbench, `~/Developer/Models/starcraft_marine.bbmodel`)
 Use the `blockbench-mcp` skill (`~/Developer/Models/.agents/skills/blockbench-mcp/`), checkpoint
 before every change, save it with every mod commit that changes the art (user's rule), re-export with `node tools/export-model.mjs`.

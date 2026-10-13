@@ -89,6 +89,11 @@ the suit's gauntlet holds it at the lower right (cockpit viewmodel). It's a norm
 has nothing to do, right click goes to the socket tool instead, exactly like vanilla tries your main hand and then a
 shield in your off hand (your real off-hand item isn't used while piloting). A powered-down suit's hand can't do anything.
 
+**Lights**: the firebox in the chest glows through its grate while the engine runs (brighter under load,
+dimmer when fuel runs low, embers dying out after shutdown), and the porthole visor shows the suit's state:
+**green** = parked with power (free to climb in), **amber** = piloted, **red** = a tool in use or just hit,
+**dark** = powered off; it stutters while starting up or shutting down and drops out now and then on low fuel.
+
 While inside: the suit takes hits instead of you, it has no fall damage, steps up full blocks,
 and the camera pulls back in third person (F5).
 
@@ -118,6 +123,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
 | `python3 tools/extract-tool-geo.py` | Rebuilds the tool item models from the suit model (run after `export-model.mjs`) |
 | `python3 tools/extract-view-geo.py` | Rebuilds the cockpit viewmodel (`geo/view`) from the suit model (run after `export-model.mjs`) |
+| `uv run --with pillow python3 tools/make-glowmasks.py` | Rebuilds the glowmasks (`power_armor_glow_fire/visor.png`) from the texture's reserved colours (run after `export-model.mjs`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | Live-tunes the cockpit viewmodel's placement (`run/view/tuning.json`, shots `run/screenshots/ap_view_*.png`) |
 | `python3 tools/terrain-report.py` | Summarizes `run/autopilot_terrain.csv` per leg (speed, air time, drops, step-ups, animations) |
 
@@ -159,6 +165,7 @@ src/main/java/dev/ajaczero/powerarmor/
     FuelGauge.java           HUD fuel gauge + low-fuel beep
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
+    SuitGlowLayer.java       firebox + porthole visor lights (glowmasks, tinted per frame)
     PlasmaBoltRenderer.java  the glowing bolt (camera-facing quad)
     ClientSetup.java         registers the renderer
     PowerArmorClient.java    client-only @Mod entry: the in-game config screen

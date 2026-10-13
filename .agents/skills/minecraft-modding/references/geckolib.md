@@ -71,6 +71,13 @@ public class MyRenderer extends GeoEntityRenderer<MyEntity> { ... }        // re
 - Bone world positions (particles from pipes etc.): `bone.setTrackingMatrices(true)` then
   `bone.getWorldPosition()` after rendering.
 
+- **Glowing parts with per-frame colour** (fire that flickers, a visor that changes colour): a `GeoRenderLayer` whose
+  `render` calls `getRenderer().reRender(model, poseStack, buffers, animatable, RenderType.eyes(mask),
+  buffers.getBuffer(type), partialTick, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, argb)` once per mask.
+  `eyes` is additive and ignores light: black mask pixels add nothing, and scaling the colour dims the glow.
+  GeckoLib's `AutoGlowingGeoLayer` does the same with a fixed colour and one `<texture>_glowmask.png`.
+  Power Armor: `SuitGlowLayer`, masks generated from reserved texture colours by `tools/make-glowmasks.py`.
+
 ## Flicker checklist
 1. **Static z-fighting**: two cubes with coplanar, overlapping faces whose outward normals point the same
    way. Flush stacked cubes (opposite normals) are harmless. Scan with the Blockbench skill's

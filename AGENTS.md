@@ -32,7 +32,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
-| `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000) |
+| `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000); then `extract-tool-geo.py`, `extract-view-geo.py` and `uv run --with pillow python3 tools/make-glowmasks.py` |
 macOS has no `timeout`; run game tasks in the background and poll the log for completion.
 Extend the autopilot scripts (`client/dev/AutoPilot.java`, `TerrainPilot.java`) with a scenario for each
 new feature and log numbers to CSV: measuring beat guessing every time in this project.
@@ -127,6 +127,12 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   would win). GeckoLib bones: rest rotations load as (-X, -Y, +Z) of Blockbench, so code offsets on GeoBone are
   `rotX -= bbX`; check a raise/pose change with a same-camera before/after pair (`cannon_side_976` vs
   `cannon_side_lowered`): one shot with torso twist and recoil was misread as the wrong sign.
+- **Glowing pixels are painted in reserved colours** (dark coal / smoked glass, listed in `tools/make-glowmasks.py`):
+  the masks are generated from them, so never reuse those colours elsewhere (the script counts them and refuses).
+  The glow is additive (`RenderType.eyes`): dark base + bright mask = dead when off, glowing when on, also by day.
+- **Night shots in the autopilot**: the client hears the new time of day only once a second, and place scene cameras
+  from the ground height (`Heightmap`), not from where the player happens to stand. Parked suits burn no fuel, so
+  run a suit dry while piloted.
 - **Sides are mirrored, not rebuilt.** The arms were swapped (hand right, tools left) by mirroring the whole
   model across x = 0 (cubes x-flipped + `mirror_uv` toggled, Y/Z rotations and position X negated in rest poses and
   keys, left/right names swapped), which keeps every animation consistent; swapping only the arm keys would have

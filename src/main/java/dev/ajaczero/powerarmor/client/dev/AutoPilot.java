@@ -259,7 +259,27 @@ public final class AutoPilot {
                     net.neoforged.fml.ModList.get().getModContainerById(PowerArmor.MODID).orElseThrow(), null));
             case 1396 -> shot(mc, "config");
             case 1398 -> mc.setScreen(null);
-            case 1400 -> mc.stop();
+            // ---- lights at night (SuitGlowLayer): parked = green visor, piloted = amber, tool / hit = red, then the
+            //      fuel runs out: the visor stutters and goes dark, the firebox dies down to embers
+            case 1400 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); lightsSetup(mc); }
+            case 1430 -> { yaw = 0; pitch = 0; boardNearestSuit(mc); } // (the client learns the new time once a second)
+            case 1440 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); lightsCamera(mc); }
+            case 1446 -> shot(mc, "lights_piloted");
+            case 1448 -> hold(o.keyUse, true);
+            case 1454 -> shot(mc, "lights_tool");
+            case 1456 -> hold(o.keyUse, false);
+            case 1468 -> shot(mc, "lights_amber_again");
+            case 1470 -> onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) s.hurt(p.serverLevel().damageSources().generic(), 1F); });
+            case 1474 -> shot(mc, "lights_hit");
+            case 1480 -> hold(o.keyShift, true);                  // climb out: parked with power -> green
+            case 1482 -> hold(o.keyShift, false);
+            case 1494 -> shot(mc, "lights_parked");
+            case 1496 -> boardNearestSuit(mc);                  // back in: a parked suit burns no fuel, so it could never run dry
+            case 1500 -> onServer(mc, p -> p.serverLevel().getEntitiesOfClass(PowerArmorEntity.class, p.getBoundingBox().inflate(8)).forEach(s -> {
+                              s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, net.minecraft.world.item.ItemStack.EMPTY); s.setBurn(1, 1600); })); // out of fuel
+            case 1506, 1510, 1516 -> shot(mc, "lights_shutdown_" + t);
+            case 1560 -> shot(mc, "lights_off");
+            case 1562 -> mc.stop();
             default -> {}
         }
         if (t >= 360 && t < 640) {
@@ -519,6 +539,50 @@ public final class AutoPilot {
         Vec3 to = at.subtract(mc.player.getEyePosition());
         yaw = (float) (net.minecraft.util.Mth.atan2(-to.x, to.z) * net.minecraft.util.Mth.RAD_TO_DEG);
         pitch = (float) (-net.minecraft.util.Mth.atan2(to.y, to.horizontalDistance()) * net.minecraft.util.Mth.RAD_TO_DEG);
+    }
+
+    /** Where the lights scene's suit stands (it faces +Z). Set on the integrated server's thread, read on the client. */
+    private static volatile Vec3 lightsPos;
+
+    /** Night, and a fresh fuelled suit with the cannon, 60 blocks away from the other scenes on open ground; the player
+     *  stands behind it (out of the camera's view). */
+    private static void lightsSetup(Minecraft mc) {
+        onServer(mc, player -> {
+            var level = player.serverLevel();
+            level.setDayTime(18000);
+            int x = player.getBlockX() + 60, z = player.getBlockZ();
+            Vec3 pos = new Vec3(x + 0.5, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z), z + 0.5);
+            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 8));
+            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()));
+            suit.moveTo(pos.x, pos.y, pos.z, 0, 0);
+            suit.setYBodyRot(0);
+            level.addFreshEntity(suit);
+            player.teleportTo(pos.x, pos.y, pos.z - 3);
+            lightsPos = pos;
+        });
+    }
+
+    /** Camera 4.5 blocks in front of the lights suit, a little to its right, looking at the visor and firebox. */
+    private static void lightsCamera(Minecraft mc) {
+        Vec3 pos = lightsPos;
+        if (pos != null) {
+            lookCamera(mc, pos.add(-1.2, 2.3, 4.5), pos.add(0, 2.2, 0));
+        }
+    }
+
+    /** Climb back into the nearest suit with an empty hand and the cannon back in its socket. */
+    private static void boardNearestSuit(Minecraft mc) {
+        onServer(mc, player -> {
+            PowerArmorEntity suit = player.serverLevel().getEntitiesOfClass(PowerArmorEntity.class, player.getBoundingBox().inflate(8)).stream()
+                    .min(java.util.Comparator.comparingDouble(s -> s.distanceToSqr(player))).orElse(null);
+            if (suit != null) {
+                player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+                suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
+                        new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()));
+                suit.interact(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+            }
+        });
     }
 
     /** A client-only camera at {@code pos} looking at {@code at}. */

@@ -191,6 +191,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private float aimBlend;
     /** Client: 0 = tool arm in its hip carry, 1 = raised to aim (follows TOOL_ACTIVE, like raising a shield). */
     private float toolRaise, toolRaiseO;
+    /** Client: the lights (SuitGlowLayer). Fire 0..1; visor brightness 0..1 and colour; ticks the visor stays red after a hit. */
+    private float fireGlow, visorLevel;
+    private final float[] visorColor = {1F, 0.68F, 0.22F};
+    private int redTicks;
 
     /** Ticks to stay around after dying so the death animation (2.68 s) can finish. */
     private static final int DEATH_TICKS = 60;
@@ -828,6 +832,50 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return t * t * (3 - 2 * t);
     }
 
+    // ---- Lights (client): the firebox and the porthole visor, drawn by SuitGlowLayer -----------------------------
+
+    private static final float[] VISOR_GREEN = {0.35F, 1F, 0.45F}, VISOR_AMBER = {1F, 0.68F, 0.22F}, VISOR_RED = {1F, 0.12F, 0.08F};
+
+    /** Client, every tick: ease the lights toward what the suit is doing. The fire flares up quickly and dies down
+     *  slowly (embers); the visor shows the state in colour: green = parked with power (free to climb in),
+     *  amber = piloted, red = a tool in use or just hit, dark = powered off. */
+    private void tickLights() {
+        boolean powered = this.isPowered();
+        float fireTarget = powered ? (0.6F + 0.4F * Math.min(1F, this.engineLoad())) * (this.isLowOnFuel() ? 0.7F : 1F) : 0F;
+        this.fireGlow += (fireTarget - this.fireGlow) * (fireTarget > this.fireGlow ? 0.2F : 0.03F);
+        this.redTicks = this.hurtTime > 0 ? 40 : Math.max(0, this.redTicks - 1);
+        float[] target = !this.isVehicle() ? VISOR_GREEN : (this.isToolActive() || this.redTicks > 0) ? VISOR_RED : VISOR_AMBER;
+        for (int i = 0; i < 3; i++) {
+            this.visorColor[i] += (target[i] - this.visorColor[i]) * 0.25F;
+        }
+        float levelTarget = powered ? 1F : 0F;
+        this.visorLevel += (levelTarget - this.visorLevel) * (powered ? 0.3F : 0.08F);
+    }
+
+    /** Client: firebox glow, 0 (cold) .. 1 (roaring). */
+    public float getFireGlow() {
+        return this.fireGlow;
+    }
+
+    /** Client: the visor's colour (r, g, b, 0..1). */
+    public float[] getVisorColor() {
+        return this.visorColor;
+    }
+
+    /** Client: the visor's brightness at this moment: stutters while the engine starts or dies, and drops out now
+     *  and then when the fuel runs low (time in ticks, with the partial tick). */
+    public float getVisorFlicker(float time) {
+        float level = this.visorLevel;
+        boolean unsteady = this.startupTicks > 0 || (!this.isPowered() && level > 0.02F);
+        if (unsteady && Mth.sin(time * 2.1F + this.getId()) + Mth.sin(time * 3.7F) < -0.4F) {
+            return level * 0.2F;
+        }
+        if (this.isPowered() && this.isLowOnFuel() && Mth.sin(time * 0.9F) * Mth.sin(time * 2.3F) > 0.6F) {
+            return level * 0.3F;
+        }
+        return level;
+    }
+
     /** Both sides: a continuous socket tool is running (synced). */
     public boolean isToolRunning() {
         return this.entityData.get(TOOL_RUNNING);
@@ -1072,6 +1120,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.toolRaiseO = this.toolRaise;
             this.toolRaise = this.isToolActive() && this.isVehicle() ? Math.min(1F, this.toolRaise + 1F / 3F)
                     : Math.max(0F, this.toolRaise - 1F / 5F);
+            this.tickLights();
             ExhaustSmoke.tick(this);
             EmBeamEffects.tick(this);
             this.tickHandSwing();
