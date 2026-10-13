@@ -83,8 +83,7 @@ block you cut. Both mining tools post Minecraft's block-break event for every bl
 protect blocks from them.
 
 **Left hand**: shows your selected hotbar item and carries it forward (`hold_item`), reaching out each time
-you use it (`use_item`). In first person the item is drawn at the lower left like vanilla's off-hand (the
-suit's arm hangs below the cockpit view). The hand never attacks or mines (left click is the tool's), and a
+you use it (`use_item`). In first person the suit's gauntlet holds it at the lower left (cockpit viewmodel). The hand never attacks or mines (left click is the tool's), and a
 powered-down suit's hand can't use anything.
 
 While inside: the suit takes hits instead of you, it has no fall damage, steps up full blocks,
@@ -115,6 +114,8 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`, `fuel`, `menu`) |
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
 | `python3 tools/extract-tool-geo.py` | Rebuilds the tool item models from the suit model (run after `export-model.mjs`) |
+| `python3 tools/extract-view-geo.py` | Rebuilds the cockpit viewmodel (`geo/view`) from the suit model (run after `export-model.mjs`) |
+| `tools/view-tuner.sh start\|shoot\|stop` | Live-tunes the cockpit viewmodel's placement (`run/view/tuning.json`, shots `run/screenshots/ap_view_*.png`) |
 | `python3 tools/terrain-report.py` | Summarizes `run/autopilot_terrain.csv` per leg (speed, air time, drops, step-ups, animations) |
 
 ## Where things live
@@ -147,13 +148,14 @@ src/main/java/dev/ajaczero/powerarmor/
   registry/ModSounds.java    engine + tool loop sound events (audio picked in assets/powerarmor/sounds.json)
   client/                    rendering only (never loaded on servers)
     PowerArmorModel.java     points GeckoLib at the asset files, head follows your view
-    PowerArmorRenderer.java  hides the head in first person
-    PilotView.java           hides the pilot and hand, pulls the camera back
+    PowerArmorRenderer.java  draws only the legs in first person (cockpit)
+    PilotView.java           hides the pilot and vanilla hands, pulls the camera back
+    CockpitHands.java        first-person viewmodel: socket tool on the right, gauntlet + held item on the left
+    CockpitView*.java        its GeckoLib animatable/renderer (geo/view, cut from the suit by tools/extract-view-geo.py)
     PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
     FuelGauge.java           HUD fuel gauge + low-fuel beep
     ToolInput.java           attack button -> socket tool (cancels vanilla punching while piloting)
     HeldItemLayer.java       draws the pilot's selected item in the suit's left hand (third person)
-    FirstPersonLeftHand.java draws it vanilla-style at the lower left in the cockpit
     PlasmaBoltRenderer.java  the glowing bolt (camera-facing quad)
     ClientSetup.java         registers the renderer
     PowerArmorClient.java    client-only @Mod entry: the in-game config screen
@@ -165,6 +167,7 @@ src/main/resources/
   assets/powerarmor/geo|animations|textures/entity/   exported from Blockbench
   assets/powerarmor/textures/gui/power_armor.png      suit menu background (tools/make-gui.py)
   assets/powerarmor/geo/item/<tool>.geo.json          cannon, EM projector, drill, chainsaw: cut out of the suit model (tools/extract-tool-geo.py)
+  assets/powerarmor/geo/view/power_armor_view.geo.json cockpit viewmodel: tools + gauntlet cut out of the suit model (tools/extract-view-geo.py)
   assets/powerarmor/models/item/plasma_cannon.json    how the cannon sits in your hand / inventory
   data/powerarmor/damage_type/plasma.json             "vaporized" damage type (+ minecraft is_projectile tag)
   data/powerarmor/damage_type/em_slam.json            "slammed into a wall" (EM throws)

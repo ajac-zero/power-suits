@@ -1,6 +1,7 @@
 package dev.ajaczero.powerarmor.item;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -16,10 +17,14 @@ import org.jetbrains.annotations.Nullable;
 public final class SocketAim {
     // Muzzle in the torso's frame, in blocks (measured in Blockbench from the cannon's muzzle_flash bone;
     // the EM projector's tip is within a few pixels): right of centre, up from the feet, forward.
-    // Halfway between the animated pose (third person) and the cockpit pose (PowerArmorModel tilts the tool
-    // up in first person), so the bolt starts ~0.35 blocks from the visible muzzle in either view.
+    // That's where everyone else sees the cannon; the pilot's own first-person view draws its bolts from the cockpit
+    // viewmodel's muzzle instead (visualMuzzle + PlasmaBolt.visualOffset).
     // The torso pivot is 1.54 up; the torso faces the view and pitches with it (55%).
-    private static final double MUZZLE_RIGHT = 0.78, MUZZLE_UP = 2.10, MUZZLE_FORWARD = 1.62, TORSO_PIVOT_UP = 1.54;
+    private static final double MUZZLE_RIGHT = 0.95, MUZZLE_UP = 1.77, MUZZLE_FORWARD = 1.59, TORSO_PIVOT_UP = 1.54;
+
+    /** Where muzzle effects (EM beam particles) start on this client. The client points it at the cockpit viewmodel's
+     *  muzzle for its own pilot in first person (CockpitHands); everywhere else it's the suit's muzzle. */
+    public static BiFunction<PowerArmorEntity, Player, Vec3> visualMuzzle = SocketAim::muzzlePosition;
 
     public static Vec3 muzzlePosition(PowerArmorEntity suit, Player pilot) {
         float yaw = pilot.getYRot() * Mth.DEG_TO_RAD;

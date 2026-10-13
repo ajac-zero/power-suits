@@ -2,6 +2,7 @@ package dev.ajaczero.powerarmor.entity;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.item.PlasmaCannonItem;
+import dev.ajaczero.powerarmor.item.SocketAim;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -17,6 +18,7 @@ import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.Level;
@@ -51,6 +53,22 @@ public class PlasmaBolt extends Projectile {
         ProjectileUtil.rotateTowardsMovement(this, 1F);
     }
 
+    /** Ticks over which a bolt drawn from the pilot's on-screen muzzle merges into its real path. */
+    private static final float CONVERGE_TICKS = 4F;
+
+    /**
+     * Client: how far to draw this bolt (and its trail) from where it really is. Bolts start at the suit's muzzle,
+     * but its own pilot in first person sees the cockpit viewmodel's muzzle elsewhere on screen (SocketAim.visualMuzzle);
+     * the drawn bolt starts there and merges into the real path over a few ticks. Zero for everyone else.
+     */
+    public Vec3 visualOffset(float age) {
+        if (age >= CONVERGE_TICKS || !(this.getOwner() instanceof Player pilot) || !(pilot.getVehicle() instanceof PowerArmorEntity suit)) {
+            return Vec3.ZERO;
+        }
+        Vec3 gap = SocketAim.visualMuzzle.apply(suit, pilot).subtract(SocketAim.muzzlePosition(suit, pilot));
+        return gap.scale(1 - age / CONVERGE_TICKS);
+    }
+
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
     }
@@ -66,8 +84,9 @@ public class PlasmaBolt extends Projectile {
         Vec3 from = this.position();
         if (this.level().isClientSide()) {
             // A streak of glowing dust along this tick's path, plus the odd spark.
+            Vec3 shift = this.visualOffset(this.tickCount);
             for (int i = 0; i < 6; i++) {
-                Vec3 p = from.add(motion.scale(i / 6.0));
+                Vec3 p = from.add(motion.scale(i / 6.0)).add(shift);
                 this.level().addParticle(TRAIL, p.x, p.y, p.z, 0, 0, 0);
             }
             if (this.random.nextInt(3) == 0) {

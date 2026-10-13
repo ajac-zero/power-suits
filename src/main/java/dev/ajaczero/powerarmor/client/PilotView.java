@@ -25,15 +25,14 @@ public final class PilotView {
         }
     }
 
-    /** No floating first-person hand while piloting; the selected item is drawn on the left instead
-     *  (the suit's left hand holds it; the cannon is on the right). */
+    /** No vanilla hands while piloting: the cockpit viewmodel (CockpitHands) shows the suit's tool and gauntlet. */
     @SubscribeEvent
     public static void hideHand(RenderHandEvent event) {
         var player = Minecraft.getInstance().player;
-        if (player != null && player.getVehicle() instanceof PowerArmorEntity) {
+        if (player != null && player.getVehicle() instanceof PowerArmorEntity suit) {
             event.setCanceled(true);
             if (event.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND) {
-                FirstPersonLeftHand.render(event, player);
+                CockpitHands.render(event, player, suit);
             }
         }
     }

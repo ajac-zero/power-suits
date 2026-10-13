@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Draws the bolt as a glowing ball: one square that always faces the camera (a "billboard"), lit at full
@@ -33,6 +34,8 @@ public class PlasmaBoltRenderer extends EntityRenderer<PlasmaBolt> {
     @Override
     public void render(PlasmaBolt bolt, float yaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light) {
         poseStack.pushPose();
+        Vec3 shift = bolt.visualOffset(bolt.tickCount + partialTick); // own shots start at the cockpit viewmodel's muzzle
+        poseStack.translate(shift.x, shift.y, shift.z);
         float pulse = 0.9F + 0.15F * (float) Math.sin((bolt.tickCount + partialTick) * 1.7F);
         poseStack.scale(0.8F * pulse, 0.8F * pulse, 0.8F * pulse);
         poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());

@@ -14,8 +14,8 @@ import software.bernie.geckolib.renderer.layer.BlockAndItemGeoLayer;
 
 /**
  * Draws the pilot's selected item in the suit's left hand (the "left_hand" grip bone), the way a player's
- * held item is drawn, only bigger. Skipped in the pilot's own cockpit view: there the item is drawn
- * first-person style (FirstPersonLeftHand) because the suit's arm hangs below the view.
+ * held item is drawn, only bigger. Skipped in the pilot's own cockpit view: the suit's upper body
+ * isn't drawn there; the cockpit viewmodel's gauntlet holds the item instead (CockpitHands).
  */
 public class HeldItemLayer extends BlockAndItemGeoLayer<PowerArmorEntity> {
     /** The suit's hand is about 1.5x a player's. */

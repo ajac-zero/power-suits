@@ -1,6 +1,7 @@
 package dev.ajaczero.powerarmor.client;
 
 import dev.ajaczero.powerarmor.PowerArmor;
+import dev.ajaczero.powerarmor.item.SocketAim;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModMenus;
 import net.neoforged.api.distmarker.Dist;
@@ -29,6 +30,7 @@ import software.bernie.geckolib.renderer.GeoItemRenderer;
 public final class ClientSetup {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        SocketAim.visualMuzzle = CockpitHands::visualMuzzle; // muzzle effects start at the cockpit viewmodel's muzzle
         event.registerEntityRenderer(ModEntities.POWER_ARMOR.get(), PowerArmorRenderer::new);
         event.registerEntityRenderer(ModEntities.PLASMA_BOLT.get(), PlasmaBoltRenderer::new);
     }

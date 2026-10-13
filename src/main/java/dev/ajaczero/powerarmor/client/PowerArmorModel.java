@@ -2,7 +2,6 @@ package dev.ajaczero.powerarmor.client;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
-import dev.ajaczero.powerarmor.item.PowerTool;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import software.bernie.geckolib.animation.AnimationState;
@@ -28,10 +27,6 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
      */
     @Override
     public void setCustomAnimations(PowerArmorEntity suit, long instanceId, AnimationState<PowerArmorEntity> state) {
-        // The model (and its bones) is shared by every suit, so the cockpit pose is set for each render, first thing.
-        boolean cockpitTool = suit.isVehicle() && !suit.isDeadOrDying() && PowerArmorRenderer.isCockpitView(suit)
-                && suit.getSocketStack().getItem() instanceof PowerTool;
-        cockpitToolPose(cockpitTool ? suit.getAimBlend() : 0F);
         if (!suit.isVehicle() || suit.isDeadOrDying()) {
             return;
         }
@@ -59,30 +54,4 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
             head.setRotX(head.getRotX() + Mth.clamp(pitch * 0.35F, -20F, 20F) * Mth.DEG_TO_RAD);
         }
     }
-
-    /**
-     * From the cockpit you look straight down the right arm, so the tool (the forearm) points away from you.
-     * In first person only (third person keeps the animated pose), raise the arm a little, swing it inward and
-     * bend the tool up at the elbow socket so its side faces the camera, the way vanilla shows a held item.
-     * Tuned with a cockpit camera in Blockbench; SocketAim's muzzle point sits between this pose and the animated one.
-     *
-     * These go on two bones no animation keys (right_shoulder above right_arm, tool_mount above the tools) and are
-     * SET, not added: GeckoLib only resets bones the playing animation keys, so adding to an unkeyed bone every
-     * frame piles up and fights GeckoLib's slow ease back to rest (the arm flickered up and down).
-     * Same signs as Blockbench (checked in game: +rotX raises the tool).
-     */
-    private void cockpitToolPose(float blend) {
-        GeoBone shoulder = getAnimationProcessor().getBone("right_shoulder");
-        GeoBone mount = getAnimationProcessor().getBone("tool_mount");
-        if (shoulder != null) {
-            shoulder.setRotX(COCKPIT_ARM_RAISE * blend * Mth.DEG_TO_RAD);
-            shoulder.setRotY(COCKPIT_ARM_INWARD * blend * Mth.DEG_TO_RAD);
-        }
-        if (mount != null) {
-            mount.setRotX(COCKPIT_TOOL_TILT * blend * Mth.DEG_TO_RAD);
-        }
-    }
-
-    // degrees, as Blockbench +X / +Y
-    private static final float COCKPIT_ARM_RAISE = 10F, COCKPIT_ARM_INWARD = 5F, COCKPIT_TOOL_TILT = 30F;
 }

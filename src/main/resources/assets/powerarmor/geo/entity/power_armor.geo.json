@@ -937,17 +937,8 @@
      ]
     },
     {
-     "name": "right_shoulder",
-     "parent": "torso",
-     "pivot": [
-      -11,
-      39.625,
-      0
-     ]
-    },
-    {
      "name": "right_arm",
-     "parent": "right_shoulder",
+     "parent": "torso",
      "pivot": [
       -11,
       39.625,
@@ -1122,17 +1113,8 @@
      ]
     },
     {
-     "name": "tool_mount",
-     "parent": "right_forearm",
-     "pivot": [
-      -12.5,
-      25.625,
-      0
-     ]
-    },
-    {
      "name": "socket",
-     "parent": "tool_mount",
+     "parent": "right_forearm",
      "pivot": [
       -12.5,
       25.625,
@@ -1175,7 +1157,7 @@
     },
     {
      "name": "cannon",
-     "parent": "tool_mount",
+     "parent": "right_forearm",
      "pivot": [
       -12.5,
       25.625,
@@ -1325,7 +1307,7 @@
     },
     {
      "name": "em_projector",
-     "parent": "tool_mount",
+     "parent": "right_forearm",
      "pivot": [
       -12.5,
       25.625,
@@ -1464,7 +1446,7 @@
     },
     {
      "name": "drill",
-     "parent": "tool_mount",
+     "parent": "right_forearm",
      "pivot": [
       -12.5,
       25.625,
@@ -1654,7 +1636,7 @@
     },
     {
      "name": "chainsaw",
-     "parent": "tool_mount",
+     "parent": "right_forearm",
      "pivot": [
       -12.5,
       25.625,

@@ -24,7 +24,7 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
 | Suit menu (Phase 1) | Socket slot (power tools only), fuel slot, live suit preview, burn flame, hull/fuel/status display, Pack up button. See section 5. |
 | Movement | Jog 5 blocks/s, sprint 10 (players: 4.3 / 5.6). Steps up 1 block, steps down up to 2 without falling; step changes eased for camera + model. Jump: hold Space (crouch wind-up, horse jump bar), release; launch 2 ticks later. |
 | Turning | Legs face the direction of travel; torso + arms twist up to 90 deg and lean to face the pilot's view. |
-| Camera | First person: eye at the visor, suit shell hidden, back faces culled, cockpit footfall bob, speed FOV. Third person: camera pulled back to 6.5. |
+| Camera | First person: eye at the visor, only the suit's legs drawn, arms = cockpit viewmodel (tool right, gauntlet + item left), cockpit footfall bob, speed FOV. Third person: camera pulled back to 6.5. |
 | Damage | Hits on the pilot go to the suit (except drowning, starvation, void//kill). Suit: 100 HP, armor 12, toughness 4, full knockback resistance, no fall damage. Death: animation, pilot ejected, drops iron. |
 | Water | Fallout-style: sinks (~2.5 blocks/s), walks the bottom at half speed, suit never drowns, ignores currents. Pilot's air drains normally once their head is under. |
 | Animations | idle, walk (jog), run, jump_charge, jump, fall, land, hit, death, shutdown, powered_off, startup, plasma_shot, hold_item/use_item, drill_run, chainsaw_run (+ unused: attack, throw, stim, electrified, idle_fidget, sneakwalk). Walk/run hold the cannon steady (arm IK stabiliser). |
@@ -36,8 +36,10 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
   place blocks, eat, open doors, use buckets, throw potions...
   - The left hand does **not** break blocks: the attack button belongs to the socket tool.
   - **Decided 2026-10-12: no**, the left hand never attacks mobs, even with a sword (attack = socket tool).
-  - Built (Phase 3): the item is drawn at the suit's `left_hand` bone; in the cockpit it's drawn like
-    vanilla's off-hand item instead, because the arm can't reach into the view without blocking it.
+  - Built (Phase 3): the item is drawn at the suit's `left_hand` bone. In the cockpit the suit's upper body
+    isn't drawn (only the legs); a first-person viewmodel shows the gauntlet holding the item and the socket
+    tool, like vanilla's hands (decided 2026-10-13: lining the external model up with the pilot's view never
+    worked: hands raised where yours aren't, tools hidden behind their base, pads clipping).
     A powered-down suit's hand does nothing. Reach +1.5 blocks (block and entity interaction range).
 - **Right arm = power socket.** Exactly one **power tool** item can be installed. Tools only work when
   installed in a powered suit (they do nothing on foot) and draw fuel per use.

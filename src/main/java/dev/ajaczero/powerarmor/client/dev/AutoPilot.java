@@ -45,6 +45,8 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 public final class AutoPilot {
     private static final boolean ENABLED = System.getProperty("powerarmor.autopilot") != null && !TerrainPilot.enabled();
     private static final String WORLD_PREFIX = "autopilot-";
+    /** "view" mode: stay in the cockpit and re-shoot the viewmodel whenever run/view/shoot appears (live tuning). */
+    private static final boolean VIEW = "view".equals(System.getProperty("powerarmor.autopilot"));
 
     private static boolean worldRequested;
     private static boolean suitRequested;
@@ -79,7 +81,11 @@ public final class AutoPilot {
             }
             return;
         }
-        script(mc, tick++);
+        if (VIEW) {
+            viewTuner(mc, tick++);
+        } else {
+            script(mc, tick++);
+        }
         if (aimTarget != null) {
             aimAtPos(mc, aimTarget);
         }
@@ -93,7 +99,8 @@ public final class AutoPilot {
     private static void script(Minecraft mc, int t) {
         var o = mc.options;
         switch (t) {
-            case 0 -> { o.hideGui = true; o.setCameraType(CameraType.FIRST_PERSON); }
+            // GUI stays on in every scene: hiding it (F1) also skips the hand pass, i.e. the cockpit viewmodel.
+            case 0 -> { o.hideGui = false; o.setCameraType(CameraType.FIRST_PERSON); }
             case 10 -> shot(mc, "fp_idle");
             case 15 -> hold(o.keyUp, true);
             case 40, 41, 42, 43 -> { shot(mc, "fp_walk_" + t); logSpeed(mc, "walk"); }
@@ -130,7 +137,7 @@ public final class AutoPilot {
             case 385, 400, 415, 430 -> shot(mc, "water_tp_" + t);
             case 440 -> { o.setCameraType(CameraType.FIRST_PERSON); o.hideGui = false; }
             case 450, 470 -> shot(mc, "water_fp_" + t);
-            case 480 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); o.hideGui = true; }
+            case 480 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
             case 500, 520, 540, 560, 590 -> shot(mc, "water_tp_" + t);
             case 640 -> { releaseAll(); closeWaterLog(); survival(mc, false); }
             // ---- fuel: nearly empty tank, walk until the engine dies, refuel through the menu
@@ -164,6 +171,11 @@ public final class AutoPilot {
             case 958 -> { yaw = -12; sideCamera(mc); }
             case 969, 970, 971, 973, 976 -> shot(mc, "cannon_side_" + t);
             case 985 -> releaseAll();
+            // ---- cockpit while walking and looking down (cannon still installed): both arms and the feet in view,
+            //      the tool must not clip into the upper arm
+            case 986 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 55; hold(o.keyUp, true); }
+            case 989, 990, 991, 992, 993 -> shot(mc, "fp_walkdown_" + t);
+            case 994 -> releaseAll();
             // ---- left hand: hold and place stone bricks from inside, then eat a golden apple
             case 995 -> { closeCannonLog(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON);
                           giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); yaw = 0; pitch = 40; }
@@ -205,7 +217,7 @@ public final class AutoPilot {
             case 1187, 1189, 1192, 1196 -> shot(mc, "em_side_throw_" + t);
             case 1205 -> { closeEmLog(); mc.setCameraEntity(mc.player); releaseAll(); }
             // ---- mining tools: drill a 3x3 into a rock face with ores, then fell a real oak with the chainsaw
-            case 1210 -> { miningSetup(mc); yaw = 0; pitch = 20; o.hideGui = true; o.setCameraType(CameraType.THIRD_PERSON_BACK); openMineLog(mc); }
+            case 1210 -> { miningSetup(mc); yaw = 0; pitch = 20; o.setCameraType(CameraType.THIRD_PERSON_BACK); openMineLog(mc); }
             case 1225 -> aimTarget = Vec3.atCenterOf(mineBase.offset(0, 1, 4)).add(0, 0, -0.5); // re-aimed every tick (the eye moves as the suit turns)
             case 1228 -> hold(o.keyAttack, true);
             case 1230, 1234, 1238, 1242 -> shot(mc, "drill_tp_" + t);
@@ -725,6 +737,91 @@ public final class AutoPilot {
         held.replaceAll((k, v) -> false);
         held.forEach(KeyMapping::setDown);
         KeyMapping.releaseAll();
+    }
+
+    private static int viewStep = -1;
+    private static long viewLastRequest;
+
+    /**
+     * Dev loop for tuning the cockpit viewmodel (CockpitHands) without restarting: edit run/view/tuning.json, touch
+     * run/view/shoot, and screenshots ap_view_*.png appear (one per tool, bare socket, walking + looking down,
+     * eating); run/view/done is written when the set is complete. Runs until the game is closed.
+     */
+    private static void viewTuner(Minecraft mc, int t) {
+        var o = mc.options;
+        java.nio.file.Path dir = mc.gameDirectory.toPath().resolve("view");
+        if (t == 0) {
+            viewLastRequest = System.currentTimeMillis();
+            try { // tools/view-tuner.sh stop uses this if the quit request is ever ignored
+                java.nio.file.Files.createDirectories(dir);
+                java.nio.file.Files.writeString(dir.resolve("pid"), Long.toString(ProcessHandle.current().pid()));
+            } catch (java.io.IOException ignored) {
+            }
+        }
+        // Never linger: quit on request, or after 10 minutes without a shot request.
+        if (java.nio.file.Files.exists(dir.resolve("quit")) || System.currentTimeMillis() - viewLastRequest > 10 * 60_000) {
+            try {
+                java.nio.file.Files.deleteIfExists(dir.resolve("quit"));
+                java.nio.file.Files.deleteIfExists(dir.resolve("pid"));
+            } catch (java.io.IOException ignored) {
+            }
+            mc.stop();
+            return;
+        }
+        if (viewStep < 0) {
+            try {
+                java.nio.file.Files.createDirectories(dir);
+                if (!java.nio.file.Files.deleteIfExists(dir.resolve("shoot")) && t != 60) {
+                    return;
+                }
+                viewLastRequest = System.currentTimeMillis();
+                java.nio.file.Files.deleteIfExists(dir.resolve("done"));
+            } catch (java.io.IOException e) {
+                return;
+            }
+            viewStep = 0;
+        }
+        int s = viewStep++;
+        switch (s) {
+            // GUI on: hiding it (F1) also skips the hand pass, so the viewmodel wouldn't be drawn.
+            case 0 -> { o.hideGui = false; o.setCameraType(CameraType.FIRST_PERSON); releaseAll(); yaw = 0; pitch = 10;
+                        if (java.nio.file.Files.exists(dir.resolve("tuning.json"))) dev.ajaczero.powerarmor.client.CockpitHands.loadTuning(dir.resolve("tuning.json"));
+                        socket(mc, dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get());
+                        giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); }
+            case 12 -> shot(mc, "view_cannon");
+            case 13 -> socket(mc, dev.ajaczero.powerarmor.registry.ModItems.DRILL.get());
+            case 25 -> shot(mc, "view_drill");
+            case 26 -> socket(mc, dev.ajaczero.powerarmor.registry.ModItems.CHAINSAW.get());
+            case 38 -> shot(mc, "view_chainsaw");
+            case 39 -> socket(mc, dev.ajaczero.powerarmor.registry.ModItems.EM_PROJECTOR.get());
+            case 51 -> shot(mc, "view_em");
+            case 52 -> socket(mc, null);
+            case 64 -> shot(mc, "view_empty");
+            case 65 -> { socket(mc, dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()); pitch = 55; hold(o.keyUp, true); }
+            case 80 -> shot(mc, "view_walkdown");
+            case 81 -> { releaseAll(); pitch = 10; giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE, 4)); }
+            case 86 -> hold(o.keyUse, true);
+            case 98 -> shot(mc, "view_eat");
+            case 99 -> { releaseAll(); giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); }
+            case 102 -> {
+                viewStep = -1;
+                try {
+                    java.nio.file.Files.writeString(dir.resolve("done"), "ok");
+                } catch (java.io.IOException ignored) {
+                }
+            }
+            default -> {}
+        }
+    }
+
+    /** Server: put this tool (or nothing) in the socket of the suit the player sits in. */
+    private static void socket(Minecraft mc, @org.jetbrains.annotations.Nullable net.minecraft.world.item.Item tool) {
+        onServer(mc, player -> {
+            if (player.getVehicle() instanceof PowerArmorEntity suit) {
+                suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
+                        tool == null ? net.minecraft.world.item.ItemStack.EMPTY : new net.minecraft.world.item.ItemStack(tool));
+            }
+        });
     }
 
     private static void shot(Minecraft mc, String name) {

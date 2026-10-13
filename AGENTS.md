@@ -31,6 +31,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, plasma cannon range, left hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
+| `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
 | `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000) |
 macOS has no `timeout`; run game tasks in the background and poll the log for completion.
 Extend the autopilot scripts (`client/dev/AutoPilot.java`, `TerrainPilot.java`) with a scenario for each
@@ -71,7 +72,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   columns can lead the screenshots.
 - **The game can't start while the Mac's display sleeps** ("Failed to locate a primary monitor"; Gradle then
   hangs). Run game tasks under `caffeinate -d -u -i`; if it hangs, kill the gradlew client process.
-- **The suit's arm is too short to show an item in the cockpit view without blocking it** (a hand target in
+- **(Superseded by the cockpit viewmodel)** The suit's arm is too short to show an item in the cockpit view without blocking it (a hand target in
   view folded the forearm across the visor). Third person uses the 3D hand; first person draws the item
   vanilla-style (`FirstPersonLeftHand`). Check new poses from the cockpit camera, not only from outside.
 - **Arm IK has two elbow solutions**; with the wrong seed it picks hyperextension (forearm bent backward).
@@ -84,13 +85,19 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   `player.getEyePosition(partial)`.
 - **Never add to an unkeyed bone in `setCustomAnimations`**: GeckoLib only resets bones the playing animation keys
   (others ease back to rest over time), so a per-frame `+=` piles up and the bone flickers. Put code-driven offsets
-  on a bone no animation keys (`right_shoulder`, `tool_mount`) and set absolute values every render (0 when off).
-- **Rotation signs in `setCustomAnimations` match Blockbench for the arm/tool bones** (+rotX = Blockbench +X): the
-  assumed GeckoLib X negation swung the cockpit tool pose out of view. Check new additive poses in game.
-- **From the cockpit you look down the right arm**: a tool pointing away from you hides behind its own base. The
-  cockpit-only pose in `PowerArmorModel` bends it up at the socket; preview cockpit views in Blockbench (camera at
-  [0, 41.6, -8.8], fov 70, shell + left arm hidden) before running the autopilot, and keep `SocketAim`'s muzzle
-  between the cockpit and animated muzzle positions (`muzzle_flash` bone).
+  on a bone no animation keys and set absolute values every render (0 when off).
+- **The cockpit shows a viewmodel, not the suit's arms.** Looking at the external model from inside never lined up
+  (hands raised where yours aren't, tools hidden behind their base, pads clipping), so in first person only the
+  suit's legs are drawn and `CockpitHands` draws the tool + gauntlet in the hand pass (`geo/view`, rebuilt by
+  `tools/extract-view-geo.py` after every export). Bolts/EM beam start at its on-screen muzzle for the pilot only
+  (`SocketAim.visualMuzzle`, `PlasmaBolt.visualOffset`); the server still uses the suit's muzzle.
+- **Viewmodel parts must not show their cut ends**: the tool's socket face and the gauntlet's wrist stay below the
+  bottom screen edge so they reach in from the corners (floating otherwise). Check/fit poses with
+  `tools/viewmodel-fit.py` (also for the eat pose) before tuning visually.
+- **F1 (hideGui) also skips the hand pass**: screenshots with the GUI hidden show no viewmodel. The autopilots keep
+  the GUI on. Tune the viewmodel live with `tools/view-tuner.sh start|shoot|stop` (edit `run/view/tuning.json`).
+- **Dev games must not linger**: `pkill -f` on a system property doesn't match the game's command line. The view
+  tuner writes its PID, quits on `run/view/quit` and after 10 idle minutes; always `tools/view-tuner.sh stop`, or use `once` (start, shoot, stop).
 - **Wrap yaw differences** (`Mth.wrapDegrees`): yaws are unbounded (720 after two turns) and GeckoLib's
   `netHeadYaw` is a raw subtraction; unwrapped, the torso twisted 90 deg the wrong way (right pad in the cockpit).
 - **Minecraft doesn't move no-AI mobs by velocity** (`isEffectiveAi` false skips `travel`), so the EM projector

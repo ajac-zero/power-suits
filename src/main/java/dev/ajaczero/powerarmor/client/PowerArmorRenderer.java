@@ -14,8 +14,6 @@ import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
-    /** Bones whose own cubes surround the pilot's camera. */
-    private static final String[] SHELL_BONES = {"body", "torso"};
     /** Every tool's bone in the suit model (PowerTool.suitBone). Add new tools here. */
     private static final String[] TOOL_BONES = {"cannon", "em_projector", "drill", "chainsaw"};
 
@@ -28,19 +26,14 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
     @Override
     public void preRender(PoseStack poseStack, PowerArmorEntity suit, BakedGeoModel model, @Nullable MultiBufferSource bufferSource,
                           @Nullable VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, int colour) {
-        // In first person the camera sits inside the helmet. For our own suit, hide the shell around
-        // the camera (hips, torso, head+helmet) but keep the arms, shoulder pads and legs, like a cockpit.
+        // In first person the camera sits inside the helmet. For our own suit only the legs are drawn (you see your
+        // feet when looking down); the arms come from the cockpit viewmodel (CockpitHands), which lines up with the
+        // view. The body bone holds everything above the hips: torso, arms, pads, head.
         boolean cockpit = isCockpitView(suit);
-        for (String shell : SHELL_BONES) {
-            model.getBone(shell).ifPresent(bone -> {
-                bone.setHidden(cockpit);         // hides this bone's own cubes (and children by default)
-                bone.setChildrenHidden(false);   // ...but keep drawing child bones (arms, legs)
-            });
-        }
-        model.getBone("head").ifPresent(head -> head.setHidden(cockpit)); // head + helmet fully hidden
-        // The left arm too: in the cockpit the held item is drawn first-person style (FirstPersonLeftHand); the
-        // arm's carry pose would only add a forearm poking into the bottom-left corner next to it.
-        model.getBone("left_arm").ifPresent(arm -> arm.setHidden(cockpit));
+        model.getBone("body").ifPresent(body -> {
+            body.setHidden(cockpit);
+            body.setChildrenHidden(cockpit);
+        });
         // Socket: show the installed tool's bone and hide the others; the bare coupling only when empty.
         String installed = suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.suitBone() : null;
         for (String toolBone : TOOL_BONES) {

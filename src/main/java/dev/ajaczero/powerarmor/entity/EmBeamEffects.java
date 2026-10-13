@@ -20,7 +20,7 @@ final class EmBeamEffects {
             return;
         }
         RandomSource random = suit.getRandom();
-        Vec3 from = SocketAim.muzzlePosition(suit, pilot);
+        Vec3 from = SocketAim.visualMuzzle.apply(suit, pilot);
         Vec3 to = target.position().add(0, target.getBbHeight() / 2, 0);
         Vec3 line = to.subtract(from);
         double length = line.length();

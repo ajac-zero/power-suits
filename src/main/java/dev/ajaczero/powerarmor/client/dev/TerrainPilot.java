@@ -92,7 +92,7 @@ public final class TerrainPilot {
         mc.player.setYRot(yaw); mc.player.yRotO = yaw;
         mc.player.setXRot(10); mc.player.xRotO = 10;
         mc.options.setCameraType(CameraType.FIRST_PERSON);
-        mc.options.hideGui = true;
+        mc.options.hideGui = false; // F1 would also skip the hand pass (cockpit viewmodel)
         set(mc.options.keyUp, true);
         set(mc.options.keySprint, sprint);
         if (!sprint && mc.player.isSprinting()) {
