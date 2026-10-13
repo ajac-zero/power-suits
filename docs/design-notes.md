@@ -3,7 +3,7 @@
 # Design notes
 
 ## Current state (2026-10-12)
-- Enterable suit (GeckoLib entity) from `~/Developer/Models/starcraft_marine.bbmodel`.
+- Enterable suit (GeckoLib entity) from `model/starcraft_marine.bbmodel`.
 - Jog 5 / sprint 10 blocks/s, jump wind-up, legs follow travel while the torso aims with the view,
   cockpit view at the visor, stabilized cannon, step smoothing and 2-block step-down on terrain.
 - Water, Fallout-style: sinks, walks the bottom at half speed, suit never drowns, pilot's air drains.

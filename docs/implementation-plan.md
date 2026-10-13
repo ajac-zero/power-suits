@@ -14,7 +14,7 @@ Where things are: `SuitFuel` (fuel table), `PowerArmorEntity` (`tickFuel`, power
 inventory, save/load, `packUp`, animation states), `ExhaustSmoke`, `menu/PowerArmorMenu`,
 `client/PowerArmorScreen` + `tools/make-gui.py`, `client/FuelGauge`, `item/SuitLoadout` +
 `ModDataComponents`, `item/PowerTool` (empty marker). Animations `shutdown` / `powered_off` / `startup`
-from `starcraft_marine_anim/a_power.js`. Tests: 9 new GameTests (17 total); autopilot fuel scenario
+from `model/anim/a_power.js`. Tests: 9 new GameTests (17 total); autopilot fuel scenario
 (`ap_fuel_*`, `ap_menu_*`, `run/autopilot_fuel.csv`).
 Not done: hoppers into the fuel slot; exhaust pipe bone positions are computed from the entity transform
 (`ExhaustSmoke.PIPE_*`), not tracked GeckoLib bones (ignores the torso lean, looks right in game).
@@ -106,8 +106,8 @@ would replace them in `sounds.json` only.
    creative, immunity bypass, overheat (52).
 3. EM projector redstone restyle: model/texture, red-dust beam + sparks.
 
-## Art (Blockbench, `~/Developer/Models/starcraft_marine.bbmodel`)
-Use the `blockbench-mcp` skill (`~/Developer/Models/.agents/skills/blockbench-mcp/`), checkpoint
+## Art (Blockbench, `model/starcraft_marine.bbmodel`)
+Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint
 before every change, save it with every mod commit that changes the art (user's rule), re-export with `node tools/export-model.mjs`.
 - Phase 1 (done): `shutdown`, `powered_off`, `startup` (`a_power.js`, planted feet IK).
 - Phase 2 (done): `socket` coupling bone under `right_forearm`, `plasma_shot` overlay; the item model is
@@ -115,11 +115,11 @@ before every change, save it with every mod commit that changes the art (user's 
 - Phase 3 (done): `left_hand` grip bone, `hold_item` / `use_item` (`a_hand.js`); grenade removed (`throw` unused).
 - Phase 4 (done): `em_projector` bone (collar, 2 coils, core, 4 prongs; texture at y 98-107, x 166-225).
 - Phase 5 (done): `drill` (spinning `drill_bit`, diamond bit) and `chainsaw` (`chainsaw_chain`) bones under
-  `right_forearm` (now `left_forearm`, see below); nets painted by `~/Developer/Models/starcraft_marine_art/mining_tools_*`; `drill_run` / `chainsaw_run` (`a_tools.js`).
+  `right_forearm` (now `left_forearm`, see below); nets painted by `model/art/mining_tools_*`; `drill_run` / `chainsaw_run` (`a_tools.js`).
 - Arm swap (2026-10-13, done): hand on the right, tools on the left. The whole model was mirrored across x = 0
   (cubes, rest poses, all keyframes, left/right names; checkpoint "before arm swap mirror"), verified exact against
   the live bone matrices of every animation. Phase notes above use the old side names. Specs stay authored for the
-  old rig: `starcraft_marine_anim/kit.json` makes `bb.mjs` mirror them on bake.
+  old rig: `model/anim/kit.json` makes `bb.mjs` mirror them on bake.
 - Tool arm hip carry + shoulder fix (2026-10-13, done): the tool arm's rest pose went from raised forward (upper arm
   46 deg, elbow 38 deg: always looked extended) to a hip carry beside the body (upper arm 18 deg, elbow 62 deg, tool
   still pointing forward); walk/run re-baked (their cannon stabiliser depends on the rest pose; speeds unchanged),

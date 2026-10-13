@@ -1,7 +1,7 @@
 # Power Armor
 
 A Minecraft mod (NeoForge 1.21.1 + GeckoLib 4.9.3) that adds a power armor suit you climb into,
-Fallout / Titanfall style. Model and animations come from `~/Developer/Models/starcraft_marine.bbmodel`.
+Fallout / Titanfall style. Model and animations come from `model/starcraft_marine.bbmodel`.
 
 Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Working notes for agents: `AGENTS.md`.
 
@@ -212,10 +212,10 @@ src/main/resources/
   up to 90 degrees and leans to face where the pilot looks (`PowerArmorModel.setCustomAnimations`).
 - First person: the eye sits at the visor (0.55 forward), the head/torso/hip shell is hidden and the
   suit is drawn with back-face culling, so no insides of cubes show.
-- Animation sources (procedural specs) live in `~/Developer/Models/starcraft_marine_anim/`.
+- Animation sources (procedural specs) live in `model/anim/`.
 - Power: `shutdown` (slump, hold) when the fuel runs out, `powered_off` (its last frame) for suits that were
   already off when they came into view, `startup` (1.4 s, movement blocked meanwhile) when fuel returns.
-  The torso stops following the view while powered down. Spec: `starcraft_marine_anim/a_power.js`.
+  The torso stops following the view while powered down. Spec: `model/anim/a_power.js`.
 - Socket: the left arm ends in an elbow socket and the installed tool is the forearm, carried at the hip (rest pose:
   upper arm 18 deg forward, elbow 62 deg); `socket` (coupling plate) shows when empty, the installed
   tool's bone (`chaingun`, `em_projector`, `drill`, `chainsaw`) otherwise (`PowerArmorRenderer`). The EM push plays `tool_recoil` (0.5 s overlay, `a_tool_recoil.js`); the chaingun's barrels spin and its shots kick in code (`ChaingunParts`, `PowerArmorModel`), and `tool_recoil`
@@ -228,7 +228,7 @@ src/main/resources/
   right arm while you hold something; `use_item` is triggered on every swing of the pilot's arm (`a_hand.js`).
 - Arms swapped (2026-10-13): the hand used to be on the left and the tools on the right. The swap mirrored the
   whole model across x = 0 in Blockbench (geometry, rest poses, every keyframe, left/right names), so every
-  animation stayed consistent (the gait now leads with the other foot). The specs in `starcraft_marine_anim/` are
+  animation stayed consistent (the gait now leads with the other foot). The specs in `model/anim/` are
   still written for the old rig; its `kit.json` makes the bake tools mirror them onto the new one. Hand-held tool
   items are mirrored back to the right-arm shape by `tools/extract-tool-geo.py` (you hold them in your right hand).
 - Unused animations so far: attack (3-round burst), throw (lost its grenade prop), stim, electrified, idle_fidget, sneakwalk.

@@ -21,7 +21,7 @@ Scripts (run from anywhere, paths relative to this skill): `scripts/make_test_st
 (GameTest floor .nbt without NBT libraries), `scripts/contact_sheet.py` (tile screenshots),
 `scripts/export_model.mjs` (export geo/animations/texture from the open Blockbench project via MCP).
 For model and animation work use the Blockbench skill:
-`~/Developer/Models/.agents/skills/blockbench-mcp/SKILL.md` (+ `ANIMATION.md`).
+`.agents/skills/blockbench-mcp/SKILL.md` (+ `ANIMATION.md`).
 
 ## Workflow that worked
 1. **Pin versions and read real sources.** Never guess an API from memory: extract the NeoForge

@@ -4,7 +4,7 @@ A NeoForge 1.21.1 + GeckoLib 4.9.3 Minecraft mod: an enterable power-armor suit.
 `docs/design.md` (spec), `docs/implementation-plan.md` (next phases) and `README.md` (controls, files).
 The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is the project skill
 `.agents/skills/minecraft-modding/SKILL.md`; model/animation work uses
-`~/Developer/Models/.agents/skills/blockbench-mcp/SKILL.md`.
+`.agents/skills/blockbench-mcp/SKILL.md`.
 
 ## The user
 - First Minecraft mod. Explain concepts briefly as you go (client vs server, registries, events,
@@ -13,9 +13,21 @@ The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is
   a copy (see `runAutopilotTerrain`). A sorted md5 listing of it is in `.scratch/world_baseline.txt`
   (`find . -type f ! -name session.lock -exec md5 -r {} \; | sort -k2`); the user plays it between
   sessions, so check file mtimes before blaming a run, and refresh the baseline at the start of a session.
-- The art lives in Blockbench: `~/Developer/Models/starcraft_marine.bbmodel`. Checkpoint before edits,
+- The art lives in Blockbench: `model/starcraft_marine.bbmodel` (in this repo since 2026-10-13; it used to sit in
+  `~/Developer/Models`, which is now only for generic Blockbench experiments). Checkpoint before edits,
   save it (`BarItems.save_project.trigger()` via risky_eval) **with every mod commit that
-  touches the art or animations** (user's rule since Phase 5), so the model and the exported files never drift.
+  touches the art or animations** (user's rule since Phase 5) and commit it with them, so the model and the
+  exported files never drift. If Blockbench still has it open from the old place, set
+  `Project.save_path` to this file before saving.
+- When the user says "I like it" (or similar approval) about a change, commit it (and save the model if it changed).
+
+## Layout
+- `src/` the mod; `tools/` export / art / test helpers; `docs/` design + plan; `run/` dev game (not in git).
+- `model/` the Blockbench source: `starcraft_marine.bbmodel`, `anim/` procedural animation specs (bake with
+  `.agents/skills/blockbench-mcp/scripts/run.mjs`, see `model/anim/README.md`), `art/` one-off texture/part scripts.
+- `.pi/mcp.json` connects pi to Blockbench's MCP server (`localhost:3000/bb-mcp`): start sessions here.
+- `.agents/skills/`: `minecraft-modding` (this mod's how-to) and `blockbench-mcp` (a copy of the one in
+  `~/Developer/Models`; keep both in step when you improve it).
 
 ## Setup
 Java 21 from Homebrew is keg-only. Every shell needs:
@@ -48,7 +60,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   `setCustomAnimations` runs after keyframes: add to bone values, don't replace them.
 - **GeckoLib draws both faces** (`entityCutoutNoCull`): coplanar same-direction faces flicker
   (z-fighting); fix in Blockbench with `inflate` 0.1 (keeps box UVs). Scan with
-  `~/Developer/Models/.agents/skills/blockbench-mcp/scripts/zfight.mjs`. The cockpit uses back-face culling.
+  `.agents/skills/blockbench-mcp/scripts/zfight.mjs`. The cockpit uses back-face culling.
 - **Animation state flicker** comes from states toggling every few ticks (e.g. run/fall on slopes); check the
   `anim` column of the terrain CSV for rapid switches.
 - **GameTest structures sit one block above the test origin** (floor at relative y=1, stand at y=2) and are
@@ -160,10 +172,10 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   model across x = 0 (cubes x-flipped + `mirror_uv` toggled, Y/Z rotations and position X negated in rest poses and
   keys, left/right names swapped), which keeps every animation consistent; swapping only the arm keys would have
   put the arm swing in phase with the wrong leg and doubled the torso sway on the stabilised tool arm. The specs
-  in `starcraft_marine_anim/` still describe the old rig (`kit.json` mirrors them on bake), so their `right_*`
+  in `model/anim/` still describe the old rig (`kit.json` mirrors them on bake), so their `right_*`
   is today's `left_*`. Hand-held tool items are mirrored back in `extract-tool-geo.py`.
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
-  `~/Developer/Models/starcraft_marine_anim/` (walk/run carry a tool-arm `stabilize()` wrapper). Measure gait
+  `model/anim/` (walk/run carry a tool-arm `stabilize()` wrapper). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.
 
 ## Code map (see README for the full list)
