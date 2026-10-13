@@ -16,11 +16,12 @@ import org.jetbrains.annotations.Nullable;
 /** Where socket tools fire from and what the pilot is aiming at. Works on both sides. */
 public final class SocketAim {
     // Muzzle in the torso's frame, in blocks (measured in Blockbench from the cannon's muzzle_flash bone;
-    // the EM projector's tip is within a few pixels): right of centre, up from the feet, forward.
+    // the EM projector's tip is within a few pixels): left of centre (the tool arm is the suit's left),
+    // up from the feet, forward.
     // That's where everyone else sees the cannon; the pilot's own first-person view draws its bolts from the cockpit
     // viewmodel's muzzle instead (visualMuzzle + PlasmaBolt.visualOffset).
     // The torso pivot is 1.54 up; the torso faces the view and pitches with it (55%).
-    private static final double MUZZLE_RIGHT = 0.95, MUZZLE_UP = 1.77, MUZZLE_FORWARD = 1.59, TORSO_PIVOT_UP = 1.54;
+    private static final double MUZZLE_LEFT = 0.95, MUZZLE_UP = 1.77, MUZZLE_FORWARD = 1.59, TORSO_PIVOT_UP = 1.54;
 
     /** Where muzzle effects (EM beam particles) start on this client. The client points it at the cockpit viewmodel's
      *  muzzle for its own pilot in first person (CockpitHands); everywhere else it's the suit's muzzle. */
@@ -34,7 +35,7 @@ public final class SocketAim {
         double leanedUp = up * Mth.cos(lean) - MUZZLE_FORWARD * Mth.sin(lean);
         Vec3 forward = new Vec3(-Mth.sin(yaw), 0, Mth.cos(yaw));
         Vec3 right = new Vec3(-Mth.cos(yaw), 0, -Mth.sin(yaw));
-        return suit.position().add(0, TORSO_PIVOT_UP + leanedUp, 0).add(forward.scale(leanedForward)).add(right.scale(MUZZLE_RIGHT));
+        return suit.position().add(0, TORSO_PIVOT_UP + leanedUp, 0).add(forward.scale(leanedForward)).add(right.scale(-MUZZLE_LEFT));
     }
 
     /** What's under the pilot's crosshair: the first entity or block along the view, or a far point. */

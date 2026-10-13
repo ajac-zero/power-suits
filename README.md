@@ -18,7 +18,7 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
-| Install a tool | Put a power tool (Plasma Cannon, EM Projector, Mining Drill, Chainsaw) in the menu's socket slot; it appears on the suit's right arm |
+| Install a tool | Put a power tool (Plasma Cannon, EM Projector, Mining Drill, Chainsaw) in the menu's socket slot; it appears on the suit's left arm |
 | Use items | Right-click as usual while piloting: the suit's left hand holds your selected item (place blocks, eat, open doors, buckets...). 1.5 blocks extra reach |
 | EM Projector | Hold attack on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 1 fuel/tick while holding, 80 per throw |
 | Mining Drill | Hold attack on a block: digs it and the 8 around it (a 3x3 face of a wall, floor or ceiling) like a diamond pickaxe + shovel. 20 fuel per block |
@@ -82,8 +82,9 @@ touching leaves that grew, not placed ones) brings down every connected log at o
 block you cut. Both mining tools post Minecraft's block-break event for every block, so land-claim mods can
 protect blocks from them.
 
-**Left hand**: shows your selected hotbar item and carries it forward (`hold_item`), reaching out each time
-you use it (`use_item`). In first person the suit's gauntlet holds it at the lower left (cockpit viewmodel). The hand never attacks or mines (left click is the tool's), and a
+**Right hand**: shows your selected hotbar item and carries it forward (`hold_item`), reaching out each time
+you use it (`use_item`). It's the suit's main hand, like yours: the tools sit on the left arm. In first person
+the suit's gauntlet holds it at the lower right (cockpit viewmodel). The hand never attacks or mines (left click is the tool's), and a
 powered-down suit's hand can't use anything.
 
 While inside: the suit takes hits instead of you, it has no fall damage, steps up full blocks,
@@ -109,7 +110,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew runGameTestServer` | Runs the automated in-game tests headless, prints pass/fail |
 | `./gradlew build` | Builds the mod jar into `build/libs/` (put it in a real `mods/` folder, plus GeckoLib) |
 | `node tools/export-model.mjs` | Re-exports model, animations and texture from the open Blockbench project |
-| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (pool, running out of fuel, cannon range, left hand, EM projector, drill + chainsaw, tool items on foot), saves `run/screenshots/ap_*.png`, `run/autopilot_{water,fuel,cannon,em,mine}.csv`, quits |
+| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (pool, running out of fuel, cannon range, right hand, EM projector, drill + chainsaw, tool items on foot), saves `run/screenshots/ap_*.png`, `run/autopilot_{water,fuel,cannon,em,mine}.csv`, quits |
 | `./gradlew runAutopilotTerrain` | Dev tool: drives a suit over real terrain in a **copy** of `run/saves/New World`, logs `run/autopilot_terrain.csv` (speed, height, ground contact, animation, camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`, `fuel`, `menu`) |
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
@@ -150,12 +151,12 @@ src/main/java/dev/ajaczero/powerarmor/
     PowerArmorModel.java     points GeckoLib at the asset files, head follows your view
     PowerArmorRenderer.java  draws only the legs in first person (cockpit)
     PilotView.java           hides the pilot and vanilla hands, pulls the camera back
-    CockpitHands.java        first-person viewmodel: socket tool on the right, gauntlet + held item on the left
+    CockpitHands.java        first-person viewmodel: socket tool on the left, gauntlet + held item on the right
     CockpitView*.java        its GeckoLib animatable/renderer (geo/view, cut from the suit by tools/extract-view-geo.py)
     PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
     FuelGauge.java           HUD fuel gauge + low-fuel beep
     ToolInput.java           attack button -> socket tool (cancels vanilla punching while piloting)
-    HeldItemLayer.java       draws the pilot's selected item in the suit's left hand (third person)
+    HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
     PlasmaBoltRenderer.java  the glowing bolt (camera-facing quad)
     ClientSetup.java         registers the renderer
     PowerArmorClient.java    client-only @Mod entry: the in-game config screen
@@ -197,13 +198,18 @@ src/main/resources/
 - Power: `shutdown` (slump, hold) when the fuel runs out, `powered_off` (its last frame) for suits that were
   already off when they came into view, `startup` (1.4 s, movement blocked meanwhile) when fuel returns.
   The torso stops following the view while powered down. Spec: `starcraft_marine_anim/a_power.js`.
-- Socket: the right arm ends in an elbow socket and the installed tool is the forearm; `socket` (coupling plate) shows when empty, the installed
+- Socket: the left arm ends in an elbow socket and the installed tool is the forearm; `socket` (coupling plate) shows when empty, the installed
   tool's bone (`cannon`, `em_projector`, `drill`, `chainsaw`) otherwise (`PowerArmorRenderer`). The EM push reuses `plasma_shot` as `tool_recoil`. `plasma_shot` (0.5 s overlay, `a_plasma_shot.js`)
   is triggered per shot; it must stay shorter than the cooldown because GeckoLib won't restart a running one.
 - Mining tools: while a continuous tool runs, the suit syncs `TOOL_RUNNING` and a fourth controller (`tool`)
   loops the tool's own animation: `drill_run` spins the `drill_bit` 4 turns/s and buzzes the head,
   `chainsaw_run` shimmers the chain (`a_tools.js`). They key only the tool bones, so the arm keeps following
   walk/run and the aim.
-- Left hand: `left_hand` grip bone (replaced the grenade prop) and a third GeckoLib controller that owns the
-  left arm while you hold something; `use_item` is triggered on every swing of the pilot's arm (`a_hand.js`).
+- Right hand: `right_hand` grip bone (replaced the grenade prop) and a GeckoLib controller (`right_hand`) that owns the
+  right arm while you hold something; `use_item` is triggered on every swing of the pilot's arm (`a_hand.js`).
+- Arms swapped (2026-10-13): the hand used to be on the left and the tools on the right. The swap mirrored the
+  whole model across x = 0 in Blockbench (geometry, rest poses, every keyframe, left/right names), so every
+  animation stayed consistent (the gait now leads with the other foot). The specs in `starcraft_marine_anim/` are
+  still written for the old rig; its `kit.json` makes the bake tools mirror them onto the new one. Hand-held tool
+  items are mirrored back to the right-arm shape by `tools/extract-tool-geo.py` (you hold them in your right hand).
 - Unused animations so far: attack (3-round burst), throw (lost its grenade prop), stim, electrified, idle_fidget, sneakwalk.

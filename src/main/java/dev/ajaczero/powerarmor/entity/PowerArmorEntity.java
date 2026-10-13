@@ -159,7 +159,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final EntityDataAccessor<ItemStack> SOCKET_ITEM =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
 
-    /** The suit's own two slots: fuel and the right-arm socket. Real contents only exist on the server. */
+    /** The suit's own two slots: fuel and the left-arm socket. Real contents only exist on the server. */
     private final SimpleContainer inventory = new SimpleContainer(2);
     /** Server: energy left in the burning item (fractional, idle drains 0.25 per tick). */
     private float burnLeft;
@@ -206,7 +206,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final RawAnimation POWERED_OFF = RawAnimation.begin().thenPlayAndHold("animation.power_armor.powered_off");
     private static final RawAnimation STARTUP = RawAnimation.begin().thenPlay("animation.power_armor.startup");
     private static final RawAnimation PLASMA_SHOT = RawAnimation.begin().thenPlay("animation.power_armor.plasma_shot");
-    // Left hand (a_hand.js): carry pose while the pilot holds something, quick reach on every use.
+    // Right hand (a_hand.js): carry pose while the pilot holds something, quick reach on every use.
     private static final RawAnimation HOLD_ITEM = RawAnimation.begin().thenLoop("animation.power_armor.hold_item");
     private static final RawAnimation USE_ITEM = RawAnimation.begin().thenPlay("animation.power_armor.use_item");
 
@@ -1052,7 +1052,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.aimBlend += (aimTarget - this.aimBlend) * 0.2F;
             ExhaustSmoke.tick(this);
             EmBeamEffects.tick(this);
-            this.tickLeftHandSwing();
+            this.tickHandSwing();
             // Measure how fast we actually move (blocks/s) and smooth it to avoid flicker
             // between idle and walk.
             double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
@@ -1138,9 +1138,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         // Controller 3: the socket tool's own loop (drill spin, chainsaw chain) while it runs. It keys only
         // the tool's bones, so the arm keeps following walk/run and the aim.
         controllers.add(new AnimationController<>(this, "tool", 3, this::toolAnimation));
-        // Controller 4: the left hand. Added last, so while it plays it owns the left arm (the gait's arm
+        // Controller 4: the right hand. Added last, so while it plays it owns the right arm (the gait's arm
         // swing pauses, like a person carrying a torch). Stops when there's nothing to hold or no power.
-        controllers.add(new AnimationController<>(this, "left_hand", 4, this::leftHandAnimation)
+        controllers.add(new AnimationController<>(this, "right_hand", 4, this::handAnimation)
                 .triggerableAnim("use_item", USE_ITEM));
     }
 
@@ -1188,7 +1188,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return PlayState.STOP;
     }
 
-    private PlayState leftHandAnimation(AnimationState<PowerArmorEntity> state) {
+    private PlayState handAnimation(AnimationState<PowerArmorEntity> state) {
         if (this.isDeadOrDying() || !this.canOperate() || !(this.getControllingPassenger() instanceof Player pilot)
                 || pilot.getMainHandItem().isEmpty()) {
             return PlayState.STOP;
@@ -1198,11 +1198,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** Client: the pilot swung their hand (placed a block, used an item on something): reach with the suit's hand.
      *  Swings of other players arrive as packets, so everyone sees it. */
-    private void tickLeftHandSwing() {
+    private void tickHandSwing() {
         boolean swinging = this.getControllingPassenger() instanceof Player pilot && pilot.swinging
                 && pilot.swingingArm == InteractionHand.MAIN_HAND;
         if (swinging && !this.pilotWasSwinging && this.canOperate()) {
-            this.triggerAnim("left_hand", "use_item");
+            this.triggerAnim("right_hand", "use_item");
         }
         this.pilotWasSwinging = swinging;
     }

@@ -7,7 +7,8 @@ Same transform as CockpitHands: translate(x,y,z) * rotY(yaw) * rotX(pitch) * rot
 in view space (x right, y up, -z forward). The hand pass projects with a fixed 70 degree FOV; 16:9 is assumed for the
 horizontal NDC. 'check' prints the highest screen y (NDC, -1 = bottom edge) of the cut end and where the tip lands;
 'fit' searches y, z and pitch for a pose whose cut end sits below the bottom edge (< -1.08, room for the gait bob)
-with the tip at (tipX, tipY) in NDC. For the left side, mirror x, yaw and roll.
+with the tip at (tipX, tipY) in NDC. The tool sits on the left (x < 0), the gauntlet on the right; 'fit'
+searches with the x, yaw and roll you give, so to fit one side from the other, mirror x, yaw and roll.
 """
 import sys
 import numpy as np
@@ -15,8 +16,8 @@ import numpy as np
 T, ASP = np.tan(np.radians(35)), 16 / 9
 # cut end corners and tip, model pixels (geo/view/power_armor_view.geo.json): tools start at the socket face (y 0),
 # the gauntlet at the wrist (y -6, the elbow cuff is left out); the widest tool section is the cannon/saw body.
-PARTS = {'tool': ([(x, 0, z) for x in (-5.5, 4.5) for z in (-5.5, 6.5)], (0, -16, 0)),
-         'gauntlet': ([(x, -6, z) for x in (-4, 3) for z in (-3.5, 3.5)], (0, -15, 0))}
+PARTS = {'tool': ([(x, 0, z) for x in (-4.5, 5.5) for z in (-5.5, 6.5)], (0, -16, 0)),
+         'gauntlet': ([(x, -6, z) for x in (-3, 4) for z in (-3.5, 3.5)], (0, -15, 0))}
 
 
 def rot(yaw, pitch, roll):

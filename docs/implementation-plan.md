@@ -29,7 +29,7 @@ visibility, `socket` coupling in the model, `plasma_shot` animation (`a_plasma_s
 cannon range + item views (`ap_cannon_*`, `ap_item_*`, `run/autopilot_cannon.csv`).
 Not done: muzzle position is computed from constants, not the animated bone (fine at the bolt's speed);
 no glowmask (emissive) texture yet; fuel cost per shot to be balanced (user: later).
-For the next tools: add the tool's bone to the suit model (child of `right_forearm`), its name to
+For the next tools: add the tool's bone to the suit model (child of `left_forearm` since the 2026-10-13 arm swap), its name to
 `PowerArmorRenderer.TOOL_BONES` and `extract-tool-geo.py`, implement `PowerTool`, register the item + client
 extension, add a `models/item/<tool>.json`.
 
@@ -96,4 +96,8 @@ before every change, save it with every mod commit that changes the art (user's 
 - Phase 3 (done): `left_hand` grip bone, `hold_item` / `use_item` (`a_hand.js`); grenade removed (`throw` unused).
 - Phase 4 (done): `em_projector` bone (collar, 2 coils, core, 4 prongs; texture at y 98-107, x 166-225).
 - Phase 5 (done): `drill` (spinning `drill_bit`, diamond bit) and `chainsaw` (`chainsaw_chain`) bones under
-  `right_forearm`; nets painted by `~/Developer/Models/starcraft_marine_art/mining_tools_*`; `drill_run` / `chainsaw_run` (`a_tools.js`).
+  `right_forearm` (now `left_forearm`, see below); nets painted by `~/Developer/Models/starcraft_marine_art/mining_tools_*`; `drill_run` / `chainsaw_run` (`a_tools.js`).
+- Arm swap (2026-10-13, done): hand on the right, tools on the left. The whole model was mirrored across x = 0
+  (cubes, rest poses, all keyframes, left/right names; checkpoint "before arm swap mirror"), verified exact against
+  the live bone matrices of every animation. Phase notes above use the old side names. Specs stay authored for the
+  old rig: `starcraft_marine_anim/kit.json` makes `bb.mjs` mirror them on bake.

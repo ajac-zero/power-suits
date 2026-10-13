@@ -20,7 +20,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
     public PowerArmorRenderer(EntityRendererProvider.Context context) {
         super(context, new PowerArmorModel());
         this.shadowRadius = 0.9F;
-        this.addRenderLayer(new HeldItemLayer(this)); // the pilot's selected item in the left hand
+        this.addRenderLayer(new HeldItemLayer(this)); // the pilot's selected item in the right hand
     }
 
     @Override

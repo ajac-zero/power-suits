@@ -14,7 +14,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 import software.bernie.geckolib.util.RenderUtil;
 
 /**
- * The pilot's first-person "viewmodel": the socket tool on the right and the suit's gauntlet on the left, drawn in
+ * The pilot's first-person "viewmodel": the socket tool on the left and the suit's gauntlet on the right, drawn in
  * front of the camera like vanilla's hands (CockpitHands) instead of looking at the suit's own arms from inside.
  * There is one per client. Its bones are named like the suit's (tools/extract-view-geo.py), so it plays the suit's
  * tool animations: the drill bit spins, the chain runs, the muzzle flashes. Keys for bones it doesn't have

@@ -26,7 +26,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 /**
  * The first power tool: fires a plasma bolt where the pilot aims. The bolt leaves the cannon's muzzle
  * and flies toward whatever is under the crosshair, so it hits what you look at even though the
- * cannon sits off to the right of your eyes.
+ * cannon sits off to the left of your eyes.
  *
  * It's a GeckoLib item (GeoItem) so it can use the same 3D model in your hand as on the suit's arm.
  */

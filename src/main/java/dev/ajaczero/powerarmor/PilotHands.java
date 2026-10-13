@@ -17,7 +17,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 
 /**
- * What the pilot's hands can do from inside the suit. The suit's left hand holds the selected item and
+ * What the pilot's hands can do from inside the suit. The suit's right hand holds the selected item and
  * right-click uses it as normal (place blocks, eat, open doors). But:
  *  - left click belongs to the socket tool: no punching mobs, no mining (decided: not even with a sword);
  *  - a powered-down suit's hand doesn't move: no using items on blocks / entities / the air;

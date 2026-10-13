@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animation.RawAnimation;
 
 /**
- * A power tool for the suit's right-arm socket (plasma cannon, EM projector, drill, chainsaw).
+ * A power tool for the suit's left-arm socket (plasma cannon, EM projector, drill, chainsaw).
  * Only items implementing this fit the socket slot. They do nothing on foot.
  *
  * Two kinds, both run by the suit on the server while the pilot holds attack:

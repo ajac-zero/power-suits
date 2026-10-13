@@ -176,7 +176,7 @@ public final class AutoPilot {
             case 986 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 55; hold(o.keyUp, true); }
             case 989, 990, 991, 992, 993 -> shot(mc, "fp_walkdown_" + t);
             case 994 -> releaseAll();
-            // ---- left hand: hold and place stone bricks from inside, then eat a golden apple
+            // ---- right hand: hold and place stone bricks from inside, then eat a golden apple
             case 995 -> { closeCannonLog(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON);
                           giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); yaw = 0; pitch = 40; }
             case 1003 -> shot(mc, "hand_fp_hold");
@@ -828,13 +828,14 @@ public final class AutoPilot {
         Screenshot.grab(mc.gameDirectory, "ap_" + name + ".png", mc.getMainRenderTarget(), msg -> {});
     }
 
-    /** A client-only camera in front of the suit and to its left (its torso faces the pilot's yaw), looking back at it. */
+    /** A client-only camera in front of the suit and to its right, the working hand's side (its torso faces the pilot's
+     *  yaw), looking back at it. */
     private static void frontCamera(Minecraft mc) {
         var suit = mc.player.getVehicle();
         float yawRad = yaw * net.minecraft.util.Mth.DEG_TO_RAD;
         Vec3 forward = new Vec3(-net.minecraft.util.Mth.sin(yawRad), 0, net.minecraft.util.Mth.cos(yawRad));
-        Vec3 left = new Vec3(forward.z, 0, -forward.x);
-        Vec3 pos = suit.position().add(forward.scale(4.5)).add(left.scale(2.5)).add(0, 0.6, 0);
+        Vec3 right = new Vec3(-forward.z, 0, forward.x);
+        Vec3 pos = suit.position().add(forward.scale(4.5)).add(right.scale(2.5)).add(0, 0.6, 0);
         Vec3 look = suit.position().add(0, 1.7, 0).subtract(pos);
         float camYaw = (float) (net.minecraft.util.Mth.atan2(-look.x, look.z) * net.minecraft.util.Mth.RAD_TO_DEG);
         float camPitch = (float) (-net.minecraft.util.Mth.atan2(look.y, look.horizontalDistance()) * net.minecraft.util.Mth.RAD_TO_DEG);

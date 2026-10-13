@@ -4,10 +4,10 @@ with Blockbench:
     python3 tools/extract-view-geo.py        (after node tools/export-model.mjs)
 
 Two roots, each moved so its joint sits on the origin (CockpitHands places them in front of the camera):
-  view_tool      every socket tool with its moving parts (drill_bit, chainsaw_chain, muzzle_flash), and the
+  view_tool      every socket tool (left forearm) with its moving parts (drill_bit, chainsaw_chain, muzzle_flash), and the
                  empty-socket stump (ring + plate + pins, only shown when nothing is installed); hangs down -Y
                  from the socket like on the suit.
-  view_gauntlet  the left wrist, hand and fingers with the left_hand grip bone for the held item; hangs down -Y
+  view_gauntlet  the right wrist, hand and fingers with the right_hand grip bone for the held item; hangs down -Y
                  from the elbow.
 Trimmed for the first-person view: the socket ring and the gauntlet's elbow cuff sat right in front of the
 camera as big blocks, so the ring only shows as part of the empty stump and the cuff is left out.
@@ -24,8 +24,8 @@ OUT = ASSETS / 'geo/view/power_armor_view.geo.json'
 # root name: (bone whose cubes it takes, size filter, keep (True) or drop (False) those sizes, bone the cubes go to,
 #             top-level bones re-parented under the root, joint to centre on)
 ROOTS = {
-    'view_tool': ('right_forearm', [[7, 1, 7]], True, 'socket', ['socket', 'cannon', 'em_projector', 'drill', 'chainsaw'], 'socket'),
-    'view_gauntlet': ('left_forearm', [[8, 8, 8]], False, None, ['left_hand'], 'left_forearm'),
+    'view_tool': ('left_forearm', [[7, 1, 7]], True, 'socket', ['socket', 'cannon', 'em_projector', 'drill', 'chainsaw'], 'socket'),
+    'view_gauntlet': ('right_forearm', [[8, 8, 8]], False, None, ['right_hand'], 'right_forearm'),
 }
 
 

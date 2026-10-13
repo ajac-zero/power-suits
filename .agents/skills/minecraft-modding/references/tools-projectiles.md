@@ -57,9 +57,10 @@ Built for the Power Armor plasma cannon. Files: `item/PowerTool.java`, `item/Pla
 ## Held items in a vehicle's hand
 - `BlockAndItemGeoLayer` subclass on the vehicle renderer: return the rider's main-hand stack for the grip
   bone, then in `renderStackForBone` copy vanilla `ItemInHandLayer`'s grip (`XP -90`, `YP 180`,
-  translate `(-1/16, 0.125, 0)` at a bone placed at the grip, not the shoulder), scale for the bigger hand,
-  `renderStatic(entity, stack, THIRD_PERSON_LEFT_HAND, true, ...)`. Skip it in the rider's own first-person view.
-- First person: cancel `RenderHandEvent` and redraw the item with vanilla's first-person math mirrored
+  translate `(1/16, 0.125, 0)` for a right hand, `(-1/16, ...)` for a left one, at a bone placed at the grip, not the
+  shoulder), scale for the bigger hand, `renderStatic(entity, stack, THIRD_PERSON_RIGHT_HAND, false, ...)`
+  (`THIRD_PERSON_LEFT_HAND, true` for a left hand: vanilla mirrors the item's display transform). Skip it in the rider's own first-person view.
+- First person (Power Armor now draws a whole viewmodel instead, `CockpitHands`): cancel `RenderHandEvent` and redraw the item with vanilla's first-person math (mirrored for a left hand)
   (`applyItemArmTransform`, `applyItemArmAttackTransform`, swing translate, `applyEatTransform` are private:
   copy their few lines), `ItemInHandRenderer.renderItem(player, stack, FIRST_PERSON_LEFT_HAND, true, ...)`.
 - Swing reaction: watch the rider's `swinging` rising edge on the client (other players' swings arrive as

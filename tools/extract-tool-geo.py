@@ -6,6 +6,8 @@ hand as on the suit's arm and stays in sync with Blockbench.
 For each tool: copy its bone subtree (+ extra cubes: the elbow socket ring the tool locks onto), move it
 so its bounding box is centred on the origin (GeckoLib already moves item models to the middle of the block),
 and put it under one root bone. How it sits in your hand / GUI is set in models/item/<tool>.json.
+The suit carries its tools on the LEFT forearm; on foot you hold them in your right hand, so the copy is mirrored
+back to the right-arm version (the same shape the item always had).
 """
 import json
 from pathlib import Path
@@ -16,17 +18,35 @@ SUIT = ASSETS / 'geo/entity/power_armor.geo.json'
 
 TOOLS = {
     # tool name: (bone subtree, extra bone whose cubes of these sizes are included, bones to drop)
-    'plasma_cannon': ('cannon', ('right_forearm', [[7, 1, 7]]), {'muzzle_flash'}),
-    'em_projector': ('em_projector', ('right_forearm', [[7, 1, 7]]), set()),
-    'drill': ('drill', ('right_forearm', [[7, 1, 7]]), set()),
-    'chainsaw': ('chainsaw', ('right_forearm', [[7, 1, 7]]), set()),
+    'plasma_cannon': ('cannon', ('left_forearm', [[7, 1, 7]]), {'muzzle_flash'}),
+    'em_projector': ('em_projector', ('left_forearm', [[7, 1, 7]]), set()),
+    'drill': ('drill', ('left_forearm', [[7, 1, 7]]), set()),
+    'chainsaw': ('chainsaw', ('left_forearm', [[7, 1, 7]]), set()),
 }
+
+
+def mirrored(bone):
+    """The bone mirrored across x = 0 (left forearm -> right forearm): x flipped, Y/Z rotations negated, box UV
+    mirrored (Blockbench's 'mirror' flag), exactly like the model's own left/right pairs."""
+    b = json.loads(json.dumps(bone))
+    b['pivot'][0] = -b['pivot'][0]
+    if 'rotation' in b:
+        b['rotation'] = [b['rotation'][0], -b['rotation'][1], -b['rotation'][2]]
+    for c in b.get('cubes', []):
+        c['origin'][0] = -(c['origin'][0] + c['size'][0])
+        if 'pivot' in c:
+            c['pivot'][0] = -c['pivot'][0]
+        if 'rotation' in c:
+            c['rotation'] = [c['rotation'][0], -c['rotation'][1], -c['rotation'][2]]
+        if c.pop('mirror', False) is False:
+            c['mirror'] = True
+    return b
 
 
 def main():
     suit = json.loads(SUIT.read_text())
     geo = suit['minecraft:geometry'][0]
-    bones = {b['name']: b for b in geo['bones']}
+    bones = {b['name']: mirrored(b) for b in geo['bones']}
     for tool, (subtree, (extra_bone, extra_sizes), drop) in TOOLS.items():
         keep = [subtree]
         changed = True

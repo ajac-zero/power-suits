@@ -13,7 +13,7 @@ import software.bernie.geckolib.renderer.GeoRenderer;
 import software.bernie.geckolib.renderer.layer.BlockAndItemGeoLayer;
 
 /**
- * Draws the pilot's selected item in the suit's left hand (the "left_hand" grip bone), the way a player's
+ * Draws the pilot's selected item in the suit's right hand (the "right_hand" grip bone), the way a player's
  * held item is drawn, only bigger. Skipped in the pilot's own cockpit view: the suit's upper body
  * isn't drawn there; the cockpit viewmodel's gauntlet holds the item instead (CockpitHands).
  */
@@ -27,7 +27,7 @@ public class HeldItemLayer extends BlockAndItemGeoLayer<PowerArmorEntity> {
 
     @Override
     protected ItemStack getStackForBone(GeoBone bone, PowerArmorEntity suit) {
-        if (!"left_hand".equals(bone.getName()) || !(suit.getControllingPassenger() instanceof Player pilot)
+        if (!"right_hand".equals(bone.getName()) || !(suit.getControllingPassenger() instanceof Player pilot)
                 || PowerArmorRenderer.isCockpitView(suit)) {
             return null;
         }
@@ -42,9 +42,9 @@ public class HeldItemLayer extends BlockAndItemGeoLayer<PowerArmorEntity> {
         // Same grip as vanilla's ItemInHandLayer (the bone's -Y runs down the forearm to the fingers).
         poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-        poseStack.translate(-1F / 16F, 0.125F, 0.0F);
+        poseStack.translate(1F / 16F, 0.125F, 0.0F);
         poseStack.scale(SCALE, SCALE, SCALE);
-        Minecraft.getInstance().getItemRenderer().renderStatic(suit, stack, ItemDisplayContext.THIRD_PERSON_LEFT_HAND, true,
+        Minecraft.getInstance().getItemRenderer().renderStatic(suit, stack, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, false,
                 poseStack, buffers, suit.level(), packedLight, packedOverlay, suit.getId());
         poseStack.popPose();
     }

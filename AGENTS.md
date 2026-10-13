@@ -28,7 +28,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 |---|---|
 | `./gradlew build` | compile + jar |
 | `./gradlew runGameTestServer` | headless GameTests in `src/main/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
-| `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, plasma cannon range, left hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
+| `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, plasma cannon range, right hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
@@ -121,6 +121,12 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   file is shared by the client, the GameTest server and the user's edits).
 - **Looping sounds are client side** (`SuitSounds`): the server only syncs state (powered, piloted, `TOOL_RUNNING`);
   one-shots still use `playSound` on the server. Sounds are re-pitched vanilla events in `sounds.json`.
+- **Sides are mirrored, not rebuilt.** The arms were swapped (hand right, tools left) by mirroring the whole
+  model across x = 0 (cubes x-flipped + `mirror_uv` toggled, Y/Z rotations and position X negated in rest poses and
+  keys, left/right names swapped), which keeps every animation consistent; swapping only the arm keys would have
+  put the arm swing in phase with the wrong leg and doubled the torso sway on the stabilised tool arm. The specs
+  in `starcraft_marine_anim/` still describe the old rig (`kit.json` mirrors them on bake), so their `right_*`
+  is today's `left_*`. Hand-held tool items are mirrored back in `extract-tool-geo.py`.
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
   `~/Developer/Models/starcraft_marine_anim/` (walk/run carry a cannon `stabilize()` wrapper). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.

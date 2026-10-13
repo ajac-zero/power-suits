@@ -79,7 +79,7 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
 
     /** The pilot's selected item in the gauntlet's grip bone, held the way the suit holds it in third person. */
     private static final class HeldItem extends BlockAndItemGeoLayer<CockpitView> {
-        /** Smaller than on the suit (1.5): this close to the camera a full-size block filled the left of the view. */
+        /** Smaller than on the suit (1.5): this close to the camera a full-size block filled the right of the view. */
         static float ITEM_SCALE = 0.9F;
         private final CockpitViewRenderer renderer;
 
@@ -91,7 +91,7 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
         @Nullable
         @Override
         protected ItemStack getStackForBone(GeoBone bone, CockpitView view) {
-            if (this.renderer.part != Part.GAUNTLET || !"left_hand".equals(bone.getName()) || this.renderer.held.isEmpty()) {
+            if (this.renderer.part != Part.GAUNTLET || !"right_hand".equals(bone.getName()) || this.renderer.held.isEmpty()) {
                 return null;
             }
             return this.renderer.held;
@@ -104,10 +104,10 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
             // Same grip as HeldItemLayer / vanilla's ItemInHandLayer (the bone's -Y runs down the forearm to the fingers).
             poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
             poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-            poseStack.translate(-1F / 16F, 0.125F, 0.0F);
+            poseStack.translate(1F / 16F, 0.125F, 0.0F);
             poseStack.scale(ITEM_SCALE, ITEM_SCALE, ITEM_SCALE);
             Minecraft mc = Minecraft.getInstance();
-            mc.getItemRenderer().renderStatic(mc.player, stack, ItemDisplayContext.THIRD_PERSON_LEFT_HAND, true,
+            mc.getItemRenderer().renderStatic(mc.player, stack, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, false,
                     poseStack, buffers, mc.level, packedLight, packedOverlay, 0);
             poseStack.popPose();
         }

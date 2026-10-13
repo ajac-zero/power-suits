@@ -24,30 +24,33 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
 | Suit menu (Phase 1) | Socket slot (power tools only), fuel slot, live suit preview, burn flame, hull/fuel/status display, Pack up button. See section 5. |
 | Movement | Jog 5 blocks/s, sprint 10 (players: 4.3 / 5.6). Steps up 1 block, steps down up to 2 without falling; step changes eased for camera + model. Jump: hold Space (crouch wind-up, horse jump bar), release; launch 2 ticks later. |
 | Turning | Legs face the direction of travel; torso + arms twist up to 90 deg and lean to face the pilot's view. |
-| Camera | First person: eye at the visor, only the suit's legs drawn, arms = cockpit viewmodel (tool right, gauntlet + item left), cockpit footfall bob, speed FOV. Third person: camera pulled back to 6.5. |
+| Camera | First person: eye at the visor, only the suit's legs drawn, arms = cockpit viewmodel (tool left, gauntlet + item right), cockpit footfall bob, speed FOV. Third person: camera pulled back to 6.5. |
 | Damage | Hits on the pilot go to the suit (except drowning, starvation, void//kill). Suit: 100 HP, armor 12, toughness 4, full knockback resistance, no fall damage. Death: animation, pilot ejected, drops iron. |
 | Water | Fallout-style: sinks (~2.5 blocks/s), walks the bottom at half speed, suit never drowns, ignores currents. Pilot's air drains normally once their head is under. |
 | Animations | idle, walk (jog), run, jump_charge, jump, fall, land, hit, death, shutdown, powered_off, startup, plasma_shot, hold_item/use_item, drill_run, chainsaw_run (+ unused: attack, throw, stim, electrified, idle_fidget, sneakwalk). Walk/run hold the cannon steady (arm IK stabiliser). |
 | Old saves | Suits loaded from older versions get current base stats (`readAdditionalSaveData`). |
 
 ## 3. Arms: one hand, one power socket
-- **Left arm = a real hand.** It shows and uses the pilot's **currently selected hotbar item**
-  (rendered in the suit's left hand). The **use** button (right-click) works as normal for that item:
+- **Decided 2026-10-13: hand right, tools left** (swapped from the original layout: "the hand should represent
+  flexibility", and it matches vanilla's main hand). Done by mirroring the whole suit (model, animations, code,
+  cockpit viewmodel), so third person and the cockpit agree.
+- **Right arm = a real hand.** It shows and uses the pilot's **currently selected hotbar item**
+  (rendered in the suit's right hand). The **use** button (right-click) works as normal for that item:
   place blocks, eat, open doors, use buckets, throw potions...
-  - The left hand does **not** break blocks: the attack button belongs to the socket tool.
-  - **Decided 2026-10-12: no**, the left hand never attacks mobs, even with a sword (attack = socket tool).
-  - Built (Phase 3): the item is drawn at the suit's `left_hand` bone. In the cockpit the suit's upper body
+  - The hand does **not** break blocks: the attack button belongs to the socket tool.
+  - **Decided 2026-10-12: no**, the hand never attacks mobs, even with a sword (attack = socket tool).
+  - Built (Phase 3): the item is drawn at the suit's `right_hand` bone (`left_hand` until the 2026-10-13 swap). In the cockpit the suit's upper body
     isn't drawn (only the legs); a first-person viewmodel shows the gauntlet holding the item and the socket
     tool, like vanilla's hands (decided 2026-10-13: lining the external model up with the pilot's view never
     worked: hands raised where yours aren't, tools hidden behind their base, pads clipping).
     A powered-down suit's hand does nothing. Reach +1.5 blocks (block and entity interaction range).
-- **Right arm = power socket.** Exactly one **power tool** item can be installed. Tools only work when
+- **Left arm = power socket.** Exactly one **power tool** item can be installed. Tools only work when
   installed in a powered suit (they do nothing on foot) and draw fuel per use.
   - The **attack** button (left-click, hold for continuous tools) uses the installed tool.
   - Empty socket: attack does nothing (maybe a dry "clunk" sound).
   - The suit is crafted/deployed with an **empty socket**.
-- Built (Phase 2, reworked later): the right arm ends at the elbow in a steel socket ring, and **each tool is the
-  whole forearm** (16-19 px from the elbow, like the left forearm + hand). A `socket` coupling plate (cyan pins)
+- Built (Phase 2, reworked later): the left arm ends at the elbow in a steel socket ring, and **each tool is the
+  whole forearm** (16-19 px from the elbow, like the right forearm + hand). A `socket` coupling plate (cyan pins)
   shows when the socket is empty. Each tool is a bone in the suit model (`cannon` for the plasma cannon) pivoting
   at the socket, shown only while installed, so tools can have their own animated parts. In first person
   `PowerArmorModel` raises the arm, swings it in a little and bends the tool up at the socket so you see its side.
