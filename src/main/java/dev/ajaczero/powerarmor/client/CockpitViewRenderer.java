@@ -39,6 +39,11 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
         }
         boolean bare = this.installed == null;
         model.getBone("socket").ifPresent(b -> { b.setHidden(!bare); b.setChildrenHidden(!bare); });
+        if (isReRender) {
+            // GeoObjectRenderer.preRender centres the model in its block (translate 0.5, 0.51, 0.5) every time it runs, and
+            // reRender (the heat glow layer) runs it again inside the first pass: the glow drew half a block off the gun.
+            return;
+        }
         super.preRender(poseStack, view, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, colour);
     }
 
@@ -90,12 +95,21 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
         @Override
         public void render(PoseStack poseStack, CockpitView view, BakedGeoModel model, RenderType renderType, MultiBufferSource buffers,
                            com.mojang.blaze3d.vertex.VertexConsumer buffer, float partialTick, int packedLight, int packedOverlay) {
-            float glow = view.suit == null || this.renderer.part != Part.TOOL ? 0F : SuitGlowLayer.heatGlow(view.suit.getToolHeat());
+            if (view.suit == null || this.renderer.part != Part.TOOL) {
+                return;
+            }
+            float heat = view.suit.getToolHeat();
+            draw(poseStack, view, model, buffers, partialTick, SuitGlowLayer.HEAT, SuitGlowLayer.heatGlow(heat));
+            draw(poseStack, view, model, buffers, partialTick, SuitGlowLayer.HEAT_BARREL, SuitGlowLayer.barrelGlow(heat));
+        }
+
+        private void draw(PoseStack poseStack, CockpitView view, BakedGeoModel model, MultiBufferSource buffers, float partialTick,
+                          ResourceLocation mask, float glow) {
             if (glow <= 0.01F) {
                 return;
             }
             int c = net.minecraft.util.Mth.clamp((int) (glow * 255F), 0, 255);
-            RenderType type = RenderType.eyes(SuitGlowLayer.HEAT);
+            RenderType type = RenderType.eyes(mask);
             getRenderer().reRender(model, poseStack, buffers, view, type, buffers.getBuffer(type), partialTick,
                     net.minecraft.client.renderer.LightTexture.FULL_BRIGHT, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,
                     0xFF000000 | c << 16 | c << 8 | c);

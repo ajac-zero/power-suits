@@ -8,6 +8,9 @@ which adds nothing (SuitGlowLayer draws the masks full-bright and additively, ti
   power_armor_glow_fire.png   the firebox coals (yellow at the bottom -> red at the top) and the ember vent slits
   power_armor_glow_visor.png  the visor glass, white (tinted green / amber / red by the suit's state)
   power_armor_glow_heat.png   the chaingun's barrel tips (tinted by the barrels' heat)
+  power_armor_glow_heat_barrel.png  the barrels further back (dark red -> orange-red toward the tips); it lights up
+                              only when the barrels get really hot, so the heat creeps back from the tips. It's what
+                              the pilot sees: from the cockpit the front collar hides the tips.
 The script refuses to run if a reserved colour turns up outside the expected amount (someone painted with it).
 """
 from pathlib import Path
@@ -28,8 +31,13 @@ GLOW = {
     H('46505c'): ('visor', H('ffffff')),  # visor glass, highlight
     H('3c4147'): ('heat', H('ff6a1a')),   # chaingun barrel tip, second row: orange
     H('353a40'): ('heat', H('ffc860')),   # chaingun barrel tip, last row: yellow-hot
+    # barrel sides behind the tips: the stripes' own colours, one step off (cold barrels look the same)
+    H('4c555a'): ('heat_barrel', H('6e1a0a')), H('3b4247'): ('heat_barrel', H('5a1408')),  # 4th row from the tip: dark red
+    H('4c555b'): ('heat_barrel', H('b4300e')), H('3b4248'): ('heat_barrel', H('96280c')),  # 3rd: red
+    H('4c555c'): ('heat_barrel', H('f0501a')), H('3b4249'): ('heat_barrel', H('d24416')),  # under the front collar: orange-red
 }
-EXPECTED = {'fire': 15, 'visor': 35, 'heat': 16}  # pixels per mask (firebox 12 + 3 slits; the 7x5 visor; 4 barrel sides x 2x2)
+EXPECTED = {'fire': 15, 'visor': 35, 'heat': 16, 'heat_barrel': 24}  # pixels per mask (firebox 12 + 3 slits; the 7x5 visor;
+# 4 barrel sides x 2x2 tips; 4 barrel sides x 2x3 behind them)
 
 
 def main():

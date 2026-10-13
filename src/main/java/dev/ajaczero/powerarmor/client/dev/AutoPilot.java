@@ -895,7 +895,16 @@ public final class AutoPilot {
             case 178 -> giveHeld(mc, net.minecraft.world.item.ItemStack.EMPTY);
             case 190 -> shot(mc, "view_vanilla_hand");
             case 191 -> { onFoot(mc, false); giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); }
-            case 200 -> {
+            // overheated chaingun (client-side heat: the server keeps sending 0 only when it changes, so it sticks)
+            case 192 -> socket(mc, dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get());
+            case 198 -> { if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.setToolSpin(0F, 1F); }
+            case 202 -> shot(mc, "view_hot");
+            case 203 -> { if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.setToolSpin(0F, 0.7F); }
+            case 206 -> shot(mc, "view_warm");
+            case 207 -> { o.setCameraType(CameraType.THIRD_PERSON_FRONT); if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.setToolSpin(0F, 1F); }
+            case 214 -> shot(mc, "view_hot_tp");
+            case 215 -> { o.setCameraType(CameraType.FIRST_PERSON); if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.setToolSpin(0F, 0F); }
+            case 218 -> {
                 viewStep = -1;
                 try {
                     java.nio.file.Files.writeString(dir.resolve("done"), "ok");
