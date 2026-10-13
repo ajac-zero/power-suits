@@ -50,8 +50,9 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 public class ChaingunItem extends Item implements PowerTool, GeoItem {
     /** How far the crosshair is traced to find the aim point. */
     private static final double AIM_RANGE = 96;
-    /** Bullet spread at full spin, degrees (none for the first, slow shot). */
-    private static final float MAX_SPREAD = 1.2F;
+    /** Bullet spread at full spin, degrees (none for the first, slow shot). Small: the barrage should still hit what
+     *  is in the crosshair (1.2 missed small mobs beyond ~20 blocks). */
+    private static final float MAX_SPREAD = 0.4F;
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
@@ -162,15 +163,17 @@ public class ChaingunItem extends Item implements PowerTool, GeoItem {
     }
 
     private void fire(ServerLevel level, PowerArmorEntity suit, Player pilot, Vec3 muzzle, State s) {
-        Vec3 look = pilot.getViewVector(1F);
-        Vec3 direction = SocketAim.aimPoint(suit, pilot, AIM_RANGE).subtract(muzzle).normalize();
-        if (direction.dot(look) < 0.5) {
-            direction = look; // the aim point is beside/behind the muzzle (something very close): fire straight
+        // The bullet flies along the pilot's line of sight: from the eye through the crosshair, so it hits what the pilot
+        // sees there. Clients draw it coming out of the gun (Bullet.visualShift); sound and muzzle burst are at the gun.
+        Vec3 eye = pilot.getEyePosition();
+        Vec3 direction = SocketAim.aimPoint(suit, pilot, AIM_RANGE).subtract(eye).normalize();
+        if (direction.lengthSqr() < 0.5) {
+            direction = pilot.getViewVector(1F);
         }
         float spread = MAX_SPREAD * s.spin * Mth.DEG_TO_RAD;
         direction = direction.xRot((float) level.random.nextGaussian() * spread).yRot((float) level.random.nextGaussian() * spread);
         float spin = s.spin;
-        level.addFreshEntity(new Bullet(level, pilot, muzzle, direction.scale(Bullet.SPEED), damage(spin), 1F - spin));
+        level.addFreshEntity(new Bullet(level, pilot, eye, direction.scale(Bullet.SPEED), damage(spin), 1F - spin));
         suit.countToolUse();
         suit.countShot(); // every client: recoil kick, muzzle burst (the pilot's own client draws it on screen)
         s.sinceShot = 0;

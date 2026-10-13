@@ -41,6 +41,11 @@ projectile is in git history, commit 299d91b.)
 - Entity type: small `sized`, `updateInterval(1)` for fast projectiles. `isPickable`/`hurt` false so it can't be punched back.
 - **Gravity + still hitting the crosshair**: own gravity in `tick()` (`isNoGravity` true so vanilla's doesn't add);
   launch with `v = d/n + (0, g(n-1)/2, 0)`, n = distance / speed (it falls g*n*(n-1)/2 in n ticks).
+- **Offset guns: physics from the eye, visuals from the muzzle** (Chaingun `Bullet`): spawn at `pilot.getEyePosition()`
+  toward the aim point, so hits match the crosshair; on each client remember the first position (start), direction,
+  target distance D (`SocketAim.aimPoint`) and gap = visible muzzle - start, then draw at real + gap * (1 - s/D) (s =
+  distance flown) oriented along dir*D - gap. Learn this lazily on the first tick OR first frame (renderers can run before
+  the entity's first client tick: an NPE crashed the game).
 - **Rapid fire with spin-up** (Chaingun): make it a continuous tool so it times its own shots: per-suit state with a
   countdown timer (counts down every tick, held or not, so tapping can't beat the slow rate), spin += 1/spinUp while
   held, -= when not; interval = lerp(slow, fast, spin); first shot at once. Sync spin/heat/shot counter as entity data.

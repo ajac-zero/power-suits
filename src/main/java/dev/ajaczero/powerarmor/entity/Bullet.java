@@ -34,6 +34,12 @@ import net.minecraft.world.phys.Vec3;
  * bullets would do nothing), and their damage type is in the no_knockback tag: vanilla's shove per hit would launch
  * mobs across the map at ten hits a second. Each bullet pushes by its own strength instead (heavy single shots more).
  *
+ * <p>Where it flies vs where it's drawn: the bullet itself flies from the pilot's eye along the crosshair line, so what
+ * the pilot sees in the crosshair is what it hits (from the gun's muzzle, off to the lower left, a fence or a block edge
+ * could be in the way that the pilot can't see). Every client draws it coming out of the gun instead: from the muzzle
+ * it sees (the cockpit viewmodel's for the pilot in first person, the suit's real muzzle for everyone else) along a
+ * straight line that joins the real path at the target. See {@link #visualShift}.
+ *
  * <p>Both sides move it every tick (smooth); only the server decides hits. Drawn by BulletRenderer.
  */
 public class Bullet extends Projectile {
@@ -71,22 +77,65 @@ public class Bullet extends Projectile {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
     }
 
-    /** Ticks over which a bullet drawn from the pilot's on-screen muzzle merges into its real path. */
-    private static final float CONVERGE_TICKS = 3F;
+    /** Client: the drawn path. Set on the first client tick: where the real path starts (the pilot's eye) and goes,
+     *  how far away its target is, and the gap from there to the muzzle this client draws it from. */
+    private Vec3 pathStart, pathDir, gap = Vec3.ZERO;
+    private float convergeDistance = 1F;
+    private boolean pathKnown;
 
-    /** Client: draw offset for the pilot's own shots in first person: the cockpit viewmodel's muzzle isn't where the
-     *  suit's muzzle is, so the drawn tracer starts at the one on screen and merges into its real path. Zero for
-     *  everyone else and once it has converged. */
-    public Vec3 visualOffset(float age) {
-        if (age >= CONVERGE_TICKS || !(this.getOwner() instanceof Player pilot) || !(pilot.getVehicle() instanceof PowerArmorEntity suit)) {
-            return Vec3.ZERO;
+    /** Client: the first tick or the first frame, whichever comes first (the bullet is still at its spawn point). */
+    private void learnPath() {
+        if (this.pathKnown) {
+            return;
         }
-        Vec3 gap = SocketAim.visualMuzzle.apply(suit, pilot).subtract(SocketAim.muzzlePosition(suit, pilot));
-        return gap.scale(1 - age / CONVERGE_TICKS);
+        this.pathKnown = true;
+        this.pathStart = this.position();
+        this.pathDir = this.getDeltaMovement().normalize();
+        if (this.getOwner() instanceof Player pilot && pilot.getVehicle() instanceof PowerArmorEntity suit) {
+            this.gap = SocketAim.visualMuzzle.apply(suit, pilot).subtract(this.pathStart);
+            Vec3 target = SocketAim.aimPoint(suit, pilot, 96);
+            this.convergeDistance = (float) Math.max(2.0, target.distanceTo(this.pathStart));
+        }
+    }
+
+    /** Client: how far the bullet has flown along its real path (at {@code position}). */
+    private double travelled(Vec3 position) {
+        this.learnPath();
+        return position.distanceTo(this.pathStart);
+    }
+
+    /**
+     * Client: offset from where the bullet really is (at {@code position}) to where it's drawn. The drawn bullet starts
+     * at the muzzle (start + gap) and moves in a straight line to the real path's target, where the offset is gone:
+     * drawn(s) = start + dir * s + gap * (1 - s / D) for flight distance s and target distance D.
+     */
+    public Vec3 visualShift(Vec3 position) {
+        double s = this.travelled(position);
+        return s >= this.convergeDistance ? Vec3.ZERO : this.gap.scale(1 - s / this.convergeDistance);
+    }
+
+    /** Client: the direction the drawn bullet moves in (the streak points along it). */
+    public Vec3 visualDirection(Vec3 position) {
+        if (this.travelled(position) >= this.convergeDistance) {
+            return this.getDeltaMovement().normalize();
+        }
+        return this.pathDir.scale(this.convergeDistance).subtract(this.gap).normalize();
+    }
+
+    /** Client: how far the drawn bullet is from the muzzle it started at (the streak never reaches back past it). */
+    public double visualTravelled(Vec3 position) {
+        double s = this.travelled(position);
+        if (s >= this.convergeDistance) {
+            return Double.MAX_VALUE;
+        }
+        return s / this.convergeDistance * this.pathDir.scale(this.convergeDistance).subtract(this.gap).length();
     }
 
     @Override
     public void tick() {
+        if (this.level().isClientSide()) {
+            this.learnPath();
+        }
         super.tick();
         HitResult hit = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity);
         if (hit.getType() != HitResult.Type.MISS && !net.neoforged.neoforge.event.EventHooks.onProjectileImpact(this, hit)) {

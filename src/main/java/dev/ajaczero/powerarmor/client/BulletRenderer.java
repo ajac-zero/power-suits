@@ -17,9 +17,10 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Draws a bullet as a tracer: a thin hot streak trailing behind it along its flight, full-bright and additive (the
- * "eyes" render type), a white-yellow core in an orange sheath. Oriented like vanilla's arrow: after the two rotations
- * below, -X is forward (ProjectileUtil.rotateTowardsMovement stores yaw as atan2(z, x) + 90), so the streak runs along
- * +X behind the bullet. The first tick it's short, so it doesn't stick out of the muzzle backwards.
+ * "eyes" render type), a white-yellow core in an orange sheath. Drawn where Bullet.visualShift says (coming out of the
+ * gun, joining the real path at the target) and pointing along that drawn path. After the two rotations below (the
+ * same convention as ProjectileUtil.rotateTowardsMovement: yaw atan2(z, x) + 90), -X is forward, so the streak runs
+ * along +X behind the bullet; it never reaches back past the muzzle.
  */
 public class BulletRenderer extends EntityRenderer<Bullet> {
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/bullet.png");
@@ -32,11 +33,19 @@ public class BulletRenderer extends EntityRenderer<Bullet> {
     @Override
     public void render(Bullet bullet, float yaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light) {
         poseStack.pushPose();
-        Vec3 shift = bullet.visualOffset(bullet.tickCount + partialTick); // own shots start at the cockpit viewmodel's muzzle
+        Vec3 at = bullet.getPosition(partialTick);
+        Vec3 shift = bullet.visualShift(at);
         poseStack.translate(shift.x, shift.y, shift.z);
-        poseStack.mulPose(Axis.YP.rotationDegrees(Mth.lerp(partialTick, bullet.yRotO, bullet.getYRot()) - 90.0F));
-        poseStack.mulPose(Axis.ZP.rotationDegrees(Mth.lerp(partialTick, bullet.xRotO, bullet.getXRot())));
-        float length = LENGTH * Mth.clamp((bullet.tickCount + partialTick) / 1.5F, 0.15F, 1F);
+        Vec3 dir = bullet.visualDirection(at);
+        float dirYaw = (float) (Mth.atan2(dir.z, dir.x) * Mth.RAD_TO_DEG) + 90F;
+        float pitch = (float) (Mth.atan2(dir.horizontalDistance(), dir.y) * Mth.RAD_TO_DEG) - 90F;
+        poseStack.mulPose(Axis.YP.rotationDegrees(dirYaw - 90.0F));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(pitch));
+        float length = (float) Math.min(LENGTH, bullet.visualTravelled(at));
+        if (length < 0.05F) {
+            poseStack.popPose();
+            return;
+        }
         VertexConsumer out = buffers.getBuffer(RenderType.eyes(TEXTURE));
         box(poseStack.last(), out, 0F, -0.045F, -0.045F, length, 0.045F, 0.045F, 0xFFFF7A1E);        // orange sheath
         box(poseStack.last(), out, -0.02F, -0.02F, -0.02F, length * 0.6F, 0.02F, 0.02F, 0xFFFFE8A0); // hot core

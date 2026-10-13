@@ -140,6 +140,10 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   so the chaingun's barrels turn by an angle each client accumulates from the synced spin (`ChaingunParts`, absolute
   set on an unkeyed bone). Rapid fire needs: hit immunity bypass (`target.invulnerableTime = 0`), the damage type in
   `minecraft:no_knockback` (vanilla's shove per hit launches mobs) and light particles per shot.
+- **Shoot from the eye, draw from the gun**: projectiles from an offset muzzle hit things the pilot can't see (parallax)
+  and a per-frame offset that only converges over time lags behind a fast projectile (it's already a tick out when first
+  drawn). The chaingun's bullets fly from the eye along the crosshair line; each client draws them from its muzzle
+  (cockpit viewmodel / suit) along a straight line to the target, pointing the streak along that drawn line.
 - **Floats don't sum to whole numbers**: 80 x (1/80) < 1 (overheat came one bullet late); compare with a tolerance.
 - **Mock players don't get their game mode's abilities**: `makeMockPlayer(GameType.CREATIVE)` still has
   `hasInfiniteMaterials()` false; set `getAbilities().instabuild = true` in creative GameTests.

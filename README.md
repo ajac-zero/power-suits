@@ -62,7 +62,8 @@ four barrels driven by the engine. **Tap** right-click for heavy single shots (4
 spin up over 2.5 s, firing faster and faster up to a barrage of 10 bullets a second (1.5 hearts each). Let go and they
 coast down over 1.5 s; grab the trigger again before they stop and it picks up where it was. Each bullet uses fuel and
 **one iron nugget** from your inventory (off hand first, like a bow's arrows; free in creative); the HUD shows how many
-you carry and the barrels' heat. Bullets are hot tracers at 80 blocks/s: they ignore the half-second of immunity mobs
+you carry and the barrels' heat. Bullets are hot tracers at 80 blocks/s that fly along your line of sight (whatever is in the crosshair is what gets hit;
+they're drawn coming out of the gun and meet that line at the target). They ignore the half-second of immunity mobs
 get after a hit (so every bullet of a barrage counts), push lightly instead of vanilla's knockback, and spark off
 blocks without breaking them. **Overheat** (on by default, `overheat` in the config): 80 bullets without letting go and
 the barrels glow white-hot and lock until they've cooled (3 s); the tips glow from a third of the way there. Kills
