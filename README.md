@@ -19,11 +19,12 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Climb out | Shift |
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
 | Install a tool | Put a power tool (Plasma Cannon, EM Projector, Mining Drill, Chainsaw) in the menu's socket slot; it appears on the suit's left arm |
-| Use items | Right-click as usual while piloting: the suit's left hand holds your selected item (place blocks, eat, open doors, buckets...). 1.5 blocks extra reach |
-| EM Projector | Hold attack on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 1 fuel/tick while holding, 80 per throw |
-| Mining Drill | Hold attack on a block: digs it and the 8 around it (a 3x3 face of a wall, floor or ceiling) like a diamond pickaxe + shovel. 20 fuel per block |
-| Chainsaw | Hold attack on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 15 fuel per log |
-| Fire | Hold attack (left click) while piloting: a plasma bolt every 0.6 s toward your crosshair (120 fuel = 6 s of walking, 5 hearts) |
+| Your hand | Works as normal while piloting: the suit's right hand holds your selected item; left click punches, fights and mines, right click places, eats, opens doors... 1.5 blocks extra reach |
+| Use the tool | Right-click when your hand has nothing to do (empty hand, a sword, aiming at the air with blocks...), like a shield in the off hand; hold it as long as you need. The tool arm raises while in use |
+| EM Projector | Hold right-click on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 1 fuel/tick while holding, 80 per throw |
+| Mining Drill | Hold right-click on a block: digs it and the 8 around it (a 3x3 face of a wall, floor or ceiling) like a diamond pickaxe + shovel. 20 fuel per block |
+| Chainsaw | Hold right-click on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 15 fuel per log |
+| Fire | Hold right-click while piloting (Plasma Cannon): a plasma bolt every 0.6 s toward your crosshair (120 fuel = 6 s of walking, 5 hearts) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
 
 ### Balance and config
@@ -59,8 +60,7 @@ start empty: give them some coal.
 **Plasma Cannon** (crafted: iron ingots top and bottom rows, blaze rod + diamond + glass in the middle).
 It does nothing on foot. Bolts fly at 60 blocks/s from the muzzle to whatever is under your crosshair, set
 targets alight for a second, never break blocks, and fizzle after ~90 blocks or in water. Kills credit you
-("vaporized by"). While piloting, left click never punches or mines; with an empty socket or no fuel the
-trigger just clicks.
+("vaporized by"). With an empty socket or no fuel the trigger just clicks.
 
 **EM Projector** (crafted: iron ingots in the corners, copper ingots top and bottom middle, redstone either
 side of a lodestone). Grabs dropped items and mobs within 16 blocks, never players, bosses, other suits,
@@ -84,8 +84,10 @@ protect blocks from them.
 
 **Right hand**: shows your selected hotbar item and carries it forward (`hold_item`), reaching out each time
 you use it (`use_item`). It's the suit's main hand, like yours: the tools sit on the left arm. In first person
-the suit's gauntlet holds it at the lower right (cockpit viewmodel). The hand never attacks or mines (left click is the tool's), and a
-powered-down suit's hand can't use anything.
+the suit's gauntlet holds it at the lower right (cockpit viewmodel). It's a normal hand: left click attacks and mines
+(at normal speed: riding doesn't count as "in the air" while the suit stands), right click uses the item. When the hand
+has nothing to do, right click goes to the socket tool instead, exactly like vanilla tries your main hand and then a
+shield in your off hand (your real off-hand item isn't used while piloting). A powered-down suit's hand can't do anything.
 
 While inside: the suit takes hits instead of you, it has no fall damage, steps up full blocks,
 and the camera pulls back in third person (F5).
@@ -155,7 +157,7 @@ src/main/java/dev/ajaczero/powerarmor/
     CockpitView*.java        its GeckoLib animatable/renderer (geo/view, cut from the suit by tools/extract-view-geo.py)
     PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
     FuelGauge.java           HUD fuel gauge + low-fuel beep
-    ToolInput.java           attack button -> socket tool (cancels vanilla punching while piloting)
+    ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
     PlasmaBoltRenderer.java  the glowing bolt (camera-facing quad)
     ClientSetup.java         registers the renderer

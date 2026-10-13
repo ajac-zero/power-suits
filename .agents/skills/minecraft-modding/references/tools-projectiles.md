@@ -5,8 +5,15 @@ Built for the Power Armor plasma cannon. Files: `item/PowerTool.java`, `item/Pla
 `client/PlasmaBoltRenderer.java`, `PowerArmorEntity.tickTool`, `tools/extract-tool-geo.py`.
 
 ## Hold-to-use input from a vehicle
-- Client: `InputEvent.InteractionKeyMappingTriggered` -> `if (event.isAttack() && piloting) { setCanceled(true); setSwingHand(false); }`
-  (stops punching / mining). In `ClientTickEvent.Post` send the button state **only when it changes**:
+- Client, a dedicated button (Power Armor until 2026-10-13: attack): `InputEvent.InteractionKeyMappingTriggered` ->
+  `if (event.isAttack() && piloting) { setCanceled(true); setSwingHand(false); }` (stops punching / mining).
+- Client, shield-style on right click (Power Armor now): vanilla's `startUseItem` tries MAIN_HAND then OFF_HAND and
+  NeoForge fires InteractionKeyMappingTriggered (`isUseItem()`, `getHand()`) before each; the event for OFF_HAND means
+  the main hand had nothing to do (block use, item use, entity interaction all passed). Claim the press there
+  (`toolHeld = true`), cancel it and every later use event (vanilla repeats every 4 ticks while held) until
+  `keyUse` is up. Server: cancel `RightClick*`/`EntityInteract*` with `OFF_HAND` for riders so a forged packet can't
+  use the real off hand.
+- In `ClientTickEvent.Post` send the button state **only when it changes**:
   `PacketDistributor.sendToServer(new Payload(down))`; send `false` when leaving the vehicle or opening a screen.
 - Payload: `record P(boolean down) implements CustomPacketPayload`, `Type` with a ResourceLocation,
   `ByteBufCodecs.BOOL.map(P::new, P::down)`; register on the mod bus with
@@ -66,8 +73,10 @@ Built for the Power Armor plasma cannon. Files: `item/PowerTool.java`, `item/Pla
 - Swing reaction: watch the rider's `swinging` rising edge on the client (other players' swings arrive as
   packets) and `triggerAnim` locally; hold pose = a controller added after the gait controller (it owns the
   bones it animates while playing). Return STOP when the vehicle is off so the slump pose wins.
-- Rules for the rider: cancel `AttackEntityEvent`, `PlayerInteractEvent.LeftClickBlock`, `BlockEvent.BreakEvent`;
-  `RightClickBlock/RightClickItem/EntityInteract(Specific)` when unpowered. Test with
+- Rules for the rider: cancel `AttackEntityEvent`, `PlayerInteractEvent.LeftClickBlock`, `BlockEvent.BreakEvent`,
+  `RightClickBlock/RightClickItem/EntityInteract(Specific)` when the vehicle is unpowered (Power Armor once also blocked
+  attacking/mining always). Riders mine 5x slower (vanilla `if (!onGround()) speed /= 5`, and a passenger is never on
+  the ground): `PlayerEvent.BreakSpeed` -> `setNewSpeed(speed * 5)` while the vehicle stands. Test with
   `CommonHooks.onLeftClickBlock/onRightClickBlock(...).isCanceled()` and `player.attack(mob)` in GameTests.
 - Reach: `EntityMountEvent` (server) -> `addTransientModifier(new AttributeModifier(id, 1.5, ADD_VALUE))` on
   `BLOCK_INTERACTION_RANGE` / `ENTITY_INTERACTION_RANGE`, remove on dismount. Transient = not saved; re-added

@@ -17,7 +17,7 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
 | Item | `power_armor` item deploys the suit (needs 3-block clearance). Durability bar = suit health; anvil + iron ingots repairs. Crafted from iron blocks, iron helmet/chestplate/boots, pistons. Packed items keep fuel, socket tool and the half-burnt item (`powerarmor:loadout` component; shown in the tooltip). |
 | Entering | Right-click empty suit = climb in. Shift = climb out (behind/beside the suit). Sneak + right-click empty suit = suit menu. |
 | Fuel + power (Phase 1) | Furnace-style fuel slot, drain by load, shutdown/startup animations + sounds, exhaust smoke by load, HUD gauge, low-fuel warning. See section 4. |
-| Socket + plasma cannon (Phase 2) | `PowerTool` items in the socket; hold attack to use. Plasma cannon: bolt to the crosshair, 10 damage, 300 energy, 0.6 s cooldown, `plasma_shot` animation, 3D item (cut from the suit model), recipe. See section 3. |
+| Socket + plasma cannon (Phase 2) | `PowerTool` items in the socket; hold right-click to use (attack until 2026-10-13). Plasma cannon: bolt to the crosshair, 10 damage, 300 energy, 0.6 s cooldown, `plasma_shot` animation, 3D item (cut from the suit model), recipe. See section 3. |
 | Left hand (Phase 3) | Holds the pilot's selected item (3D in third person, vanilla-style lower-left in first person); right-click uses it as normal; carry + reach animations; no attacking or mining; needs power; +1.5 reach. See section 3. |
 | EM projector (Phase 4) | Hold to grab items / mobs (16 blocks) and hold them floating; items are collected; release throws, tap shoves; wall slam damage. Socket only. See section 3. |
 | Drill + chainsaw (Phase 5) | Diamond-tipped 3x3 drill (pickaxe + shovel blocks, diamond tier) and a chainsaw (axe blocks + leaves, fells natural trees above the cut). BreakEvent per block, vanilla drops, crack overlay, tool-bone loop animations. See section 3. |
@@ -37,8 +37,9 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
 - **Right arm = a real hand.** It shows and uses the pilot's **currently selected hotbar item**
   (rendered in the suit's right hand). The **use** button (right-click) works as normal for that item:
   place blocks, eat, open doors, use buckets, throw potions...
-  - The hand does **not** break blocks: the attack button belongs to the socket tool.
-  - **Decided 2026-10-12: no**, the hand never attacks mobs, even with a sword (attack = socket tool).
+  - **Decided 2026-10-13: the hand is completely normal**: left click attacks mobs and mines blocks (at normal
+    speed), right click uses the item. (Until then attack belonged to the socket tool and the hand could neither
+    attack nor mine, decided 2026-10-12.)
   - Built (Phase 3): the item is drawn at the suit's `right_hand` bone (`left_hand` until the 2026-10-13 swap). In the cockpit the suit's upper body
     isn't drawn (only the legs); a first-person viewmodel shows the gauntlet holding the item and the socket
     tool, like vanilla's hands (decided 2026-10-13: lining the external model up with the pilot's view never
@@ -46,8 +47,12 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
     A powered-down suit's hand does nothing. Reach +1.5 blocks (block and entity interaction range).
 - **Left arm = power socket.** Exactly one **power tool** item can be installed. Tools only work when
   installed in a powered suit (they do nothing on foot) and draw fuel per use.
-  - The **attack** button (left-click, hold for continuous tools) uses the installed tool.
-  - Empty socket: attack does nothing (maybe a dry "clunk" sound).
+  - **Decided 2026-10-13: the tool works like a shield in the off hand.** Right click goes to the hand first
+    (vanilla order: the block you click, then the held item); if the hand has nothing to do, the press goes to the
+    tool, which runs while the button is held (`ToolInput`). The player's real off-hand item isn't used while
+    piloting. While the tool is used its arm raises from the hip carry to aim (`PowerArmorModel.raiseTool`, synced
+    `TOOL_ACTIVE`, 3 ticks up / 5 down); the cockpit viewmodel raises it toward the middle too.
+  - Empty socket: the trigger just clicks (dispenser sound).
   - The suit is crafted/deployed with an **empty socket**.
 - Built (Phase 2, reworked later): the left arm ends at the elbow in a steel socket ring, and **each tool is the
   whole forearm** (16-19 px from the elbow, like the right forearm + hand). A `socket` coupling plate (cyan pins)

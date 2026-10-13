@@ -107,3 +107,8 @@ before every change, save it with every mod commit that changes the art (user's 
   the other animations are offsets on top of the rest pose and follow. `SocketAim` muzzle re-measured. The
   `shoulder_joint` blocks moved down 1.25 px: the pads' inner edge rolled onto them in walk/run and they poked up
   through the pad tops (up to 0.85 px in run, now 0 in every animation).
+- Controls swap (2026-10-13, done): the hand is fully normal (left click attacks/mines at normal speed, right click
+  uses the item) and the socket tool takes right click when the hand passes, like a shield (`ToolInput`); the
+  player's off-hand item is ignored while piloting; the tool arm raises to aim while used (code-driven blend on
+  `left_arm`/`left_forearm`, cockpit viewmodel too); `SocketAim` uses the raised muzzle. Tests: hand fights/mines,
+  unpowered hand can't, off hand blocked, raise synced (47 total).

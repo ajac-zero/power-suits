@@ -162,14 +162,16 @@ public final class AutoPilot {
             case 845 -> { mc.player.closeContainer(); sideCamera(mc); }
             case 850, 858, 866, 874, 890 -> shot(mc, "fuel_side_startup_" + t);
             // ---- plasma cannon: climb back in, shoot three pigs 12 blocks ahead and a wall behind them
-            case 900 -> { closeFuelLog(); mc.setCameraEntity(mc.player); yaw = 0; pitch = 9; cannonRangeSetup(mc); }
+            case 900 -> { closeFuelLog(); mc.setCameraEntity(mc.player); yaw = 0; pitch = 9; cannonRangeSetup(mc); giveHeld(mc, net.minecraft.world.item.ItemStack.EMPTY); } // empty hand: right click goes to the tool
             case 910 -> { o.setCameraType(CameraType.FIRST_PERSON); openCannonLog(mc); }
-            case 920 -> hold(o.keyAttack, true);
+            case 920 -> hold(o.keyUse, true);
             case 921, 922, 923, 924, 925, 926, 927, 928, 929, 930, 931, 932 -> shot(mc, "cannon_fp_" + t);
             case 940 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 12; }
             case 945, 946, 947, 949 -> shot(mc, "cannon_tp_" + t);
             case 958 -> { yaw = -12; sideCamera(mc); }
             case 969, 970, 971, 973, 976 -> shot(mc, "cannon_side_" + t);
+            case 978 -> hold(o.keyUse, false);                    // let go: the tool arm lowers to its hip carry
+            case 984 -> shot(mc, "cannon_side_lowered");
             case 985 -> releaseAll();
             // ---- cockpit while walking and looking down (cannon still installed): both arms and the feet in view,
             //      the tool must not clip into the upper arm
@@ -196,47 +198,51 @@ public final class AutoPilot {
             case 1062, 1075 -> shot(mc, "hand_fp_eat_" + t);
             case 1078 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
             case 1085 -> shot(mc, "hand_tp_eat");
+            case 1086 -> { releaseAll(); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 40;   // left click: the hand mines the bricks it placed
+                           giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE)); }
+            case 1087 -> hold(o.keyAttack, true);
+            case 1089, 1091 -> shot(mc, "hand_fp_mine_" + t);
             case 1092 -> releaseAll();
             // ---- EM projector: vacuum up dropped diamonds, then grab a pig, hold it and throw it
-            case 1095 -> { emRangeSetup(mc); yaw = 180; pitch = 15; o.setCameraType(CameraType.THIRD_PERSON_BACK); openEmLog(mc); }
-            case 1110 -> hold(o.keyAttack, true);
+            case 1095 -> { giveHeld(mc, net.minecraft.world.item.ItemStack.EMPTY); emRangeSetup(mc); yaw = 180; pitch = 15; o.setCameraType(CameraType.THIRD_PERSON_BACK); openEmLog(mc); }
+            case 1110 -> hold(o.keyUse, true);
             case 1113, 1118, 1124 -> shot(mc, "em_tp_items_" + t);
             case 1121 -> pitch = 10; // the next diamonds lie further out
             case 1128 -> o.setCameraType(CameraType.FIRST_PERSON);
             case 1132 -> shot(mc, "em_fp_items");
-            case 1140 -> hold(o.keyAttack, false);
+            case 1140 -> hold(o.keyUse, false);
             case 1146, 1149 -> aimAt(mc, emPig);
-            case 1150 -> hold(o.keyAttack, true);
+            case 1150 -> hold(o.keyUse, true);
             case 1156, 1164 -> shot(mc, "em_fp_pig_" + t);
             case 1166 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
             case 1172 -> shot(mc, "em_tp_pig");
             case 1174 -> sideCamera(mc);
             case 1180 -> shot(mc, "em_side_pig");
             case 1182 -> pitch = -5;
-            case 1186 -> hold(o.keyAttack, false);
+            case 1186 -> hold(o.keyUse, false);
             case 1187, 1189, 1192, 1196 -> shot(mc, "em_side_throw_" + t);
             case 1205 -> { closeEmLog(); mc.setCameraEntity(mc.player); releaseAll(); }
             // ---- mining tools: drill a 3x3 into a rock face with ores, then fell a real oak with the chainsaw
-            case 1210 -> { miningSetup(mc); yaw = 0; pitch = 20; o.setCameraType(CameraType.THIRD_PERSON_BACK); openMineLog(mc); }
+            case 1210 -> { giveHeld(mc, net.minecraft.world.item.ItemStack.EMPTY); miningSetup(mc); yaw = 0; pitch = 20; o.setCameraType(CameraType.THIRD_PERSON_BACK); openMineLog(mc); }
             case 1225 -> aimTarget = Vec3.atCenterOf(mineBase.offset(0, 1, 4)).add(0, 0, -0.5); // re-aimed every tick (the eye moves as the suit turns)
-            case 1228 -> hold(o.keyAttack, true);
+            case 1228 -> hold(o.keyUse, true);
             case 1230, 1234, 1238, 1242 -> shot(mc, "drill_tp_" + t);
             case 1246 -> o.setCameraType(CameraType.FIRST_PERSON);
             case 1250, 1254, 1258 -> shot(mc, "drill_fp_" + t);
             case 1262 -> lookCamera(mc, Vec3.atBottomCenterOf(mineBase).add(-4.5, 2.0, 3.0), Vec3.atBottomCenterOf(mineBase).add(-0.5, 1.9, 1.8));
             case 1264, 1266, 1268 -> shot(mc, "drill_side_" + t);
-            case 1272 -> { aimTarget = null; hold(o.keyAttack, false); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); }
+            case 1272 -> { aimTarget = null; hold(o.keyUse, false); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); }
             case 1278 -> shot(mc, "drill_tp_after");
             case 1280 -> treeSetup(mc);
             case 1284 -> aimTarget = Vec3.atCenterOf(treeBase).add(-0.5, 0, 0);
-            case 1286 -> { hold(o.keyAttack, true); o.setCameraType(CameraType.FIRST_PERSON); }
+            case 1286 -> { hold(o.keyUse, true); o.setCameraType(CameraType.FIRST_PERSON); }
             case 1289 -> shot(mc, "saw_fp_" + t);
             case 1290 -> lookCamera(mc, Vec3.atBottomCenterOf(mineBase).add(-3.5, 3.0, -3.5), Vec3.atBottomCenterOf(mineBase).add(2.0, 1.6, 0.6)); // behind-left, clear of the rock and the canopy
             case 1291, 1293, 1294, 1295, 1296, 1297, 1298, 1300, 1304 -> shot(mc, "saw_side_" + t);
             case 1306 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); }
             case 1310 -> shot(mc, "saw_fp_" + t);
             case 1312 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1324 -> { aimTarget = null; hold(o.keyAttack, false); mc.setCameraEntity(mc.player); }
+            case 1324 -> { aimTarget = null; hold(o.keyUse, false); mc.setCameraEntity(mc.player); }
             case 1330 -> { shot(mc, "saw_tp_after"); closeMineLog(); }
             // ---- the cannon item on foot: hand (first / third person) and inventory icon
             case 1340 -> { o.setCameraType(CameraType.FIRST_PERSON); hold(o.keyShift, true); }

@@ -10,7 +10,7 @@ import software.bernie.geckolib.animation.RawAnimation;
  * A power tool for the suit's left-arm socket (plasma cannon, EM projector, drill, chainsaw).
  * Only items implementing this fit the socket slot. They do nothing on foot.
  *
- * Two kinds, both run by the suit on the server while the pilot holds attack:
+ * Two kinds, both run by the suit on the server while the pilot holds the use button (right click; see ToolInput):
  *  - repeating (cannon): every time the tool is ready ({@link #cooldownTicks()} after the last use) and
  *    there's fuel for {@link #energyPerUse()}, the suit calls {@link #use};
  *  - continuous (EM projector, {@link #isContinuous()}): {@link #holdTick} every tick while held and
@@ -35,11 +35,11 @@ public interface PowerTool {
         return false;
     }
 
-    /** Server, continuous tools: every tick while attack is held and the suit can operate. */
+    /** Server, continuous tools: every tick while the button is held and the suit can operate. */
     default void holdTick(PowerArmorEntity suit, Player pilot, ItemStack tool) {
     }
 
-    /** Server, continuous tools: attack released ({@code interrupted} false), or the suit lost power, the
+    /** Server, continuous tools: button released ({@code interrupted} false), or the suit lost power, the
      *  pilot left or the tool was taken out ({@code interrupted} true, {@code pilot} may be null). */
     default void release(PowerArmorEntity suit, @Nullable Player pilot, boolean interrupted) {
     }

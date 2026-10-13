@@ -11,7 +11,8 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Client -> server: "the pilot pressed / released attack". Mouse buttons only exist on the client,
+ * Client -> server: "the pilot started / stopped using the socket tool" (right click the hand passed on, see
+ * ToolInput). Mouse buttons only exist on the client,
  * but tools act on the world, which only the server may change. So the client sends this tiny message
  * (one boolean) and the server's suit runs the tool while it's held.
  */

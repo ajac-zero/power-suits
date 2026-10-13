@@ -31,7 +31,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
  * Third power tool: a diamond-tipped 3x3 mining drill.
- * Hold attack on a block: it digs the block you look at plus the 8 around it, in the plane facing you
+ * Hold use (right click) on a block: it digs the block you look at plus the 8 around it, in the plane facing you
  * (a wall gives a 3x3 tunnel face, the floor a 3x3 pit). Digs like a diamond pickaxe *and* shovel
  * (stone, ores, obsidian, dirt, sand, gravel...), never bedrock or other unbreakable blocks; wood and other
  * axe blocks are the chainsaw's job. The 9 blocks break together, as slowly as the hardest of them.

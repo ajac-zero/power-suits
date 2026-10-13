@@ -36,7 +36,7 @@ public class PowerArmor {
         modBus.addListener(PowerArmor::registerAttributes);
         // Show the item in a creative inventory tab.
         modBus.addListener(PowerArmor::addToCreativeTab);
-        // Network messages (client -> server: attack pressed/released for the socket tool).
+        // Network messages (client -> server: socket tool button (right click) pressed/released).
         modBus.addListener(dev.ajaczero.powerarmor.network.ToolTriggerPayload::register);
     }
 

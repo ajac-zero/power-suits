@@ -40,6 +40,10 @@ public final class CockpitHands {
     // Not final: the dev view tuner (autopilot "view" mode) reloads them from run/view/tuning.json.
     static Vector3f toolPos = new Vector3f(-0.55F, -0.50F, -0.42F);
     static float toolYaw = -4F, toolPitch = 112F, toolRoll = 15F, toolScale = 0.7F;
+    // Raised while the tool is used (like a shield): in toward the middle and up (tools/viewmodel-fit.py: tip from
+    // (-0.38, -0.32) to (-0.28, -0.18) on screen, the socket stays below the edge all the way). Same roll and scale.
+    static Vector3f toolRaisedPos = new Vector3f(-0.42F, -0.45F, -0.35F);
+    static float toolRaisedYaw = -8F, toolRaisedPitch = 118F;
     // Gauntlet: where the elbow sits (the forearm hangs -Y from it in the model), how it's turned, size.
     static Vector3f gauntletPos = new Vector3f(0.54F, -0.725F, -0.525F);
     static float gauntletYaw = 4F, gauntletPitch = 129F, gauntletRoll = -10F, gauntletScale = 0.6F;
@@ -62,7 +66,7 @@ public final class CockpitHands {
         RENDERER.installed = suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.suitBone() : null;
 
         pose.pushPose();
-        toolTransform(pose, suit, partial);
+        toolTransform(pose, suit, partial, suit.getToolRaise(partial));
         drawPart(pose, event, CockpitViewRenderer.Part.TOOL, ItemStack.EMPTY);
         pose.popPose();
 
@@ -80,22 +84,25 @@ public final class CockpitHands {
         RENDERER.render(pose, CockpitView.INSTANCE, event.getMultiBufferSource(), null, null, event.getPackedLight(), event.getPartialTick());
     }
 
-    /** Tool: fixed in the lower left, bobbing with the gait, kicking back and up when it fires. */
-    private static void toolTransform(PoseStack pose, PowerArmorEntity suit, float partial) {
+    /** Tool: low on the left, raised toward the middle while used, bobbing with the gait, kicking back and up when
+     *  it fires. */
+    private static void toolTransform(PoseStack pose, PowerArmorEntity suit, float partial, float raise) {
         float kick = recoil(partial);
-        pose.translate(toolPos.x, toolPos.y + bob(suit), toolPos.z + kick * 0.10F);
-        pose.mulPose(Axis.YP.rotationDegrees(toolYaw));
-        pose.mulPose(Axis.XP.rotationDegrees(toolPitch + kick * 8F));
+        Vector3f p = new Vector3f(toolPos).lerp(toolRaisedPos, raise);
+        pose.translate(p.x, p.y + bob(suit), p.z + kick * 0.10F);
+        pose.mulPose(Axis.YP.rotationDegrees(Mth.lerp(raise, toolYaw, toolRaisedYaw)));
+        pose.mulPose(Axis.XP.rotationDegrees(Mth.lerp(raise, toolPitch, toolRaisedPitch) + kick * 8F));
         pose.mulPose(Axis.YP.rotationDegrees(toolRoll));
         pose.scale(toolScale, toolScale, toolScale);
     }
 
     /** Same as toolTransform, as a matrix (no kick), to find the muzzle. */
-    private static Matrix4f toolMatrix(PowerArmorEntity suit) {
+    private static Matrix4f toolMatrix(PowerArmorEntity suit, float raise) {
+        Vector3f p = new Vector3f(toolPos).lerp(toolRaisedPos, raise);
         return new Matrix4f()
-                .translate(toolPos.x, toolPos.y + bob(suit), toolPos.z)
-                .rotateY(toolYaw * Mth.DEG_TO_RAD)
-                .rotateX(toolPitch * Mth.DEG_TO_RAD)
+                .translate(p.x, p.y + bob(suit), p.z)
+                .rotateY(Mth.lerp(raise, toolYaw, toolRaisedYaw) * Mth.DEG_TO_RAD)
+                .rotateX(Mth.lerp(raise, toolPitch, toolRaisedPitch) * Mth.DEG_TO_RAD)
                 .rotateY(toolRoll * Mth.DEG_TO_RAD)
                 .scale(toolScale);
     }
@@ -172,7 +179,7 @@ public final class CockpitHands {
         if (pilot != mc.player || !mc.options.getCameraType().isFirstPerson()) {
             return SocketAim.muzzlePosition(suit, pilot);
         }
-        Vector3f p = toolMatrix(suit).transformPosition(new Vector3f(0, MUZZLE_PX / 16F, 0));
+        Vector3f p = toolMatrix(suit, suit.getToolRaise(1F)).transformPosition(new Vector3f(0, MUZZLE_PX / 16F, 0));
         double k = Math.tan(Math.toRadians(mc.options.fov().get()) / 2) / Math.tan(Math.toRadians(70) / 2);
         Camera camera = mc.gameRenderer.getMainCamera();
         Vector3f look = camera.getLookVector(), up = camera.getUpVector(), left = camera.getLeftVector();
@@ -194,6 +201,8 @@ public final class CockpitHands {
             };
             if (j.has("toolPos")) toolPos = v.apply("toolPos");
             if (j.has("gauntletPos")) gauntletPos = v.apply("gauntletPos");
+            if (j.has("toolRaisedPos")) toolRaisedPos = v.apply("toolRaisedPos");
+            toolRaisedYaw = f.apply("toolRaisedYaw", toolRaisedYaw); toolRaisedPitch = f.apply("toolRaisedPitch", toolRaisedPitch);
             toolYaw = f.apply("toolYaw", toolYaw); toolPitch = f.apply("toolPitch", toolPitch);
             toolRoll = f.apply("toolRoll", toolRoll); toolScale = f.apply("toolScale", toolScale);
             gauntletYaw = f.apply("gauntletYaw", gauntletYaw); gauntletPitch = f.apply("gauntletPitch", gauntletPitch);

@@ -36,7 +36,7 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
- * Fourth power tool: a chainsaw. Hold attack on a wooden block (anything an axe is for) or leaves to cut it,
+ * Fourth power tool: a chainsaw. Hold use (right click) on a wooden block (anything an axe is for) or leaves to cut it,
  * one block at a time at diamond-axe speed. Cut a log of a natural tree and everything of that tree above
  * the cut comes down too, top first, a few logs per tick. "Natural tree" = connected logs with natural
  * leaves (not placed by a player) attached, so log cabins and wooden builds only lose the block you cut.

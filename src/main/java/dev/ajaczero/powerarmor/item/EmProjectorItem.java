@@ -36,7 +36,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
  * Second power tool: an electromagnetic field projector, a gravity gun for items and mobs (no blocks).
- *  - Hold attack on a dropped item or a mob: the beam pulls it in front of the suit and holds it there.
+ *  - Hold use (right click) on a dropped item or a mob: the beam pulls it in front of the suit and holds it there.
  *    Items that arrive go straight into the pilot's inventory.
  *  - Release: whatever is held is launched along the view. A quick tap shoves a target away.
  *  - Thrown mobs that hit a wall take damage.

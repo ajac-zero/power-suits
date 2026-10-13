@@ -153,6 +153,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** True while a continuous socket tool runs (drill spinning, chainsaw cutting), for its animation. */
     private static final EntityDataAccessor<Boolean> TOOL_RUNNING =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
+    /** True while the pilot is using the socket tool (button held, tool installed, power): the tool arm is raised. */
+    private static final EntityDataAccessor<Boolean> TOOL_ACTIVE =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     /** Copies of the two slots, so clients can show the fuel left and (Phase 2) draw the socket tool. */
     private static final EntityDataAccessor<ItemStack> FUEL_ITEM =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
@@ -170,7 +173,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** The suit was already off when we first saw it: hold the slumped pose instead of playing the slump. */
     private boolean wasOffWhenLoaded;
     private int startupTicks;
-    /** Server: the pilot is holding attack (sent by the client, see ToolTriggerPayload). */
+    /** Server: the pilot is holding the tool's button (right click, sent by the client, see ToolInput / ToolTriggerPayload). */
     private boolean triggerHeld;
     /** Server: ticks until the socket tool may be used again. */
     private int toolCooldown;
@@ -186,6 +189,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private boolean pilotWasSwinging;
     /** Client: 0..1, how much the torso follows the pilot's view (eases out on shutdown, in after startup). */
     private float aimBlend;
+    /** Client: 0 = tool arm in its hip carry, 1 = raised to aim (follows TOOL_ACTIVE, like raising a shield). */
+    private float toolRaise, toolRaiseO;
 
     /** Ticks to stay around after dying so the death animation (2.68 s) can finish. */
     private static final int DEATH_TICKS = 60;
@@ -248,6 +253,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(FUEL_ITEM, ItemStack.EMPTY);
         builder.define(BEAM_TARGET, -1);
         builder.define(TOOL_RUNNING, false);
+        builder.define(TOOL_ACTIVE, false);
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
     }
 
@@ -425,7 +431,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     // ---- Socket tool ---------------------------------------------------------------------------
 
-    /** Server: the pilot pressed or released attack. Anyone else (or a forged packet) is ignored. */
+    /** Server: the pilot pressed or released the tool's button (right click). Anyone else (or a forged packet) is ignored. */
     public void setTriggerHeld(Player who, boolean down) {
         if (who != this.getControllingPassenger()) {
             return;
@@ -450,6 +456,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         boolean active = pilot != null && this.triggerHeld && tool != null && this.canOperate();
         this.entityData.set(TOOL_RUNNING, tool != null && tool.isContinuous() && (active || tool.keepsRunning(this)));
+        this.entityData.set(TOOL_ACTIVE, active);
         if (this.activeContinuousTool != null && (this.activeContinuousTool != tool || !active)) {
             boolean interrupted = this.activeContinuousTool != tool || pilot == null || !this.canOperate();
             this.activeContinuousTool.release(this, pilot, interrupted);
@@ -810,6 +817,17 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return current == null ? "-" : current.animation().name().replace("animation.power_armor.", "");
     }
 
+    /** Both sides: the pilot is using the socket tool (synced): the tool arm raises. */
+    public boolean isToolActive() {
+        return this.entityData.get(TOOL_ACTIVE);
+    }
+
+    /** Client: how far the tool arm is raised, 0 (hip carry) .. 1 (aiming), eased, for this frame. */
+    public float getToolRaise(float partial) {
+        float t = Mth.lerp(partial, this.toolRaiseO, this.toolRaise);
+        return t * t * (3 - 2 * t);
+    }
+
     /** Both sides: a continuous socket tool is running (synced). */
     public boolean isToolRunning() {
         return this.entityData.get(TOOL_RUNNING);
@@ -1050,6 +1068,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (this.level().isClientSide()) {
             float aimTarget = this.isVehicle() && this.canOperate() ? 1F : 0F;
             this.aimBlend += (aimTarget - this.aimBlend) * 0.2F;
+            // Raise the tool arm in 3 ticks while the tool is used, lower it in 5 (heavier on the way down).
+            this.toolRaiseO = this.toolRaise;
+            this.toolRaise = this.isToolActive() && this.isVehicle() ? Math.min(1F, this.toolRaise + 1F / 3F)
+                    : Math.max(0F, this.toolRaise - 1F / 5F);
             ExhaustSmoke.tick(this);
             EmBeamEffects.tick(this);
             this.tickHandSwing();

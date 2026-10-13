@@ -46,7 +46,7 @@ public final class PowerArmorConfig {
             .comment("Energy per shot (120 = 6 s of walking: 13 shots per coal).").translation(key("cannon_energy"))
             .defineInRange("energy_per_shot", 120, 0, 100_000);
     public static final ModConfigSpec.IntValue CANNON_COOLDOWN = B
-            .comment("Ticks between shots while attack is held (20 = 1 s). At least 11: the shot animation lasts 10.").translation(key("cannon_cooldown"))
+            .comment("Ticks between shots while the tool button is held (20 = 1 s). At least 11: the shot animation lasts 10.").translation(key("cannon_cooldown"))
             .defineInRange("cooldown_ticks", 12, 11, 200);
     public static final ModConfigSpec.DoubleValue CANNON_DAMAGE = B
             .comment("Damage per bolt (2 = one heart).").translation(key("cannon_damage"))

@@ -121,6 +121,12 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   file is shared by the client, the GameTest server and the user's edits).
 - **Looping sounds are client side** (`SuitSounds`): the server only syncs state (powered, piloted, `TOOL_RUNNING`);
   one-shots still use `playSound` on the server. Sounds are re-pitched vanilla events in `sounds.json`.
+- **Right click is shared by the hand and the tool** (vanilla's main hand -> off hand order): `ToolInput` claims a press
+  only when NeoForge's InteractionKeyMappingTriggered fires for OFF_HAND (= the main hand passed), then cancels every
+  use event until the button is released. Scripts that use a tool must empty the pilot's hand first (food or blocks
+  would win). GeckoLib bones: rest rotations load as (-X, -Y, +Z) of Blockbench, so code offsets on GeoBone are
+  `rotX -= bbX`; check a raise/pose change with a same-camera before/after pair (`cannon_side_976` vs
+  `cannon_side_lowered`): one shot with torso twist and recoil was misread as the wrong sign.
 - **Sides are mirrored, not rebuilt.** The arms were swapped (hand right, tools left) by mirroring the whole
   model across x = 0 (cubes x-flipped + `mirror_uv` toggled, Y/Z rotations and position X negated in rest poses and
   keys, left/right names swapped), which keeps every animation consistent; swapping only the arm keys would have

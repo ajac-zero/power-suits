@@ -38,6 +38,7 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
         if (root != null) {
             suit.setHipHeight(root.getPosY()); // the gait's hip bob, used for the cockpit camera bob
         }
+        raiseTool(suit, state.getPartialTick());
         // aimBlend fades the aiming out when the suit powers down and back in after it boots up.
         float aim = suit.getAimBlend();
         // Look yaw relative to the legs. Wrapped to -180..180 first: yaw angles are unbounded (a pilot who has turned
@@ -52,6 +53,33 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
         }
         if (head != null) {
             head.setRotX(head.getRotX() + Mth.clamp(pitch * 0.35F, -20F, 20F) * Mth.DEG_TO_RAD);
+        }
+    }
+
+    // The tool arm's rest pose is a hip carry (Blockbench: left_arm [18, 0, -18], left_forearm [62, -4, 0]). Using the
+    // tool raises it to the aiming pose [46, 0, -22] / [38, -4, 0] (the muzzle SocketAim fires from), like raising a
+    // shield. These are the differences, in Blockbench degrees.
+    private static final float RAISE_ARM_X = 28F, RAISE_ARM_Z = -4F, RAISE_FOREARM_X = -24F;
+
+    /**
+     * Raise the tool arm by the suit's toolRaise blend. Added on top of the animation, so the gait's sway and the
+     * shot recoil still show. Safe to add every frame: every animation that plays while piloted keys both bones
+     * (an unkeyed bone would keep the previous frame's value and the offset would pile up). GeckoLib flips the
+     * sign of X and Y rotations relative to Blockbench (Bedrock -> Java model space); Z keeps it.
+     */
+    private void raiseTool(PowerArmorEntity suit, float partial) {
+        float w = suit.getToolRaise(partial);
+        if (w <= 0F) {
+            return;
+        }
+        GeoBone arm = getAnimationProcessor().getBone("left_arm");
+        GeoBone forearm = getAnimationProcessor().getBone("left_forearm");
+        if (arm != null) {
+            arm.setRotX(arm.getRotX() - RAISE_ARM_X * w * Mth.DEG_TO_RAD);
+            arm.setRotZ(arm.getRotZ() + RAISE_ARM_Z * w * Mth.DEG_TO_RAD);
+        }
+        if (forearm != null) {
+            forearm.setRotX(forearm.getRotX() - RAISE_FOREARM_X * w * Mth.DEG_TO_RAD);
         }
     }
 }

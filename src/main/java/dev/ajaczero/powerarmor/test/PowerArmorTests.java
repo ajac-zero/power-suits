@@ -383,7 +383,7 @@ public final class PowerArmorTests {
         return suit;
     }
 
-    /** Holding attack fires every cooldown (12 ticks by default), paying the configured energy per shot; releasing stops. */
+    /** Holding the tool button fires every cooldown (12 ticks by default), paying the configured energy per shot; releasing stops. */
     @GameTest(template = PAD, timeoutTicks = 80)
     public static void cannonFiresOnCooldownAndCostsFuel(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2)); // 9600 energy
@@ -401,7 +401,29 @@ public final class PowerArmorTests {
             suit.setTriggerHeld(pilot, false);
         });
         helper.runAfterDelay(50, () -> {
-            helper.assertTrue(suit.getToolUses() == 2, "releasing attack stops firing, uses " + suit.getToolUses());
+            helper.assertTrue(suit.getToolUses() == 2, "releasing the button stops firing, uses " + suit.getToolUses());
+            helper.succeed();
+        });
+    }
+
+    /** Using a tool raises the tool arm on every client (synced TOOL_ACTIVE); an empty socket doesn't. */
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void usingAToolRaisesTheArm(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
+        Player pilot = boardedPilot(helper, suit);
+        suit.positionRider(pilot);
+        helper.runAfterDelay(2, () -> suit.setTriggerHeld(pilot, true));
+        helper.runAfterDelay(4, () -> {
+            helper.assertTrue(suit.isToolActive(), "tool held: the arm should be raised");
+            suit.setTriggerHeld(pilot, false);
+        });
+        helper.runAfterDelay(6, () -> {
+            helper.assertTrue(!suit.isToolActive(), "released: the arm should lower");
+            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, ItemStack.EMPTY);
+            suit.setTriggerHeld(pilot, true);
+        });
+        helper.runAfterDelay(9, () -> {
+            helper.assertTrue(!suit.isToolActive(), "an empty socket has nothing to raise");
             helper.succeed();
         });
     }
@@ -497,30 +519,74 @@ public final class PowerArmorTests {
     }
 
     // =========================================================================================
-    // Left hand (Phase 3)
+    // The hand (Phase 3; since 2026-10-13 the right hand, fully normal: left click attacks and mines)
     // =========================================================================================
 
-    /** Decided: left click is the socket tool's; the hand never attacks, even holding a sword. */
-    @GameTest(template = PAD)
-    public static void pilotCannotPunchEvenWithASword(GameTestHelper helper) {
+    /** Decided 2026-10-13: the hand works as normal, so the pilot fights with what they hold. */
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void pilotFightsWithTheHand(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
         pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
         Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 6));
-        pilot.attack(pig);
-        helper.assertTrue(pig.getHealth() == pig.getMaxHealth(), "the pilot must not hit mobs, pig health " + pig.getHealth());
-        helper.succeed();
+        helper.runAfterDelay(5, () -> {
+            helper.assertTrue(suit.canOperate(), "suit should be running");
+            pilot.attack(pig);
+            helper.assertTrue(pig.getHealth() < pig.getMaxHealth(), "the pilot's sword should hurt the pig, health " + pig.getHealth());
+            helper.succeed();
+        });
     }
 
-    @GameTest(template = PAD)
-    public static void pilotCannotMine(GameTestHelper helper) {
+    /** Mining from inside: allowed, and not slowed down 5x for "not standing on the ground" while the suit stands. */
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void pilotMinesAtNormalSpeed(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
         BlockPos block = helper.absolutePos(new BlockPos(4, 1, 6));
-        var event = net.neoforged.neoforge.common.CommonHooks.onLeftClickBlock(pilot, block, Direction.UP,
-                net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK);
-        helper.assertTrue(event.isCanceled(), "starting to mine from inside the suit must be cancelled");
-        helper.succeed();
+        helper.runAfterDelay(5, () -> {
+            helper.assertTrue(suit.canOperate() && suit.onGround(), "suit should be running and standing");
+            var event = net.neoforged.neoforge.common.CommonHooks.onLeftClickBlock(pilot, block, Direction.UP,
+                    net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK);
+            helper.assertTrue(!event.isCanceled(), "mining from inside a running suit is allowed");
+            var state = helper.getLevel().getBlockState(block);
+            float bare = pilot.getInventory().getDestroySpeed(state); // what the empty hand digs at, before penalties
+            float speed = pilot.getDigSpeed(state, block);
+            helper.assertTrue(Math.abs(speed - bare) < 1e-4, "hand mining speed " + speed + ", expected the on-ground " + bare);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 20)
+    public static void unpoweredHandCannotFightOrMine(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY); // no fuel: powered down
+        Player pilot = boardedPilot(helper, suit);
+        pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
+        Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 6));
+        BlockPos block = helper.absolutePos(new BlockPos(4, 1, 6));
+        helper.runAfterDelay(2, () -> {
+            pilot.attack(pig);
+            helper.assertTrue(pig.getHealth() == pig.getMaxHealth(), "a powered-down hand doesn't swing, pig health " + pig.getHealth());
+            var event = net.neoforged.neoforge.common.CommonHooks.onLeftClickBlock(pilot, block, Direction.UP,
+                    net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK);
+            helper.assertTrue(event.isCanceled(), "a powered-down hand doesn't mine");
+            helper.succeed();
+        });
+    }
+
+    /** The socket tool is the suit's off hand: the player's real off-hand item isn't used from inside. */
+    @GameTest(template = PAD, timeoutTicks = 20)
+    public static void offHandBelongsToTheTool(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player pilot = boardedPilot(helper, suit);
+        BlockPos block = helper.absolutePos(new BlockPos(4, 1, 6));
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(block).add(0, 0.5, 0), Direction.UP, block, false);
+        helper.runAfterDelay(5, () -> {
+            helper.assertTrue(net.neoforged.neoforge.common.CommonHooks.onRightClickBlock(pilot, InteractionHand.OFF_HAND, block, hit).isCanceled(),
+                    "off-hand use is cancelled while piloting");
+            helper.assertTrue(!net.neoforged.neoforge.common.CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, block, hit).isCanceled(),
+                    "the main hand still uses things");
+            helper.succeed();
+        });
     }
 
     @GameTest(template = PAD, timeoutTicks = 40)
