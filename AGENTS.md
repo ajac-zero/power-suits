@@ -91,6 +91,10 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   suit's legs are drawn and `CockpitHands` draws the tool + gauntlet in the hand pass (`geo/view`, rebuilt by
   `tools/extract-view-geo.py` after every export). Bullets/EM beam start at its on-screen muzzle for the pilot only
   (`SocketAim.visualMuzzle`, `Bullet.visualOffset`); the server still uses the suit's muzzle.
+- **Viewmodel tools aim at the crosshair**: a tool tilted up (the first poses: 20-40 degrees) makes its shots/beam leave at a
+  different angle than its barrels point. Solve raised poses with `tools/viewmodel-fit.py aim x roll scale 0 0 -10 tool`
+  (axis through the crosshair 10 blocks out, cut end hidden); keep parts in the screen corners (the hotbar hides the
+  middle of the bottom edge). Preview with the view tuner by copying the raised pose into the rest slot.
 - **Viewmodel parts must not show their cut ends**: the tool's socket face and the gauntlet's wrist stay below the
   bottom screen edge so they reach in from the corners (floating otherwise). Check/fit poses with
   `tools/viewmodel-fit.py` (also for the eat pose) before tuning visually.

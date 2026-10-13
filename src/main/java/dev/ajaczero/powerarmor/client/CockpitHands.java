@@ -33,20 +33,22 @@ public final class CockpitHands {
     private static final CockpitViewRenderer RENDERER = new CockpitViewRenderer();
     private static final int RIGHT = 1; // vanilla's arm side factor for the right (main) hand
 
-    // Placement rule: each part's cut end (the tool's socket face, the gauntlet's wrist) stays below the bottom edge
-    // of the screen, so tool and arm reach in from the corners instead of floating (tools/viewmodel-fit.py checks
-    // and fits poses; the hand pass always uses a 70 degree FOV, so this holds for any FOV setting).
-    // Socket tool: where the socket sits, how it's turned (the tool hangs -Y from the socket in the model), size.
+    // Placement rules (tools/viewmodel-fit.py checks and solves them; the hand pass always uses a 70 degree FOV):
+    //  - each part's cut end (the tool's socket face, the gauntlet's wrist) stays below the bottom edge of the screen, so
+    //    tool and arm reach in from the corners instead of floating;
+    //  - the raised tool's axis points at the crosshair 10 blocks out (`viewmodel-fit.py aim`), so its barrels line up
+    //    with where the shots go (the first poses pointed 20-40 degrees up and the tracers looked off);
+    //  - the corners: the hotbar covers the middle of the bottom edge.
     // Not final: the dev view tuner (autopilot "view" mode) reloads them from run/view/tuning.json.
-    static Vector3f toolPos = new Vector3f(-0.55F, -0.50F, -0.42F);
-    static float toolYaw = -4F, toolPitch = 112F, toolRoll = 15F, toolScale = 0.7F;
-    // Raised while the tool is used (like a shield): in toward the middle and up (tools/viewmodel-fit.py: tip from
-    // (-0.38, -0.32) to (-0.28, -0.18) on screen, the socket stays below the edge all the way). Same roll and scale.
-    static Vector3f toolRaisedPos = new Vector3f(-0.42F, -0.45F, -0.35F);
-    static float toolRaisedYaw = -8F, toolRaisedPitch = 118F;
-    // Gauntlet: where the elbow sits (the forearm hangs -Y from it in the model), how it's turned, size.
-    static Vector3f gauntletPos = new Vector3f(0.54F, -0.725F, -0.525F);
-    static float gauntletYaw = 4F, gauntletPitch = 129F, gauntletRoll = -10F, gauntletScale = 0.6F;
+    // Socket tool at rest (lowered: its axis points just below the crosshair, 16 blocks out) and raised (aiming).
+    static Vector3f toolPos = new Vector3f(-0.58F, -0.57F, -0.19F);
+    static float toolYaw = -2.1F, toolPitch = 88.4F, toolRoll = 15F, toolScale = 1.0F;
+    static Vector3f toolRaisedPos = new Vector3f(-0.55F, -0.54F, -0.19F);
+    static float toolRaisedYaw = -3.2F, toolRaisedPitch = 93.1F;
+    // Gauntlet: where the elbow sits (the forearm hangs -Y from it in the model), how it's turned, size. It points forward,
+    // a little up (at a spot 8 blocks out, 2 up), so the held item stays in view.
+    static Vector3f gauntletPos = new Vector3f(0.55F, -0.54F, -0.20F);
+    static float gauntletYaw = 4.0F, gauntletPitch = 108.0F, gauntletRoll = -10F, gauntletScale = 0.7F;
     // Eating / drinking: the elbow moves here and the forearm turns in and up, so the food sits low in the middle.
     private static final Vector3f EAT_POS = new Vector3f(0.26F, -0.53F, -0.26F);
     private static final float EAT_YAW = 30F, EAT_PITCH = 148F;
