@@ -17,11 +17,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.GameRules;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ViewportEvent;
 
 /**
  * DEV TOOL, inert unless started with -Dpowerarmor.autopilot=terrain:<world> (./gradlew runAutopilotTerrain).
@@ -39,7 +41,7 @@ public final class TerrainPilot {
     private static boolean worldRequested, suitRequested;
     private static int tick = -1;
     private static float startYaw;
-    private static BufferedWriter csv;
+    private static BufferedWriter csv, frames;
     private static double lastX, lastY, lastZ;
 
     public static boolean enabled() {
@@ -104,6 +106,24 @@ public final class TerrainPilot {
         }
     }
 
+    /** Every render frame: how far the pilot's eye (the camera) sits above the drawn model, in blocks. From the
+     *  cockpit, any change of this between frames is the suit's arm jerking up or down in view (it did, on every
+     *  step). Uses the eye at this frame's partial tick: the Camera object still holds last frame's position here. */
+    @SubscribeEvent
+    public static void onCamera(ViewportEvent.ComputeCameraAngles event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!ENABLED || frames == null || tick < 0 || mc.player == null || !(mc.player.getVehicle() instanceof PowerArmorEntity suit)) {
+            return;
+        }
+        float partial = (float) event.getPartialTick();
+        double model = Mth.lerp(partial, suit.yOld, suit.getY()) + suit.getStepOffset(partial);
+        try {
+            frames.write(String.format(Locale.ROOT, "%d,%.3f,%.4f,%.4f%n", tick, partial, mc.player.getEyePosition(partial).y - model, model));
+        } catch (IOException e) {
+            PowerArmor.LOGGER.error("[terrain] frames csv", e);
+        }
+    }
+
     private static void set(KeyMapping key, boolean down) {
         key.setDown(down);
     }
@@ -124,6 +144,8 @@ public final class TerrainPilot {
         try {
             csv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_terrain.csv"));
             csv.write("tick,phase,x,y,z,speed,vy,onGround,airTicks,anim,hipBob,hCollide,eyeY\n");
+            frames = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_terrain_frames.csv"));
+            frames.write("tick,partial,eyeAboveModel,modelY\n");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -132,6 +154,8 @@ public final class TerrainPilot {
     private static void finish(Minecraft mc) {
         try {
             csv.close();
+            frames.close();
+            frames = null;
         } catch (IOException ignored) {
         }
         set(mc.options.keyUp, false);

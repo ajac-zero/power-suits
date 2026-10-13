@@ -3,7 +3,7 @@ hand as on the suit's arm and stays in sync with Blockbench.
 
     python3 tools/extract-tool-geo.py        (after node tools/export-model.mjs)
 
-For each tool: copy its bone subtree (+ extra cubes, e.g. the forearm housing it wraps around), move it
+For each tool: copy its bone subtree (+ extra cubes: the elbow socket ring the tool locks onto), move it
 so its bounding box is centred on the origin (GeckoLib already moves item models to the middle of the block),
 and put it under one root bone. How it sits in your hand / GUI is set in models/item/<tool>.json.
 """
@@ -16,10 +16,10 @@ SUIT = ASSETS / 'geo/entity/power_armor.geo.json'
 
 TOOLS = {
     # tool name: (bone subtree, extra bone whose cubes of these sizes are included, bones to drop)
-    'plasma_cannon': ('cannon', ('right_forearm', [[9, 11, 10]]), {'muzzle_flash'}),
-    'em_projector': ('em_projector', ('right_forearm', [[9, 11, 10]]), set()),
-    'drill': ('drill', ('right_forearm', [[9, 11, 10]]), set()),
-    'chainsaw': ('chainsaw', ('right_forearm', [[9, 11, 10]]), set()),
+    'plasma_cannon': ('cannon', ('right_forearm', [[7, 1, 7]]), {'muzzle_flash'}),
+    'em_projector': ('em_projector', ('right_forearm', [[7, 1, 7]]), set()),
+    'drill': ('drill', ('right_forearm', [[7, 1, 7]]), set()),
+    'chainsaw': ('chainsaw', ('right_forearm', [[7, 1, 7]]), set()),
 }
 
 

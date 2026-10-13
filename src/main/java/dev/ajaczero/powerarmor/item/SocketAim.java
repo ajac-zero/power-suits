@@ -16,8 +16,10 @@ import org.jetbrains.annotations.Nullable;
 public final class SocketAim {
     // Muzzle in the torso's frame, in blocks (measured in Blockbench from the cannon's muzzle_flash bone;
     // the EM projector's tip is within a few pixels): right of centre, up from the feet, forward.
+    // Halfway between the animated pose (third person) and the cockpit pose (PowerArmorModel tilts the tool
+    // up in first person), so the bolt starts ~0.35 blocks from the visible muzzle in either view.
     // The torso pivot is 1.54 up; the torso faces the view and pitches with it (55%).
-    private static final double MUZZLE_RIGHT = 0.95, MUZZLE_UP = 1.73, MUZZLE_FORWARD = 1.71, TORSO_PIVOT_UP = 1.54;
+    private static final double MUZZLE_RIGHT = 0.78, MUZZLE_UP = 2.10, MUZZLE_FORWARD = 1.62, TORSO_PIVOT_UP = 1.54;
 
     public static Vec3 muzzlePosition(PowerArmorEntity suit, Player pilot) {
         float yaw = pilot.getYRot() * Mth.DEG_TO_RAD;

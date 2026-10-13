@@ -44,10 +44,12 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
   - The **attack** button (left-click, hold for continuous tools) uses the installed tool.
   - Empty socket: attack does nothing (maybe a dry "clunk" sound).
   - The suit is crafted/deployed with an **empty socket**.
-- Built (Phase 2): the forearm block stays as the **socket housing**; a `socket` coupling plate (cyan pins)
-  shows when the socket is empty. Each tool is a bone in the suit model (`cannon` for the plasma cannon),
-  shown only while installed, so tools can have their own animated parts. The hand-held item model is
-  cut from the same bones by `tools/extract-tool-geo.py`.
+- Built (Phase 2, reworked later): the right arm ends at the elbow in a steel socket ring, and **each tool is the
+  whole forearm** (16-19 px from the elbow, like the left forearm + hand). A `socket` coupling plate (cyan pins)
+  shows when the socket is empty. Each tool is a bone in the suit model (`cannon` for the plasma cannon) pivoting
+  at the socket, shown only while installed, so tools can have their own animated parts. In first person
+  `PowerArmorModel` raises the arm, swings it in a little and bends the tool up at the socket so you see its side.
+  The hand-held item model is cut from the same bones (plus the socket ring) by `tools/extract-tool-geo.py`.
 - Firing: the client cancels vanilla attack while piloting and sends "trigger down/up"; the server checks
   the sender is the pilot, the suit can operate, the tool's cooldown and fuel (lighting more fuel items if
   needed). Empty socket / no fuel: a dry click.

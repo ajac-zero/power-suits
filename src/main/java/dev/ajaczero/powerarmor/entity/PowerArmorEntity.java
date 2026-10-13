@@ -86,8 +86,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Walking off a ledge up to this high keeps the suit planted (steps down instead of falling).
      *  2 blocks: a 3-block-tall mech steps down mountain terraces; the step easing smooths it. */
     private static final double STEP_DOWN = 2.1;
-    /** Each tick the eased step offset keeps this fraction (0.65 -> ~6 ticks to settle). */
-    private static final float STEP_EASE = 0.65F;
 
     // ---- Water (Fallout-style: the suit sinks and walks along the bottom) ----------------------
     /** Speed on the bottom relative to dry land. */
@@ -223,8 +221,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Client only: smoothed horizontal speed in blocks per second, used to pick walk/run/idle. */
     private double visualSpeed;
     /** Client only: vertical offset (blocks) that eases the camera and model over step-ups/downs. */
-    private float stepOffset, stepOffsetO;
-    private boolean wasOnGroundForSteps;
+    private final StepSmoothing steps = new StepSmoothing(STEP_DOWN);
     /** Client only: airborne bookkeeping for the jump / fall / land animations. */
     private int airTicks;
     private boolean jumped;
@@ -1066,31 +1063,20 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
     }
 
-    /** Step-ups (and snapped step-downs) move us a whole block in one tick. Absorb that jump into an
-     *  offset that eases back to zero, used for the pilot's seat and the rendered model. */
+    /** Step-ups (and snapped step-downs) move us a whole block in one tick: ease that (see StepSmoothing). */
     private void tickStepSmoothing() {
-        this.stepOffsetO = this.stepOffset;
-        double dy = this.getY() - this.yo;
-        if (this.wasOnGroundForSteps && this.onGround() && Math.abs(dy) > 0.2 && Math.abs(dy) <= STEP_DOWN + 0.1) {
-            this.stepOffset -= (float) dy;
-            this.stepOffsetO -= (float) dy;
-        }
-        this.wasOnGroundForSteps = this.onGround();
-        this.stepOffset = Mth.clamp(this.stepOffset * STEP_EASE, -2.5F, 2.5F);
-        if (Math.abs(this.stepOffset) < 0.01F) {
-            this.stepOffset = 0;
-        }
+        this.steps.tick(this.getY() - this.yo, this.onGround());
     }
 
     /** Client: eased step offset in blocks for this frame. */
     public float getStepOffset(float partialTick) {
-        return Mth.lerp(partialTick, this.stepOffsetO, this.stepOffset);
+        return this.steps.at(partialTick);
     }
 
     /** The pilot rides with the eased step offset, so the camera glides over steps. */
     @Override
     protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float partialTick) {
-        return super.getPassengerAttachmentPoint(passenger, dimensions, partialTick).add(0, this.stepOffset, 0);
+        return super.getPassengerAttachmentPoint(passenger, dimensions, partialTick).add(0, this.steps.current(), 0);
     }
 
     private void tickAirborneAnimationState() {

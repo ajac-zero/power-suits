@@ -4,6 +4,7 @@ import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PlasmaBolt;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.StepSmoothing;
 import dev.ajaczero.powerarmor.entity.SuitFuel;
 import dev.ajaczero.powerarmor.item.PowerTool;
 import dev.ajaczero.powerarmor.item.SuitLoadout;
@@ -909,6 +910,43 @@ public final class PowerArmorTests {
             helper.assertTrue(tool.getDestroySpeed(Blocks.STONE.defaultBlockState()) == 1F
                     && tool.getDestroySpeed(Blocks.OAK_LOG.defaultBlockState()) == 1F, "in your hand it mines like a fist");
         }
+        helper.succeed();
+    }
+
+    /**
+     * Walking up and down blocks: the model and the pilot's camera must glide together. Feeds a staircase (two
+     * step-ups, then a 1- and a 2-block snapped step-down) through StepSmoothing exactly as the game uses it:
+     * the renderer draws the model at lerp(partial, yo, y) + offset(partial), the seat puts the camera at
+     * y + EYE + offset at the end of each tick and Minecraft lerps the camera between ticks. At 5 render frames
+     * per tick, the model must never jump and must stay at the same height below the camera (from the cockpit,
+     * anything else looks like the arm flickering up and down). The old version dropped the model a block at
+     * the start of every step tick.
+     */
+    @GameTest(template = PAD)
+    public static void stepsDoNotJerkTheModelAgainstTheCamera(GameTestHelper helper) {
+        final double eye = 2.6;
+        double[] heights = {0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+        StepSmoothing steps = new StepSmoothing(2.1);
+        double lastModel = heights[0], lastCamera = heights[0] + eye, maxJump = 0, maxDrift = 0;
+        for (int t = 1; t < heights.length; t++) {
+            double yo = heights[t - 1], y = heights[t];
+            double cameraStart = lastCamera;                       // where last tick left the pilot
+            steps.tick(y - yo, true);
+            double cameraEnd = y + eye + steps.current();
+            for (int f = 0; f <= 4; f++) {
+                float partial = f / 4F;
+                double model = Mth.lerp(partial, yo, y) + steps.at(partial);
+                double camera = Mth.lerp(partial, cameraStart, cameraEnd);
+                maxJump = Math.max(maxJump, Math.abs(model - lastModel));
+                maxDrift = Math.max(maxDrift, Math.abs(camera - model - eye));
+                lastModel = model;
+            }
+            lastCamera = cameraEnd;
+        }
+        // A 1-block step eases over ~6 ticks; the biggest quarter-tick move is the first one of a 2-block step.
+        helper.assertTrue(maxJump < 0.3, "model jumped " + maxJump + " blocks between two frames");
+        helper.assertTrue(maxDrift < 0.01, "model moved " + maxDrift + " blocks against the camera");
+        helper.assertTrue(Math.abs(steps.current()) < 0.05, "step offset should settle, got " + steps.current());
         helper.succeed();
     }
 
