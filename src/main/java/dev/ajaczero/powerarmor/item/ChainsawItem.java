@@ -29,11 +29,7 @@ import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.animatable.GeoItem;
-import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
  * Fourth power tool: a chainsaw. Hold use (right click) on a wooden block (anything an axe is for) or leaves to cut it,
@@ -41,7 +37,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * the cut comes down too, top first, a few logs per tick. "Natural tree" = connected logs with natural
  * leaves (not placed by a player) attached, so log cabins and wooden builds only lose the block you cut.
  */
-public class ChainsawItem extends Item implements PowerTool, GeoItem {
+public class ChainsawItem extends Item implements PowerTool {
     // Fuel per log, the biggest tree it fells (default 256 logs; the biggest vanilla trees have ~200) and the
     // felling speed: PowerArmorConfig.
     public static final float SPEED = 8F;          // diamond axe
@@ -50,7 +46,6 @@ public class ChainsawItem extends Item implements PowerTool, GeoItem {
     private static final int MIN_LEAVES = 4;
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_armor.chainsaw_run");
 
-    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public ChainsawItem(Properties properties) {
         super(properties);
@@ -256,14 +251,5 @@ public class ChainsawItem extends Item implements PowerTool, GeoItem {
         tooltip.add(Component.translatable("item.powerarmor.chainsaw.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("item.powerarmor.chainsaw.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.add(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
-    }
-
-    @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-    }
-
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return this.cache;
     }
 }

@@ -23,11 +23,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.animatable.GeoItem;
-import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
  * Third power tool: a diamond-tipped 3x3 mining drill.
@@ -36,13 +32,12 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * (stone, ores, obsidian, dirt, sand, gravel...), never bedrock or other unbreakable blocks; wood and other
  * axe blocks are the chainsaw's job. The 9 blocks break together, as slowly as the hardest of them.
  */
-public class DrillItem extends Item implements PowerTool, GeoItem {
+public class DrillItem extends Item implements PowerTool {
     // Fuel per block and the pause after each 3x3: PowerArmorConfig.
     /** Mining speed of a diamond pickaxe / shovel (no enchantments). */
     public static final float SPEED = 8F;
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_armor.drill_run");
 
-    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public DrillItem(Properties properties) {
         super(properties);
@@ -190,14 +185,5 @@ public class DrillItem extends Item implements PowerTool, GeoItem {
         tooltip.add(Component.translatable("item.powerarmor.drill.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("item.powerarmor.drill.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.add(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
-    }
-
-    @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-    }
-
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return this.cache;
     }
 }

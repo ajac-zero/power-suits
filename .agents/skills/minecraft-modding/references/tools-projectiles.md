@@ -76,7 +76,11 @@ projectile is in git history, commit 299d91b.)
   An empty `animations/item/<name>.animation.json` keeps GeckoLib quiet.
 - Item: `implements GeoItem` (cache + empty `registerControllers`). Renderer: register an `IClientItemExtensions`
   returning a `GeoItemRenderer` in `RegisterClientExtensionsEvent` (GeckoLib doesn't do it on NeoForge 21.1).
-  Model JSON: `"parent": "builtin/entity"` + `display` transforms.
+  Model JSON: `"parent": "builtin/entity"` + `display` transforms. Flat icon in slots only (3D in hand), wrap it:
+  `"loader": "neoforge:separate_transforms"`, `"base"`: the builtin/entity model, `"perspectives"`: `gui`/`ground`/`fixed` ->
+  `{"parent": "minecraft:item/generated", "loader": "neoforge:item_layers", "textures": {"layer0": ...}}`.
+- **This mod's tools are flat now** (user's choice, like vanilla tools): `item/handheld` + an icon drawn from the cut-out
+  geo by `tools/make-item-icons.py` (tiny box-UV software renderer, 8x supersampled, 32 px + outline); no GeoItem.
 - Display rotations are applied X·Y·Z (Z first on the vector). Solve them instead of guessing: choose where the
   barrel and the top should point, build the rotation matrix, brute-force Euler angles in 5° steps
   (numpy). In hand / first person, -Z is forward; in GUI the camera looks along -Z. Verify with autopilot

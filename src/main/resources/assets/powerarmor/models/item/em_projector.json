@@ -1,14 +1,6 @@
 {
-  "parent": "builtin/entity",
-  "textures": { "particle": "minecraft:block/iron_block" },
-  "gui_light": "front",
-  "display": {
-    "gui": { "rotation": [125, -10, 120], "translation": [0, 0, 0], "scale": [0.75, 0.75, 0.75] },
-    "ground": { "rotation": [95, 0, 0], "translation": [0, 3, 0], "scale": [0.4, 0.4, 0.4] },
-    "fixed": { "rotation": [125, -10, 120], "translation": [0, 0, 0], "scale": [0.8, 0.8, 0.8] },
-    "thirdperson_righthand": { "rotation": [95, 0, 0], "translation": [0, 1.5, -2.5], "scale": [0.5, 0.5, 0.5] },
-    "thirdperson_lefthand": { "rotation": [95, 0, 0], "translation": [0, 1.5, -2.5], "scale": [0.5, 0.5, 0.5] },
-    "firstperson_righthand": { "rotation": [-85, 180, 175], "translation": [0, 2, -5], "scale": [0.4, 0.4, 0.4] },
-    "firstperson_lefthand": { "rotation": [-85, 180, 175], "translation": [0, 2, -5], "scale": [0.4, 0.4, 0.4] }
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "powerarmor:item/em_projector"
   }
 }

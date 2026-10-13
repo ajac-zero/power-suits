@@ -42,7 +42,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
-| `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000); then `extract-tool-geo.py`, `extract-view-geo.py` and `uv run --with pillow python3 tools/make-glowmasks.py` |
+| `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000); then `extract-tool-geo.py`, `extract-view-geo.py`, `uv run --with pillow python3 tools/make-glowmasks.py` and `tools/make-item-icons.py` (the tool items' icons) |
 macOS has no `timeout`; run game tasks in the background and poll the log for completion.
 Extend the autopilot scripts (`client/dev/AutoPilot.java`, `TerrainPilot.java`) with a scenario for each
 new feature and log numbers to CSV: measuring beat guessing every time in this project.
@@ -74,9 +74,10 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   (vanilla: `source(FIREBALL, fireball, thrower)`). Swapped, kills credit the projectile instead of the pilot.
 - **GeckoLib won't restart a triggered animation that is still playing**: per-use animations must be shorter
   than the tool's cooldown (`tool_recoil` 0.5 s vs the EM push's cooldown); rapid fire (the chaingun) kicks in code from a synced shot counter instead.
-- **GeckoLib items are not hooked up automatically on NeoForge**: register a `GeoItemRenderer` through
-  `RegisterClientExtensionsEvent` (see `ClientSetup`), model JSON parent `builtin/entity`. Centre the item
-  geo on the origin (GeckoLib adds the half-block offset) or rotations swing it out of the slot.
+- **Tool items are flat, like vanilla tools** (user decision): `models/item/<tool>.json` is `item/handheld` with an
+  icon drawn from the tool's geo by `tools/make-item-icons.py`; the 3D tools exist only on the suit and in the cockpit
+  viewmodel. (A 3D GeckoLib item needs a `GeoItemRenderer` registered in `RegisterClientExtensionsEvent` and a
+  `builtin/entity` model; GeckoLib doesn't hook items up on NeoForge. The tools were 3D until 2026-10-13.)
 - **Server and client tick independently in the autopilot**: a server-side event can show up a few client
   ticks later; screenshot every tick around an event instead of guessing the frame. Server-side CSV
   columns can lead the screenshots.

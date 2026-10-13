@@ -1,11 +1,11 @@
-"""Builds the hand-held model of a socket tool from the suit model, so the tool looks the same in your
-hand as on the suit's arm and stays in sync with Blockbench.
+"""Cuts each socket tool out of the suit model (geo/item/<tool>.geo.json), the source of the tool items' icons
+(tools/make-item-icons.py), so the icons look like the tools on the suit's arm and stay in sync with Blockbench.
 
     python3 tools/extract-tool-geo.py        (after node tools/export-model.mjs)
 
 For each tool: copy its bone subtree (+ extra cubes: the elbow socket ring the tool locks onto), move it
 so its bounding box is centred on the origin (GeckoLib already moves item models to the middle of the block),
-and put it under one root bone. How it sits in your hand / GUI is set in models/item/<tool>.json.
+and put it under one root bone (the layout GeckoLib items use; the tools were 3D GeckoLib items until 2026-10-13).
 The suit carries its tools on the LEFT forearm; on foot you hold them in your right hand, so the copy is mirrored
 back to the right-arm version (the same shape the item always had).
 """

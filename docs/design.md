@@ -49,7 +49,7 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
 | Item | `power_armor` item deploys the suit (needs 3-block clearance). Durability bar = suit health; anvil + iron ingots repairs. Crafted from iron blocks, iron helmet/chestplate/boots, pistons. Packed items keep fuel, socket tool and the half-burnt item (`powerarmor:loadout` component; shown in the tooltip). |
 | Entering | Right-click empty suit = climb in. Shift = climb out (behind/beside the suit). Sneak + right-click empty suit = suit menu. |
 | Fuel + power (Phase 1) | Furnace-style fuel slot, drain by load, shutdown/startup animations + sounds, exhaust smoke by load, HUD gauge, low-fuel warning. See section 4. |
-| Socket + chaingun (Phase 2; plasma cannon, then rivet gun, chaingun since 2026-10-13) | `PowerTool` items in the socket; hold right-click to use (attack until 2026-10-13). Chaingun: tap = heavy shots, hold = spin-up to a 10/s barrage, 1 iron nugget + fuel per bullet, bullets ignore hit immunity, optional overheat, 3D item (cut from the suit model), recipe. See section 3. |
+| Socket + chaingun (Phase 2; plasma cannon, then rivet gun, chaingun since 2026-10-13) | `PowerTool` items in the socket; hold right-click to use (attack until 2026-10-13). Chaingun: tap = heavy shots, hold = spin-up to a 10/s barrage, 1 iron nugget + fuel per bullet, bullets ignore hit immunity, optional overheat, flat item (icon rendered from the suit model), recipe. See section 3. |
 | Left hand (Phase 3) | Holds the pilot's selected item (3D in third person, vanilla-style lower-left in first person); right-click uses it as normal; carry + reach animations; no attacking or mining; needs power; +1.5 reach. See section 3. |
 | EM projector (Phase 4) | Hold to grab items / mobs (16 blocks) and hold them floating; items are collected; release throws, tap shoves; wall slam damage. Socket only. See section 3. |
 | Drill + chainsaw (Phase 5) | Diamond-tipped 3x3 drill (pickaxe + shovel blocks, diamond tier) and a chainsaw (axe blocks + leaves, fells natural trees above the cut). BreakEvent per block, vanilla drops, crack overlay, tool-bone loop animations. See section 3. |
@@ -91,7 +91,8 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
   shows when the socket is empty. Each tool is a bone in the suit model (`chaingun` for the chaingun) pivoting
   at the socket, shown only while installed, so tools can have their own animated parts. In first person
   `PowerArmorModel` raises the arm, swings it in a little and bends the tool up at the socket so you see its side.
-  The hand-held item model is cut from the same bones (plus the socket ring) by `tools/extract-tool-geo.py`.
+  The item is flat like a vanilla tool; its icon is rendered from the same bones (plus the socket ring), cut out by
+  `tools/extract-tool-geo.py` and drawn by `tools/make-item-icons.py`.
 - Firing: the client cancels vanilla attack while piloting and sends "trigger down/up"; the server checks
   the sender is the pilot, the suit can operate, the tool's cooldown and fuel (lighting more fuel items if
   needed). Empty socket / no fuel: a dry click.

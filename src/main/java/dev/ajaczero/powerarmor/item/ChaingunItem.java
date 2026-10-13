@@ -26,10 +26,6 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.animatable.GeoItem;
-import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
  * The suit's gun: a cluster of four barrels driven by the engine. Tap the trigger and it fires single heavy shots; hold
@@ -45,16 +41,15 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * they drive the barrel spin, the recoil, the muzzle burst, the heat glow and the motor whine.
  *
  * <p>Registered as powerarmor:chaingun; the old ids powerarmor:plasma_cannon and powerarmor:rivet_gun are aliases, so
- * those items in old worlds load as chainguns. A GeckoLib item (GeoItem): the hand-held model is cut from the suit.
+ * those items in old worlds load as chainguns. A flat item like a vanilla tool; only the suit wears it in 3D.
  */
-public class ChaingunItem extends Item implements PowerTool, GeoItem {
+public class ChaingunItem extends Item implements PowerTool {
     /** How far the crosshair is traced to find the aim point. */
     private static final double AIM_RANGE = 96;
     /** Bullet spread at full spin, degrees (none for the first, slow shot). Small: the barrage should still hit what
      *  is in the crosshair (1.2 missed small mobs beyond ~20 blocks). */
     private static final float MAX_SPREAD = 0.4F;
 
-    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public ChaingunItem(Properties properties) {
         super(properties);
@@ -279,15 +274,5 @@ public class ChaingunItem extends Item implements PowerTool, GeoItem {
                 String.format("%.1f", damage(0F) / 2), String.format("%.1f", damage(1F) / 2),
                 String.format("%.0f", 20F / PowerArmorConfig.CHAINGUN_FAST_INTERVAL.get()), this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.add(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
-    }
-
-    // GeckoLib: no animations of its own in the hand.
-    @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-    }
-
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return this.cache;
     }
 }

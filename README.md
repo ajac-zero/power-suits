@@ -133,6 +133,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`, `fuel`, `menu`) |
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
 | `python3 tools/extract-tool-geo.py` | Rebuilds the tool item models from the suit model (run after `export-model.mjs`) |
+| `uv run --with pillow python3 tools/make-item-icons.py` | Redraws the tool items' icons from those tool models (run after `extract-tool-geo.py`) |
 | `python3 tools/extract-view-geo.py` | Rebuilds the cockpit viewmodel (`geo/view`) from the suit model (run after `export-model.mjs`) |
 | `uv run --with pillow python3 tools/make-glowmasks.py` | Rebuilds the glowmasks (`power_armor_glow_{fire,visor,heat,heat_barrel,em_core,em_arc}.png`) from the texture's reserved colours (run after `export-model.mjs`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | Live-tunes the cockpit viewmodel's placement (`run/view/tuning.json`, shots `run/screenshots/ap_view_*.png`) |
@@ -188,9 +189,10 @@ src/main/java/dev/ajaczero/powerarmor/
 src/main/resources/
   assets/powerarmor/geo|animations|textures/entity/   exported from Blockbench
   assets/powerarmor/textures/gui/power_armor.png      suit menu background (tools/make-gui.py)
-  assets/powerarmor/geo/item/<tool>.geo.json          chaingun, EM projector, drill, chainsaw: cut out of the suit model (tools/extract-tool-geo.py)
+  assets/powerarmor/geo/item/<tool>.geo.json          chaingun, EM projector, drill, chainsaw: cut out of the suit model, source of the item icons (tools/extract-tool-geo.py)
   assets/powerarmor/geo/view/power_armor_view.geo.json cockpit viewmodel: tools + gauntlet cut out of the suit model (tools/extract-view-geo.py)
-  assets/powerarmor/models/item/chaingun.json         how the chaingun sits in your hand / inventory
+  assets/powerarmor/models/item/chaingun.json         a flat hand-held item, like a vanilla tool (item/handheld)
+  assets/powerarmor/textures/item/<tool>.png          the tools' item icons, rendered from their 3D models (tools/make-item-icons.py)
   data/powerarmor/damage_type/bullet.json             "shredded" damage type (+ minecraft is_projectile, no_knockback tags)
   data/powerarmor/damage_type/em_slam.json            "slammed into a wall" (EM throws)
   data/powerarmor/recipe/*.json                       crafting recipes (suit + 4 tools)

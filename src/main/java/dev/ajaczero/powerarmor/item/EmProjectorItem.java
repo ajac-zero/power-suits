@@ -29,10 +29,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.Tags;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.animatable.GeoItem;
-import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
  * Second power tool: an electromagnetic field projector (a redstone electromagnet: copper-wound prongs, a redstone
@@ -44,7 +40,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * Never grabs players, bosses, other suits, no-AI mobs, anything riding or being ridden, or very big mobs.
  * Like all tools it only works in a powered suit's socket.
  */
-public class EmProjectorItem extends Item implements PowerTool, GeoItem {
+public class EmProjectorItem extends Item implements PowerTool {
     // Fuel per tick while holding, per throw, grab range and slam damage: PowerArmorConfig.
     /** Held things get away beyond this many times the grab range. */
     private static final double KEEP_RANGE_FACTOR = 1.5;
@@ -61,7 +57,6 @@ public class EmProjectorItem extends Item implements PowerTool, GeoItem {
     public static final ResourceKey<DamageType> EM_SLAM = ResourceKey.create(Registries.DAMAGE_TYPE,
             ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "em_slam"));
 
-    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public EmProjectorItem(Properties properties) {
         super(properties);
@@ -278,14 +273,5 @@ public class EmProjectorItem extends Item implements PowerTool, GeoItem {
         tooltip.add(Component.translatable("item.powerarmor.em_projector.stats", PowerArmorConfig.EM_HOLD_ENERGY.get() * 20, PowerArmorConfig.EM_THROW_ENERGY.get())
                 .withStyle(ChatFormatting.DARK_AQUA));
         tooltip.add(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
-    }
-
-    @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-    }
-
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return this.cache;
     }
 }
