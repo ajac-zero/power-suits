@@ -95,9 +95,12 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   different angle than its barrels point. Solve raised poses with `tools/viewmodel-fit.py aim x roll scale 0 0 -10 tool`
   (axis through the crosshair 10 blocks out, cut end hidden); keep parts in the screen corners (the hotbar hides the
   middle of the bottom edge). Preview with the view tuner by copying the raised pose into the rest slot.
-- **Viewmodel parts must not show their cut ends**: the tool's socket face and the gauntlet's wrist stay below the
-  bottom screen edge so they reach in from the corners (floating otherwise). Check/fit poses with
-  `tools/viewmodel-fit.py` (also for the eat pose) before tuning visually.
+- **Viewmodel parts must not show their cut ends**: the tool's socket face stays below the bottom screen edge so it
+  reaches in from the corner (floating otherwise). Check/fit poses with `tools/viewmodel-fit.py` before tuning visually.
+- **The cockpit's main hand is vanilla's** (user decision): held items are left to vanilla's first-person renderer
+  (same place and motions as on foot, no arm, as in vanilla); only an empty hand is ours, the gauntlet laid along
+  vanilla's empty-arm pose (`CockpitHands.gauntletTransform`). Don't give items a custom cockpit pose. The view tuner
+  shoots `view_vanilla_*` on foot next to `view_*` in the suit to compare.
 - **F1 (hideGui) also skips the hand pass**: screenshots with the GUI hidden show no viewmodel. The autopilots keep
   the GUI on. Tune the viewmodel live with `tools/view-tuner.sh start|shoot|stop` (edit `run/view/tuning.json`).
 - **Dev games must not linger**: `pkill -f` on a system property doesn't match the game's command line. The view

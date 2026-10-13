@@ -2,22 +2,16 @@ package dev.ajaczero.powerarmor.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import dev.ajaczero.powerarmor.PowerArmor;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.renderer.GeoObjectRenderer;
-import software.bernie.geckolib.renderer.layer.BlockAndItemGeoLayer;
 
-/** Draws one half of the cockpit viewmodel (CockpitView): the socket tool or the gauntlet with the held item. */
+/** Draws one half of the cockpit viewmodel (CockpitView): the socket tool or the empty gauntlet. */
 final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
     enum Part { TOOL, GAUNTLET }
 
@@ -27,11 +21,9 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
     /** Installed tool's bone (PowerTool.suitBone), or null for the bare socket. */
     @Nullable
     String installed;
-    ItemStack held = ItemStack.EMPTY;
 
     CockpitViewRenderer() {
         super(new Model());
-        this.addRenderLayer(new HeldItem(this));
         this.addRenderLayer(new HeatGlow(this));
     }
 
@@ -107,42 +99,6 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
             getRenderer().reRender(model, poseStack, buffers, view, type, buffers.getBuffer(type), partialTick,
                     net.minecraft.client.renderer.LightTexture.FULL_BRIGHT, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,
                     0xFF000000 | c << 16 | c << 8 | c);
-        }
-    }
-
-    /** The pilot's selected item in the gauntlet's grip bone, held the way the suit holds it in third person. */
-    private static final class HeldItem extends BlockAndItemGeoLayer<CockpitView> {
-        /** Smaller than on the suit (1.5): this close to the camera a full-size block filled the right of the view. */
-        static float ITEM_SCALE = 0.9F;
-        private final CockpitViewRenderer renderer;
-
-        HeldItem(CockpitViewRenderer renderer) {
-            super(renderer);
-            this.renderer = renderer;
-        }
-
-        @Nullable
-        @Override
-        protected ItemStack getStackForBone(GeoBone bone, CockpitView view) {
-            if (this.renderer.part != Part.GAUNTLET || !"right_hand".equals(bone.getName()) || this.renderer.held.isEmpty()) {
-                return null;
-            }
-            return this.renderer.held;
-        }
-
-        @Override
-        protected void renderStackForBone(PoseStack poseStack, GeoBone bone, ItemStack stack, CockpitView view,
-                                          MultiBufferSource buffers, float partialTick, int packedLight, int packedOverlay) {
-            poseStack.pushPose();
-            // Same grip as HeldItemLayer / vanilla's ItemInHandLayer (the bone's -Y runs down the forearm to the fingers).
-            poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
-            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-            poseStack.translate(1F / 16F, 0.125F, 0.0F);
-            poseStack.scale(ITEM_SCALE, ITEM_SCALE, ITEM_SCALE);
-            Minecraft mc = Minecraft.getInstance();
-            mc.getItemRenderer().renderStatic(mc.player, stack, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, false,
-                    poseStack, buffers, mc.level, packedLight, packedOverlay, 0);
-            poseStack.popPose();
         }
     }
 }

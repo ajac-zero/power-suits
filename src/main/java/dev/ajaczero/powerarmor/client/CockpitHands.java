@@ -7,11 +7,8 @@ import dev.ajaczero.powerarmor.item.PowerTool;
 import dev.ajaczero.powerarmor.item.SocketAim;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import org.joml.Matrix4f;
@@ -24,18 +21,19 @@ import software.bernie.geckolib.util.RenderUtil;
  * What the pilot sees of the suit's arms, drawn in the hand pass like vanilla's first-person hands. The suit's own
  * upper body is hidden in the cockpit (only the legs are drawn), because looking at its arms from inside never lined
  * up with the view: the arm raised a hand where your hand isn't, the tool hid behind its own base, pads clipped.
- * Instead: the socket tool low on the left (CockpitView, animated like the suit's tool) and the suit's gauntlet
- * holding the selected item on the right (your main hand), with vanilla's swing / use / eat motions.
+ * Instead: the socket tool low on the left (CockpitView, animated like the suit's tool), and on the right your main
+ * hand exactly as vanilla draws it, except that the suit's gauntlet replaces the player's arm: a held item is vanilla's
+ * own first-person item (same place, swing, eat / bow / shield / crossbow motions; no arm, as in vanilla), and an
+ * empty hand is the gauntlet in vanilla's empty-arm pose (PilotView decides which).
  *
  * <p>Positions are in view space (blocks; x right, y up, -z forward), like vanilla's hand transforms.
  */
 public final class CockpitHands {
     private static final CockpitViewRenderer RENDERER = new CockpitViewRenderer();
-    private static final int RIGHT = 1; // vanilla's arm side factor for the right (main) hand
 
     // Placement rules (tools/viewmodel-fit.py checks and solves them; the hand pass always uses a 70 degree FOV):
-    //  - each part's cut end (the tool's socket face, the gauntlet's wrist) stays below the bottom edge of the screen, so
-    //    tool and arm reach in from the corners instead of floating;
+    //  - the tool's cut end (its socket face) stays below the bottom edge of the screen, so it reaches in from the corner
+    //    instead of floating;
     //  - the raised tool's axis points at the crosshair 10 blocks out (`viewmodel-fit.py aim`), so its barrels line up
     //    with where the shots go (the first poses pointed 20-40 degrees up and the tracers looked off);
     //  - the corners: the hotbar covers the middle of the bottom edge.
@@ -45,13 +43,10 @@ public final class CockpitHands {
     static float toolYaw = -2.1F, toolPitch = 88.4F, toolRoll = 15F, toolScale = 1.0F;
     static Vector3f toolRaisedPos = new Vector3f(-0.55F, -0.54F, -0.19F);
     static float toolRaisedYaw = -3.2F, toolRaisedPitch = 93.1F;
-    // Gauntlet: where the elbow sits (the forearm hangs -Y from it in the model), how it's turned, size. It points forward,
-    // a little up (at a spot 8 blocks out, 2 up), so the held item stays in view.
-    static Vector3f gauntletPos = new Vector3f(0.55F, -0.54F, -0.20F);
-    static float gauntletYaw = 4.0F, gauntletPitch = 108.0F, gauntletRoll = -10F, gauntletScale = 0.7F;
-    // Eating / drinking: the elbow moves here and the forearm turns in and up, so the food sits low in the middle.
-    private static final Vector3f EAT_POS = new Vector3f(0.26F, -0.53F, -0.26F);
-    private static final float EAT_YAW = 30F, EAT_PITCH = 148F;
+    // Gauntlet: stands in for the player's arm, so it only shows when vanilla would show the arm (an empty hand; with an item
+    // vanilla draws just the item, and so do we). It's laid along the player's right arm in vanilla's own empty-hand pose
+    // (ItemInHandRenderer.renderPlayerArm): its fingertips where the player's fist is, a little bulkier than the arm.
+    static float gauntletScale = 0.7F;
     /** The chaingun's muzzle (barrel tips) in the view model (pixels below the socket; the muzzle bone's pivot). */
     private static final float MUZZLE_PX = -15F;
     private static final float RECOIL_TICKS = 6F;
@@ -59,29 +54,31 @@ public final class CockpitHands {
     private static boolean wasShooting;
     private static double shotAt = -100;
 
-    static void render(RenderHandEvent event, LocalPlayer player, PowerArmorEntity suit) {
+    /** The socket tool, low on the left (the off hand's place). */
+    static void renderTool(RenderHandEvent event, PowerArmorEntity suit) {
         PoseStack pose = event.getPoseStack();
-        float partial = event.getPartialTick();
         CockpitView view = CockpitView.INSTANCE;
         view.suit = suit;
         pollShot(suit, view);
         RENDERER.installed = suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.suitBone() : null;
-
         pose.pushPose();
-        toolTransform(pose, suit, partial, suit.getToolRaise(partial));
-        drawPart(pose, event, CockpitViewRenderer.Part.TOOL, ItemStack.EMPTY);
-        pose.popPose();
-
-        pose.pushPose();
-        ItemStack held = player.getMainHandItem();
-        gauntletTransform(pose, player, held, event.getSwingProgress(), event.getEquipProgress(), partial, suit);
-        drawPart(pose, event, CockpitViewRenderer.Part.GAUNTLET, held);
+        toolTransform(pose, suit, event.getPartialTick(), suit.getToolRaise(event.getPartialTick()));
+        drawPart(pose, event, CockpitViewRenderer.Part.TOOL);
         pose.popPose();
     }
 
-    private static void drawPart(PoseStack pose, RenderHandEvent event, CockpitViewRenderer.Part part, ItemStack held) {
+    /** The gauntlet where vanilla draws the empty right hand, with vanilla's swing and equip motion. */
+    static void renderGauntlet(RenderHandEvent event, PowerArmorEntity suit) {
+        PoseStack pose = event.getPoseStack();
+        CockpitView.INSTANCE.suit = suit;
+        pose.pushPose();
+        gauntletTransform(pose, event.getSwingProgress(), event.getEquipProgress());
+        drawPart(pose, event, CockpitViewRenderer.Part.GAUNTLET);
+        pose.popPose();
+    }
+
+    private static void drawPart(PoseStack pose, RenderHandEvent event, CockpitViewRenderer.Part part) {
         RENDERER.part = part;
-        RENDERER.held = held;
         pose.translate(-0.5F, -0.51F, -0.5F); // GeoObjectRenderer centres objects in a block; undo that
         RENDERER.render(pose, CockpitView.INSTANCE, event.getMultiBufferSource(), null, null, event.getPackedLight(), event.getPartialTick());
     }
@@ -114,38 +111,31 @@ public final class CockpitHands {
         return suit.getHipBob() * 0.008F + Mth.sin((float) RenderUtil.getCurrentTick() * 0.07F) * 0.004F;
     }
 
-    /** Gauntlet: vanilla's first-person swing (ItemInHandRenderer's right hand), and an eat/drink motion
-     *  that brings the gauntlet to the bottom middle of the view (vanilla's eat transform assumes its own hand offsets
-     *  and swung the gauntlet out of view). */
-    private static void gauntletTransform(PoseStack pose, Player player, ItemStack held, float swing, float equip, float partial,
-                                          PowerArmorEntity suit) {
-        boolean eating = player.isUsingItem() && player.getUseItemRemainingTicks() > 0
-                && (held.getUseAnimation() == UseAnim.EAT || held.getUseAnimation() == UseAnim.DRINK);
-        float bob = bob(suit);
-        float toMouth = 0F, chew = 0F;
-        if (eating) {
-            float left = player.getUseItemRemainingTicks() - partial + 1.0F;
-            float done = left / held.getUseDuration(player);
-            toMouth = Mth.clamp((1.0F - done) * 6F, 0F, 1F);                           // raise it over the first ~1/6
-            chew = done < 0.8F ? Mth.abs(Mth.cos(left / 4.0F * Mth.PI)) * 0.06F : 0F;   // vanilla's chewing bob
-        } else {
-            float sq = Mth.sqrt(swing);
-            pose.translate(RIGHT * -0.4F * Mth.sin(sq * Mth.PI), 0.2F * Mth.sin(sq * Mth.TWO_PI), -0.2F * Mth.sin(swing * Mth.PI));
-        }
-        pose.translate(Mth.lerp(toMouth, gauntletPos.x, EAT_POS.x), Mth.lerp(toMouth, gauntletPos.y, EAT_POS.y) + bob + chew - equip * 0.6F,
-                Mth.lerp(toMouth, gauntletPos.z, EAT_POS.z));
-        if (!eating) {
-            float f = Mth.sin(swing * swing * Mth.PI);
-            float f1 = Mth.sin(Mth.sqrt(swing) * Mth.PI);
-            pose.mulPose(Axis.YP.rotationDegrees(RIGHT * (45.0F + f * -20.0F)));
-            pose.mulPose(Axis.ZP.rotationDegrees(RIGHT * f1 * -20.0F));
-            pose.mulPose(Axis.XP.rotationDegrees(f1 * -80.0F));
-            pose.mulPose(Axis.YP.rotationDegrees(RIGHT * -45.0F));
-        }
-        pose.mulPose(Axis.YP.rotationDegrees(Mth.lerp(toMouth, gauntletYaw, EAT_YAW)));
-        pose.mulPose(Axis.XP.rotationDegrees(Mth.lerp(toMouth, gauntletPitch, EAT_PITCH)));
-        pose.mulPose(Axis.YP.rotationDegrees(gauntletRoll));
-        pose.scale(gauntletScale, gauntletScale, gauntletScale);
+    /** Vanilla's right-arm transform (ItemInHandRenderer.renderPlayerArm + PlayerModel's right arm), then the gauntlet
+     *  laid along that arm. */
+    private static void gauntletTransform(PoseStack pose, float swing, float equip) {
+        float sq = Mth.sqrt(swing);
+        pose.translate(-0.3F * Mth.sin(sq * Mth.PI) + 0.64F, 0.4F * Mth.sin(sq * Mth.TWO_PI) - 0.6F - equip * 0.6F,
+                -0.4F * Mth.sin(swing * Mth.PI) - 0.72F);
+        pose.mulPose(Axis.YP.rotationDegrees(45.0F));
+        pose.mulPose(Axis.YP.rotationDegrees(Mth.sin(sq * Mth.PI) * 70.0F));
+        pose.mulPose(Axis.ZP.rotationDegrees(Mth.sin(swing * swing * Mth.PI) * -20.0F));
+        pose.translate(-1.0F, 3.6F, 3.5F);
+        pose.mulPose(Axis.ZP.rotationDegrees(120.0F));
+        pose.mulPose(Axis.XP.rotationDegrees(200.0F));
+        pose.mulPose(Axis.YP.rotationDegrees(-135.0F));
+        pose.translate(5.6F, 0.0F, 0.0F);
+        // PlayerModel's right arm (wide): pivot (-5, 2, 0) px, idle sway zRot 0.1 rad (AnimationUtils.bobModelPart, age 0).
+        // Its box runs x -3..1, y -2..10 (model Y runs down the arm, toward the fist at y 10).
+        pose.translate(-5F / 16F, 2F / 16F, 0F);
+        pose.mulPose(Axis.ZP.rotation(0.1F));
+        // Into the gauntlet's space: entity models are turned 180 degrees about Z into the world (Y up), GeckoLib models
+        // aren't, so the gauntlet (hanging -Y, fingertips at y -17, centred on x 0.5) turns 180 about Z; then its
+        // fingertips go where the player's fist ends (-1, 10, 0).
+        float k = gauntletScale;
+        pose.translate((-1F + 0.5F * k) / 16F, (10F - 17F * k) / 16F, 0F);
+        pose.mulPose(Axis.ZP.rotationDegrees(180.0F));
+        pose.scale(k, k, k);
     }
 
     /** The suit plays tool_recoil when the EM projector pushes; start the kick here too. (Chaingun shots kick through
@@ -202,13 +192,11 @@ public final class CockpitHands {
                 return new Vector3f(a.get(0).getAsFloat(), a.get(1).getAsFloat(), a.get(2).getAsFloat());
             };
             if (j.has("toolPos")) toolPos = v.apply("toolPos");
-            if (j.has("gauntletPos")) gauntletPos = v.apply("gauntletPos");
             if (j.has("toolRaisedPos")) toolRaisedPos = v.apply("toolRaisedPos");
             toolRaisedYaw = f.apply("toolRaisedYaw", toolRaisedYaw); toolRaisedPitch = f.apply("toolRaisedPitch", toolRaisedPitch);
             toolYaw = f.apply("toolYaw", toolYaw); toolPitch = f.apply("toolPitch", toolPitch);
             toolRoll = f.apply("toolRoll", toolRoll); toolScale = f.apply("toolScale", toolScale);
-            gauntletYaw = f.apply("gauntletYaw", gauntletYaw); gauntletPitch = f.apply("gauntletPitch", gauntletPitch);
-            gauntletRoll = f.apply("gauntletRoll", gauntletRoll); gauntletScale = f.apply("gauntletScale", gauntletScale);
+            gauntletScale = f.apply("gauntletScale", gauntletScale);
         } catch (Exception e) {
             dev.ajaczero.powerarmor.PowerArmor.LOGGER.warn("[view] can't read {}: {}", file, e.toString());
         }

@@ -115,7 +115,7 @@ public final class AutoPilot {
             case 122 -> pitch = -30;
             case 127 -> shot(mc, "fp_look_up");
             case 130 -> { pitch = 10; yaw = 0; o.setCameraType(CameraType.THIRD_PERSON_BACK); }
-            case 140 -> shot(mc, "tp_idle");
+            case 177 -> shot(mc, "tp_idle");
             case 142 -> yaw = 70;
             case 144 -> shot(mc, "tp_twist_now");
             case 170 -> shot(mc, "tp_twist_settled");
@@ -825,7 +825,7 @@ public final class AutoPilot {
     /**
      * Dev loop for tuning the cockpit viewmodel (CockpitHands) without restarting: edit run/view/tuning.json, touch
      * run/view/shoot, and screenshots ap_view_*.png appear (one per tool, bare socket, walking + looking down,
-     * eating); run/view/done is written when the set is complete. Runs until the game is closed.
+     * eating, the right hand with a sword / empty, and the same items on foot for comparison); run/view/done is written when the set is complete. Runs until the game is closed.
      */
     private static void viewTuner(Minecraft mc, int t) {
         var o = mc.options;
@@ -882,8 +882,20 @@ public final class AutoPilot {
             case 81 -> { releaseAll(); pitch = 10; giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE, 4)); }
             case 86 -> hold(o.keyUse, true);
             case 98 -> shot(mc, "view_eat");
-            case 99 -> { releaseAll(); giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); }
-            case 102 -> {
+            // the right hand in the suit, then the same items on foot (vanilla's first-person hand) to compare;
+            // wait out the attack cooldown after each swap: vanilla (and the gauntlet) keep the hand lowered until it recharges
+            case 99 -> { releaseAll(); giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_SWORD)); }
+            case 125 -> shot(mc, "view_sword");
+            case 126 -> giveHeld(mc, net.minecraft.world.item.ItemStack.EMPTY);
+            case 135 -> shot(mc, "view_hand");
+            case 136 -> { onFoot(mc, true); giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); }
+            case 150 -> shot(mc, "view_vanilla_bricks");
+            case 151 -> giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_SWORD));
+            case 177 -> shot(mc, "view_vanilla_sword");
+            case 178 -> giveHeld(mc, net.minecraft.world.item.ItemStack.EMPTY);
+            case 190 -> shot(mc, "view_vanilla_hand");
+            case 191 -> { onFoot(mc, false); giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); }
+            case 200 -> {
                 viewStep = -1;
                 try {
                     java.nio.file.Files.writeString(dir.resolve("done"), "ok");
@@ -892,6 +904,21 @@ public final class AutoPilot {
             }
             default -> {}
         }
+    }
+
+    private static PowerArmorEntity parkedSuit;
+
+    /** Server: climb out and stand 3 blocks in front of the suit facing away from it (yaw 0 looks +Z), or climb back in. */
+    private static void onFoot(Minecraft mc, boolean out) {
+        onServer(mc, player -> {
+            if (out && player.getVehicle() instanceof PowerArmorEntity suit) {
+                parkedSuit = suit;
+                player.stopRiding();
+                player.teleportTo(suit.getX(), suit.getY(), suit.getZ() + 3);
+            } else if (!out && parkedSuit != null) {
+                player.startRiding(parkedSuit, true);
+            }
+        });
     }
 
     /** Server: put this tool (or nothing) in the socket of the suit the player sits in. */

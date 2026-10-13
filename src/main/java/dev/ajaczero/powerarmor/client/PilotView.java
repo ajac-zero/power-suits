@@ -25,15 +25,30 @@ public final class PilotView {
         }
     }
 
-    /** No vanilla hands while piloting: the cockpit viewmodel (CockpitHands) shows the suit's tool and gauntlet. */
+    private static boolean toolDrawn;
+
+    /**
+     * The hand pass while piloting: the socket tool takes the off hand's place (vanilla's off-hand item isn't drawn), and
+     * the main hand stays vanilla's: a held item is left to vanilla, an empty hand becomes the suit's gauntlet
+     * (CockpitHands). The tool is drawn with whichever hand vanilla renders first this frame (with a bow or crossbow in
+     * use vanilla renders only one hand).
+     */
     @SubscribeEvent
-    public static void hideHand(RenderHandEvent event) {
+    public static void cockpitHands(RenderHandEvent event) {
         var player = Minecraft.getInstance().player;
-        if (player != null && player.getVehicle() instanceof PowerArmorEntity suit) {
+        if (player == null || !(player.getVehicle() instanceof PowerArmorEntity suit)) {
+            return;
+        }
+        boolean main = event.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND;
+        if (main || !toolDrawn) {
+            CockpitHands.renderTool(event, suit);
+        }
+        toolDrawn = main; // the off hand comes after the main hand in the same frame
+        if (!main) {
             event.setCanceled(true);
-            if (event.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND) {
-                CockpitHands.render(event, player, suit);
-            }
+        } else if (event.getItemStack().isEmpty()) {
+            event.setCanceled(true);
+            CockpitHands.renderGauntlet(event, suit);
         }
     }
 

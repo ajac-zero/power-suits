@@ -7,7 +7,7 @@ Two roots, each moved so its joint sits on the origin (CockpitHands places them 
   view_tool      every socket tool (left forearm) with its moving parts (drill_bit, chainsaw_chain, the rivet gun's drum, piston and vent), and the
                  empty-socket stump (ring + plate + pins, only shown when nothing is installed); hangs down -Y
                  from the socket like on the suit.
-  view_gauntlet  the right wrist, hand and fingers with the right_hand grip bone for the held item; hangs down -Y
+  view_gauntlet  the right wrist, hand and fingers (the empty main hand; held items are vanilla's); hangs down -Y
                  from the elbow.
 Trimmed for the first-person view: the socket ring and the gauntlet's elbow cuff sat right in front of the
 camera as big blocks, so the ring only shows as part of the empty stump and the cuff is left out.
