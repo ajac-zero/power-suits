@@ -25,6 +25,24 @@ public final class PilotView {
         }
     }
 
+    /**
+     * Vanilla paints the screen with a block's texture when your head is inside it, and with flames while you burn. The
+     * pilot's head sits forward in the visor and grazes a wall the suit leans against (the suit itself isn't in it), and
+     * a powered suit takes the pilot's fire on its own hull (SuitSeal): neither should cover the cockpit view. A
+     * knocked-out or empty suit shows the flames again: no power, no seal.
+     */
+    @SubscribeEvent
+    public static void cockpitOverlays(net.neoforged.neoforge.client.event.RenderBlockScreenEffectEvent event) {
+        if (!(event.getPlayer().getVehicle() instanceof PowerArmorEntity suit)) {
+            return;
+        }
+        switch (event.getOverlayType()) {
+            case BLOCK -> event.setCanceled(!suit.isInWall());
+            case FIRE -> event.setCanceled(suit.isPowered());
+            default -> {}
+        }
+    }
+
     private static boolean toolDrawn;
 
     /**

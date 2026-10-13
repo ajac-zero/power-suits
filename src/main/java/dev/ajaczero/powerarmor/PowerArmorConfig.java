@@ -106,6 +106,37 @@ public final class PowerArmorConfig {
             .comment("How fast a tree comes down (logs per tick).").translation(key("chainsaw_logs_per_tick"))
             .defineInRange("logs_per_tick", 3, 1, 64);
 
+    // ---- the suit itself ---------------------------------------------------------------------------
+    public static final ModConfigSpec.DoubleValue SEAL_ENERGY_PER_DAMAGE = B.pop().translation(key("suit")).push("suit")
+            .comment("Sealed suit: fire, frost, magma, cactus and effect damage cost this much energy per point of damage instead of",
+                    "hurting the suit (only while powered; lava still hurts the hull). 20 = a second of walking per point.").translation(key("seal_energy_per_damage"))
+            .defineInRange("seal_energy_per_damage", 20.0, 0, 10_000);
+    public static final ModConfigSpec.IntValue SEAL_EFFECT_ENERGY = B
+            .comment("Energy to keep one harmful effect (poison, wither, slowness...) away from the pilot. Good effects still get through.").translation(key("seal_effect_energy"))
+            .defineInRange("seal_effect_energy", 100, 0, 100_000);
+    public static final ModConfigSpec.DoubleValue AIR_ENERGY_PER_TICK = B
+            .comment("Extra energy per tick while the pilot's head is under water: the suit feeds them air.").translation(key("air_energy_per_tick"))
+            .defineInRange("air_energy_per_tick", 0.5, 0, 100);
+    public static final ModConfigSpec.DoubleValue MELEE_BONUS = B
+            .comment("Extra melee damage for the pilot's hand, with or without a weapon (2 = one heart).").translation(key("melee_bonus"))
+            .defineInRange("melee_bonus", 4.0, 0, 1000);
+    public static final ModConfigSpec.DoubleValue STOMP_MIN_FALL = B
+            .comment("Landings from at least this high (blocks) hurt everything around (a jump on flat ground is ~2.3).").translation(key("stomp_min_fall"))
+            .defineInRange("stomp_min_fall", 3.5, 0, 256);
+    public static final ModConfigSpec.DoubleValue STOMP_DAMAGE_PER_BLOCK = B
+            .comment("Stomp damage per block fallen, at the centre (half of it at the edge of the shock wave).").translation(key("stomp_damage_per_block"))
+            .defineInRange("stomp_damage_per_block", 2.0, 0, 1000);
+    public static final ModConfigSpec.DoubleValue STOMP_MAX_DAMAGE = B
+            .comment("Most damage a stomp can do.").translation(key("stomp_max_damage"))
+            .defineInRange("stomp_max_damage", 30.0, 0, 10_000);
+    public static final ModConfigSpec.IntValue LIGHTNING_STUN_TICKS = B
+            .comment("A lightning strike knocks the suit out for this many ticks (sparks, slump), then it restarts.").translation(key("lightning_stun_ticks"))
+            .defineInRange("lightning_stun_ticks", 100, 0, 6000);
+    public static final ModConfigSpec.BooleanValue SMASH_BLOCKS = B
+            .comment("Walking breaks leaves, panes, cobwebs, snow layers (block tag powerarmor:suit_smashes_walking); sprinting also",
+                    "breaks glass and ice (powerarmor:suit_smashes_sprinting). Nothing drops.").translation(key("smash_blocks"))
+            .define("smash_blocks", true);
+
     public static final ModConfigSpec SPEC = B.pop().build();
 
     private static String key(String name) {

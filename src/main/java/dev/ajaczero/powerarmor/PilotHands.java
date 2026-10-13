@@ -20,19 +20,23 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 
 /**
  * What the pilot's hands can do from inside the suit. The suit's right hand is the pilot's main hand and works as
- * normal: punch, mine, fight, place blocks, eat, open doors (decided 2026-10-13; it used to be blocked so left click
+ * normal: punch, mine, fight, place blocks, open doors (decided 2026-10-13; it used to be blocked so left click
  * could run the tool). The socket tool is the suit's off hand, used with right click when the hand has nothing to do
  * (ToolInput), so:
  *  - the player's real off-hand item isn't used while piloting (the suit has no second hand for it);
+ *  - no eating or drinking: the pilot is sealed in (food, potions, milk, honey, stew, cake). Food in the hand counts as
+ *    "nothing to do", so right click goes on to the socket tool;
  *  - a powered-down suit's hand doesn't move: no attacking, mining or using items;
  *  - mining isn't slowed down for riding (vanilla mines 5x slower when not standing on the ground) while the suit
  *    stands;
- *  - the suit's long arm reaches 1.5 blocks further.
+ *  - the suit's long arm reaches 1.5 blocks further;
+ *  - and hits harder: every melee hit (bare hand, sword, axe...) gets the configured damage bonus.
  */
 @EventBusSubscriber(modid = PowerArmor.MODID)
 public final class PilotHands {
     public static final double EXTRA_REACH = 1.5;
     private static final ResourceLocation REACH_ID = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "suit_reach");
+    private static final ResourceLocation DAMAGE_ID = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "suit_strength");
 
     private static PowerArmorEntity suitOf(Player player) {
         return player.getVehicle() instanceof PowerArmorEntity suit ? suit : null;
@@ -84,12 +88,44 @@ public final class PilotHands {
 
     @SubscribeEvent
     public static void useOnBlock(PlayerInteractEvent.RightClickBlock event) {
+        PowerArmorEntity suit = suitOf(event.getEntity());
+        var block = event.getLevel().getBlockState(event.getPos()).getBlock();
+        if (suit != null && (block instanceof net.minecraft.world.level.block.CakeBlock || block instanceof net.minecraft.world.level.block.CandleCakeBlock)) {
+            // Cake is eaten by right-clicking the block itself. Deny only the block's reaction: the item in hand
+            // (a block to place, say) still gets its turn.
+            event.setUseBlock(net.neoforged.neoforge.common.util.TriState.FALSE);
+        }
         checkUse(event, event);
     }
 
     @SubscribeEvent
     public static void useItem(PlayerInteractEvent.RightClickItem event) {
+        PowerArmorEntity suit = suitOf(event.getEntity());
+        if (suit != null && event.getHand() == InteractionHand.MAIN_HAND && isEatOrDrink(event.getItemStack())) {
+            // FAIL (not CONSUME): the click isn't used up, so vanilla moves on to the off hand = the socket tool
+            // (ToolInput). Holding bread then works like holding a stick, instead of blocking the tool.
+            event.setCanceled(true);
+            event.setCancellationResult(net.minecraft.world.InteractionResult.FAIL);
+            if (event.getLevel().isClientSide() && suit.getSocketStack().isEmpty()) {
+                event.getEntity().displayClientMessage(Component.translatable("message.powerarmor.sealed_in"), true);
+            }
+            return;
+        }
         checkUse(event, event);
+    }
+
+    /** Food (eating) and drinks (potions, milk, honey bottles...): what vanilla plays the eat / drink animation for. */
+    public static boolean isEatOrDrink(net.minecraft.world.item.ItemStack stack) {
+        var anim = stack.getUseAnimation();
+        return anim == net.minecraft.world.item.UseAnim.EAT || anim == net.minecraft.world.item.UseAnim.DRINK;
+    }
+
+    /** Backstop for anything that starts eating or drinking without a right click (other mods): refuse it. */
+    @SubscribeEvent
+    public static void startEating(net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Start event) {
+        if (event.getEntity() instanceof Player player && suitOf(player) != null && isEatOrDrink(event.getItem())) {
+            event.setCanceled(true);
+        }
     }
 
     @SubscribeEvent
@@ -142,6 +178,32 @@ public final class PilotHands {
             if (event.isMounting()) {
                 instance.addTransientModifier(new AttributeModifier(REACH_ID, EXTRA_REACH, AttributeModifier.Operation.ADD_VALUE));
             }
+        }
+        AttributeInstance damage = player.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (damage != null) {
+            damage.removeModifier(DAMAGE_ID);
+            if (event.isMounting()) {
+                refreshBonuses(player);
+            }
+        }
+    }
+
+    /**
+     * The melee bonus: a modifier on the pilot's ATTACK_DAMAGE attribute. A weapon's damage is also a modifier on that
+     * attribute (a diamond sword adds 6 to the base 1), so adding ours there makes every melee hit stronger, armed or not,
+     * while bows, tridents thrown and the socket tools stay as they are. Server, on boarding and every tick (the value is
+     * a config option that can change while you sit in the suit; replacing it only when it differs is cheap).
+     */
+    public static void refreshBonuses(Player player) {
+        AttributeInstance damage = player.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (damage == null) {
+            return;
+        }
+        double bonus = dev.ajaczero.powerarmor.PowerArmorConfig.MELEE_BONUS.get();
+        AttributeModifier current = damage.getModifier(DAMAGE_ID);
+        if (current == null || current.amount() != bonus) {
+            damage.removeModifier(DAMAGE_ID);
+            damage.addTransientModifier(new AttributeModifier(DAMAGE_ID, bonus, AttributeModifier.Operation.ADD_VALUE));
         }
     }
 

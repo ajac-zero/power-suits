@@ -91,6 +91,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     // ---- Water (Fallout-style: the suit sinks and walks along the bottom) ----------------------
     /** Speed on the bottom relative to dry land. */
     private static final float UNDERWATER_SPEED = 0.5F;
+    /** Lava is thicker: the suit wades through it (and its hull burns) at a third of its speed. */
+    private static final float LAVA_SPEED = 0.35F;
     /** Steering while sinking / rising, relative to UNDERWATER_SPEED. */
     private static final float UNDERWATER_AIR_CONTROL = 0.3F;
     /** Downward acceleration per tick and the vertical drag: terminal sink ~2.8 blocks/s. */
@@ -165,6 +167,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> TOOL_SHOTS =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
+    /** True while a lightning strike has knocked the suit out (it restarts by itself): the slump starts with sparks. */
+    private static final EntityDataAccessor<Boolean> STUNNED =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     /** Copies of the two slots, so clients can show the fuel left and (Phase 2) draw the socket tool. */
     private static final EntityDataAccessor<ItemStack> FUEL_ITEM =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
@@ -212,6 +217,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private float emCoreGlow, emArcGlow;
     private final float[] visorColor = {1F, 0.68F, 0.22F};
     private int redTicks;
+    /** Server: ticks left of a lightning knock-out (0 = none). */
+    private int stunTicks;
+    /** Server: when the seal last paid for keeping fire/frost out (SuitSeal: once per half second, like hit immunity). */
+    public int lastSealTick = -100;
+    /** Client: ticks since the lightning knock-out began (sparks fly for the first second). */
+    private int sparkTicks = -1;
 
     /** Ticks to stay around after dying so the death animation (2.68 s) can finish. */
     private static final int DEATH_TICKS = 60;
@@ -231,6 +242,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final RawAnimation SHUTDOWN = RawAnimation.begin().thenPlayAndHold("animation.power_armor.shutdown");
     private static final RawAnimation POWERED_OFF = RawAnimation.begin().thenPlayAndHold("animation.power_armor.powered_off");
     private static final RawAnimation STARTUP = RawAnimation.begin().thenPlay("animation.power_armor.startup");
+    // Struck by lightning: convulse (the electrified loop, played once) and then slump like an empty tank. thenPlay would
+    // use the JSON's loop setting ("loop": true for electrified) and convulse forever; PLAY_ONCE moves on to the slump.
+    private static final RawAnimation ZAPPED = RawAnimation.begin()
+            .then("animation.power_armor.electrified", software.bernie.geckolib.animation.Animation.LoopType.PLAY_ONCE)
+            .thenPlayAndHold("animation.power_armor.shutdown");
     private static final RawAnimation TOOL_RECOIL = RawAnimation.begin().thenPlay("animation.power_armor.tool_recoil");
     // Right hand (a_hand.js): carry pose while the pilot holds something, quick reach on every use.
     private static final RawAnimation HOLD_ITEM = RawAnimation.begin().thenLoop("animation.power_armor.hold_item");
@@ -279,6 +295,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(TOOL_HEAT, 0F);
         builder.define(TOOL_SHOTS, 0);
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
+        builder.define(STUNNED, false);
     }
 
     /** Base stats. The single source of truth: also re-applied to suits loaded from old saves. */
@@ -335,18 +352,25 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Server: one tick of the engine. Only a piloted suit burns fuel; a parked one is switched off. */
     private void tickFuel() {
         Player pilot = this.getControllingPassenger() instanceof Player p ? p : null;
-        if (pilot != null) {
+        if (this.stunTicks > 0 && --this.stunTicks == 0) {
+            this.entityData.set(STUNNED, false); // back on: setPowered below plays the startup
+        }
+        if (pilot != null && this.stunTicks == 0) { // a knocked-out engine burns nothing
             if (this.burnLeft <= 0) {
                 this.igniteNextItem();
             }
             if (this.burnLeft > 0) {
-                this.burnLeft = Math.max(0, this.burnLeft - drainPerTick(pilot));
+                float drain = drainPerTick(pilot);
+                if (dev.ajaczero.powerarmor.SuitSeal.feedsAir(pilot)) {
+                    drain += PowerArmorConfig.AIR_ENERGY_PER_TICK.get().floatValue(); // the pilot breathes the suit's air
+                }
+                this.burnLeft = Math.max(0, this.burnLeft - drain);
                 if (this.burnLeft <= 0) {
                     this.igniteNextItem(); // hand over to the next item without a gap, like a furnace
                 }
             }
         }
-        this.setPowered(this.hasEnergy());
+        this.setPowered(this.hasEnergy() && this.stunTicks == 0);
         this.syncBurn();
     }
 
@@ -403,7 +427,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.playSound(SoundEvents.BEACON_DEACTIVATE, 1.0F, 0.6F);
             this.playSound(SoundEvents.IRON_GOLEM_DAMAGE, 0.6F, 0.5F);
             if (this.getControllingPassenger() instanceof Player pilot) {
-                pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.out_of_fuel"), true);
+                pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                        this.stunTicks > 0 ? "message.powerarmor.lightning" : "message.powerarmor.out_of_fuel"), true);
             }
         }
     }
@@ -973,8 +998,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      */
     @Override
     public void travel(Vec3 travelVector) {
-        if (this.isInWater() && this.isControlledByLocalInstance()) {
-            this.travelUnderwater(travelVector);
+        if ((this.isInWater() || this.isInLava()) && this.isControlledByLocalInstance()) {
+            this.travelUnderwater(travelVector); // lava too: vanilla's lava swimming crawled at 0.4 blocks/s
             return;
         }
         boolean wasOnGround = this.onGround();
@@ -995,7 +1020,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      * controls the suit (the pilot's client, or the server for an empty suit).
      */
     private void travelUnderwater(Vec3 input) {
-        float speed = this.getSpeed() * UNDERWATER_SPEED * (this.onGround() ? 1.0F : UNDERWATER_AIR_CONTROL);
+        float fluidSpeed = this.isInLava() ? LAVA_SPEED : UNDERWATER_SPEED;
+        float speed = this.getSpeed() * fluidSpeed * (this.onGround() ? 1.0F : UNDERWATER_AIR_CONTROL);
         this.moveRelative(speed, input);
         this.move(MoverType.SELF, this.getDeltaMovement());
         Vec3 v = this.getDeltaMovement();
@@ -1077,11 +1103,24 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        if (!this.level().isClientSide() && dev.ajaczero.powerarmor.SuitSeal.absorbs(this, source, amount)) {
+            return false; // fire, frost & co. kept out by the seal, paid in fuel
+        }
         boolean damaged = super.hurt(source, amount);
-        if (damaged && !this.level().isClientSide() && this.isAlive()) {
+        if (damaged && !this.level().isClientSide() && this.isAlive() && this.reactsToHits()) {
             this.triggerAnim("action", "hit"); // play the flinch on every client
         }
         return damaged;
+    }
+
+    /** Vanilla calls this on landing, with how far we fell. The suit takes no fall damage, but a big drop stomps:
+     *  everything around the landing spot gets hurt, friend or foe. Runs on the server (it moves the suit too, from the
+     *  pilot's position packets) and on the pilot's client, which only plays the sound. */
+    /** Only a running suit flinches when hit. Switched off (empty, knocked out, still standing up) it can't react: and the
+     *  flinch (on the "action" controller, which overrides the body's controller) would cut into the electrified
+     *  convulsion, the slump or the startup, e.g. on every tick of fire after a lightning strike. */
+    public boolean reactsToHits() {
+        return this.canOperate();
     }
 
     @Override
@@ -1089,7 +1128,40 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (fallDistance > 3) {
             this.playSound(SoundEvents.ANVIL_LAND, 0.6F, 0.5F); // heavy landing, no damage
         }
+        if (this.level() instanceof ServerLevel level && fallDistance >= PowerArmorConfig.STOMP_MIN_FALL.get()) {
+            this.lastStompVictims = SuitStomp.stomp(this, level, fallDistance);
+        }
         return false;
+    }
+
+    /** Server: how many things the last stomp hit (tests and dev logs). */
+    public int lastStompVictims = -1;
+
+    /** Struck by lightning (vanilla sets us on fire and hurts us first): the electrics trip. A suit with fuel shuts down,
+     *  convulsing, and restarts by itself after a few seconds; until then it can't move, fight or keep fire out. */
+    @Override
+    public void thunderHit(ServerLevel level, net.minecraft.world.entity.LightningBolt lightning) {
+        boolean wasPowered = this.isPowered();
+        // Knock it out first, so the strike's damage below finds it already off: no flinch over the convulsion.
+        int ticks = PowerArmorConfig.LIGHTNING_STUN_TICKS.get();
+        if (this.isAlive() && ticks > 0 && this.hasEnergy()) {
+            this.stunTicks = ticks;
+            this.entityData.set(STUNNED, true);
+            this.setPowered(false);
+            this.stopTriggeredAnim("action", "hit"); // a flinch from just before the strike mustn't play over it either
+        }
+        if (!wasPowered) {
+            super.thunderHit(level, lightning); // no power, no resistance: it catches fire like anything else
+        } else {
+            // Running: the strike doesn't set the steel alight (vanilla would), it fries the electrics. Once knocked
+            // out, the fire the bolt usually leaves at the suit's feet will catch it.
+            this.hurt(this.damageSources().lightningBolt(), lightning.getDamage());
+        }
+    }
+
+    /** Both sides: knocked out by lightning (synced). */
+    public boolean isStunned() {
+        return this.entityData.get(STUNNED);
     }
 
     @Override
@@ -1157,13 +1229,22 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     @Override
     public void tick() {
+        this.putOutFire(); // before baseTick, which decides whether clients see flames (see putOutFire)
         super.tick();
         if (!this.level().isClientSide() && this.isAlive()) {
             this.tickFuel();
             this.tickTool();
+            this.putOutFire();
+            if (this.getControllingPassenger() instanceof Player pilot) {
+                dev.ajaczero.powerarmor.PilotHands.refreshBonuses(pilot);
+                if (this.canOperate()) {
+                    SuitSmash.tick(this, pilot);
+                }
+            }
         }
         this.tickPowerTransitions();
         if (this.level().isClientSide()) {
+            this.putOutFire(); // the pilot's client moved us (and maybe into fire) during super.tick()
             float aimTarget = this.isVehicle() && this.canOperate() ? 1F : 0F;
             this.aimBlend += (aimTarget - this.aimBlend) * 0.2F;
             // Raise the tool arm in 3 ticks while the tool is used, lower it in 5 (heavier on the way down).
@@ -1171,6 +1252,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.toolRaise = this.isToolActive() && this.isVehicle() ? Math.min(1F, this.toolRaise + 1F / 3F)
                     : Math.max(0F, this.toolRaise - 1F / 5F);
             this.tickLights();
+            this.tickSparks();
             ExhaustSmoke.tick(this);
             EmBeamEffects.tick(this);
             this.tickHandSwing();
@@ -1182,6 +1264,21 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.visualSpeed += (speed - this.visualSpeed) * 0.4;
             tickStepSmoothing();
             tickAirborneAnimationState();
+        }
+    }
+
+    /**
+     * Both sides: a running suit doesn't burn. Whatever set it alight (a fire block, a flaming arrow, the lava it just
+     * left) is put out at the start and the end of each tick. Server: vanilla's baseTick, early in the tick, turns "fire
+     * ticks left" into the "on fire" flag other clients draw flames from, and a piloted suit also touches fire between
+     * ticks (it's moved when the pilot's movement packet arrives). Client: the pilot's client moves the suit itself, sets
+     * its own fire ticks when it touches a fire block, and draws flames from those. Contact with fire still costs fuel
+     * (SuitSeal). Not fireImmune(): that would also make lava and fire blocks free. In lava it keeps burning; with no
+     * power it burns like anything else.
+     */
+    private void putOutFire() {
+        if (this.isAlive() && this.isPowered() && !this.isInLava()) {
+            this.clearFire();
         }
     }
 
@@ -1232,6 +1329,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         } else {
             if (this.airTicks >= LAND_AFTER_TICKS) {
                 this.landTicks = LAND_TICKS;
+                SuitStomp.landingDust(this, this.airTicks);
             }
             this.airTicks = 0;
             this.jumped = false;
@@ -1270,8 +1368,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             return state.setAndContinue(DEATH);
         }
         if (!this.isPowered()) {
-            state.getController().transitionLength(4);
-            return state.setAndContinue(this.wasOffWhenLoaded ? POWERED_OFF : SHUTDOWN);
+            state.getController().transitionLength(this.isStunned() ? 1 : 4); // a strike jolts, it doesn't ease in
+            return state.setAndContinue(this.wasOffWhenLoaded ? POWERED_OFF : this.isStunned() ? ZAPPED : SHUTDOWN);
         }
         if (this.startupTicks > 0) {
             state.getController().transitionLength(2);
@@ -1315,6 +1413,32 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             return PlayState.STOP;
         }
         return state.setAndContinue(HOLD_ITEM);
+    }
+
+    /** Client: sparks crawl over the suit for the first second of a lightning knock-out (while it convulses). Only on the
+     *  legs and hips: particles near the cockpit camera turn into big blobs. */
+    private void tickSparks() {
+        if (!this.isStunned()) {
+            this.sparkTicks = -1;
+            return;
+        }
+        this.sparkTicks++;
+        if (this.sparkTicks > 24) {
+            return;
+        }
+        float yaw = this.yBodyRot * Mth.DEG_TO_RAD;
+        for (int i = 0; i < 3; i++) {
+            double side = (this.random.nextDouble() - 0.5) * 1.4, front = (this.random.nextDouble() - 0.5) * 0.8;
+            double x = this.getX() + side * Mth.cos(yaw) - front * Mth.sin(yaw);
+            double z = this.getZ() + side * Mth.sin(yaw) + front * Mth.cos(yaw);
+            double y = this.getY() + 0.2 + this.random.nextDouble() * 1.1;
+            this.level().addParticle(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, x, y, z,
+                    this.random.nextGaussian() * 0.15, this.random.nextGaussian() * 0.15, this.random.nextGaussian() * 0.15);
+        }
+        if (this.sparkTicks % 6 == 0) {
+            this.level().playLocalSound(this.getX(), this.getY() + 1, this.getZ(), SoundEvents.COPPER_BULB_TURN_OFF,
+                    net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 0.6F + this.random.nextFloat() * 0.6F, false);
+        }
     }
 
     /** Client, every tick: follow the socket tool's synced spin and shots. The chaingun's barrels turn by the spin (up to
@@ -1404,7 +1528,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 || this.airTicks >= FALL_POSE_AFTER_TICKS || this.landTicks > 0) {
             return 1.0;
         }
-        double water = this.isInWater() ? UNDERWATER_SPEED : 1.0; // slow-motion steps on the bottom
+        double water = this.isInWater() ? UNDERWATER_SPEED : this.isInLava() ? LAVA_SPEED : 1.0; // slow-motion steps on the bottom
         if (!this.isWalking()) {
             return (this.realigning ? 0.6 : 1.0) * water; // turning on the spot: a slower step cycle
         }

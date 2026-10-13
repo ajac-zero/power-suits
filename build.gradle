@@ -69,6 +69,12 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'true'
         }
 
+        // Dev tool: only the last scene of the autopilot (smashing blocks, stomp, lightning, lava, punch), ~25 s.
+        autopilotMech {
+            client()
+            systemProperty 'powerarmor.autopilot', 'mech'
+        }
+
         // Dev tool: live-tunes the cockpit viewmodel (see AutoPilot.viewTuner); stays open until closed.
         autopilotView {
             client()

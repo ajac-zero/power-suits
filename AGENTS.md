@@ -39,6 +39,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew build` | compile + jar |
 | `./gradlew runGameTestServer` | headless GameTests in `src/main/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
 | `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, chaingun range, right hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
+| `./gradlew runAutopilotMech` | only the autopilot's last scene (~25 s): smashing blocks, stomp, lightning, punch, lava + poison; `ap_mech_*.png`, `run/autopilot_mech.csv` |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
@@ -173,6 +174,24 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   put the arm swing in phase with the wrong leg and doubled the torso sway on the stabilised tool arm. The specs
   in `model/anim/` still describe the old rig (`kit.json` mirrors them on bake), so their `right_*`
   is today's `left_*`. Hand-held tool items are mirrored back in `extract-tool-geo.py`.
+- **GeckoLib `thenPlay` uses the JSON's loop setting**: `thenPlay("electrified")` (a `"loop": true` animation) convulsed
+  forever and never reached the chained slump. Chain after a looping animation with `then(name, LoopType.PLAY_ONCE)`.
+- **The pilot's head pokes out of the suit's hitbox** (eye 0.55 forward, player width 0.6): pressed against a wall, vanilla
+  thought the pilot was suffocating (hull damage every 10 ticks, block texture over the screen). `PilotProtection` drops
+  IN_WALL unless the suit itself is in a wall; `PilotView.cockpitOverlays` cancels the overlay.
+- **The pilot's own tick re-ignites them** (their box touches a fire block at the suit's feet): clearing the pilot's fire in
+  the suit's tick left the burning flag on every tick. Move pilot state at the end of their tick (`PlayerTickEvent.Post`,
+  `SuitSeal.afterPlayerTick`) and cancel client overlays as a backstop.
+- **NeoForge renames poison damage**: the poison effect hurts with `neoforge:poison` (tag `neoforge:is_poison`), not vanilla's
+  `magic`; a check for `DamageTypes.MAGIC` alone missed it. Match damage by tags where NeoForge has one.
+- **Fire is tracked on both sides**: the pilot's client moves the suit, touches fire blocks itself and draws flames from its
+  own fire ticks, while the server's baseTick (early in the tick) sets the "on fire" flag other clients see, and a piloted
+  suit also touches fire between ticks (move packets). Putting a running suit out needs `clearFire()` at the start and end
+  of the tick on both sides (`PowerArmorEntity.putOutFire`); log the client's `isOnFire()`, not only the server's.
+- **Damage you cancel never reaches vanilla's hit immunity**: a fire block "hits" every tick, so paying fuel per absorbed hit
+  needs its own half-second cooldown (`SuitSeal.SEAL_COOLDOWN_TICKS`).
+- **Blocks broken by walking must be broken ahead of the suit** (`SuitSmash`): ridden movement is client-side, so the client
+  hits a pane before the server could break it; the server clears a box reaching 0.6 / 1.1 blocks ahead along the input.
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
   `model/anim/` (walk/run carry a tool-arm `stabilize()` wrapper). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.

@@ -1122,6 +1122,243 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
+    // =========================================================================================
+    // The suit's own mechanics: sealing, stomp, lightning, melee bonus, smashing through blocks
+    // =========================================================================================
+
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void sealKeepsFireOutForFuel(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player pilot = boardedPilot(helper, suit);
+        helper.runAfterDelay(5, () -> {
+            var sources = helper.getLevel().damageSources();
+            float before = suit.getBurnLeftExact();
+            pilot.hurt(sources.onFire(), 1F); // redirected to the suit (PilotProtection), where the seal pays for it
+            float paid = before - suit.getBurnLeftExact();
+            helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "fire must not hurt a powered suit, health " + suit.getHealth());
+            helper.assertTrue(pilot.getHealth() == pilot.getMaxHealth(), "nor its pilot");
+            helper.assertTrue(Math.abs(paid - PowerArmorConfig.SEAL_ENERGY_PER_DAMAGE.get()) < 0.01, "one point of fire should cost its energy, paid " + paid);
+            float before2 = suit.getBurnLeftExact();
+            suit.hurt(sources.inFire(), 1F); // the next tick of fire within the half second is already paid for
+            helper.assertTrue(suit.getBurnLeftExact() == before2, "fire within the half-second immunity is free");
+            suit.hurt(sources.lava(), 4F);
+            helper.assertTrue(suit.getHealth() < suit.getMaxHealth(), "lava still eats the hull");
+            suit.igniteForSeconds(5);   // a flaming arrow, say
+            pilot.igniteForSeconds(5);
+        });
+        helper.runAfterDelay(8, () -> {
+            helper.assertTrue(!suit.isOnFire(), "a running suit doesn't burn");
+            helper.assertTrue(!pilot.isOnFire(), "nor does its pilot");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 20)
+    public static void unpoweredSuitBurns(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY);
+        helper.runAfterDelay(2, () -> suit.igniteForSeconds(5));
+        helper.runAfterDelay(6, () -> {
+            helper.assertTrue(suit.isOnFire(), "with no power the suit catches fire like anything else");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 20)
+    public static void unpoweredSuitIsNotSealed(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY);
+        Player pilot = boardedPilot(helper, suit);
+        helper.runAfterDelay(2, () -> {
+            pilot.hurt(helper.getLevel().damageSources().onFire(), 2F);
+            helper.assertTrue(suit.getHealth() < suit.getMaxHealth(), "without power, fire hurts the hull");
+            pilot.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 100));
+            helper.assertTrue(pilot.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "without power, poison reaches the pilot");
+            var breathe = new net.neoforged.neoforge.event.entity.living.LivingBreatheEvent(pilot, false, 1, 4);
+            NeoForge.EVENT_BUS.post(breathe);
+            helper.assertTrue(!breathe.canBreathe(), "without power, the pilot can't breathe under water");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 20)
+    public static void sealBlocksHarmfulEffectsAndFeedsAir(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player pilot = boardedPilot(helper, suit);
+        helper.runAfterDelay(2, () -> {
+            float before = suit.getBurnLeftExact();
+            pilot.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 100));
+            helper.assertTrue(!pilot.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "poison should be kept out");
+            helper.assertTrue(Math.abs(before - suit.getBurnLeftExact() - PowerArmorConfig.SEAL_EFFECT_ENERGY.get()) < 0.01, "and cost fuel");
+            pilot.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, 100));
+            helper.assertTrue(pilot.hasEffect(net.minecraft.world.effect.MobEffects.REGENERATION), "good effects get through");
+            var breathe = new net.neoforged.neoforge.event.entity.living.LivingBreatheEvent(pilot, false, 1, 4);
+            NeoForge.EVENT_BUS.post(breathe);
+            helper.assertTrue(breathe.canBreathe(), "a powered suit feeds its pilot air");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 220)
+    public static void lightningKnocksTheSuitOutThenItRestarts(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player pilot = boardedPilot(helper, suit);
+        int stun = PowerArmorConfig.LIGHTNING_STUN_TICKS.get();
+        helper.runAfterDelay(5, () -> {
+            helper.assertTrue(suit.canOperate(), "suit should be running");
+            var bolt = EntityType.LIGHTNING_BOLT.create(helper.getLevel());
+            bolt.moveTo(suit.position());
+            suit.thunderHit(helper.getLevel(), bolt);
+            helper.assertTrue(suit.isStunned() && !suit.isPowered() && !suit.canOperate(), "a strike knocks the suit out");
+            helper.assertTrue(suit.getRemainingFireTicks() <= 0, "but doesn't set the running suit alight by itself");
+            helper.assertTrue(!suit.reactsToHits(), "a knocked-out suit doesn't flinch (the convulsion plays undisturbed)");
+            helper.assertTrue(suit.getHealth() < suit.getMaxHealth(), "and hurts it");
+            helper.assertTrue(pilot.getVehicle() == suit, "the pilot stays inside");
+        });
+        helper.runAfterDelay(5 + stun / 2, () -> helper.assertTrue(!suit.isPowered(), "still out halfway through"));
+        helper.runAfterDelay(5 + stun + 3, () -> helper.assertTrue(suit.isPowered() && !suit.isStunned(), "it restarts by itself"));
+        helper.runAfterDelay(5 + stun + 3, () -> helper.assertTrue(!suit.reactsToHits(), "nor while it stands back up"));
+        helper.runAfterDelay(5 + stun + 40, () -> {
+            helper.assertTrue(suit.canOperate() && suit.reactsToHits(), "and runs (and flinches) again after the startup");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 20)
+    public static void lightningOnAnEmptyTankDoesNotStun(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY);
+        helper.runAfterDelay(2, () -> {
+            var bolt = EntityType.LIGHTNING_BOLT.create(helper.getLevel());
+            suit.thunderHit(helper.getLevel(), bolt);
+            helper.assertTrue(!suit.isStunned(), "nothing to knock out without fuel");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 30)
+    public static void stompHurtsEverythingAroundButThePilot(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player pilot = boardedPilot(helper, suit);
+        Pig near = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 6));   // 2 blocks from the suit's centre
+        Pig far = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 8));    // 4 blocks: outside the shock wave
+        helper.runAfterDelay(3, () -> {
+            var fall = helper.getLevel().damageSources().fall();
+            suit.causeFallDamage(2.3F, 1F, fall); // a jump on flat ground: just a thud
+            helper.assertTrue(near.getHealth() == near.getMaxHealth(), "a normal jump must not stomp");
+            suit.causeFallDamage(6F, 1F, fall);
+            float expected = (float) Math.min(PowerArmorConfig.STOMP_MAX_DAMAGE.get(), PowerArmorConfig.STOMP_DAMAGE_PER_BLOCK.get() * 6);
+            float dealt = near.getMaxHealth() - near.getHealth();
+            helper.assertTrue(dealt > 0 && (near.isDeadOrDying() || dealt >= expected * 0.5F - 0.01F), "the near pig should be hurt, took " + dealt);
+            helper.assertTrue(near.getLastDamageSource() != null && near.getLastDamageSource().getEntity() == pilot, "credited to the pilot");
+            helper.assertTrue(far.getHealth() == far.getMaxHealth(), "the far pig is out of reach");
+            helper.assertTrue(pilot.getHealth() == pilot.getMaxHealth() && suit.getHealth() == suit.getMaxHealth(), "the suit and its pilot are spared");
+            helper.assertTrue(near.getDeltaMovement().y > 0 || near.isDeadOrDying(), "the shock wave throws it up");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void pilotHitsHarder(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        double base = player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        player.moveTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        suit.interact(player, InteractionHand.MAIN_HAND);
+        double bonus = PowerArmorConfig.MELEE_BONUS.get();
+        helper.assertTrue(Math.abs(player.getAttributeValue(Attributes.ATTACK_DAMAGE) - base - bonus) < 1e-6,
+                "melee damage should grow by " + bonus + ", got " + player.getAttributeValue(Attributes.ATTACK_DAMAGE));
+        player.stopRiding();
+        helper.assertTrue(player.getAttributeValue(Attributes.ATTACK_DAMAGE) == base, "climbing out removes the bonus");
+        helper.succeed();
+    }
+
+    /** A suit at (4,2,2) facing +Z: its hitbox spans x 3.8..5.2, z 1.8..3.2; walking reaches 0.6 further (z 3.8), sprinting 1.1 (z 4.3). */
+    @GameTest(template = PAD, timeoutTicks = 20)
+    public static void walkingSmashesPanesAndLeavesSprintingAlsoGlass(GameTestHelper helper) {
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 2, 2));
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 4));
+        suit.setYRot(0);
+        Player pilot = boardedPilot(helper, suit);
+        pilot.setYRot(0);
+        BlockPos pane = new BlockPos(4, 3, 3), leaves = new BlockPos(5, 4, 3), glass = new BlockPos(4, 2, 4), wall = new BlockPos(4, 2, 7);
+        helper.setBlock(pane, Blocks.GLASS_PANE);
+        helper.setBlock(leaves, Blocks.OAK_LEAVES);
+        helper.setBlock(glass, Blocks.GLASS);
+        helper.setBlock(wall, Blocks.GLASS_PANE); // out of reach
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(dev.ajaczero.powerarmor.entity.SuitSmash.tick(suit, pilot) == 0, "standing still breaks nothing");
+            pilot.zza = 1;
+            dev.ajaczero.powerarmor.entity.SuitSmash.tick(suit, pilot);
+            helper.assertBlockNotPresent(Blocks.GLASS_PANE, pane);
+            helper.assertBlockNotPresent(Blocks.OAK_LEAVES, leaves);
+            helper.assertBlockPresent(Blocks.GLASS, glass); // full glass needs a sprint
+            helper.assertBlockPresent(Blocks.GLASS_PANE, wall);
+            pilot.setSprinting(true);
+            dev.ajaczero.powerarmor.entity.SuitSmash.tick(suit, pilot);
+            helper.assertBlockNotPresent(Blocks.GLASS, glass);
+            helper.assertTrue(helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    new AABB(helper.absolutePos(glass)).inflate(4)).isEmpty(), "smashed blocks drop nothing");
+            helper.succeed();
+        });
+    }
+
+    /** Sealed in: no eating or drinking. The refused click passes on (FAIL) so the socket tool can take it. */
+    @GameTest(template = PAD, timeoutTicks = 20)
+    public static void pilotCannotEatOrDrink(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player pilot = boardedPilot(helper, suit);
+        pilot.getFoodData().setFoodLevel(10);
+        helper.runAfterDelay(2, () -> {
+            for (ItemStack stack : List.of(new ItemStack(Items.BREAD), new ItemStack(Items.POTION), new ItemStack(Items.MILK_BUCKET),
+                    new ItemStack(Items.HONEY_BOTTLE), new ItemStack(Items.SUSPICIOUS_STEW))) {
+                pilot.setItemInHand(InteractionHand.MAIN_HAND, stack);
+                var result = net.neoforged.neoforge.common.CommonHooks.onItemRightClick(pilot, InteractionHand.MAIN_HAND);
+                helper.assertTrue(result == InteractionResult.FAIL, stack + " should be refused (and passed on), got " + result);
+                pilot.startUsingItem(InteractionHand.MAIN_HAND);
+                helper.assertTrue(!pilot.isUsingItem(), "the pilot must not start eating/drinking " + stack);
+            }
+            pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
+            helper.assertTrue(net.neoforged.neoforge.common.CommonHooks.onItemRightClick(pilot, InteractionHand.MAIN_HAND) == null,
+                    "other items are used as normal");
+            BlockPos cake = helper.absolutePos(new BlockPos(4, 2, 6));
+            helper.setBlock(new BlockPos(4, 2, 6), Blocks.CAKE);
+            var hit = new BlockHitResult(Vec3.atCenterOf(cake), Direction.UP, cake, false);
+            var event = net.neoforged.neoforge.common.CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, cake, hit);
+            helper.assertTrue(event.getUseBlock() == net.neoforged.neoforge.common.util.TriState.FALSE, "no cake from inside either");
+            pilot.stopRiding();
+            pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BREAD));
+            pilot.startUsingItem(InteractionHand.MAIN_HAND);
+            helper.assertTrue(pilot.isUsingItem(), "on foot the player eats as normal");
+            helper.succeed();
+        });
+    }
+
+    /** Effects already inside the pilot (food poisoning from before climbing in) hurt the pilot, not the suit. */
+    @GameTest(template = PAD, timeoutTicks = 20)
+    public static void poisonAlreadyInsideHurtsThePilot(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 200)); // ate a spider eye
+        player.moveTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        suit.interact(player, InteractionHand.MAIN_HAND);
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(player.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "the poison came in with the pilot");
+            // A poison tick (NeoForge's own damage type, neoforge:poison), then a wither tick.
+            float fuel = suit.getBurnLeftExact();
+            var types = helper.getLevel().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE);
+            player.invulnerableTime = 0;
+            player.hurt(new net.minecraft.world.damagesource.DamageSource(types.getHolderOrThrow(net.neoforged.neoforge.common.NeoForgeMod.POISON_DAMAGE)), 1F);
+            helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "poison must not reach the suit");
+            player.invulnerableTime = 0;
+            player.hurt(helper.getLevel().damageSources().wither(), 1F);
+            helper.assertTrue(player.getHealth() < player.getMaxHealth(), "poison hurts the pilot, health " + player.getHealth());
+            helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "not the suit, health " + suit.getHealth() + " from "
+                    + (suit.getLastDamageSource() == null ? "-" : suit.getLastDamageSource().getMsgId()));
+            helper.assertTrue(player.getLastDamageSource() != null && player.getLastDamageSource().is(net.minecraft.world.damagesource.DamageTypes.WITHER),
+                    "the wither tick reached the pilot");
+            helper.assertTrue(suit.getBurnLeftExact() == fuel, "and costs no fuel");
+            helper.succeed();
+        });
+    }
+
     private static ItemStack packedSuit(Player player) {
         return player.getInventory().items.stream().filter(s -> s.is(ModItems.POWER_ARMOR.get())).findFirst().orElse(ItemStack.EMPTY);
     }

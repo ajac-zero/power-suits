@@ -28,7 +28,8 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Block breaking for the mining tools (drill, chainsaw). Server side only.
+ * Block breaking for the mining tools (drill, chainsaw) and the suit smashing through glass and leaves
+ * ({@code SuitSmash}, without drops). Server side only.
  *
  * Breaking a block "properly" is more than {@code level.removeBlock}: other mods (land claims, spawn
  * protection) listen for {@link BlockEvent.BreakEvent} and may cancel it, the block gets a chance to react
@@ -63,6 +64,11 @@ public final class ToolMining {
      * (air, unbreakable, a protection mod said no). Drops follow vanilla: none in creative mode.
      */
     public static boolean breakBlock(ServerLevel level, BlockPos pos, Player pilot, ItemStack tool) {
+        return breakBlock(level, pos, pilot, tool, true);
+    }
+
+    /** Same, choosing whether the block drops anything (the suit smashing through glass drops nothing). */
+    public static boolean breakBlock(ServerLevel level, BlockPos pos, Player pilot, ItemStack tool, boolean drops) {
         BlockState state = level.getBlockState(pos);
         if (state.isAir() || state.getDestroySpeed(level, pos) < 0) {
             return false;
@@ -91,7 +97,7 @@ public final class ToolMining {
             return false;
         }
         broken.getBlock().destroy(level, pos, broken);
-        if (!pilot.isCreative()) {
+        if (drops && !pilot.isCreative()) {
             Block.dropResources(broken, level, pos, blockEntity, pilot, tool); // loot table + XP (ores)
         }
         if (pilot instanceof ServerPlayer sp) {

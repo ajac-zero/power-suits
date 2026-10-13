@@ -19,13 +19,18 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Climb out | Shift |
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
 | Install a tool | Put a power tool (Chaingun, EM Projector, Mining Drill, Chainsaw) in the menu's socket slot; it appears on the suit's left arm |
-| Your hand | Works as normal while piloting: the suit's right hand holds your selected item; left click punches, fights and mines, right click places, eats, opens doors... 1.5 blocks extra reach |
+| Your hand | Works as normal while piloting: the suit's right hand holds your selected item; left click punches, fights and mines, right click places, opens doors, throws potions... 1.5 blocks extra reach. No eating or drinking (you're sealed in): food in your hand counts as nothing to do, so right click goes to the tool |
 | Use the tool | Right-click when your hand has nothing to do (empty hand, a sword, aiming at the air with blocks...), like a shield in the off hand; hold it as long as you need. The tool arm raises while in use |
 | EM Projector | Hold right-click on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 1 fuel/tick while holding, 80 per throw |
 | Mining Drill | Hold right-click on a block: digs it and the 8 around it (a 3x3 face of a wall, floor or ceiling) like a diamond pickaxe + shovel. 20 fuel per block |
 | Chainsaw | Hold right-click on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 15 fuel per log |
 | Fire | Right-click while piloting (Chaingun): tap for heavy single shots, hold to spin up to a 10-a-second barrage toward your crosshair; one iron nugget per bullet |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
+| Sealed suit | While powered: fire, frost, magma, cactus/berry bushes and harmful effects (poison, wither, slowness...) don't reach you or the hull; keeping them out costs fuel. You breathe under water (0.5 fuel/tick extra). A running suit never catches fire (lava excepted: it burns while in it, the flames die as it steps out). Lava still eats the hull (wade through at a third of your speed). No power, no seal: an empty or knocked-out suit burns like anything else. What's already inside you stays yours: poison or wither you had when you climbed in (food poisoning) hurts you, not the suit |
+| Strength | Every melee hit from inside (bare hand, sword, axe...) does +4 damage |
+| Stomp | Landing from 3.5+ blocks hurts everything around you (not you): 2 damage per block fallen, up to 30, half at the edge of the shock wave (2-3.5 blocks); things get thrown. A normal jump doesn't stomp |
+| Smashing through | Walking breaks leaves, glass panes, cobwebs, snow layers, berry bushes, bamboo...; sprinting also breaks glass and ice. Nothing drops. Block tags `powerarmor:suit_smashes_walking` / `_sprinting`; can be switched off in the config |
+| Lightning | A strike knocks a fuelled suit out: it convulses, slumps (you're stuck, the seal is off, so the fire the bolt leaves at your feet usually catches it) and restarts by itself after 5 s; the flames die as it powers up |
 
 ### Balance and config
 Everything that costs fuel, plus damage, ranges and speeds, is in `config/powerarmor-common.toml` (in the
@@ -41,6 +46,7 @@ balance pass), with what one piece of coal (1600) buys:
 | EM Projector | 1 per tick holding, 80 per throw | 80 s of holding, or 20 throws |
 | Mining Drill | 20 per block (180 per 3x3) | ~9 faces (80 blocks) |
 | Chainsaw | 15 per log | ~20 oaks (5 logs each) |
+| Sealing | 20 per point of fire/frost damage kept out, 100 per harmful effect, +0.5 per tick of air under water | 80 s of burning |
 
 Coal and charcoal 1600, lava bucket 3200, blaze rod 4800. Hover over any of them for its walking time.
 
@@ -129,6 +135,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew build` | Builds the mod jar into `build/libs/` (put it in a real `mods/` folder, plus GeckoLib) |
 | `node tools/export-model.mjs` | Re-exports model, animations and texture from the open Blockbench project |
 | `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (pool, running out of fuel, chaingun range, right hand, EM projector, drill + chainsaw, tool items on foot), saves `run/screenshots/ap_*.png`, `run/autopilot_{water,fuel,cannon,em,mine}.csv`, quits |
+| `./gradlew runAutopilotMech` | Dev tool: only the autopilot's last scene (~25 s): smashing through panes/leaves/glass/ice, a 9-block stomp on mobs, lightning, a punch, wading through lava + poison; `run/screenshots/ap_mech_*.png`, `run/autopilot_mech.csv`. A file `run/cleanzap` keeps the bolt's fire away (to see the knock-out animation) |
 | `./gradlew runAutopilotTerrain` | Dev tool: drives a suit over real terrain in a **copy** of `run/saves/New World`, logs `run/autopilot_terrain.csv` (speed, height, ground contact, animation, camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`, `fuel`, `menu`) |
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
@@ -163,8 +170,11 @@ src/main/java/dev/ajaczero/powerarmor/
   entity/Bullet.java         the tracer bullet (flight, hit without immunity, sparks off blocks)
   network/ToolTriggerPayload.java  client -> server "attack pressed/released"
   item/PowerArmorItem.java   deploying / packing / repairing
-  PilotProtection.java       redirects damage from the pilot to the suit
-  PilotHands.java            no punching/mining from inside, hand needs power, +1.5 reach
+  PilotProtection.java       redirects damage from the pilot to the suit (not "suffocating" against a wall)
+  SuitSeal.java              sealed suit: fire/frost/effects kept out for fuel, air under water (tag damage_type/sealed_out)
+  entity/SuitStomp.java      landing dust, stomp shock wave (damage type powerarmor:stomp)
+  entity/SuitSmash.java      breaking leaves/panes/glass/ice while walking/sprinting (block tags suit_smashes_*)
+  PilotHands.java            hand needs power, +1.5 reach, +4 melee damage
   PowerArmorConfig.java      balance knobs (config/powerarmor-common.toml)
   registry/ModSounds.java    engine + tool loop sound events (audio picked in assets/powerarmor/sounds.json)
   client/                    rendering only (never loaded on servers)

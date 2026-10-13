@@ -57,9 +57,15 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
 | Movement | Jog 5 blocks/s, sprint 10 (players: 4.3 / 5.6). Steps up 1 block, steps down up to 2 without falling; step changes eased for camera + model. Jump: hold Space (crouch wind-up, horse jump bar), release; launch 2 ticks later. |
 | Turning | Legs face the direction of travel; torso + arms twist up to 90 deg and lean to face the pilot's view. |
 | Camera | First person: eye at the visor, only the suit's legs drawn, arms = cockpit viewmodel (tool left, gauntlet + item right), cockpit footfall bob, speed FOV. Third person: camera pulled back to 6.5. |
-| Damage | Hits on the pilot go to the suit (except drowning, starvation, void//kill). Suit: 100 HP, armor 12, toughness 4, full knockback resistance, no fall damage. Death: animation, pilot ejected, drops iron. |
-| Water | Fallout-style: sinks (~2.5 blocks/s), walks the bottom at half speed, suit never drowns, ignores currents. Pilot's air drains normally once their head is under. |
-| Animations | idle, walk (jog), run, jump_charge, jump, fall, land, hit, death, shutdown, powered_off, startup, tool_recoil, hold_item/use_item, drill_run, chainsaw_run (+ unused: attack, throw, stim, electrified, idle_fidget, sneakwalk). Walk/run hold the cannon steady (arm IK stabiliser). |
+| Damage | Hits on the pilot go to the suit (except drowning, starvation, void//kill; "suffocating" because the pilot's head pokes out of the hitbox against a wall is ignored). Suit: 100 HP, armor 12, toughness 4, full knockback resistance, no fall damage. Death: animation, pilot ejected, drops iron. |
+| Sealed suit (2026-10-13) | While powered, damage in the tag `powerarmor:sealed_out` (fire, campfire, magma, frost, cactus, berry bush, magic, wither) costs fuel instead of hull (20 per point, once per half second), harmful effects on pilot or suit are refused for 100 fuel (good ones pass), the pilot breathes under water (+0.5/tick) and doesn't burn or freeze. A powered suit never stays alight (fire put out at the start and end of every tick, both sides; not fireImmune, which would make lava and fire free); in lava it burns, and the flames die as it leaves. Lava still hurts the hull. No power (empty or knocked out) = no seal, burns like any mob. |
+| Effects inside (2026-10-13) | Poison (`neoforge:is_poison`), wither and magic ticks on the pilot hurt the pilot, not the suit, and cost no fuel: food poisoning from before climbing in, or an effect that got in while unpowered. |
+| Strength (2026-10-13) | Pilot's ATTACK_DAMAGE +4 (config): every melee hit, armed or not. Bows, thrown tridents and socket tools unchanged. |
+| Stomp (2026-10-13) | Landing from >= 3.5 blocks: everything alive within 2-3.5 blocks (grows with the drop) except the suit and its pilot takes 2/block (max 30, half at the edge), credited to the pilot (`powerarmor:stomp`), thrown outward + up; mace ground-smash dust + sound. Every heavy landing kicks up a dust ring. |
+| Smashing (2026-10-13) | While piloted, powered and steering: blocks in `powerarmor:suit_smashes_walking` (leaves, panes, cobweb, snow layer, berry bush, azalea, dripleaf, bamboo) break in the hitbox + 0.6 ahead + under the feet; sprinting adds `suit_smashes_sprinting` (glass, ice) 1.1 ahead. No drops, BreakEvent via ToolMining. Config switch. |
+| Lightning (2026-10-13) | A weakness: a strike on a suit with fuel knocks it out for 100 ticks (electrified once + shutdown slump, sparks), no seal meanwhile, then startup. No boost. The bolt itself doesn't ignite a running suit; the fire it leaves at the suit's feet catches the knocked-out one. A suit that is off (empty, knocked out, standing up) doesn't flinch when hit (`reactsToHits`): the hit animation would cut into the convulsion, slump and startup. |
+| Water | Fallout-style: sinks (~2.5 blocks/s), walks the bottom at half speed, suit never drowns, ignores currents. Powered: the pilot breathes the suit's air; unpowered: their air drains once their head is under. Lava: same bottom-walking at 35% speed (vanilla lava swimming crawled at 0.4 blocks/s). |
+| Animations | idle, walk (jog), run, jump_charge, jump, fall, land, hit, death, shutdown, powered_off, startup, electrified (lightning), tool_recoil, hold_item/use_item, drill_run, chainsaw_run (+ unused: attack, throw, stim, idle_fidget, sneakwalk). Walk/run hold the cannon steady (arm IK stabiliser). |
 | Old saves | Suits loaded from older versions get current base stats (`readAdditionalSaveData`). |
 
 ## 3. Arms: one hand, one power socket
@@ -68,7 +74,10 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
   cockpit viewmodel), so third person and the cockpit agree.
 - **Right arm = a real hand.** It shows and uses the pilot's **currently selected hotbar item**
   (rendered in the suit's right hand). The **use** button (right-click) works as normal for that item:
-  place blocks, eat, open doors, use buckets, throw potions...
+  place blocks, open doors, use buckets, throw potions...
+  - **Decided 2026-10-13: no eating or drinking inside** (sealed in): food, potions, milk, honey, stew and cake are
+    refused ("Sealed in: climb out to eat or drink" when no tool takes the click). A refused click passes on (FAIL), so
+    with food in hand right click runs the socket tool, like with a sword. Splash/lingering potions still work.
   - **Decided 2026-10-13: the hand is completely normal**: left click attacks mobs and mines blocks (at normal
     speed), right click uses the item. (Until then attack belonged to the socket tool and the hand could neither
     attack nor mine, decided 2026-10-12.)
@@ -145,7 +154,9 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
 
 ## 7. Balance knobs (built, Phase 6: `config/powerarmor-common.toml`, in-game config screen)
 Fuel energy per item, drain per state, jump cost, low-fuel threshold, tool costs, chaingun intervals, spin-up, damage, overheat, EM range + slam
-damage, drill pause, chainsaw cap + felling speed. Not configurable (decided design): drill harvest tier (diamond).
+damage, drill pause, chainsaw cap + felling speed; suit: sealing costs, air cost, melee bonus, stomp threshold/damage/cap, lightning
+knock-out length, smashing on/off. A light source was considered and dropped (2026-10-13): vanilla has no moving lights, and
+the usual trick (invisible light blocks following the suit) was judged not worth its hacks. Not configurable (decided design): drill harvest tier (diamond).
 Default costs per coal (1600): 80 s walking, ~100 chaingun bullets, 80 s of EM holding or 20 throws, ~9 drill faces,
 ~20 felled oaks.
 

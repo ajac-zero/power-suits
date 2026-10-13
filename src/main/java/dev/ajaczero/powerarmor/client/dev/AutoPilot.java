@@ -47,6 +47,11 @@ public final class AutoPilot {
     private static final String WORLD_PREFIX = "autopilot-";
     /** "view" mode: stay in the cockpit and re-shoot the viewmodel whenever run/view/shoot appears (live tuning). */
     private static final boolean VIEW = "view".equals(System.getProperty("powerarmor.autopilot"));
+    /** "mech" mode: skip straight to the suit-mechanics scene (MECH_START), for quick iterations. */
+    private static final boolean MECH_ONLY = "mech".equals(System.getProperty("powerarmor.autopilot"));
+    private static final int MECH_START = 1712;
+    /** A file run/cleanzap: no fire from the lightning scene's bolt, so the knock-out animation can be seen. */
+    private static final boolean CLEAN_ZAP = Files.exists(Path.of("cleanzap"));
 
     private static boolean worldRequested;
     private static boolean suitRequested;
@@ -75,7 +80,7 @@ public final class AutoPilot {
                 boardSuit(mc);
             }
             if (mc.player.getVehicle() instanceof PowerArmorEntity) {
-                tick = 0;
+                tick = MECH_ONLY ? MECH_START : 0;
                 yaw = 0;
                 pitch = 0;
             }
@@ -193,11 +198,12 @@ public final class AutoPilot {
             case 1040 -> shot(mc, "hand_front_hold");
             case 1043, 1044, 1045, 1047 -> shot(mc, "hand_front_use_" + t);
             case 1050 -> { hold(o.keyUse, false); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 10;
-                           giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE, 4)); }
-            case 1055 -> hold(o.keyUse, true);
-            case 1062, 1075 -> shot(mc, "hand_fp_eat_" + t);
+                           giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE, 4));
+                           socket(mc, null); } // no tool to pass the click on to: the "sealed in" message shows
+            case 1055 -> hold(o.keyUse, true);  // sealed in: eating is refused
+            case 1062, 1075 -> shot(mc, "hand_fp_food_refused_" + t);
             case 1078 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1085 -> shot(mc, "hand_tp_eat");
+            case 1085 -> shot(mc, "hand_tp_food_refused");
             case 1086 -> { releaseAll(); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 40;   // left click: the hand mines the bricks it placed
                            giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE)); }
             case 1087 -> hold(o.keyAttack, true);
@@ -286,8 +292,10 @@ public final class AutoPilot {
                               s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, net.minecraft.world.item.ItemStack.EMPTY); s.setBurn(1, 1600); })); // out of fuel
             case 1656, 1660, 1666 -> shot(mc, "lights_shutdown_" + t);
             case 1710 -> shot(mc, "lights_off");
-            case 1712 -> mc.stop();
             default -> {}
+        }
+        if (t >= MECH_START) {
+            mechanics(mc, t - MECH_START);
         }
         if (t >= 360 && t < 640) {
             logWater(mc, t);
@@ -886,8 +894,7 @@ public final class AutoPilot {
             case 65 -> { socket(mc, dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get()); pitch = 55; hold(o.keyUp, true); }
             case 80 -> shot(mc, "view_walkdown");
             case 81 -> { releaseAll(); pitch = 10; giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE, 4)); }
-            case 86 -> hold(o.keyUse, true);
-            case 98 -> shot(mc, "view_eat");
+            case 98 -> shot(mc, "view_food"); // holding food (pilots can't eat: no use animation to check)
             // the right hand in the suit, then the same items on foot (vanilla's first-person hand) to compare;
             // wait out the attack cooldown after each swap: vanilla (and the gauntlet) keep the hand lowered until it recharges
             case 99 -> { releaseAll(); giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_SWORD)); }
@@ -1057,6 +1064,268 @@ public final class AutoPilot {
     private static void deleteTree(Path root) {
         try (Stream<Path> walk = Files.walk(root)) {
             walk.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
+        } catch (IOException ignored) {
+        }
+    }
+
+    // ---- suit mechanics: smashing through blocks, stomp, lightning, lava + poison (the seal), a punch ----------------
+
+    /** Server-side suit of this scene, and the scene's origin (the suit starts here facing +Z). */
+    private static PowerArmorEntity mechSuit;
+    private static volatile BlockPos mechBase;
+    private static final java.util.List<net.minecraft.world.entity.LivingEntity> mechMobs = new java.util.ArrayList<>();
+    private static java.io.BufferedWriter mechCsv;
+    private static String mechPhase = "-";
+
+    /** Scene cameras look from an armour stand, but vanilla still paints the player's own fire / in-wall overlays over
+     *  them (it only checks "first person"): hide those while a scene camera is active. */
+    @SubscribeEvent
+    public static void sceneCameraOverlays(net.neoforged.neoforge.client.event.RenderBlockScreenEffectEvent event) {
+        if (ENABLED && Minecraft.getInstance().getCameraEntity() != Minecraft.getInstance().player) {
+            event.setCanceled(true);
+        }
+    }
+
+    private static void mechanics(Minecraft mc, int m) {
+        var o = mc.options;
+        switch (m) {
+            // smash: snow layers, a wall of panes, a leaf hedge, then glass + ice that only a sprint gets through
+            case 0 -> { releaseAll(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); o.hideGui = false;
+                        yaw = 0; pitch = 15; mechSetup(mc); }
+            case 10 -> { openMechLog(mc); mechPhase = "smash"; hold(o.keyUp, true); }
+            case 22, 30, 38 -> shot(mc, "mech_smash_" + m);
+            case 44 -> o.setCameraType(CameraType.FIRST_PERSON);   // through the panes from the cockpit
+            case 48, 50, 52, 54, 56 -> shot(mc, "mech_smash_fp_" + m);
+            case 58 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 62 -> shot(mc, "mech_smash_leaves");
+            case 64 -> hold(o.keySprint, true);
+            case 68, 72, 78 -> shot(mc, "mech_smash_sprint_" + m);
+            case 90 -> { releaseAll(); mc.player.setSprinting(false); }
+            case 96 -> { o.setCameraType(CameraType.FIRST_PERSON); }   // pressed against the stone wall: no suffocation, no in-wall overlay
+            case 100 -> { shot(mc, "mech_smash_fp_wall"); o.setCameraType(CameraType.THIRD_PERSON_BACK); }
+            // stomp: lifted 9 blocks up over a ring of mobs, dropped
+            case 104 -> { mechPhase = "stomp"; stompSetup(mc); }
+            case 112 -> stompCamera(mc);
+            case 114, 118, 122, 124, 126, 128, 130, 132, 136, 142, 150 -> shot(mc, "mech_stomp_" + m);
+            // lightning: a real bolt on the suit; it convulses, slumps and restarts
+            case 160 -> { mechPhase = "lightning"; onServer(mc, p -> { if (mechSuit != null) {
+                              if (CLEAN_ZAP) p.serverLevel().getGameRules().getRule(GameRules.RULE_DOFIRETICK).set(false, p.server);
+                              var bolt = EntityType.LIGHTNING_BOLT.create(p.serverLevel());
+                              bolt.moveTo(mechSuit.position());
+                              p.serverLevel().addFreshEntity(bolt); } }); }
+            case 161, 163, 165, 167 -> { if (CLEAN_ZAP) onServer(mc, p -> { if (mechSuit != null) { mechSuit.clearFire(); p.clearFire(); } }); }
+            case 162, 166, 170, 174, 178, 182, 186, 190, 196, 202, 210, 220, 240, 255, 262, 266, 270, 276, 282, 292, 299 -> shot(mc, "mech_zap_" + m);
+            case 230 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); o.hideGui = false; }
+            case 232 -> shot(mc, "mech_zap_fp_out");
+            case 236 -> stompCamera(mc);
+            // a punch with the bare hand: 1 + the melee bonus (a cow has 10 health)
+            case 300 -> { mechPhase = "punch"; mc.setCameraEntity(mc.player); o.hideGui = false; o.setCameraType(CameraType.FIRST_PERSON); punchSetup(mc); }
+            case 310 -> { var cow = nearestCow(mc); if (cow != null) { aimAt(mc, cow); } }
+            case 320 -> { var cow = nearestCow(mc); if (cow != null) { mc.gameMode.attack(mc.player, cow); mc.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND); } }
+            case 321 -> shot(mc, "mech_punch");
+            case 322 -> { giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 4));
+                          onServer(mc, p -> p.getFoodData().setFoodLevel(10)); }   // hungry, bread in hand, no tool: refused
+            case 323 -> hold(o.keyUse, true);
+            case 328 -> { shot(mc, "mech_eat_refused"); hold(o.keyUse, false); }
+            // the seal: wade through lava (hull damage, fire kept out for fuel), get poisoned (kept out)
+            case 330 -> { mechPhase = "lava"; o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 0; pitch = 20; lavaSetup(mc); }
+            case 336 -> hold(o.keyUp, true);
+            case 350, 370, 390 -> shot(mc, "mech_lava_" + m);
+            case 400 -> { releaseAll(); onServer(mc, p -> p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 200))); }
+            case 404 -> o.setCameraType(CameraType.FIRST_PERSON);
+            case 410 -> shot(mc, "mech_lava_fp_burning");
+            case 420 -> { closeMechLog(); mc.stop(); }
+            default -> {}
+        }
+        if (m >= 10) {
+            logMech(mc, m);
+        }
+    }
+
+    /** A fixed camera 7 blocks to the side of the stomp spot (30 blocks into the scene), looking at it. First person with
+     *  the GUI hidden: a third-person camera would pull 4 blocks back, and the hand pass would draw the cockpit viewmodel. */
+    private static void stompCamera(Minecraft mc) {
+        BlockPos b = mechBase;
+        if (b == null) {
+            return;
+        }
+        mc.options.setCameraType(CameraType.FIRST_PERSON);
+        mc.options.hideGui = true;
+        Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        lookCamera(mc, Vec3.atBottomCenterOf(b).add(8, 2.2, 30).subtract(drop), Vec3.atBottomCenterOf(b).add(0, 1.4, 30).subtract(drop));
+    }
+
+    private static net.minecraft.world.entity.animal.Cow nearestCow(Minecraft mc) {
+        return mc.level.getEntitiesOfClass(net.minecraft.world.entity.animal.Cow.class, mc.player.getBoundingBox().inflate(8)).stream()
+                .min(Comparator.comparingDouble(c -> c.distanceToSqr(mc.player))).orElse(null);
+    }
+
+    /** Server: a fresh suit 120 blocks east of the start on flat ground, by day; the scene's blocks ahead (+Z). */
+    private static void mechSetup(Minecraft mc) {
+        onServer(mc, player -> {
+            var level = player.serverLevel();
+            level.setDayTime(6000);
+            player.setGameMode(GameType.SURVIVAL);
+            if (player.getVehicle() != null) {
+                player.stopRiding();
+            }
+            int x = player.getBlockX() + 120, z = player.getBlockZ();
+            int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+            BlockPos base = new BlockPos(x, y, z);
+            mechBase = base;
+            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 32));
+            suit.moveTo(x + 0.5, y, z + 0.5, 0, 0);
+            suit.setYBodyRot(0);
+            level.addFreshEntity(suit);
+            mechSuit = suit;
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+            player.teleportTo(x + 0.5, y, z - 1.5);
+            player.startRiding(suit, true);
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = 2; dz <= 4; dz++) {
+                    level.setBlock(base.offset(dx, 0, dz), net.minecraft.world.level.block.Blocks.SNOW.defaultBlockState(), 3);
+                }
+                for (int dy = 0; dy <= 2; dy++) {
+                    level.setBlock(base.offset(dx, dy, 6), net.minecraft.world.level.block.Blocks.GLASS_PANE.defaultBlockState(), 3);
+                }
+                for (int dy = 0; dy <= 2; dy++) { // persistent leaves (like a hedge someone planted): they don't decay
+                    level.setBlock(base.offset(dx, dy, 9), net.minecraft.world.level.block.Blocks.OAK_LEAVES.defaultBlockState()
+                            .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true), 3);
+                }
+                for (int dy = 0; dy <= 2; dy++) {
+                    level.setBlock(base.offset(dx, dy, 13), (dy < 2 ? net.minecraft.world.level.block.Blocks.GLASS
+                            : net.minecraft.world.level.block.Blocks.ICE).defaultBlockState(), 3);
+                }
+                // a stone wall the suit can't get through, to end the run
+                for (int dy = 0; dy <= 3; dy++) {
+                    level.setBlock(base.offset(dx, dy, 20), net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                }
+            }
+        });
+    }
+
+    /** Server: lift the suit (and pilot) 9 blocks over a spot 30 blocks further on, with mobs around it: two pigs and a
+     *  villager within the shock wave, a cow outside it. */
+    private static void stompSetup(Minecraft mc) {
+        onServer(mc, player -> {
+            if (mechSuit == null || mechBase == null) {
+                return;
+            }
+            var level = player.serverLevel();
+            BlockPos spot = mechBase.offset(0, 0, 30);
+            Vec3 c = Vec3.atBottomCenterOf(spot);
+            mechMobs.clear();
+            Object[][] mobs = {{EntityType.PIG, 2.0, 0.0}, {EntityType.PIG, -1.5, 1.5}, {EntityType.VILLAGER, 0.0, -2.8}, {EntityType.COW, -6.0, 0.0}};
+            for (Object[] mob : mobs) {
+                var e = ((EntityType<?>) mob[0]).create(level);
+                e.moveTo(c.x + (double) mob[1], spot.getY(), c.z + (double) mob[2], 0, 0);
+                level.addFreshEntity(e);
+                mechMobs.add((net.minecraft.world.entity.LivingEntity) e);
+            }
+            player.stopRiding();
+            mechSuit.moveTo(c.x, spot.getY() + 9, c.z, 0, 0);
+            mechSuit.setDeltaMovement(Vec3.ZERO);
+            player.teleportTo(c.x, spot.getY() + 9, c.z);
+            player.startRiding(mechSuit, true);
+        });
+    }
+
+    /** Server: a 3x4 lava puddle (one deep) 2 blocks ahead of the suit, and a stone floor beyond to walk out onto. */
+    private static void lavaSetup(Minecraft mc) {
+        onServer(mc, player -> {
+            if (mechSuit == null) {
+                return;
+            }
+            var level = player.serverLevel();
+            BlockPos at = mechSuit.blockPosition();
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = 2; dz <= 5; dz++) {
+                    level.setBlock(at.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
+                }
+            }
+        });
+    }
+
+    /** Server: a cow 3 blocks to the side (10 health: one bare-handed punch at 1 + 4 takes half). */
+    private static void punchSetup(Minecraft mc) {
+        onServer(mc, player -> {
+            if (mechSuit == null) {
+                return;
+            }
+            var level = player.serverLevel();
+            var cow = EntityType.COW.create(level);
+            cow.moveTo(mechSuit.getX() + 3, mechSuit.getY(), mechSuit.getZ() + 1, 90, 0); // off to the left, clear of the lava to come
+            cow.setNoAi(true);
+            level.addFreshEntity(cow);
+            mechMobs.add(cow);
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        });
+    }
+
+    private static void openMechLog(Minecraft mc) {
+        try {
+            mechCsv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_mech.csv"));
+            mechCsv.write("tick,phase,dz,y,speed,onGround,sprint,anim,powered,stunned,canOperate,suitHealth,suitFire,pilotHealth,pilotFire,"
+                    + "pilotPoison,air,energy,panes,leaves,glass,ice,snow,drops,victims,mobs,pilotFireTicks,clientPilotFire,suitLastDamage,pilotDamage,strength,eating,food,clientSuitFire,actionAnim\n");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /** One row per tick: the client's suit (movement, animation), the server's suit and mobs (singleplayer: same JVM). */
+    private static void logMech(Minecraft mc, int m) {
+        if (mechCsv == null || mechSuit == null || mechBase == null || !(mc.player.getVehicle() instanceof PowerArmorEntity suit)) {
+            return;
+        }
+        int panes = 0, leaves = 0, glass = 0, ice = 0, snow = 0;
+        for (BlockPos p : BlockPos.betweenClosed(mechBase.offset(-2, 0, 0), mechBase.offset(2, 3, 14))) {
+            var state = mc.level.getBlockState(p);
+            panes += state.is(net.minecraft.world.level.block.Blocks.GLASS_PANE) ? 1 : 0;
+            leaves += state.is(net.minecraft.world.level.block.Blocks.OAK_LEAVES) ? 1 : 0;
+            glass += state.is(net.minecraft.world.level.block.Blocks.GLASS) ? 1 : 0;
+            ice += state.is(net.minecraft.world.level.block.Blocks.ICE) ? 1 : 0;
+            snow += state.is(net.minecraft.world.level.block.Blocks.SNOW) ? 1 : 0;
+        }
+        int drops = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(mechBase).inflate(20)).size();
+        String mobs = mechMobs.stream().map(e -> e.getType().toShortString() + ":" + (e.isAlive() ? String.format(java.util.Locale.ROOT, "%.1f", e.getHealth()) : "dead"))
+                .reduce((a, b) -> a + "/" + b).orElse("");
+        var server = mechSuit;
+        var pilot = server.getControllingPassenger();
+        try {
+            var last = server.getLastDamageSource();
+            mechCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%b,%s,%b,%b,%b,%.1f,%b,%.1f,%b,%b,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%b,%s,%.1f,%.2f,%b,%d,%b,%s%n",
+                    m, mechPhase, suit.getZ() - mechBase.getZ(), suit.getY() - mechBase.getY(), Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20,
+                    suit.onGround(), mc.player.isSprinting(), suit.getMovementAnimationName(), server.isPowered(), server.isStunned(), server.canOperate(),
+                    server.getHealth(), server.isOnFire(), pilot == null ? -1F : pilot.getHealth(), pilot != null && pilot.isOnFire(),
+                    pilot != null && pilot.hasEffect(net.minecraft.world.effect.MobEffects.POISON), pilot == null ? -1 : pilot.getAirSupply(),
+                    server.getTotalEnergy(), panes, leaves, glass, ice, snow, drops, server.lastStompVictims, mobs,
+                    pilot == null ? -1 : pilot.getRemainingFireTicks(), mc.player.isOnFire(), last == null ? "-" : last.getMsgId(),
+                    pilot instanceof net.minecraft.world.entity.player.Player p ? p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) : -1,
+                    pilot instanceof net.minecraft.world.entity.player.Player p2 ? p2.getAttackStrengthScale(0.5F) : -1F,
+                    mc.player.isUsingItem(), pilot instanceof net.minecraft.world.entity.player.Player p3 ? p3.getFoodData().getFoodLevel() : -1, suit.isOnFire(), actionAnim(suit)));
+        } catch (IOException e) {
+            PowerArmor.LOGGER.error("[autopilot] mech csv", e);
+        }
+    }
+
+    /** What the client's "action" controller (hit flinch, tool recoil) is playing, or "-". */
+    private static String actionAnim(PowerArmorEntity suit) {
+        var manager = suit.getAnimatableInstanceCache().getManagerForId(suit.getId());
+        var controller = manager == null ? null : manager.getAnimationControllers().get("action");
+        if (controller == null || controller.getCurrentAnimation() == null
+                || controller.getAnimationState() == software.bernie.geckolib.animation.AnimationController.State.STOPPED) {
+            return "-";
+        }
+        return controller.getCurrentAnimation().animation().name().replace("animation.power_armor.", "");
+    }
+
+    private static void closeMechLog() {
+        try {
+            if (mechCsv != null) {
+                mechCsv.close();
+                mechCsv = null; // the game takes another tick or two to quit
+            }
         } catch (IOException ignored) {
         }
     }

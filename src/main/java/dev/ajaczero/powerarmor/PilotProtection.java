@@ -21,11 +21,21 @@ public final class PilotProtection {
             return;
         }
         DamageSource source = event.getSource();
-        // Things the suit can't stop: /kill, the void, hunger, drowning.
-        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || source.is(DamageTypes.STARVE) || source.is(DamageTypes.DROWN)) {
+        // Things the suit can't stop: /kill, the void, hunger, drowning, and effects already inside the pilot. Poison and
+        // wither tick as damage with no attacker (NeoForge gives poison its own type, neoforge:poison, in the tag
+        // neoforge:is_poison; vanilla used "magic"): food poisoning from before climbing in, or an effect that got
+        // through while the suit had no power. The seal keeps new effects out (SuitSeal); what's in is yours.
+        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || source.is(DamageTypes.STARVE) || source.is(DamageTypes.DROWN)
+                || source.is(net.neoforged.neoforge.common.Tags.DamageTypes.IS_POISON) || source.is(DamageTypes.MAGIC)
+                || source.is(DamageTypes.WITHER)) {
             return;
         }
         event.setCanceled(true);
+        if (source.is(DamageTypes.IN_WALL) && !suit.isInWall()) {
+            // The pilot's head sits forward in the visor and pokes out of the hitbox's face: with the suit pressed against a
+            // wall, vanilla thought the pilot was suffocating. Only a suit that is itself stuck in blocks suffocates.
+            return;
+        }
         // Explosions already hit the suit by themselves, don't count them twice.
         if (!source.is(DamageTypeTags.IS_EXPLOSION)) {
             suit.hurt(source, event.getAmount());

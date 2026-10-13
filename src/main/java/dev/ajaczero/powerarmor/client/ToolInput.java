@@ -14,7 +14,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * While piloting, the socket tool works like a shield in the off hand: the use button (right click) goes to the
- * suit's hand first, exactly as vanilla does it (open the door, place the block, eat the food...), and only when the
+ * suit's hand first, exactly as vanilla does it (open the door, place the block, throw the potion...), and only when the
  * hand has nothing to do does the press go to the socket tool, which then runs for as long as the button is held.
  * Attack (left click) is never touched: the hand punches, mines and swings its weapon as normal.
  *
