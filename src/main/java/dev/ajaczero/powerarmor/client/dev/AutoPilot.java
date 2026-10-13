@@ -904,7 +904,16 @@ public final class AutoPilot {
             case 207 -> { o.setCameraType(CameraType.THIRD_PERSON_FRONT); if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.setToolSpin(0F, 1F); }
             case 214 -> shot(mc, "view_hot_tp");
             case 215 -> { o.setCameraType(CameraType.FIRST_PERSON); if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.setToolSpin(0F, 0F); }
-            case 218 -> {
+            // tracers: a barrage diagonally up at the sky (yaw 45: the streaks must trail straight back along their flight)
+            case 216 -> { giveHeld(mc, net.minecraft.world.item.ItemStack.EMPTY); yaw = 45; pitch = -25;
+                          onServer(mc, p -> p.getInventory().setItem(8, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_NUGGET, 64))); }
+            case 220 -> hold(o.keyUse, true);
+            case 250, 252 -> shot(mc, "view_tracers_" + s);
+            case 253 -> { sideCamera(mc); o.setCameraType(CameraType.THIRD_PERSON_BACK); } // (a "first person" camera entity would draw the pilot's cockpit tracers)
+            case 262, 264 -> shot(mc, "view_tracers_tp_" + s);
+            case 265 -> { releaseAll(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 10;
+                          giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); }
+            case 285 -> {
                 viewStep = -1;
                 try {
                     java.nio.file.Files.writeString(dir.resolve("done"), "ok");

@@ -2,7 +2,6 @@ package dev.ajaczero.powerarmor.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.Bullet;
 import net.minecraft.client.renderer.LightTexture;
@@ -12,19 +11,18 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Quaternionf;
 
 /**
  * Draws a bullet as a tracer: a thin hot streak trailing behind it along its flight, full-bright and additive (the
  * "eyes" render type), a white-yellow core in an orange sheath. Drawn where Bullet.visualShift says (coming out of the
- * gun, joining the real path at the target) and pointing along that drawn path. After the two rotations below (the
- * same convention as ProjectileUtil.rotateTowardsMovement: yaw atan2(z, x) + 90), -X is forward, so the streak runs
- * along +X behind the bullet; it never reaches back past the muzzle.
+ * gun, joining the real path at the target) and pointing along that drawn path: the streak runs along local +X, turned
+ * to point back the way the bullet came; it never reaches back past the muzzle.
  */
 public class BulletRenderer extends EntityRenderer<Bullet> {
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/bullet.png");
-    private static final float LENGTH = 1.1F;
+    private static final float LENGTH = 3.0F;
 
     public BulletRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -37,10 +35,10 @@ public class BulletRenderer extends EntityRenderer<Bullet> {
         Vec3 shift = bullet.visualShift(at);
         poseStack.translate(shift.x, shift.y, shift.z);
         Vec3 dir = bullet.visualDirection(at);
-        float dirYaw = (float) (Mth.atan2(dir.z, dir.x) * Mth.RAD_TO_DEG) + 90F;
-        float pitch = (float) (Mth.atan2(dir.horizontalDistance(), dir.y) * Mth.RAD_TO_DEG) - 90F;
-        poseStack.mulPose(Axis.YP.rotationDegrees(dirYaw - 90.0F));
-        poseStack.mulPose(Axis.ZP.rotationDegrees(pitch));
+        // Turn the streak's +X straight onto the way it came from. (A yaw/pitch pair borrowed from
+        // ProjectileUtil.rotateTowardsMovement mirrored the east-west part: only due north/south and straight up
+        // lined up, other shots trailed up to 180 degrees off, i.e. sideways.)
+        poseStack.mulPose(new Quaternionf().rotationTo(1F, 0F, 0F, (float) -dir.x, (float) -dir.y, (float) -dir.z));
         float length = (float) Math.min(LENGTH, bullet.visualTravelled(at));
         if (length < 0.05F) {
             poseStack.popPose();
