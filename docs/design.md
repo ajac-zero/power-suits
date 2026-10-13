@@ -24,7 +24,15 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
   barrage. One iron nugget per bullet. Bullets ignore the half-second hit immunity. Optional overheat (config). Model:
   compact like the EM projector / drill (motor housing + short spinning cluster of barrels), no long thin barrel, no
   extra accessories (sight, magazine, drum, gauge). Name: Chaingun (pairs with Chainsaw). Built 2026-10-13 (step 2).
-- EM projector -> **redstone electromagnet**: copper coils, glowing redstone core, red-dust beam and sparks. No ammo.
+- EM projector -> **redstone electromagnet** (built 2026-10-13, step 3): the user kept the four prongs; the copper (it's in
+  the recipe) is wound round each prong like an electromagnet's iron cores instead of two big rings round all four (too
+  thick), the core no longer sticks out between the prongs but is a redstone lens set into the housing, the prong tips
+  are redstone (like redstone torch heads). Prongs + windings halved after the first in-game look (it was the biggest
+  tool), a pixel of steel left showing between copper and tip, then given the same 7x6x7 blue forearm block as the
+  other tools (without it the projector looked like a head without an arm), then the prongs 2 px longer again (3 px of
+  bare steel between copper and tip): 13 px long, the others 15-16. Glow (`em_core` lens + vents: faint while mounted and powered, brighter while used, throbbing while
+  holding; `em_arc` tips: only while holding, crackling), redstone-dust beam (red + orange-red strands; a dark-red
+  strand read as blood round a pig), red sparks between the tips. No ammo.
 - Later (not now): dyeable paint like leather armor.
 
 ## 1. Pillars

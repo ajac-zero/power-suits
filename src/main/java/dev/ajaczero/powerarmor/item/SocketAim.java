@@ -32,8 +32,10 @@ public final class SocketAim {
         float yaw = pilot.getYRot() * Mth.DEG_TO_RAD;
         float lean = Mth.clamp(pilot.getXRot() * 0.55F, -25F, 25F) * Mth.DEG_TO_RAD; // + = looking down
         double up = MUZZLE_UP - TORSO_PIVOT_UP;
-        double leanedForward = MUZZLE_FORWARD * Mth.cos(lean) + up * Mth.sin(lean);
-        double leanedUp = up * Mth.cos(lean) - MUZZLE_FORWARD * Mth.sin(lean);
+        // Shorter tools end before the chaingun's muzzle; the raised tool points along the view, i.e. forward here.
+        double reach = MUZZLE_FORWARD - (suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.muzzleInsetPixels() / 16.0 : 0);
+        double leanedForward = reach * Mth.cos(lean) + up * Mth.sin(lean);
+        double leanedUp = up * Mth.cos(lean) - reach * Mth.sin(lean);
         Vec3 forward = new Vec3(-Mth.sin(yaw), 0, Mth.cos(yaw));
         Vec3 right = new Vec3(-Mth.cos(yaw), 0, -Mth.sin(yaw));
         return suit.position().add(0, TORSO_PIVOT_UP + leanedUp, 0).add(forward.scale(leanedForward)).add(right.scale(-MUZZLE_LEFT));

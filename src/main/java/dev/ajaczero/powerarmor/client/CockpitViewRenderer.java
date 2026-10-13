@@ -24,7 +24,7 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
 
     CockpitViewRenderer() {
         super(new Model());
-        this.addRenderLayer(new HeatGlow(this));
+        this.addRenderLayer(new ToolGlow(this));
     }
 
     @Override
@@ -83,11 +83,11 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
         }
     }
 
-    /** The chaingun's hot barrel tips, glowing like on the suit (SuitGlowLayer). */
-    private static final class HeatGlow extends software.bernie.geckolib.renderer.layer.GeoRenderLayer<CockpitView> {
+    /** The tool's lights, like on the suit (SuitGlowLayer): the chaingun's hot barrels, the EM projector's redstone. */
+    private static final class ToolGlow extends software.bernie.geckolib.renderer.layer.GeoRenderLayer<CockpitView> {
         private final CockpitViewRenderer renderer;
 
-        HeatGlow(CockpitViewRenderer renderer) {
+        ToolGlow(CockpitViewRenderer renderer) {
             super(renderer);
             this.renderer = renderer;
         }
@@ -101,6 +101,9 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
             float heat = view.suit.getToolHeat();
             draw(poseStack, view, model, buffers, partialTick, SuitGlowLayer.HEAT, SuitGlowLayer.heatGlow(heat));
             draw(poseStack, view, model, buffers, partialTick, SuitGlowLayer.HEAT_BARREL, SuitGlowLayer.barrelGlow(heat));
+            float time = (float) software.bernie.geckolib.util.RenderUtil.getCurrentTick() + partialTick;
+            draw(poseStack, view, model, buffers, partialTick, SuitGlowLayer.EM_CORE, view.suit.getEmCoreGlow(time));
+            draw(poseStack, view, model, buffers, partialTick, SuitGlowLayer.EM_ARC, view.suit.getEmArcGlow(time));
         }
 
         private void draw(PoseStack poseStack, CockpitView view, BakedGeoModel model, MultiBufferSource buffers, float partialTick,

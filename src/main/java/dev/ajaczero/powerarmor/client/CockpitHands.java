@@ -168,10 +168,11 @@ public final class CockpitHands {
      */
     static Vec3 visualMuzzle(PowerArmorEntity suit, Player pilot) {
         Minecraft mc = Minecraft.getInstance();
-        if (pilot != mc.player || !mc.options.getCameraType().isFirstPerson()) {
-            return SocketAim.muzzlePosition(suit, pilot);
+        if (pilot != mc.player || !PowerArmorRenderer.isCockpitView(suit)) {
+            return SocketAim.muzzlePosition(suit, pilot); // also when a scripted camera watches the suit from outside
         }
-        Vector3f p = toolMatrix(suit, suit.getToolRaise(1F)).transformPosition(new Vector3f(0, MUZZLE_PX / 16F, 0));
+        float inset = suit.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.PowerTool tool ? tool.muzzleInsetPixels() : 0F;
+        Vector3f p = toolMatrix(suit, suit.getToolRaise(1F)).transformPosition(new Vector3f(0, (MUZZLE_PX + inset) / 16F, 0));
         double k = Math.tan(Math.toRadians(mc.options.fov().get()) / 2) / Math.tan(Math.toRadians(70) / 2);
         Camera camera = mc.gameRenderer.getMainCamera();
         Vector3f look = camera.getLookVector(), up = camera.getUpVector(), left = camera.getLeftVector();

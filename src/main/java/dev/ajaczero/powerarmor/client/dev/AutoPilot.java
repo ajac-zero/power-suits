@@ -205,6 +205,9 @@ public final class AutoPilot {
             case 1092 -> releaseAll();
             // ---- EM projector: vacuum up dropped diamonds, then grab a pig, hold it and throw it
             case 1095 -> { giveHeld(mc, net.minecraft.world.item.ItemStack.EMPTY); emRangeSetup(mc); yaw = 180; pitch = 15; o.setCameraType(CameraType.THIRD_PERSON_BACK); openEmLog(mc); }
+            case 1104 -> emCloseCamera(mc, false);   // close-up of the mounted projector: faint idle glow
+            case 1107 -> shot(mc, "em_close_idle");
+            case 1109 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); o.hideGui = false; }
             case 1110 -> hold(o.keyUse, true);
             case 1113, 1118, 1124 -> shot(mc, "em_tp_items_" + t);
             case 1121 -> pitch = 10; // the next diamonds lie further out
@@ -215,6 +218,9 @@ public final class AutoPilot {
             case 1150 -> hold(o.keyUse, true);
             case 1156, 1164 -> shot(mc, "em_fp_pig_" + t);
             case 1166 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 1167 -> emCloseCamera(mc, true);    // close-up while the beam holds the pig: core + tips lit, sparks
+            case 1169 -> shot(mc, "em_close_pig");
+            case 1170 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); o.hideGui = false; }
             case 1172 -> shot(mc, "em_tp_pig");
             case 1174 -> sideCamera(mc);
             case 1180 -> shot(mc, "em_side_pig");
@@ -974,6 +980,27 @@ public final class AutoPilot {
     }
 
     /** A client-only camera 8 blocks to the side of the suit, looking at it. */
+    /** A camera ~1.6 blocks out to the front-left of the tool arm, looking at the EM projector: raised (at the muzzle)
+     *  or in its hip carry. */
+    private static void emCloseCamera(Minecraft mc, boolean raised) {
+        if (!(mc.player.getVehicle() instanceof PowerArmorEntity suit)) {
+            return;
+        }
+        float yaw = mc.player.getYRot() * net.minecraft.util.Mth.DEG_TO_RAD;
+        Vec3 forward = new Vec3(-net.minecraft.util.Mth.sin(yaw), 0, net.minecraft.util.Mth.cos(yaw));
+        Vec3 left = new Vec3(net.minecraft.util.Mth.cos(yaw), 0, net.minecraft.util.Mth.sin(yaw));
+        Vec3 at = raised ? dev.ajaczero.powerarmor.item.SocketAim.muzzlePosition(suit, mc.player).subtract(forward.scale(0.3))
+                : suit.position().add(0, 1.05, 0).add(left.scale(0.8)).add(forward.scale(0.3));
+        // First person: in third person the game pulls the view 4 blocks back from the camera entity. The camera
+        // entity (an armour stand) sees from its eye height, so stand it (and the aim point, to keep the direction)
+        // that much lower. GUI hidden: the hand pass would draw the pilot's cockpit viewmodel over the close-up.
+        mc.options.setCameraType(CameraType.FIRST_PERSON);
+        mc.options.hideGui = true;
+        Vec3 eye = at.add(left.scale(1.1)).add(forward.scale(1.1)).add(0, 0.35, 0);
+        Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        lookCamera(mc, eye.subtract(drop), at.subtract(drop));
+    }
+
     private static void sideCamera(Minecraft mc) {
         var target = mc.player.getVehicle() != null ? mc.player.getVehicle()
                 : mc.level.getEntitiesOfClass(PowerArmorEntity.class, mc.player.getBoundingBox().inflate(8)).stream().findFirst().orElseThrow();

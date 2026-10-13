@@ -6,7 +6,7 @@ import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -35,7 +35,8 @@ import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
- * Second power tool: an electromagnetic field projector, a gravity gun for items and mobs (no blocks).
+ * Second power tool: an electromagnetic field projector (a redstone electromagnet: copper-wound prongs, a redstone
+ * lens), a gravity gun for items and mobs (no blocks).
  *  - Hold use (right click) on a dropped item or a mob: the beam pulls it in front of the suit and holds it there.
  *    Items that arrive go straight into the pilot's inventory.
  *  - Release: whatever is held is launched along the view. A quick tap shoves a target away.
@@ -132,6 +133,12 @@ public class EmProjectorItem extends Item implements PowerTool, GeoItem {
         return "em_projector";
     }
 
+    /** The prong tips end 13 px below the socket, the chaingun's barrels 15 (the projector is the shortest tool). */
+    @Override
+    public float muzzleInsetPixels() {
+        return 2F;
+    }
+
     @Override
     public boolean use(PowerArmorEntity suit, Player pilot, ItemStack tool) {
         return false; // continuous: see holdTick / release
@@ -212,7 +219,8 @@ public class EmProjectorItem extends Item implements PowerTool, GeoItem {
         suit.playSound(SoundEvents.WIND_CHARGE_BURST.value(), 1.0F, 0.8F);
         if (suit.level() instanceof ServerLevel level) {
             Vec3 at = target.position().add(0, target.getBbHeight() / 2, 0);
-            level.sendParticles(ParticleTypes.REVERSE_PORTAL, at.x, at.y, at.z, 20, 0.3, 0.3, 0.3, 0.3);
+            // A puff of redstone dust where the field lets go (vanilla's redstone particle).
+            level.sendParticles(DustParticleOptions.REDSTONE, at.x, at.y, at.z, 24, 0.35, 0.35, 0.35, 0.0);
         }
     }
 

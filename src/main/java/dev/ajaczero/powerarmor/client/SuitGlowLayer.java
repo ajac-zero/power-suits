@@ -16,7 +16,7 @@ import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 import software.bernie.geckolib.util.RenderUtil;
 
 /**
- * The suit's lights: the firebox fire, the visor and the chaingun's hot barrels, drawn on top of the model at full brightness so they glow
+ * The suit's lights: the firebox fire, the visor, the chaingun's hot barrels and the EM projector's redstone, drawn on top of the model at full brightness so they glow
  * in the dark. Like GeckoLib's AutoGlowingGeoLayer, the whole model is drawn again with a glowmask texture (black
  * everywhere except the glowing pixels, made by tools/make-glowmasks.py) in vanilla's "eyes" render type (the one
  * spider and enderman eyes use): it ignores light and adds its colour on top. Unlike AutoGlowingGeoLayer, each mask
@@ -27,6 +27,9 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity> {
     private static final ResourceLocation VISOR = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_visor.png");
     static final ResourceLocation HEAT = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_heat.png");
     static final ResourceLocation HEAT_BARREL = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_heat_barrel.png");
+    /** The EM projector's redstone: lens + vents, and the prong tips. */
+    static final ResourceLocation EM_CORE = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_em_core.png");
+    static final ResourceLocation EM_ARC = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_em_arc.png");
 
     public SuitGlowLayer(GeoRenderer<PowerArmorEntity> renderer) {
         super(renderer);
@@ -47,6 +50,8 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity> {
         draw(poseStack, suit, model, buffers, partialTick, VISOR, on, visor[0], visor[1], visor[2]);
         draw(poseStack, suit, model, buffers, partialTick, HEAT, heatGlow(suit.getToolHeat()), 1F, 1F, 1F);
         draw(poseStack, suit, model, buffers, partialTick, HEAT_BARREL, barrelGlow(suit.getToolHeat()), 1F, 1F, 1F);
+        draw(poseStack, suit, model, buffers, partialTick, EM_CORE, suit.getEmCoreGlow(time), 1F, 1F, 1F);
+        draw(poseStack, suit, model, buffers, partialTick, EM_ARC, suit.getEmArcGlow(time), 1F, 1F, 1F);
     }
 
     /** Chaingun barrel tips: nothing while cool, a dull red glow from a third of the way, white-hot when overheated. */

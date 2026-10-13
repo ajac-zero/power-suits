@@ -73,7 +73,9 @@ With an empty socket or no fuel the trigger just clicks.
 **EM Projector** (crafted: iron ingots in the corners, copper ingots top and bottom middle, redstone either
 side of a lodestone). Grabs dropped items and mobs within 16 blocks, never players, bosses, other suits,
 no-AI "statue" mobs, riders/ridden mobs or very big mobs (a ravager is too heavy, an iron golem is fine).
-Thrown mobs that hit a wall take damage ("slammed into a wall"). Socket only.
+Thrown mobs that hit a wall take damage ("slammed into a wall"). Socket only. A redstone electromagnet: four
+copper-wound prongs round a redstone lens; the lens glows faintly while it's mounted in a powered suit and the prong
+tips light up and spark while it holds something; the beam is redstone dust.
 
 **Mining Drill** (crafted: a diamond on top, iron ingots + a diamond in the middle row, iron ingots + a
 piston at the bottom). Diamond-tipped: it digs pickaxe and shovel blocks a diamond tool can harvest
@@ -101,6 +103,7 @@ shield in your off hand (your real off-hand item isn't used while piloting). A p
 dimmer when fuel runs low, embers dying out after shutdown), and the visor shows the suit's state:
 **green** = parked with power (free to climb in), **amber** = piloted, **red** = a tool in use or just hit,
 **dark** = powered off; it stutters while starting up or shutting down and drops out now and then on low fuel.
+The chaingun's barrels glow with heat and the EM projector's redstone with its field.
 
 While inside: the suit takes hits instead of you, it has no fall damage, steps up full blocks,
 and the camera pulls back in third person (F5).
@@ -131,7 +134,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
 | `python3 tools/extract-tool-geo.py` | Rebuilds the tool item models from the suit model (run after `export-model.mjs`) |
 | `python3 tools/extract-view-geo.py` | Rebuilds the cockpit viewmodel (`geo/view`) from the suit model (run after `export-model.mjs`) |
-| `uv run --with pillow python3 tools/make-glowmasks.py` | Rebuilds the glowmasks (`power_armor_glow_fire/visor.png`) from the texture's reserved colours (run after `export-model.mjs`) |
+| `uv run --with pillow python3 tools/make-glowmasks.py` | Rebuilds the glowmasks (`power_armor_glow_{fire,visor,heat,heat_barrel,em_core,em_arc}.png`) from the texture's reserved colours (run after `export-model.mjs`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | Live-tunes the cockpit viewmodel's placement (`run/view/tuning.json`, shots `run/screenshots/ap_view_*.png`) |
 | `python3 tools/terrain-report.py` | Summarizes `run/autopilot_terrain.csv` per leg (speed, air time, drops, step-ups, animations) |
 
@@ -155,7 +158,7 @@ src/main/java/dev/ajaczero/powerarmor/
   item/DrillItem.java        the third tool: 3x3 digging at diamond pickaxe/shovel speed
   item/ChainsawItem.java     the fourth tool: cuts wood, fells natural trees top-down
   item/ToolMining.java       shared block breaking for both (BreakEvent, drops, crack overlay, progress)
-  entity/EmBeamEffects.java  client-side violet beam particles
+  entity/EmBeamEffects.java  client-side redstone beam particles + sparks
   entity/Bullet.java         the tracer bullet (flight, hit without immunity, sparks off blocks)
   network/ToolTriggerPayload.java  client -> server "attack pressed/released"
   item/PowerArmorItem.java   deploying / packing / repairing
@@ -173,7 +176,7 @@ src/main/java/dev/ajaczero/powerarmor/
     FuelGauge.java           HUD fuel gauge + low-fuel beep
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
-    SuitGlowLayer.java       firebox + visor lights (glowmasks, tinted per frame)
+    SuitGlowLayer.java       firebox, visor, chaingun heat and EM redstone lights (glowmasks, tinted per frame)
     BulletRenderer.java      the glowing tracer streak
     ChaingunParts.java       turns the chaingun's barrels with the synced spin (suit + cockpit viewmodel)
     ClientSetup.java         registers the renderer

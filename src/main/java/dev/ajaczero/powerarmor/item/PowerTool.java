@@ -27,6 +27,12 @@ public interface PowerTool {
     /** Name of this tool's bone in the suit model. The renderer shows it only while this tool is installed. */
     String suitBone();
 
+    /** How far this tool's tip sits behind the chaingun's muzzle along the tool, in model pixels (1/16 block): muzzle
+     *  effects (the EM beam) start at the tip. The muzzle position was measured on the chaingun, the longest. */
+    default float muzzleInsetPixels() {
+        return 0F;
+    }
+
     /** Server: one use (one shot, one block...). Return false if nothing happened (no fuel is charged). */
     boolean use(PowerArmorEntity suit, Player pilot, ItemStack tool);
 

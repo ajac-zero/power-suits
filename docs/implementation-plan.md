@@ -104,7 +104,11 @@ would replace them in `sounds.json` only.
    whine loop with spin pitch (`PowerTool.runSoundPitch`), HUD bullets + heat bar; `rivet_shot` -> arm-only
    `tool_recoil` (EM push); item aliases plasma_cannon/rivet_gun -> chaingun. Tests: tap, spin-up/coast, nuggets,
    creative, immunity bypass, overheat (52).
-3. EM projector redstone restyle: model/texture, red-dust beam + sparks.
+3. EM projector redstone restyle (DONE 2026-10-13): repaint + rework (`model/art/em_redstone_art.py`: housing, redstone
+   blue forearm block with a redstone-vented collar, redstone lens, 4 short prongs with copper windings and redstone tips), `em_core`/`em_arc` glowmasks (suit + cockpit
+   viewmodel, levels in `PowerArmorEntity.tickLights`), redstone beam + sparks (`EmBeamEffects`), release puff of
+   redstone dust, `PowerTool.muzzleInsetPixels` (beam starts at the shorter tool's tips), autopilot close-ups
+   `ap_em_close_{idle,pig}`.
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint

@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.entity;
 
+import dev.ajaczero.powerarmor.item.EmProjectorItem;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.item.PowerTool;
@@ -207,6 +208,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private float toolRaise, toolRaiseO;
     /** Client: the lights (SuitGlowLayer). Fire 0..1; visor brightness 0..1 and colour; ticks the visor stays red after a hit. */
     private float fireGlow, visorLevel;
+    /** Client: the EM projector's redstone, 0..1: the lens + vents (core) and the prong tips (arc). */
+    private float emCoreGlow, emArcGlow;
     private final float[] visorColor = {1F, 0.68F, 0.22F};
     private int redTicks;
 
@@ -873,6 +876,30 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         float levelTarget = powered ? 1F : 0F;
         this.visorLevel += (levelTarget - this.visorLevel) * (powered ? 0.3F : 0.08F);
+        // EM projector: the core idles at a faint glow while mounted in a powered suit, brightens while the button
+        // is held (searching for something to grab) and runs full while the beam holds something; the prong tips
+        // only light up while the beam holds something (that's when they spark). Quick to light, slower to fade.
+        boolean em = powered && this.getSocketStack().getItem() instanceof EmProjectorItem;
+        boolean holding = em && this.getBeamTarget() != null;
+        float coreTarget = !em ? 0F : holding ? 1F : this.isToolActive() ? 0.6F : 0.25F;
+        float arcTarget = holding ? 1F : 0F;
+        this.emCoreGlow += (coreTarget - this.emCoreGlow) * (coreTarget > this.emCoreGlow ? 0.35F : 0.1F);
+        this.emArcGlow += (arcTarget - this.emArcGlow) * (arcTarget > this.emArcGlow ? 0.5F : 0.15F);
+    }
+
+    /** Client: the EM projector's lens and vents at this moment, 0..1: a slow breathing pulse, and a fast uneven
+     *  throb while the beam holds something (time in ticks, with the partial tick). */
+    public float getEmCoreGlow(float time) {
+        float g = this.emCoreGlow;
+        float pulse = this.emArcGlow > 0.5F ? 0.8F + 0.12F * Mth.sin(time * 1.7F) + 0.08F * Mth.sin(time * 4.3F)
+                : 0.85F + 0.15F * Mth.sin(time * 0.25F);
+        return g * pulse;
+    }
+
+    /** Client: the EM projector's prong tips at this moment, 0..1: they crackle (flicker at random-looking times). */
+    public float getEmArcGlow(float time) {
+        float crackle = Mth.sin(time * 5.1F) * Mth.sin(time * 2.9F + this.getId()) > 0.5F ? 0.55F : 1F;
+        return this.emArcGlow * crackle;
     }
 
     /** Client: firebox glow, 0 (cold) .. 1 (roaring). */

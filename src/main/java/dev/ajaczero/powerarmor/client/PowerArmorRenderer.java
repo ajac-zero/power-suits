@@ -50,7 +50,9 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
     /** True when we're drawing the suit the local player sits in, from inside (first person). */
     static boolean isCockpitView(PowerArmorEntity suit) {
         Minecraft mc = Minecraft.getInstance();
-        return suit.isPilotedBy(mc.player) && mc.options.getCameraType().isFirstPerson();
+        // The camera must also be the pilot: a scripted camera (another entity, e.g. the autopilot's close-ups) sees
+        // the whole suit even while the view is set to first person.
+        return suit.isPilotedBy(mc.player) && mc.options.getCameraType().isFirstPerson() && mc.getCameraEntity() == mc.player;
     }
 
     /** GeckoLib draws both sides of every face by default. From inside the suit that exposes the

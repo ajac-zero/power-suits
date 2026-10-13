@@ -12,6 +12,8 @@ which adds nothing (SuitGlowLayer draws the masks full-bright and additively, ti
                               around them; it lights up
                               only when the barrels get really hot, so the heat creeps back from the tips. It's what
                               the pilot sees: from the cockpit the front collar hides the tips.
+  power_armor_glow_em_core.png  the EM projector's redstone lens and the vent slits round its housing
+  power_armor_glow_em_arc.png   the EM projector's redstone prong tips (they spark while the beam holds something)
 The script refuses to run if a reserved colour turns up outside the expected amount (someone painted with it).
 """
 from pathlib import Path
@@ -38,9 +40,15 @@ GLOW = {
     H('4c555c'): ('heat_barrel', H('f0501a')), H('3b4249'): ('heat_barrel', H('d24416')),  # under the front collar: orange-red
     # the front collar around the barrels (its own net; the rear collar stays cold): the ring's greys, one step off
     H('89939b'): ('heat_barrel', H('f0501a')), H('7d888f'): ('heat_barrel', H('d24416')), H('6f797f'): ('heat_barrel', H('b4300e')),
+    # EM projector (model/art/em_redstone_art.py): dead redstone, lit red
+    H('3a0e0c'): ('em_core', H('7a0600')), H('4b1310'): ('em_core', H('b81206')),
+    H('5c1813'): ('em_core', H('f0200c')), H('701f17'): ('em_core', H('ff6a4a')),
+    H('4e1411'): ('em_arc', H('c01206')), H('621a14'): ('em_arc', H('ff2a14')),
 }
-EXPECTED = {'fire': 15, 'visor': 35, 'heat': 16, 'heat_barrel': 120}  # pixels per mask (firebox 12 + 3 slits; the 7x5 visor;
-# 4 barrel sides x 2x2 tips; 4 barrel sides x 2x3 behind them + the front collar's 6x1x6 net, 96)
+EXPECTED = {'fire': 15, 'visor': 35, 'heat': 16, 'heat_barrel': 120, 'em_core': 42, 'em_arc': 20}  # pixels per mask (firebox 12 + 3 slits; the 7x5 visor;
+# 4 barrel sides x 2x2 tips; 4 barrel sides x 2x3 behind them + the front collar's 6x1x6 net, 96;
+# em_core: the 3x1x3 lens's faces 30 + 3 vent slits on each of the housing's 4 sides; em_arc: the shared prong net's
+# tip, 2x2 end + 4 sides x 2x2)
 
 
 def main():
