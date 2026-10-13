@@ -1,6 +1,6 @@
-# starcraft_marine animation sources
+# Power Armor animation sources
 
-Procedural specs that generated the animations in `../starcraft_marine.bbmodel`. Pipeline docs: `../../.agents/skills/blockbench-mcp/ANIMATION.md`.
+Procedural specs that generated the animations in `../power_armor.bbmodel`. Pipeline docs: `../../.agents/skills/blockbench-mcp/ANIMATION.md`.
 
 With the model open in Blockbench (MCP plugin on `localhost:3000`), run this from the repo root (`~/Developer/PowerArmor`):
 

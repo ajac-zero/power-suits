@@ -9,7 +9,7 @@ Learned from real sessions: rigging/posing a Bedrock entity, fixing its walk cyc
 
 - **Building or reworking animations?** Read [ANIMATION.md](ANIMATION.md) (pipeline, toolkit API, recipes, pitfalls) and use `scripts/`.
 - **Taking a model into Minecraft (NeoForge + GeckoLib)?** See `~/Developer/PowerArmor/.agents/skills/minecraft-modding/SKILL.md` (export pipeline, rendering, flicker, testing in game).
-- Example production specs for a real rig: `model/anim/a_*.js` (model: `model/starcraft_marine.bbmodel`).
+- Example production specs for a real rig: `model/anim/a_*.js` (model: `model/power_armor.bbmodel`).
 
 ## 1. Access: MCP tools live in `codemode`
 - Blockbench tools are not direct function calls. Call them as `tools.mcp__blockbench__<name>(args)` inside `codemode`.
@@ -78,7 +78,7 @@ Known gaps with no tool (use `risky_eval`): delete an animation, save the projec
 
 ## 5. Undo and safety
 - Call `save_checkpoint({name})` before each meaningful change. It shows up in `get_undo_stack`. Report checkpoint names to the user.
-- Never save, export or overwrite files unless asked (or the project has a standing rule: the Power Armor user wants `starcraft_marine.bbmodel` saved with every mod commit that changes it). Say the project is unsaved when you finish. Saving the `.bbmodel` does not export Bedrock geo/animation files; mention that.
+- Never save, export or overwrite files unless asked (or the project has a standing rule: the Power Armor user wants `power_armor.bbmodel` saved with every mod commit that changes it). Say the project is unsaved when you finish. Saving the `.bbmodel` does not export Bedrock geo/animation files; mention that.
 - Tell the user before using anything not clearly read-only.
 - **Moving the project file** (user asked): check the target does not exist, `mv` it, then `risky_eval` `Project.save_path = "<new path>"` so later saves go to the new place (otherwise Blockbench recreates the old file).
 

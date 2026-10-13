@@ -1,6 +1,6 @@
-# starcraft_marine art scripts
+# Power Armor art scripts
 
-One-off scripts that added parts to `../starcraft_marine.bbmodel` (kept as reference / to redo a part).
+One-off scripts that added parts to `../power_armor.bbmodel` (kept as reference / to redo a part).
 
 | File | What |
 |---|---|

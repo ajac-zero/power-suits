@@ -106,7 +106,7 @@ would replace them in `sounds.json` only.
    creative, immunity bypass, overheat (52).
 3. EM projector redstone restyle: model/texture, red-dust beam + sparks.
 
-## Art (Blockbench, `model/starcraft_marine.bbmodel`)
+## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint
 before every change, save it with every mod commit that changes the art (user's rule), re-export with `node tools/export-model.mjs`.
 - Phase 1 (done): `shutdown`, `powered_off`, `startup` (`a_power.js`, planted feet IK).

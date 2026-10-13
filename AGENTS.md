@@ -13,7 +13,7 @@ The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is
   a copy (see `runAutopilotTerrain`). A sorted md5 listing of it is in `.scratch/world_baseline.txt`
   (`find . -type f ! -name session.lock -exec md5 -r {} \; | sort -k2`); the user plays it between
   sessions, so check file mtimes before blaming a run, and refresh the baseline at the start of a session.
-- The art lives in Blockbench: `model/starcraft_marine.bbmodel` (in this repo since 2026-10-13; it used to sit in
+- The art lives in Blockbench: `model/power_armor.bbmodel` (in this repo since 2026-10-13; it used to sit in
   `~/Developer/Models`, which is now only for generic Blockbench experiments). Checkpoint before edits,
   save it (`BarItems.save_project.trigger()` via risky_eval) **with every mod commit that
   touches the art or animations** (user's rule since Phase 5) and commit it with them, so the model and the
@@ -22,7 +22,7 @@ The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is
 
 ## Layout
 - `src/` the mod; `tools/` export / art / test helpers; `docs/` design + plan; `run/` dev game (not in git).
-- `model/` the Blockbench source: `starcraft_marine.bbmodel`, `anim/` procedural animation specs (bake with
+- `model/` the Blockbench source: `power_armor.bbmodel`, `anim/` procedural animation specs (bake with
   `.agents/skills/blockbench-mcp/scripts/run.mjs`, see `model/anim/README.md`), `art/` one-off texture/part scripts.
 - `.pi/mcp.json` connects pi to Blockbench's MCP server (`localhost:3000/bb-mcp`): start sessions here.
 - `.agents/skills/`: `minecraft-modding` (this mod's how-to) and `blockbench-mcp` (Blockbench work).
