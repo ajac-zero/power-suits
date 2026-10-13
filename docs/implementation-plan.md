@@ -78,7 +78,7 @@ Sounds (engine loop pitched by load), recipes for every tool and fuel balance pa
 
 ## Art (Blockbench, `~/Developer/Models/starcraft_marine.bbmodel`)
 Use the `blockbench-mcp` skill (`~/Developer/Models/.agents/skills/blockbench-mcp/`), checkpoint
-before every change, save only when the user asks, re-export with `node tools/export-model.mjs`.
+before every change, save it with every mod commit that changes the art (user's rule), re-export with `node tools/export-model.mjs`.
 - Phase 1 (done): `shutdown`, `powered_off`, `startup` (`a_power.js`, planted feet IK).
 - Phase 2 (done): `socket` coupling bone under `right_forearm`, `plasma_shot` overlay; the item model is
   extracted from the suit geo. Walk/run's stabiliser holds the forearm, so it steadies any tool.

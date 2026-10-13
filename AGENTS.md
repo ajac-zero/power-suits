@@ -14,7 +14,8 @@ The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is
   (`find . -type f ! -name session.lock -exec md5 -r {} \; | sort -k2`); the user plays it between
   sessions, so check file mtimes before blaming a run, and refresh the baseline at the start of a session.
 - The art lives in Blockbench: `~/Developer/Models/starcraft_marine.bbmodel`. Checkpoint before edits,
-  only save it when the user asks.
+  save it (`BarItems.save_project.trigger()` via risky_eval) **with every mod commit that
+  touches the art or animations** (user's rule since Phase 5), so the model and the exported files never drift.
 
 ## Setup
 Java 21 from Homebrew is keg-only. Every shell needs:

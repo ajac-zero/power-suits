@@ -36,7 +36,8 @@ For model and animation work use the Blockbench skill:
    state per tick (speed, ground contact, animation name, camera height) and look for the pattern.
    When a calculation and a measurement disagree, trust the measurement.
 5. **Protect the user's things.** Never open their world (copy it, checksum the original), checkpoint
-   Blockbench before edits, save only when asked, commit after each verified step.
+   Blockbench before edits, commit after each verified step (on Power Armor the user wants the .bbmodel
+   saved together with every commit that changes art; ask what a new user prefers).
 6. **Teach as you go** (first-time modders): after each change explain one concept in plain words:
    client vs server, registries, events, synced data, why a bug happened. Comment the "why" in code.
 7. **Before handing off**, write `docs/design.md` (spec with OPEN questions), `docs/implementation-plan.md`
