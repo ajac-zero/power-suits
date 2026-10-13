@@ -1,6 +1,7 @@
 package dev.ajaczero.powerarmor;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.ToolMining;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -46,9 +47,11 @@ public final class PilotHands {
         }
     }
 
+    /** The hand never breaks blocks. Breaks by the suit's own mining tools (drill, chainsaw) post this event too,
+     *  so protection mods can veto them; those are let through here. */
     @SubscribeEvent
     public static void noBreaking(BlockEvent.BreakEvent event) {
-        if (suitOf(event.getPlayer()) != null) {
+        if (suitOf(event.getPlayer()) != null && !ToolMining.isToolBreak()) {
             event.setCanceled(true);
         }
     }

@@ -155,6 +155,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Entity id of whatever the EM projector holds (-1: nothing), so every client can draw the beam. */
     private static final EntityDataAccessor<Integer> BEAM_TARGET =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
+    /** True while a continuous socket tool runs (drill spinning, chainsaw cutting), for its animation. */
+    private static final EntityDataAccessor<Boolean> TOOL_RUNNING =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     /** Copies of the two slots, so clients can show the fuel left and (Phase 2) draw the socket tool. */
     private static final EntityDataAccessor<ItemStack> FUEL_ITEM =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
@@ -250,6 +253,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(BURN_TOTAL, 0);
         builder.define(FUEL_ITEM, ItemStack.EMPTY);
         builder.define(BEAM_TARGET, -1);
+        builder.define(TOOL_RUNNING, false);
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
     }
 
@@ -451,6 +455,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             tool.serverTick(this);
         }
         boolean active = pilot != null && this.triggerHeld && tool != null && this.canOperate();
+        this.entityData.set(TOOL_RUNNING, tool != null && tool.isContinuous() && (active || tool.keepsRunning(this)));
         if (this.activeContinuousTool != null && (this.activeContinuousTool != tool || !active)) {
             boolean interrupted = this.activeContinuousTool != tool || pilot == null || !this.canOperate();
             this.activeContinuousTool.release(this, pilot, interrupted);
@@ -542,7 +547,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     /** Server: is there this much energy on board (burning item + fuel slot)? */
-    private boolean hasEnergyFor(int amount) {
+    public boolean hasEnergyFor(int amount) {
         ItemStack fuel = this.inventory.getItem(FUEL_SLOT);
         return this.burnLeft + (float) fuel.getCount() * SuitFuel.energyOf(fuel) >= amount;
     }
@@ -1136,7 +1141,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 .triggerableAnim("hit", HIT)
                 .triggerableAnim("plasma_shot", PLASMA_SHOT)
                 .triggerableAnim("tool_recoil", PLASMA_SHOT)); // same kick for the EM projector's push
-        // Controller 3: the left hand. Added last, so while it plays it owns the left arm (the gait's arm
+        // Controller 3: the socket tool's own loop (drill spin, chainsaw chain) while it runs. It keys only
+        // the tool's bones, so the arm keeps following walk/run and the aim.
+        controllers.add(new AnimationController<>(this, "tool", 3, this::toolAnimation));
+        // Controller 4: the left hand. Added last, so while it plays it owns the left arm (the gait's arm
         // swing pauses, like a person carrying a torch). Stops when there's nothing to hold or no power.
         controllers.add(new AnimationController<>(this, "left_hand", 4, this::leftHandAnimation)
                 .triggerableAnim("use_item", USE_ITEM));
@@ -1177,6 +1185,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             return state.setAndContinue(this.isRunning() ? RUN : WALK);
         }
         return state.setAndContinue(IDLE);
+    }
+
+    private PlayState toolAnimation(AnimationState<PowerArmorEntity> state) {
+        if (this.entityData.get(TOOL_RUNNING) && this.getSocketStack().getItem() instanceof PowerTool tool && tool.runAnimation() != null) {
+            return state.setAndContinue(tool.runAnimation());
+        }
+        return PlayState.STOP;
     }
 
     private PlayState leftHandAnimation(AnimationState<PowerArmorEntity> state) {

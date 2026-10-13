@@ -17,7 +17,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
     /** Bones whose own cubes surround the pilot's camera. */
     private static final String[] SHELL_BONES = {"body", "torso"};
     /** Every tool's bone in the suit model (PowerTool.suitBone). Add new tools here. */
-    private static final String[] TOOL_BONES = {"cannon", "em_projector"};
+    private static final String[] TOOL_BONES = {"cannon", "em_projector", "drill", "chainsaw"};
 
     public PowerArmorRenderer(EntityRendererProvider.Context context) {
         super(context, new PowerArmorModel());

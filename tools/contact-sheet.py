@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 prefix, out = sys.argv[1], sys.argv[2]
 cols = int(sys.argv[3]) if len(sys.argv) > 3 else 3
 W = int(sys.argv[4]) if len(sys.argv) > 4 else 480
-files = sorted(glob.glob(f'run/screenshots/ap_{prefix}*.png'), key=lambda f: [int(x) if x.isdigit() else x for x in os.path.basename(f).replace('.', '_').split('_')])
+files = sorted(glob.glob(f'run/screenshots/ap_{prefix}*.png'), key=lambda f: [(0, int(x), '') if x.isdigit() else (1, 0, x) for x in os.path.basename(f).replace('.', '_').split('_')])
 ims = []
 for f in files:
     im = Image.open(f).convert('RGB'); h = int(im.height * W / im.width); im = im.resize((W, h))

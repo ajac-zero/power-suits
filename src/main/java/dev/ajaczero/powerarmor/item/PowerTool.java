@@ -4,9 +4,10 @@ import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
+import software.bernie.geckolib.animation.RawAnimation;
 
 /**
- * A power tool for the suit's right-arm socket (plasma cannon, EM projector, later drill, chainsaw).
+ * A power tool for the suit's right-arm socket (plasma cannon, EM projector, drill, chainsaw).
  * Only items implementing this fit the socket slot. They do nothing on foot.
  *
  * Two kinds, both run by the suit on the server while the pilot holds attack:
@@ -45,5 +46,17 @@ public interface PowerTool {
 
     /** Server: every tick while installed, held or not (e.g. to follow things the tool has thrown). */
     default void serverTick(PowerArmorEntity suit) {
+    }
+
+    /** Continuous tools: a looping animation of the tool's own bones (drill spin, chain) played while it runs,
+     *  or null. It must only key the tool's bones: GeckoLib lets later controllers override whole bones. */
+    @Nullable
+    default RawAnimation runAnimation() {
+        return null;
+    }
+
+    /** Server: keep the run animation going after the trigger is released (a tree still coming down). */
+    default boolean keepsRunning(PowerArmorEntity suit) {
+        return false;
     }
 }

@@ -44,6 +44,8 @@ public class PowerArmor {
             event.accept(ModItems.POWER_ARMOR);
             event.accept(ModItems.PLASMA_CANNON);
             event.accept(ModItems.EM_PROJECTOR);
+            event.accept(ModItems.DRILL);
+            event.accept(ModItems.CHAINSAW);
         }
     }
 }

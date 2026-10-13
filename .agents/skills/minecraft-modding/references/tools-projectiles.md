@@ -81,3 +81,33 @@ Built for the Power Armor plasma cannon. Files: `item/PowerTool.java`, `item/Pla
   No-AI mobs never move by velocity. Collect items with `ItemEntity.playerTouch(player)` (+ `setNoPickUpDelay`).
 - Wall slam: remember the thrown mob's speed each tick; when `horizontalCollision` and last speed > threshold, hurt.
 - Sync what the beam holds as an entity id in synced data; clients draw the beam with particles.
+
+## Mining tools (3x3 drill, tree-felling chainsaw)
+Files: `item/ToolMining.java`, `item/DrillItem.java`, `item/ChainsawItem.java`, `PilotHands.noBreaking`.
+- Break blocks like vanilla `ServerPlayerGameMode.destroyBlock`, with a *virtual* tool stack (e.g.
+  `new ItemStack(Items.DIAMOND_PICKAXE)`) instead of the hand item: post your own
+  `new BlockEvent.BreakEvent(level, pos, state, player)` (protection mods veto here; `CommonHooks.fireBlockBreak`
+  needs a ServerPlayer and pre-cancels on the hand item), then `block.playerWillDestroy` (door halves, piglins,
+  break effect for *other* players), `state.onDestroyedByPlayer(level, pos, player, true, fluid)`, `block.destroy`,
+  `Block.dropResources(state, level, pos, blockEntity, player, tool)` (loot table + XP via `BlockDropsEvent`;
+  skip in creative like vanilla), and send `ClientboundLevelEventPacket(2001, pos, Block.getId(state), false)`
+  to the player yourself (`levelEvent(player, ...)` excludes them).
+- If you also cancel the rider's own BreakEvents (no mining by hand), exempt your tool's posts with a
+  ThreadLocal flag set around `post()`, or the tool can never break anything.
+- Harvest check without a real item: `state.is(BlockTags.MINEABLE_WITH_PICKAXE | _SHOVEL | _AXE)` and
+  `!state.is(BlockTags.INCORRECT_FOR_DIAMOND_TOOL)`; `getDestroySpeed < 0` = unbreakable. Vanilla speed with the
+  right tool: progress per tick = toolSpeed / hardness / 30 (diamond = 8: stone 6 ticks, obsidian 188).
+- Crack overlay: `serverLevel.destroyBlockProgress(id, pos, stage 0..9)`, `-1` removes. Use **negative ids**
+  (one per block): players' own ids are their entity ids and the packet is skipped for the player whose id
+  matches.
+- Natural trees: BFS over `BlockTags.LOGS` in the 26-neighbourhood (cap ~256), count touching leaves without
+  `LeavesBlock.PERSISTENT` (player-placed leaves are persistent). Collect *before* breaking the cut log, then
+  break the rest top-down from a queue in `serverTick` (a few per tick). Copy positions from
+  `BlockPos.betweenClosed` (it reuses one mutable instance).
+- Tool loop animations: sync a `TOOL_RUNNING` boolean and add a controller that plays the tool's loop. Key only
+  the tool's own bones, or the controller overrides the arm the gait/aim animations move.
+- GameTests: build the target wall inside the pad, aim the mock pilot (yaw/pitch from the eye), hold the
+  trigger, assert blocks/drops (`ItemEntity` counts)/fuel; a static test-only `@SubscribeEvent` that cancels
+  BreakEvents at one position stands in for a protection mod.
+- Autopilot: keep tree canopies away from the third-person camera path (leaves pull the camera into the
+  model); re-aim every tick while the vehicle turns (the eye position moves with it).

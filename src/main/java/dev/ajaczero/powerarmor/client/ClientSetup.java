@@ -10,6 +10,8 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import dev.ajaczero.powerarmor.item.ChainsawItem;
+import dev.ajaczero.powerarmor.item.DrillItem;
 import dev.ajaczero.powerarmor.item.EmProjectorItem;
 import dev.ajaczero.powerarmor.item.PlasmaCannonItem;
 import net.minecraft.world.item.Item;
@@ -36,6 +38,8 @@ public final class ClientSetup {
     public static void registerItemRenderers(RegisterClientExtensionsEvent event) {
         event.registerItem(ClientSetup.<PlasmaCannonItem>geoItem("plasma_cannon"), ModItems.PLASMA_CANNON.get());
         event.registerItem(ClientSetup.<EmProjectorItem>geoItem("em_projector"), ModItems.EM_PROJECTOR.get());
+        event.registerItem(ClientSetup.<DrillItem>geoItem("drill"), ModItems.DRILL.get());
+        event.registerItem(ClientSetup.<ChainsawItem>geoItem("chainsaw"), ModItems.CHAINSAW.get());
     }
 
     /** A GeckoLib item renderer for geo/item/<name>.geo.json, using the suit's texture (tool models are cut from the suit). */

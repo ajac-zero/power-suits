@@ -30,6 +30,10 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -678,6 +682,206 @@ public final class PowerArmorTests {
         Pig statue = helper.spawn(EntityType.PIG, new BlockPos(6, 2, 2));
         statue.setNoAi(true);
         helper.assertTrue(!grab.test(statue), "no-AI mobs (map statues): never");
+        helper.succeed();
+    }
+
+    // =========================================================================================
+    // Mining tools (Phase 5): 3x3 drill, chainsaw
+    // =========================================================================================
+
+    /** Protection-mod stand-in: cancels BreakEvents at this one position (null = off, as in normal play). */
+    @EventBusSubscriber(modid = PowerArmor.MODID)
+    public static final class ProtectedBlock {
+        static volatile BlockPos pos;
+
+        @SubscribeEvent
+        public static void veto(BlockEvent.BreakEvent event) {
+            if (event.getPos().equals(pos)) {
+                event.setCanceled(true);
+            }
+        }
+    }
+
+    /** A suit at (4,2,1) facing +Z with this tool and 4 blaze rods (19200 energy), the pilot looking at {@code at}. */
+    private static Player toolPilot(GameTestHelper helper, PowerArmorEntity suit, ItemStack tool, Vec3 at) {
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, tool);
+        return emPilotLookingAt(helper, suit, helper.absoluteVec(at));
+    }
+
+    /** Fills the 3x3 wall x 3..5, y 2..4 at z=5 (relative) with a block. */
+    private static void wall(GameTestHelper helper, net.minecraft.world.level.block.Block block) {
+        for (int x = 3; x <= 5; x++) {
+            for (int y = 2; y <= 4; y++) {
+                helper.setBlock(new BlockPos(x, y, 5), block);
+            }
+        }
+    }
+
+    private static int wallLeft(GameTestHelper helper) {
+        int n = 0;
+        for (int x = 3; x <= 5; x++) {
+            for (int y = 2; y <= 4; y++) {
+                n += helper.getBlockState(new BlockPos(x, y, 5)).isAir() ? 0 : 1;
+            }
+        }
+        return n;
+    }
+
+    private static int dropped(GameTestHelper helper, net.minecraft.world.item.Item item) {
+        return helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                        new AABB(helper.absolutePos(new BlockPos(4, 3, 5))).inflate(4))
+                .stream().filter(e -> e.getItem().is(item)).mapToInt(e -> e.getItem().getCount()).sum();
+    }
+
+    private static PowerArmorEntity toolSuit(GameTestHelper helper) {
+        return helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 2, 1));
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 60)
+    public static void drillDigsA3x3Face(GameTestHelper helper) {
+        wall(helper, Blocks.STONE);
+        helper.setBlock(new BlockPos(4, 3, 6), Blocks.OBSIDIAN); // behind: slow, so it's still there when we check
+        PowerArmorEntity suit = toolSuit(helper);
+        Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
+        int before = suit.getTotalEnergy();
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(4, () -> helper.assertTrue(wallLeft(helper) == 9, "stone takes 6 ticks with a diamond tool, not instant"));
+        helper.runAfterDelay(25, () -> {
+            suit.setTriggerHeld(pilot, false);
+            helper.assertTrue(wallLeft(helper) == 0, "all 9 blocks of the face should be gone, left " + wallLeft(helper));
+            helper.assertBlockPresent(Blocks.OBSIDIAN, new BlockPos(4, 3, 6));
+            helper.assertTrue(dropped(helper, Items.COBBLESTONE) == 9, "9 cobblestone should drop, got " + dropped(helper, Items.COBBLESTONE));
+            int used = before - suit.getTotalEnergy();
+            helper.assertTrue(used >= 9 * 60 && used < 9 * 60 + 40, "60 fuel per block (+ idle), used " + used);
+            helper.succeed();
+        });
+    }
+
+    /** Diamond tier: obsidian yes (slowly: the face waits for its hardest block), bedrock never, wood is the chainsaw's. */
+    @GameTest(template = PAD, timeoutTicks = 300)
+    public static void drillDigsObsidianButNotBedrockOrWood(GameTestHelper helper) {
+        wall(helper, Blocks.STONE);
+        helper.setBlock(new BlockPos(4, 3, 5), Blocks.OBSIDIAN);
+        helper.setBlock(new BlockPos(3, 3, 5), Blocks.BEDROCK);
+        helper.setBlock(new BlockPos(5, 3, 5), Blocks.OAK_PLANKS);
+        PowerArmorEntity suit = toolSuit(helper);
+        Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(150, () -> helper.assertTrue(wallLeft(helper) == 9, "obsidian takes ~9.4 s and the stone waits for it"));
+        helper.runAfterDelay(220, () -> {
+            suit.setTriggerHeld(pilot, false);
+            helper.assertBlockNotPresent(Blocks.OBSIDIAN, new BlockPos(4, 3, 5));
+            helper.assertBlockPresent(Blocks.BEDROCK, new BlockPos(3, 3, 5));
+            helper.assertBlockPresent(Blocks.OAK_PLANKS, new BlockPos(5, 3, 5));
+            helper.assertTrue(wallLeft(helper) == 2, "only bedrock and planks should be left, left " + wallLeft(helper));
+            helper.assertTrue(dropped(helper, Items.OBSIDIAN) == 1, "obsidian should drop");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 60)
+    public static void drillSkidsOnWood(GameTestHelper helper) {
+        wall(helper, Blocks.OAK_PLANKS);
+        PowerArmorEntity suit = toolSuit(helper);
+        Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(40, () -> {
+            helper.assertTrue(wallLeft(helper) == 9 && suit.getToolUses() == 0, "the drill must not cut wood");
+            helper.succeed();
+        });
+    }
+
+    /** Every block posts a BreakEvent for the pilot, so protection mods can say no. The hand still can't break anything. */
+    @GameTest(template = PAD, timeoutTicks = 60)
+    public static void drillRespectsProtection(GameTestHelper helper) {
+        wall(helper, Blocks.STONE);
+        BlockPos center = helper.absolutePos(new BlockPos(4, 3, 5));
+        ProtectedBlock.pos = center;
+        PowerArmorEntity suit = toolSuit(helper);
+        Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
+        var handBreak = new BlockEvent.BreakEvent(helper.getLevel(), helper.absolutePos(new BlockPos(3, 2, 5)), Blocks.STONE.defaultBlockState(), pilot);
+        NeoForge.EVENT_BUS.post(handBreak);
+        helper.assertTrue(handBreak.isCanceled(), "a pilot's own (hand) break must still be cancelled");
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(14, () -> {
+            suit.setTriggerHeld(pilot, false);
+            ProtectedBlock.pos = null;
+            helper.assertBlockPresent(Blocks.STONE, new BlockPos(4, 3, 5));
+            helper.assertTrue(wallLeft(helper) == 1, "the 8 unprotected blocks should break, left " + wallLeft(helper));
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 80)
+    public static void chainsawFellsANaturalTree(GameTestHelper helper) {
+        for (int y = 2; y <= 6; y++) {
+            helper.setBlock(new BlockPos(4, y, 5), Blocks.OAK_LOG);
+        }
+        for (int x = 3; x <= 5; x++) {
+            for (int z = 4; z <= 6; z++) {
+                for (int y = 5; y <= 7; y++) {
+                    if (helper.getBlockState(new BlockPos(x, y, z)).isAir()) {
+                        helper.setBlock(new BlockPos(x, y, z), Blocks.OAK_LEAVES); // natural (not persistent)
+                    }
+                }
+            }
+        }
+        PowerArmorEntity suit = toolSuit(helper);
+        Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.CHAINSAW.get()), new Vec3(4.5, 2.5, 5));
+        int before = suit.getTotalEnergy();
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(30, () -> {
+            suit.setTriggerHeld(pilot, false);
+            for (int y = 2; y <= 6; y++) {
+                helper.assertBlockNotPresent(Blocks.OAK_LOG, new BlockPos(4, y, 5));
+            }
+            helper.assertTrue(dropped(helper, Items.OAK_LOG) == 5, "5 logs should drop, got " + dropped(helper, Items.OAK_LOG));
+            int used = before - suit.getTotalEnergy();
+            helper.assertTrue(used >= 5 * 40 && used < 5 * 40 + 30, "40 fuel per log (+ idle), used " + used);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 60)
+    public static void chainsawSparesLogCabins(GameTestHelper helper) {
+        for (int y = 2; y <= 4; y++) {
+            helper.setBlock(new BlockPos(4, y, 5), Blocks.OAK_LOG); // a log wall: no leaves
+        }
+        helper.setBlock(new BlockPos(4, 5, 5), Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
+        PowerArmorEntity suit = toolSuit(helper);
+        Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.CHAINSAW.get()), new Vec3(4.5, 2.5, 5));
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(25, () -> {
+            suit.setTriggerHeld(pilot, false);
+            helper.assertBlockNotPresent(Blocks.OAK_LOG, new BlockPos(4, 2, 5));
+            helper.assertBlockPresent(Blocks.OAK_LOG, new BlockPos(4, 3, 5));
+            helper.assertBlockPresent(Blocks.OAK_LOG, new BlockPos(4, 4, 5));
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 60)
+    public static void chainsawSkidsOnStone(GameTestHelper helper) {
+        wall(helper, Blocks.STONE);
+        PowerArmorEntity suit = toolSuit(helper);
+        Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.CHAINSAW.get()), new Vec3(4.5, 3.5, 5));
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(40, () -> {
+            helper.assertTrue(wallLeft(helper) == 9 && suit.getToolUses() == 0, "the chainsaw must not cut stone");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void miningToolsDoNothingOnFoot(GameTestHelper helper) {
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        for (ItemStack tool : List.of(new ItemStack(ModItems.DRILL.get()), new ItemStack(ModItems.CHAINSAW.get()))) {
+            player.setItemInHand(InteractionHand.MAIN_HAND, tool);
+            helper.assertTrue(!tool.use(helper.getLevel(), player, InteractionHand.MAIN_HAND).getResult().consumesAction(), "no use on foot");
+            helper.assertTrue(tool.getDestroySpeed(Blocks.STONE.defaultBlockState()) == 1F
+                    && tool.getDestroySpeed(Blocks.OAK_LOG.defaultBlockState()) == 1F, "in your hand it mines like a fist");
+        }
         helper.succeed();
     }
 

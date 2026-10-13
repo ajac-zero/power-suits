@@ -54,16 +54,23 @@ violet particle beam), `em_projector` bone in the suit model (painted coils/core
 Also fixed: torso twist used an unwrapped yaw difference (twisted the wrong way after yaw passed +-180).
 Tests: 6 new GameTests (34 total); autopilot EM scenario (`ap_em_*`, `run/autopilot_em.csv`).
 
-## Phase 5: 3x3 drill and chainsaw
-- **Drill**: hold attack; break progress per target block like mining (speed set by tool tier); on
-  completion break the 3x3 in the hit face's plane (`hit.getDirection()`), each via
-  `ServerPlayerGameMode.destroyBlock` or `level.destroyBlock` + `BlockEvent.BreakEvent` firing so
-  protections work; skip unbreakable / harvest-tier-too-high blocks; fuel per block.
-- **Chainsaw**: on cutting a log, if it's the bottom of a natural tree (logs connected upward with
-  leaves present), BFS-collect connected logs (26-neighbourhood, cap 256) and break them over a few
-  ticks (top-down looks good), fuel per log.
-- Tests for both: count of broken blocks, drops present, protected/unbreakable blocks untouched,
-  fuel consumed.
+## Phase 5: 3x3 drill and chainsaw (DONE 2026-10-12)
+Decisions: drill = diamond tier, pickaxe + shovel blocks, visible diamond tip; axe blocks are the chainsaw's.
+Built: `ToolMining` (crosshair block within the pilot's reach, `breakBlock` = vanilla `destroyBlock` with a
+virtual diamond tool: own `BreakEvent` post, `playerWillDestroy`, `onDestroyedByPlayer`, `dropResources`
+(loot + XP), break effect sent to the pilot too; per-suit `Progress` with crack overlay on every target via
+`destroyBlockProgress` under negative ids), `DrillItem` (3x3 in the hit face's plane, hardest-block speed,
+4-tick pause, 60 fuel per block), `ChainsawItem` (axe blocks + leaves, natural-tree BFS above the cut, felling
+queue in `serverTick`, 40 fuel per log), `PilotHands.noBreaking` exemption (`ToolMining.isToolBreak()`),
+`PowerTool.runAnimation()` / `keepsRunning()` + synced `TOOL_RUNNING` + a 4th GeckoLib controller `tool`;
+art: `drill` (collar, hub, two twisted steel cone steps, diamond bit + tip in a spinning `drill_bit`) and
+`chainsaw` (collar, blue motor with grille + hazard stripe, exhaust, guide bar, chain in `chainsaw_chain`),
+`drill_run` / `chainsaw_run` loops (`a_tools.js`), item models, recipes, lang.
+Tests: 8 new GameTests (42 total): 3x3 + drops + fuel, obsidian/bedrock/wood, drill skids on wood, BreakEvent
+veto + hand still can't break, tree felling, log cabin spared, chainsaw skids on stone, nothing on foot.
+Autopilot: drill into a rock face with ores and fell a feature-grown oak (`ap_drill_*`, `ap_saw_*`,
+`run/autopilot_mine.csv`). Not done: tool sounds (Phase 6), leaves of felled trees decay at vanilla speed,
+fuel costs unbalanced (user: later).
 
 ## Phase 6: polish
 Sounds (engine loop pitched by load), recipes for every tool and fuel balance pass, a config file
@@ -77,5 +84,5 @@ before every change, save only when the user asks, re-export with `node tools/ex
   extracted from the suit geo. Walk/run's stabiliser holds the forearm, so it steadies any tool.
 - Phase 3 (done): `left_hand` grip bone, `hold_item` / `use_item` (`a_hand.js`); grenade removed (`throw` unused).
 - Phase 4 (done): `em_projector` bone (collar, 2 coils, core, 4 prongs; texture at y 98-107, x 166-225).
-- Phase 5: drill, chainsaw bones under `right_forearm` (+ `TOOL_BONES`, `extract-tool-geo.py`) + overlays
-  (drill vibration, chainsaw cut).
+- Phase 5 (done): `drill` (spinning `drill_bit`, diamond bit) and `chainsaw` (`chainsaw_chain`) bones under
+  `right_forearm`; nets painted by `~/Developer/Models/starcraft_marine_art/mining_tools_*`; `drill_run` / `chainsaw_run` (`a_tools.js`).

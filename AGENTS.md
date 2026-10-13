@@ -27,7 +27,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 |---|---|
 | `./gradlew build` | compile + jar |
 | `./gradlew runGameTestServer` | headless GameTests in `src/main/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
-| `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, plasma cannon range, cannon item on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon}.csv`. Quits by itself (~55 s). |
+| `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, plasma cannon range, left hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv`; summarize with `python3 tools/terrain-report.py` |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000) |
@@ -86,6 +86,14 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **Menus can't be opened by GameTest mock players**: `makeMockPlayer` ignores `openMenu`, and
   `makeMockServerPlayerInLevel` throws on NeoForge's `advanced_open_screen` payload. Test menu logic by
   constructing `PowerArmorMenu` directly; check the real screen in the autopilot (`ap_menu_*`).
+- **The pilot can't break blocks, so the mining tools post their own BreakEvent** (protection mods must be able to
+  veto) and `PilotHands.noBreaking` lets those through via `ToolMining.isToolBreak()`. Any new block-breaking
+  tool must go through `ToolMining.breakBlock`, or it breaks nothing (or bypasses claims).
+- **Crack overlays need negative breaker ids** (`destroyBlockProgress` skips the player whose entity id matches).
+- **Free texture space = transparent pixels minus every cube's box-UV net** (a cube without `uv_offset` uses
+  [0,0]). Transparent net corners belong to nobody, but a transparent face can be part of a net.
+- **Tree canopies next to the suit pull the third-person camera into the model** (camera collision): keep leaves
+  out of the camera path in autopilot scenes and grow the tree only when it's needed.
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
   `~/Developer/Models/starcraft_marine_anim/` (walk/run carry a cannon `stabilize()` wrapper). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.

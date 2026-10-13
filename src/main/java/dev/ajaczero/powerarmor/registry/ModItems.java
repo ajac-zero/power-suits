@@ -2,6 +2,8 @@ package dev.ajaczero.powerarmor.registry;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.ChainsawItem;
+import dev.ajaczero.powerarmor.item.DrillItem;
 import dev.ajaczero.powerarmor.item.EmProjectorItem;
 import dev.ajaczero.powerarmor.item.PlasmaCannonItem;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
@@ -26,6 +28,14 @@ public final class ModItems {
     /** Second power tool: electromagnetic grab / throw for items and mobs. */
     public static final DeferredItem<EmProjectorItem> EM_PROJECTOR = ITEMS.register("em_projector",
             () -> new EmProjectorItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+
+    /** Third: diamond-tipped 3x3 mining drill. */
+    public static final DeferredItem<DrillItem> DRILL = ITEMS.register("drill",
+            () -> new DrillItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+
+    /** Fourth: chainsaw, fells whole trees. */
+    public static final DeferredItem<ChainsawItem> CHAINSAW = ITEMS.register("chainsaw",
+            () -> new ChainsawItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
 
     private ModItems() {}
 }

@@ -80,6 +80,9 @@ public final class AutoPilot {
             return;
         }
         script(mc, tick++);
+        if (aimTarget != null) {
+            aimAtPos(mc, aimTarget);
+        }
         held.forEach(KeyMapping::setDown); // re-assert every tick (focus changes release keys)
         mc.player.setYRot(yaw);
         mc.player.setXRot(pitch);
@@ -201,18 +204,40 @@ public final class AutoPilot {
             case 1186 -> hold(o.keyAttack, false);
             case 1187, 1189, 1192, 1196 -> shot(mc, "em_side_throw_" + t);
             case 1205 -> { closeEmLog(); mc.setCameraEntity(mc.player); releaseAll(); }
+            // ---- mining tools: drill a 3x3 into a rock face with ores, then fell a real oak with the chainsaw
+            case 1210 -> { miningSetup(mc); yaw = 0; pitch = 20; o.hideGui = true; o.setCameraType(CameraType.THIRD_PERSON_BACK); openMineLog(mc); }
+            case 1225 -> aimTarget = Vec3.atCenterOf(mineBase.offset(0, 1, 4)).add(0, 0, -0.5); // re-aimed every tick (the eye moves as the suit turns)
+            case 1228 -> hold(o.keyAttack, true);
+            case 1230, 1234, 1238, 1242 -> shot(mc, "drill_tp_" + t);
+            case 1246 -> o.setCameraType(CameraType.FIRST_PERSON);
+            case 1250, 1254, 1258 -> shot(mc, "drill_fp_" + t);
+            case 1262 -> lookCamera(mc, Vec3.atBottomCenterOf(mineBase).add(-4.5, 2.0, 3.0), Vec3.atBottomCenterOf(mineBase).add(-0.5, 1.9, 1.8));
+            case 1264, 1266, 1268 -> shot(mc, "drill_side_" + t);
+            case 1272 -> { aimTarget = null; hold(o.keyAttack, false); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); }
+            case 1278 -> shot(mc, "drill_tp_after");
+            case 1280 -> treeSetup(mc);
+            case 1284 -> aimTarget = Vec3.atCenterOf(treeBase).add(-0.5, 0, 0);
+            case 1286 -> { hold(o.keyAttack, true); o.setCameraType(CameraType.FIRST_PERSON); }
+            case 1289 -> shot(mc, "saw_fp_" + t);
+            case 1290 -> lookCamera(mc, Vec3.atBottomCenterOf(mineBase).add(-3.5, 3.0, -3.5), Vec3.atBottomCenterOf(mineBase).add(2.0, 1.6, 0.6)); // behind-left, clear of the rock and the canopy
+            case 1291, 1293, 1294, 1295, 1296, 1297, 1298, 1300, 1304 -> shot(mc, "saw_side_" + t);
+            case 1306 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); }
+            case 1310 -> shot(mc, "saw_fp_" + t);
+            case 1312 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 1324 -> { aimTarget = null; hold(o.keyAttack, false); mc.setCameraEntity(mc.player); }
+            case 1330 -> { shot(mc, "saw_tp_after"); closeMineLog(); }
             // ---- the cannon item on foot: hand (first / third person) and inventory icon
-            case 1210 -> { o.setCameraType(CameraType.FIRST_PERSON); hold(o.keyShift, true); }
-            case 1215 -> { hold(o.keyShift, false); giveCannon(mc); survival(mc, true); yaw = 120; pitch = 10; }
-            case 1225 -> shot(mc, "item_fp");
-            case 1227 -> o.setCameraType(CameraType.THIRD_PERSON_FRONT);
-            case 1235 -> shot(mc, "item_tp_front");
-            case 1237 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1245 -> shot(mc, "item_tp_back");
-            case 1247 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)); }
-            case 1255 -> shot(mc, "item_gui");
-            case 1257 -> mc.setScreen(null);
-            case 1260 -> mc.stop();
+            case 1340 -> { o.setCameraType(CameraType.FIRST_PERSON); hold(o.keyShift, true); }
+            case 1345 -> { hold(o.keyShift, false); giveCannon(mc); survival(mc, true); yaw = 120; pitch = 10; }
+            case 1355 -> shot(mc, "item_fp");
+            case 1357 -> o.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            case 1365 -> shot(mc, "item_tp_front");
+            case 1367 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 1375 -> shot(mc, "item_tp_back");
+            case 1377 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)); }
+            case 1385 -> shot(mc, "item_gui");
+            case 1387 -> mc.setScreen(null);
+            case 1390 -> mc.stop();
             default -> {}
         }
         if (t >= 360 && t < 640) {
@@ -226,6 +251,9 @@ public final class AutoPilot {
         }
         if (t >= 1095 && t < 1205) {
             logEm(mc, t);
+        }
+        if (t >= 1210 && t < 1330) {
+            logMine(mc, t);
         }
     }
 
@@ -412,6 +440,129 @@ public final class AutoPilot {
         }
     }
 
+    // ---- mining scenario helpers -------------------------------------------------------------
+
+    private static BlockPos mineBase = BlockPos.ZERO, treeBase = BlockPos.ZERO;
+    /** While set, the pilot keeps looking at this point. */
+    private static Vec3 aimTarget;
+    private static java.io.BufferedWriter mineCsv;
+
+    /** Server: drill in the socket, survival (creative breaks drop nothing), a cleared work area with a
+     *  5x4x3 rock face 4 blocks ahead (+Z, ores in the front layer, dirt and gravel on top). */
+    private static void miningSetup(Minecraft mc) {
+        onServer(mc, player -> {
+            if (fuelSuit == null) {
+                return;
+            }
+            player.setGameMode(GameType.SURVIVAL);
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+            fuelSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
+                    new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.DRILL.get()));
+            var level = player.serverLevel();
+            BlockPos base = fuelSuit.blockPosition();
+            mineBase = base;
+            for (BlockPos p : BlockPos.betweenClosed(base.offset(-6, 0, -9), base.offset(8, 12, 9))) {
+                level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            }
+            for (BlockPos p : BlockPos.betweenClosed(base.offset(-2, 0, 4), base.offset(2, 3, 6))) {
+                var block = p.getY() - base.getY() == 3 ? (p.getX() % 2 == 0 ? net.minecraft.world.level.block.Blocks.DIRT
+                        : net.minecraft.world.level.block.Blocks.GRAVEL) : net.minecraft.world.level.block.Blocks.STONE;
+                level.setBlock(p, block.defaultBlockState(), 3);
+            }
+            level.setBlock(base.offset(0, 1, 4), net.minecraft.world.level.block.Blocks.DIAMOND_ORE.defaultBlockState(), 3);
+            level.setBlock(base.offset(-1, 0, 4), net.minecraft.world.level.block.Blocks.IRON_ORE.defaultBlockState(), 3);
+            level.setBlock(base.offset(1, 2, 4), net.minecraft.world.level.block.Blocks.COAL_ORE.defaultBlockState(), 3);
+            treeBase = base.offset(5, 0, 1);
+        });
+    }
+
+    /** Server: chainsaw in the socket and an oak grown by the vanilla tree feature 5 blocks to the side (+X).
+     *  Grown only now: its leaves next to the suit would block the third-person camera during the drill shots. */
+    private static void treeSetup(Minecraft mc) {
+        onServer(mc, player -> {
+            if (fuelSuit == null) {
+                return;
+            }
+            fuelSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
+                    new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINSAW.get()));
+            var level = player.serverLevel();
+            level.setBlock(treeBase.below(), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE)
+                    .getHolder(net.minecraft.data.worldgen.features.TreeFeatures.OAK)
+                    .ifPresent(tree -> tree.value().place(level, level.getChunkSource().getGenerator(), level.random, treeBase));
+        });
+    }
+
+    private static void aimAtPos(Minecraft mc, Vec3 at) {
+        Vec3 to = at.subtract(mc.player.getEyePosition());
+        yaw = (float) (net.minecraft.util.Mth.atan2(-to.x, to.z) * net.minecraft.util.Mth.RAD_TO_DEG);
+        pitch = (float) (-net.minecraft.util.Mth.atan2(to.y, to.horizontalDistance()) * net.minecraft.util.Mth.RAD_TO_DEG);
+    }
+
+    /** A client-only camera at {@code pos} looking at {@code at}. */
+    private static void lookCamera(Minecraft mc, Vec3 pos, Vec3 at) {
+        Vec3 look = at.subtract(pos);
+        float camYaw = (float) (net.minecraft.util.Mth.atan2(-look.x, look.z) * net.minecraft.util.Mth.RAD_TO_DEG);
+        float camPitch = (float) (-net.minecraft.util.Mth.atan2(look.y, look.horizontalDistance()) * net.minecraft.util.Mth.RAD_TO_DEG);
+        sideCamera = new ArmorStand(EntityType.ARMOR_STAND, mc.level);
+        sideCamera.setPos(pos);
+        sideCamera.xo = pos.x; sideCamera.yo = pos.y; sideCamera.zo = pos.z;
+        sideCamera.setYRot(camYaw); sideCamera.yRotO = camYaw;
+        sideCamera.setYHeadRot(camYaw); sideCamera.yHeadRotO = camYaw;
+        sideCamera.setXRot(camPitch); sideCamera.xRotO = camPitch;
+        mc.setCameraEntity(sideCamera);
+    }
+
+    private static void openMineLog(Minecraft mc) {
+        try {
+            mineCsv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_mine.csv"));
+            mineCsv.write("tick,tool,uses,energy,faceLeft,logsLeft,drops,anim,crosshair,toolAnim\n");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /** Client world: blocks left in the rock face and in the tree, dropped item stacks nearby. */
+    private static void logMine(Minecraft mc, int t) {
+        if (mineCsv == null || fuelSuit == null) {
+            return;
+        }
+        int face = 0, logs = 0;
+        for (BlockPos p : BlockPos.betweenClosed(mineBase.offset(-2, 0, 4), mineBase.offset(2, 3, 6))) {
+            face += mc.level.getBlockState(p).isAir() ? 0 : 1;
+        }
+        for (BlockPos p : BlockPos.betweenClosed(treeBase.offset(-3, 0, -3), treeBase.offset(3, 9, 3))) {
+            logs += mc.level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS) ? 1 : 0;
+        }
+        int drops = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(mineBase).inflate(12)).size();
+        try {
+            String aimed = mc.hitResult instanceof net.minecraft.world.phys.BlockHitResult hit && hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS
+                    ? net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(mc.level.getBlockState(hit.getBlockPos()).getBlock()).getPath() : "-";
+            String toolAnim = "-"; // what the client's GeckoLib "tool" controller plays (drill spin / chain)
+            if (mc.player.getVehicle() instanceof PowerArmorEntity clientSuit) {
+                var controller = clientSuit.getAnimatableInstanceCache().getManagerForId(clientSuit.getId()).getAnimationControllers().get("tool");
+                if (controller != null && controller.getCurrentAnimation() != null) {
+                    toolAnim = controller.getAnimationState() + ":" + controller.getCurrentAnimation().animation().name();
+                }
+            }
+            mineCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%s,%s,%s%n", t,
+                    net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(fuelSuit.getSocketStack().getItem()).getPath(),
+                    fuelSuit.getToolUses(), fuelSuit.getTotalEnergy(), face, logs, drops,
+                    mc.player.getVehicle() instanceof PowerArmorEntity s ? s.getMovementAnimationName() : "-", aimed, toolAnim));
+        } catch (IOException e) {
+            PowerArmor.LOGGER.error("[autopilot] mine csv", e);
+        }
+    }
+
+    private static void closeMineLog() {
+        try {
+            if (mineCsv != null) {
+                mineCsv.close();
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
     private static void giveHeld(Minecraft mc, net.minecraft.world.item.ItemStack stack) {
         onServer(mc, player -> player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, stack));
     }
@@ -425,6 +576,8 @@ public final class AutoPilot {
             player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                     new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()));
             player.getInventory().setItem(1, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.EM_PROJECTOR.get()));
+            player.getInventory().setItem(2, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.DRILL.get()));
+            player.getInventory().setItem(3, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINSAW.get()));
         });
     }
 
