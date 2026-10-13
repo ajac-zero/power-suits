@@ -68,19 +68,22 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
      * sign of X and Y rotations relative to Blockbench (Bedrock -> Java model space); Z keeps it.
      */
     private void raiseTool(PowerArmorEntity suit, float partial) {
+        ChaingunParts.pose(getAnimationProcessor(), suit, partial); // barrels turn (and coast) whether raised or not
         float w = suit.getToolRaise(partial);
-        RivetGunParts.raise(getAnimationProcessor(), w);
         if (w <= 0F) {
             return;
         }
+        // Recoil: each shot kicks the forearm up and the upper arm back a little (Blockbench +X forearm = flex, so
+        // the muzzle climbs); at full spin ten small kicks a second become a shudder.
+        float kick = suit.getRecoil(partial) * w;
         GeoBone arm = getAnimationProcessor().getBone("left_arm");
         GeoBone forearm = getAnimationProcessor().getBone("left_forearm");
         if (arm != null) {
-            arm.setRotX(arm.getRotX() - RAISE_ARM_X * w * Mth.DEG_TO_RAD);
+            arm.setRotX(arm.getRotX() - (RAISE_ARM_X * w - 3F * kick) * Mth.DEG_TO_RAD);
             arm.setRotZ(arm.getRotZ() + RAISE_ARM_Z * w * Mth.DEG_TO_RAD);
         }
         if (forearm != null) {
-            forearm.setRotX(forearm.getRotX() - RAISE_FOREARM_X * w * Mth.DEG_TO_RAD);
+            forearm.setRotX(forearm.getRotX() - (RAISE_FOREARM_X * w + 7F * kick) * Mth.DEG_TO_RAD);
         }
     }
 }

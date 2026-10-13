@@ -3,7 +3,7 @@
  "minecraft:geometry": [
   {
    "description": {
-    "identifier": "geometry.rivet_gun",
+    "identifier": "geometry.chaingun",
     "texture_width": 256,
     "texture_height": 128,
     "visible_bounds_width": 2,
@@ -16,7 +16,7 @@
    },
    "bones": [
     {
-     "name": "rivet_gun_root",
+     "name": "chaingun_root",
      "pivot": [
       0,
       0,
@@ -25,9 +25,9 @@
      "cubes": [
       {
        "origin": [
-        -3.25,
-        8.0,
-        -2.5
+        -3.5,
+        7.0,
+        -3.5
        ],
        "size": [
         7,
@@ -42,197 +42,158 @@
      ]
     },
     {
-     "name": "rivet_gun",
-     "parent": "rivet_gun_root",
+     "name": "chaingun",
+     "parent": "chaingun_root",
      "pivot": [
-      0.25,
-      8.0,
-      1.0
+      0.0,
+      7.0,
+      0.0
      ],
      "cubes": [
       {
        "origin": [
-        -2.75,
-        2.0,
-        -2.0
+        -3.5,
+        1.0,
+        -3.5
        ],
        "size": [
+        7,
         6,
-        6,
-        6
+        7
        ],
        "uv": [
         198,
         37
        ],
        "mirror": true
-      },
+      }
+     ]
+    },
+    {
+     "name": "chaingun_barrels",
+     "parent": "chaingun",
+     "pivot": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "cubes": [
       {
        "origin": [
-        -1.25,
-        5.0,
+        -3.0,
+        0.0,
         -3.0
        ],
        "size": [
-        3,
-        3,
-        1
+        6,
+        1,
+        6
        ],
        "uv": [
-        202,
-        17
+        226,
+        37
        ],
        "mirror": true
       },
       {
        "origin": [
-        -1.25,
+        -3.0,
+        -6.0,
+        -3.0
+       ],
+       "size": [
+        6,
+        1,
+        6
+       ],
+       "uv": [
+        226,
+        37
+       ],
+       "mirror": true
+      },
+      {
+       "origin": [
+        -2.5,
+        -8.0,
+        -2.5
+       ],
+       "size": [
+        2,
+        8,
+        2
+       ],
+       "uv": [
+        238,
+        4
+       ],
+       "mirror": true
+      },
+      {
+       "origin": [
+        0.5,
+        -8.0,
+        -2.5
+       ],
+       "size": [
+        2,
+        8,
+        2
+       ],
+       "uv": [
+        238,
+        4
+       ],
+       "mirror": true
+      },
+      {
+       "origin": [
+        -2.5,
+        -8.0,
+        0.5
+       ],
+       "size": [
+        2,
+        8,
+        2
+       ],
+       "uv": [
+        238,
+        4
+       ],
+       "mirror": true
+      },
+      {
+       "origin": [
+        0.5,
+        -8.0,
+        0.5
+       ],
+       "size": [
+        2,
+        8,
+        2
+       ],
+       "uv": [
+        238,
+        4
+       ],
+       "mirror": true
+      },
+      {
+       "origin": [
+        -0.5,
         -7.0,
         -0.5
        ],
        "size": [
-        3,
-        9,
-        3
-       ],
-       "uv": [
-        238,
-        4
-       ],
-       "mirror": true
-      },
-      {
-       "origin": [
-        -1.75,
-        -1.0,
-        -1.0
-       ],
-       "size": [
-        4,
         1,
-        4
+        7,
+        1
        ],
        "uv": [
-        238,
-        16
-       ],
-       "mirror": true
-      },
-      {
-       "origin": [
-        -1.75,
-        -5.0,
-        -1.0
-       ],
-       "size": [
-        4,
-        1,
-        4
-       ],
-       "uv": [
-        238,
-        16
-       ],
-       "mirror": true
-      },
-      {
-       "origin": [
-        -1.75,
-        -9.0,
-        -1.0
-       ],
-       "size": [
-        4,
-        2,
-        4
-       ],
-       "uv": [
-        20,
-        8
-       ],
-       "mirror": true
-      }
-     ]
-    },
-    {
-     "name": "rivet_drum",
-     "parent": "rivet_gun",
-     "pivot": [
-      0.25,
-      3.5,
-      -3.5
-     ],
-     "cubes": [
-      {
-       "origin": [
-        -1.25,
-        2.0,
-        -5.0
-       ],
-       "size": [
-        3,
-        3,
-        3
-       ],
-       "uv": [
-        0,
-        14
-       ],
-       "mirror": true
-      }
-     ]
-    },
-    {
-     "name": "rivet_piston",
-     "parent": "rivet_gun",
-     "pivot": [
-      0.25,
-      2.0,
-      4.0
-     ],
-     "cubes": [
-      {
-       "origin": [
-        -0.75,
-        -3.0,
-        3.0
-       ],
-       "size": [
-        2,
-        5,
+        250,
         2
-       ],
-       "uv": [
-        28,
-        14
-       ],
-       "mirror": true
-      }
-     ]
-    },
-    {
-     "name": "rivet_vent",
-     "parent": "rivet_gun",
-     "pivot": [
-      -3.25,
-      7.0,
-      1.0
-     ],
-     "cubes": [
-      {
-       "origin": [
-        -3.75,
-        3.0,
-        -1.5
-       ],
-       "size": [
-        1,
-        4,
-        5
-       ],
-       "uv": [
-        222,
-        37
        ],
        "mirror": true
       }

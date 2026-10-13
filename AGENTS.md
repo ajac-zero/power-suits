@@ -28,7 +28,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 |---|---|
 | `./gradlew build` | compile + jar |
 | `./gradlew runGameTestServer` | headless GameTests in `src/main/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
-| `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, rivet gun range, right hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
+| `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, chaingun range, right hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
@@ -63,7 +63,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **`damageSources().source(key, a, b)` takes (projectile, shooter)** despite its parameter names
   (vanilla: `source(FIREBALL, fireball, thrower)`). Swapped, kills credit the projectile instead of the pilot.
 - **GeckoLib won't restart a triggered animation that is still playing**: per-use animations must be shorter
-  than the tool's cooldown (`rivet_shot` 0.5 s vs 0.6 s).
+  than the tool's cooldown (`tool_recoil` 0.5 s vs the EM push's cooldown); rapid fire (the chaingun) kicks in code from a synced shot counter instead.
 - **GeckoLib items are not hooked up automatically on NeoForge**: register a `GeoItemRenderer` through
   `RegisterClientExtensionsEvent` (see `ClientSetup`), model JSON parent `builtin/entity`. Centre the item
   geo on the origin (GeckoLib adds the half-block offset) or rotations swing it out of the slot.
@@ -89,8 +89,8 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **The cockpit shows a viewmodel, not the suit's arms.** Looking at the external model from inside never lined up
   (hands raised where yours aren't, tools hidden behind their base, pads clipping), so in first person only the
   suit's legs are drawn and `CockpitHands` draws the tool + gauntlet in the hand pass (`geo/view`, rebuilt by
-  `tools/extract-view-geo.py` after every export). Rivets/EM beam start at its on-screen muzzle for the pilot only
-  (`SocketAim.visualMuzzle`, `Rivet.visualOffset`); the server still uses the suit's muzzle.
+  `tools/extract-view-geo.py` after every export). Bullets/EM beam start at its on-screen muzzle for the pilot only
+  (`SocketAim.visualMuzzle`, `Bullet.visualOffset`); the server still uses the suit's muzzle.
 - **Viewmodel parts must not show their cut ends**: the tool's socket face and the gauntlet's wrist stay below the
   bottom screen edge so they reach in from the corners (floating otherwise). Check/fit poses with
   `tools/viewmodel-fit.py` (also for the eat pose) before tuning visually.
@@ -134,8 +134,13 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   from the ground height (`Heightmap`), not from where the player happens to stand. Parked suits burn no fuel, so
   run a suit dry while piloted.
 - **Projectile orientation**: `ProjectileUtil.rotateTowardsMovement` stores yaw as `atan2(z, x) + 90` and pitch with up
-  negative, unlike vanilla arrows: after `YP(yRot - 90)`, `ZP(xRot)` the model's forward is -X (`RivetRenderer`; the
-  first rivet rendered backwards, shank out of the wall).
+  negative, unlike vanilla arrows: after `YP(yRot - 90)`, `ZP(xRot)` the model's forward is -X (`BulletRenderer`; the
+  rivet gun's first rivet rendered backwards, shank out of the wall).
+- **Variable-speed spinning parts are code-driven**: GeckoLib scales an animation's whole elapsed time by its speed,
+  so the chaingun's barrels turn by an angle each client accumulates from the synced spin (`ChaingunParts`, absolute
+  set on an unkeyed bone). Rapid fire needs: hit immunity bypass (`target.invulnerableTime = 0`), the damage type in
+  `minecraft:no_knockback` (vanilla's shove per hit launches mobs) and light particles per shot.
+- **Floats don't sum to whole numbers**: 80 x (1/80) < 1 (overheat came one bullet late); compare with a tolerance.
 - **Mock players don't get their game mode's abilities**: `makeMockPlayer(GameType.CREATIVE)` still has
   `hasInfiniteMaterials()` false; set `getAbilities().instabuild = true` in creative GameTests.
 - **Run game tasks with a watchdog** (background + poll the log): if it stalls (e.g. in "Saving worlds"), `jstack` the

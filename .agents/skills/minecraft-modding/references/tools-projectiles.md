@@ -1,8 +1,9 @@
 # Vehicle-mounted tools, input packets, projectiles, GeckoLib items (NeoForge 21.1)
 
-Built for the Power Armor plasma cannon, now its rivet gun. Files: `item/PowerTool.java`, `item/RivetGunItem.java`,
-`entity/Rivet.java`, `network/ToolTriggerPayload.java`, `client/ToolInput.java`,
-`client/RivetRenderer.java`, `PowerArmorEntity.tickTool`, `tools/extract-tool-geo.py`.
+Built for the Power Armor plasma cannon, then rivet gun, now its chaingun. Files: `item/PowerTool.java`,
+`item/ChaingunItem.java`, `entity/Bullet.java`, `network/ToolTriggerPayload.java`, `client/ToolInput.java`,
+`client/BulletRenderer.java`, `PowerArmorEntity.tickTool`, `tools/extract-tool-geo.py`. (The rivet gun's sticking
+projectile is in git history, commit 299d91b.)
 
 ## Hold-to-use input from a vehicle
 - Client, a dedicated button (Power Armor until 2026-10-13: attack): `InputEvent.InteractionKeyMappingTriggered` ->
@@ -40,7 +41,12 @@ Built for the Power Armor plasma cannon, now its rivet gun. Files: `item/PowerTo
 - Entity type: small `sized`, `updateInterval(1)` for fast projectiles. `isPickable`/`hurt` false so it can't be punched back.
 - **Gravity + still hitting the crosshair**: own gravity in `tick()` (`isNoGravity` true so vanilla's doesn't add);
   launch with `v = d/n + (0, g(n-1)/2, 0)`, n = distance / speed (it falls g*n*(n-1)/2 in n ticks).
-- **Sticking in blocks** (Rivet): in `onHitBlock` set position to the hit point (minus a hair along the motion), zero
+- **Rapid fire with spin-up** (Chaingun): make it a continuous tool so it times its own shots: per-suit state with a
+  countdown timer (counts down every tick, held or not, so tapping can't beat the slow rate), spin += 1/spinUp while
+  held, -= when not; interval = lerp(slow, fast, spin); first shot at once. Sync spin/heat/shot counter as entity data.
+  Bullets: `target.invulnerableTime = 0` before `hurt`, damage type in `data/minecraft/tags/damage_type/no_knockback.json`
+  plus a small own `knockback`, no per-bullet trail particles (tracer renderer instead).
+- **Sticking in blocks** (the rivet gun's Rivet, git history): in `onHitBlock` set position to the hit point (minus a hair along the motion), zero
   the motion, remember the block, set a synced STUCK flag; while stuck count ticks, drop out (ItemEntity) when the
   block is air or after a timeout; `playerTouch` lets players on foot take it; save the state in NBT.
 - **Ammo from the inventory like a bow**: off hand first, then `inventory.getItem(i)` loop and `shrink(1)`;

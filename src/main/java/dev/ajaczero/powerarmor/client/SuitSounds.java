@@ -19,7 +19,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
  * Looping sounds, played on each client: the engine (while a suit is piloted and powered; pitch and volume
- * rise with the load) and the running tool (drill whir, chainsaw buzz).
+ * rise with the load) and the running tool (drill whir, chainsaw buzz, chaingun motor whine).
  *
  * Why client side: a looping sound has to be started, moved along with the suit and faded out every frame.
  * The server only knows *that* something should sound (synced data: powered, piloted, TOOL_RUNNING); each
@@ -47,7 +47,7 @@ public final class SuitSounds {
             }
             SoundEvent toolSound = toolSound(suit);
             if (toolSound != null && !TOOLS.containsKey(suit.getId())) {
-                start(mc, TOOLS, suit, new Loop(toolSound, suit, s -> toolSound(s) == toolSound, s -> 1F, s -> 1F));
+                start(mc, TOOLS, suit, new Loop(toolSound, suit, s -> toolSound(s) == toolSound, SuitSounds::toolVolume, SuitSounds::toolPitch));
             }
         }
     }
@@ -68,6 +68,14 @@ public final class SuitSounds {
 
     private static float enginePitch(PowerArmorEntity suit) {
         return 0.85F + 0.45F * suit.engineLoad();
+    }
+
+    private static float toolVolume(PowerArmorEntity suit) {
+        return suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.runSoundVolume(suit) : 1F;
+    }
+
+    private static float toolPitch(PowerArmorEntity suit) {
+        return suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.runSoundPitch(suit) : 1F;
     }
 
     private static SoundEvent toolSound(PowerArmorEntity suit) {

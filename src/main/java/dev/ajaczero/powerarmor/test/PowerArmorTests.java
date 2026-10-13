@@ -2,7 +2,7 @@ package dev.ajaczero.powerarmor.test;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
-import dev.ajaczero.powerarmor.entity.Rivet;
+import dev.ajaczero.powerarmor.entity.Bullet;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.StepSmoothing;
 import dev.ajaczero.powerarmor.entity.SuitFuel;
@@ -351,10 +351,10 @@ public final class PowerArmorTests {
         helper.assertTrue(menu.getSlot(1).mayPlace(new ItemStack(Items.BLAZE_ROD)), "fuel slot takes blaze rods");
         helper.assertTrue(!menu.getSlot(1).mayPlace(new ItemStack(Items.DIRT)), "fuel slot refuses dirt");
         helper.assertTrue(!menu.getSlot(0).mayPlace(new ItemStack(Items.COAL)), "socket only takes power tools");
-        helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(ModItems.RIVET_GUN.get())), "socket takes the rivet gun");
-        player.getInventory().setItem(10, new ItemStack(ModItems.RIVET_GUN.get()));
+        helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(ModItems.CHAINGUN.get())), "socket takes the chaingun");
+        player.getInventory().setItem(10, new ItemStack(ModItems.CHAINGUN.get()));
         menu.quickMoveStack(player, 3); // menu slot 3 = player inventory slot 10
-        helper.assertTrue(menu.getSlot(0).getItem().is(ModItems.RIVET_GUN.get()), "shift-click should install the rivet gun");
+        helper.assertTrue(menu.getSlot(0).getItem().is(ModItems.CHAINGUN.get()), "shift-click should install the chaingun");
         helper.assertTrue(menu.getSlot(1).getItem().getCount() == 4, "menu shows the suit's fuel");
 
         // Shift-click coal from the player's inventory: it joins the coal in the fuel slot.
@@ -379,37 +379,122 @@ public final class PowerArmorTests {
     private static PowerArmorEntity armedSuit(GameTestHelper helper, BlockPos pos, ItemStack fuel) {
         PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), pos);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, fuel);
-        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.RIVET_GUN.get()));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
         return suit;
     }
 
-    /** A pilot carrying rivets (iron nuggets) for the rivet gun. */
+    /** A pilot carrying bullets (iron nuggets) for the chaingun. */
     private static Player armedPilot(GameTestHelper helper, PowerArmorEntity suit) {
         Player pilot = boardedPilot(helper, suit);
-        pilot.getInventory().add(new ItemStack(Items.IRON_NUGGET, 16));
+        pilot.getInventory().add(new ItemStack(Items.IRON_NUGGET, 64));
         return pilot;
     }
 
-    /** Holding the tool button fires every cooldown (12 ticks by default), paying the configured energy per shot; releasing stops. */
-    @GameTest(template = PAD, timeoutTicks = 80)
-    public static void rivetGunFiresOnCooldownAndCostsFuel(GameTestHelper helper) {
+    /** A creative pilot (free bullets). Mock players don't take their game mode's abilities by themselves. */
+    private static Player creativePilot(GameTestHelper helper, PowerArmorEntity suit) {
+        Player pilot = helper.makeMockPlayer(GameType.CREATIVE);
+        pilot.getAbilities().instabuild = true;
+        pilot.moveTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        suit.interact(pilot, InteractionHand.MAIN_HAND);
+        return pilot;
+    }
+
+    /** A tap fires one heavy shot at once: one nugget, one bullet's fuel plus a tick of spin. */
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void chaingunTapFiresOneHeavyShot(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2)); // 9600 energy
         Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
         helper.runAfterDelay(2, () -> suit.setTriggerHeld(pilot, true));
-        helper.runAfterDelay(6, () -> {
-            helper.assertTrue(suit.getToolUses() == 1, "first shot should fire at once, uses " + suit.getToolUses());
-            int used = 2 * PowerArmorConfig.BLAZE_ENERGY.get() - suit.getTotalEnergy(), shot = PowerArmorConfig.RIVET_ENERGY.get();
-            helper.assertTrue(used >= shot && used < shot + 10, "a shot costs " + shot + " energy (+ idle), used " + used);
-        });
-        helper.runAfterDelay(12, () -> helper.assertTrue(suit.getToolUses() == 1, "cooldown: no second shot yet"));
+        helper.runAfterDelay(3, () -> suit.setTriggerHeld(pilot, false));
         helper.runAfterDelay(20, () -> {
-            helper.assertTrue(suit.getToolUses() == 2, "second shot after the 12-tick cooldown, uses " + suit.getToolUses());
+            helper.assertTrue(suit.getToolUses() == 1, "a tap fires exactly one shot, got " + suit.getToolUses());
+            helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 63, "one nugget used");
+            int used = 2 * PowerArmorConfig.BLAZE_ENERGY.get() - suit.getTotalEnergy(), shot = PowerArmorConfig.CHAINGUN_ENERGY.get();
+            helper.assertTrue(used >= shot && used < shot + 10, "one bullet costs " + shot + " energy (+ spin, idle), used " + used);
+            helper.succeed();
+        });
+    }
+
+    /** Held, the barrels spin up and fire faster and faster; let go, they coast down to rest. */
+    @GameTest(template = PAD, timeoutTicks = 140)
+    public static void chaingunSpinsUpWhenHeld(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
+        Player pilot = creativePilot(helper, suit);
+        suit.positionRider(pilot);
+        int hold = PowerArmorConfig.CHAINGUN_SPIN_UP.get() + 20;
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(hold, () -> {
+            int atSlowRate = hold / PowerArmorConfig.CHAINGUN_SLOW_INTERVAL.get() + 1;
+            helper.assertTrue(suit.getToolUses() >= 2 * atSlowRate, "spin-up should at least double the slow rate: "
+                    + suit.getToolUses() + " shots in " + hold + " ticks (slow rate: " + atSlowRate + ")");
+            helper.assertTrue(suit.getToolSpin() > 0.99F, "full spin after the spin-up time, got " + suit.getToolSpin());
             suit.setTriggerHeld(pilot, false);
         });
-        helper.runAfterDelay(50, () -> {
-            helper.assertTrue(suit.getToolUses() == 2, "releasing the button stops firing, uses " + suit.getToolUses());
+        helper.runAfterDelay(hold + 40, () -> {
+            helper.assertTrue(suit.getToolSpin() == 0F, "the barrels should have coasted to rest, spin " + suit.getToolSpin());
             helper.succeed();
+        });
+    }
+
+    /** Each bullet uses one iron nugget; without nuggets the gun only clicks and burns no fuel for bullets. */
+    @GameTest(template = PAD, timeoutTicks = 80)
+    public static void chaingunUsesOneNuggetPerBullet(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
+        Player pilot = boardedPilot(helper, suit);
+        pilot.getInventory().add(new ItemStack(Items.IRON_NUGGET, 3));
+        suit.positionRider(pilot);
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(60, () -> {
+            helper.assertTrue(suit.getToolUses() == 3, "three nuggets, three bullets, got " + suit.getToolUses());
+            helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 0, "all nuggets used");
+            int used = 2 * PowerArmorConfig.BLAZE_ENERGY.get() - suit.getTotalEnergy();
+            int most = 3 * PowerArmorConfig.CHAINGUN_ENERGY.get() + 61 * PowerArmorConfig.CHAINGUN_SPIN_ENERGY.get() + 20;
+            helper.assertTrue(used <= most, "only three bullets (+ spin, idle) cost fuel: at most " + most + ", used " + used);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 30)
+    public static void creativePilotNeedsNoBullets(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
+        Player pilot = creativePilot(helper, suit);
+        suit.positionRider(pilot);
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(5, () -> {
+            helper.assertTrue(suit.getToolUses() == 1, "creative fires without nuggets, uses " + suit.getToolUses());
+            helper.succeed();
+        });
+    }
+
+    /** Barrels overheat after the configured number of bullets in a row, and fire again once cooled. (Skipped when
+     *  overheat is off in the config.) */
+    @GameTest(template = PAD, timeoutTicks = 600)
+    public static void chaingunOverheatsAndCools(GameTestHelper helper) {
+        if (!PowerArmorConfig.CHAINGUN_OVERHEAT.get()) {
+            helper.succeed();
+            return;
+        }
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 8));
+        Player pilot = creativePilot(helper, suit);
+        suit.positionRider(pilot);
+        suit.setTriggerHeld(pilot, true);
+        int limit = PowerArmorConfig.CHAINGUN_OVERHEAT_SHOTS.get();
+        int[] stopped = {-1};
+        helper.onEachTick(() -> {
+            if (stopped[0] < 0 && suit.getToolHeat() >= 1F) {
+                stopped[0] = suit.getToolUses();
+                helper.assertTrue(stopped[0] == limit, "overheats after " + limit + " bullets, got " + stopped[0]);
+                helper.runAfterDelay(20, () -> {
+                    helper.assertTrue(suit.getToolUses() == stopped[0], "an overheated gun must not fire");
+                    suit.setTriggerHeld(pilot, false);
+                });
+                helper.runAfterDelay(30 + PowerArmorConfig.CHAINGUN_COOL_TICKS.get(), () -> suit.setTriggerHeld(pilot, true));
+                helper.runAfterDelay(40 + PowerArmorConfig.CHAINGUN_COOL_TICKS.get(), () -> {
+                    helper.assertTrue(suit.getToolUses() > stopped[0], "cooled barrels fire again");
+                    helper.succeed();
+                });
+            }
         });
     }
 
@@ -438,16 +523,14 @@ public final class PowerArmorTests {
     @GameTest(template = PAD)
     public static void shotLightsTheNextFuelItem(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.COAL, 1));
-        int start = PowerArmorConfig.RIVET_ENERGY.get() / 2;
-        suit.setBurn(start, 1600); // not enough for a shot by itself
+        int start = PowerArmorConfig.CHAINGUN_ENERGY.get() / 2;
+        suit.setBurn(start, 1600); // not enough for a bullet by itself
         Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
         suit.setTriggerHeld(pilot, true);
         helper.runAfterDelay(3, () -> {
             helper.assertTrue(suit.getToolUses() == 1, "should fire using the next coal");
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).isEmpty(), "the coal should have been lit");
-            float left = suit.getBurnLeftExact(), expected = start + PowerArmorConfig.COAL_ENERGY.get() - PowerArmorConfig.RIVET_ENERGY.get();
-            helper.assertTrue(left > expected - 10 && left <= expected, start + " + coal - shot = " + expected + " left (minus idle), got " + left);
             helper.succeed();
         });
     }
@@ -455,7 +538,7 @@ public final class PowerArmorTests {
     @GameTest(template = PAD)
     public static void emptySocketDoesNothing(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
-        Player pilot = armedPilot(helper, suit);
+        Player pilot = boardedPilot(helper, suit);
         suit.setTriggerHeld(pilot, true);
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(suit.getToolUses() == 0, "no tool, no shots");
@@ -465,7 +548,7 @@ public final class PowerArmorTests {
     }
 
     @GameTest(template = PAD)
-    public static void unpoweredRivetGunDoesNotFire(GameTestHelper helper) {
+    public static void unpoweredChaingunDoesNotFire(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, ItemStack.EMPTY);
         Player pilot = armedPilot(helper, suit);
         suit.setTriggerHeld(pilot, true);
@@ -478,7 +561,7 @@ public final class PowerArmorTests {
     @GameTest(template = PAD)
     public static void onlyThePilotCanPullTheTrigger(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.COAL, 4));
-        boardedPilot(helper, suit);
+        armedPilot(helper, suit);
         Player stranger = helper.makeMockPlayer(GameType.SURVIVAL);
         suit.setTriggerHeld(stranger, true); // e.g. a forged packet from another player
         helper.runAfterDelay(10, () -> {
@@ -487,9 +570,9 @@ public final class PowerArmorTests {
         });
     }
 
-    /** The rivet flies from the muzzle to what the pilot looks at and hurts it with rivet damage. */
+    /** The bullet flies from the muzzle to what the pilot looks at and hurts it with bullet damage. */
     @GameTest(template = PAD, timeoutTicks = 60)
-    public static void rivetHitsWhatThePilotAimsAt(GameTestHelper helper) {
+    public static void bulletHitsWhatThePilotAimsAt(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, new BlockPos(4, 2, 1), new ItemStack(Items.COAL, 4));
         suit.setYRot(0); // facing +Z (south), toward the pig
         suit.setYBodyRot(0);
@@ -505,91 +588,40 @@ public final class PowerArmorTests {
         helper.runAfterDelay(15, () -> {
             helper.assertTrue(suit.getToolUses() == 1, "one shot");
             helper.assertTrue(pig.getHealth() < pig.getMaxHealth(), "the pig should be hit, health " + pig.getHealth());
-            helper.assertTrue(pig.getLastDamageSource() != null && pig.getLastDamageSource().is(Rivet.RIVET),
-                    "damage should be rivet, got " + pig.getLastDamageSource());
-            helper.assertTrue(pig.getLastDamageSource().getEntity() == pilot, "the pilot gets the credit (the rivet is the direct cause), got " + pig.getLastDamageSource().getEntity());
-            helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "the rivet must not hit its own suit");
+            helper.assertTrue(pig.getLastDamageSource() != null && pig.getLastDamageSource().is(Bullet.BULLET),
+                    "damage should be bullet, got " + pig.getLastDamageSource());
+            helper.assertTrue(pig.getLastDamageSource().getEntity() == pilot, "the pilot gets the credit (the bullet is the direct cause), got " + pig.getLastDamageSource().getEntity());
+            helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "the bullet must not hit its own suit");
+            helper.succeed();
+        });
+    }
+
+    /** Bullets ignore the half-second hit immunity: two bullets a tick apart both hurt. */
+    @GameTest(template = PAD, timeoutTicks = 30)
+    public static void bulletsIgnoreHitImmunity(GameTestHelper helper) {
+        Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 6));
+        pig.setNoAi(true);
+        Vec3 from = helper.absoluteVec(new Vec3(4.5, 2.5, 1.5));
+        float start = pig.getHealth();
+        helper.getLevel().addFreshEntity(new Bullet(helper.getLevel(), null, from, new Vec3(0, 0, Bullet.SPEED), 2F, 0F));
+        helper.runAfterDelay(1, () -> helper.getLevel().addFreshEntity(new Bullet(helper.getLevel(), null, from, new Vec3(0, 0, Bullet.SPEED), 2F, 0F)));
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(Math.abs(start - pig.getHealth() - 4F) < 0.01F, "both bullets should count: health " + start + " -> " + pig.getHealth());
             helper.succeed();
         });
     }
 
     @GameTest(template = PAD)
-    public static void rivetGunDoesNothingOnFoot(GameTestHelper helper) {
+    public static void chaingunDoesNothingOnFoot(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         player.moveTo(helper.absoluteVec(new Vec3(4.5, 2, 4.5)));
-        ItemStack gun = new ItemStack(ModItems.RIVET_GUN.get());
+        ItemStack gun = new ItemStack(ModItems.CHAINGUN.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, gun);
         var result = gun.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
         helper.assertTrue(!result.getResult().consumesAction(), "using it on foot should do nothing");
-        helper.assertTrue(helper.getLevel().getEntitiesOfClass(Rivet.class, new AABB(helper.absolutePos(SUIT_POS)).inflate(5)).isEmpty(),
-                "no rivet on foot");
+        helper.assertTrue(helper.getLevel().getEntitiesOfClass(Bullet.class, new AABB(helper.absolutePos(SUIT_POS)).inflate(5)).isEmpty(),
+                "no bullet on foot");
         helper.succeed();
-    }
-
-    /** Each shot uses one iron nugget; without nuggets the gun only clicks and burns no fuel for shots. */
-    @GameTest(template = PAD, timeoutTicks = 80)
-    public static void rivetGunUsesOneNuggetPerShot(GameTestHelper helper) {
-        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
-        Player pilot = boardedPilot(helper, suit);
-        pilot.getInventory().add(new ItemStack(Items.IRON_NUGGET, 2));
-        suit.positionRider(pilot);
-        suit.setTriggerHeld(pilot, true);
-        helper.runAfterDelay(50, () -> { // time for 4 shots at the 12-tick cooldown
-            helper.assertTrue(suit.getToolUses() == 2, "two nuggets, two shots, got " + suit.getToolUses());
-            helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 0, "both nuggets used");
-            int used = 2 * PowerArmorConfig.BLAZE_ENERGY.get() - suit.getTotalEnergy(), shots = 2 * PowerArmorConfig.RIVET_ENERGY.get();
-            helper.assertTrue(used >= shots && used < shots + 30, "only the two shots cost fuel (+ idle): " + shots + ", used " + used);
-            helper.succeed();
-        });
-    }
-
-    @GameTest(template = PAD, timeoutTicks = 30)
-    public static void creativePilotNeedsNoRivets(GameTestHelper helper) {
-        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
-        Player pilot = helper.makeMockPlayer(GameType.CREATIVE);
-        pilot.getAbilities().instabuild = true; // mock players don't take their game mode's abilities by themselves
-        pilot.moveTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
-        suit.interact(pilot, InteractionHand.MAIN_HAND);
-        suit.positionRider(pilot);
-        suit.setTriggerHeld(pilot, true);
-        helper.runAfterDelay(5, () -> {
-            helper.assertTrue(suit.getToolUses() == 1, "creative fires without nuggets, uses " + suit.getToolUses());
-            helper.succeed();
-        });
-    }
-
-    /** A rivet that hits a block sticks in it, and drops out as an iron nugget after its time (STUCK_TICKS). */
-    @GameTest(template = PAD, timeoutTicks = Rivet.STUCK_TICKS + 40)
-    public static void rivetSticksThenDropsANugget(GameTestHelper helper) {
-        BlockPos wall = new BlockPos(4, 3, 6);
-        helper.setBlock(wall, Blocks.STONE);
-        Rivet rivet = new Rivet(helper.getLevel(), null, helper.absoluteVec(new Vec3(4.5, 3.5, 2.5)), new Vec3(0, 0, Rivet.SPEED), true);
-        helper.getLevel().addFreshEntity(rivet);
-        helper.runAfterDelay(5, () -> {
-            helper.assertTrue(rivet.isStuck() && rivet.isAlive(), "the rivet should be stuck in the stone");
-            helper.assertTrue(Math.abs(rivet.getZ() - helper.absoluteVec(new Vec3(0, 0, 6)).z) < 0.1, "stuck at the stone's face, z " + rivet.getZ());
-        });
-        helper.runAfterDelay(Rivet.STUCK_TICKS + 15, () -> {
-            helper.assertTrue(rivet.isRemoved(), "the rivet should have dropped out");
-            var nuggets = helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
-                    new AABB(helper.absolutePos(wall)).inflate(2), e -> e.getItem().is(Items.IRON_NUGGET));
-            helper.assertTrue(nuggets.size() == 1, "one iron nugget should drop, got " + nuggets.size());
-            helper.succeed();
-        });
-    }
-
-    /** Breaking the block a rivet is stuck in drops it at once. */
-    @GameTest(template = PAD, timeoutTicks = 40)
-    public static void rivetDropsWhenItsBlockBreaks(GameTestHelper helper) {
-        BlockPos wall = new BlockPos(4, 3, 6);
-        helper.setBlock(wall, Blocks.STONE);
-        Rivet rivet = new Rivet(helper.getLevel(), null, helper.absoluteVec(new Vec3(4.5, 3.5, 2.5)), new Vec3(0, 0, Rivet.SPEED), true);
-        helper.getLevel().addFreshEntity(rivet);
-        helper.runAfterDelay(5, () -> helper.setBlock(wall, Blocks.AIR));
-        helper.runAfterDelay(8, () -> {
-            helper.assertTrue(rivet.isRemoved(), "the rivet should fall out with its block gone");
-            helper.succeed();
-        });
     }
 
     // =========================================================================================

@@ -50,8 +50,8 @@ public final class CockpitHands {
     // Eating / drinking: the elbow moves here and the forearm turns in and up, so the food sits low in the middle.
     private static final Vector3f EAT_POS = new Vector3f(0.26F, -0.53F, -0.26F);
     private static final float EAT_YAW = 30F, EAT_PITCH = 148F;
-    /** The rivet gun's muzzle in the view model (pixels below the socket; the muzzle bone's pivot). */
-    private static final float MUZZLE_PX = -17F;
+    /** The chaingun's muzzle (barrel tips) in the view model (pixels below the socket; the muzzle bone's pivot). */
+    private static final float MUZZLE_PX = -15F;
     private static final float RECOIL_TICKS = 6F;
 
     private static boolean wasShooting;
@@ -87,7 +87,7 @@ public final class CockpitHands {
     /** Tool: low on the left, raised toward the middle while used, bobbing with the gait, kicking back and up when
      *  it fires. */
     private static void toolTransform(PoseStack pose, PowerArmorEntity suit, float partial, float raise) {
-        float kick = recoil(partial);
+        float kick = Math.max(recoil(partial), suit.getRecoil(partial)); // EM push / chaingun shots
         Vector3f p = new Vector3f(toolPos).lerp(toolRaisedPos, raise);
         pose.translate(p.x, p.y + bob(suit), p.z + kick * 0.10F);
         pose.mulPose(Axis.YP.rotationDegrees(Mth.lerp(raise, toolYaw, toolRaisedYaw)));
@@ -146,14 +146,14 @@ public final class CockpitHands {
         pose.scale(gauntletScale, gauntletScale, gauntletScale);
     }
 
-    /** The suit plays rivet_shot (rivet gun shot, EM push) when it fires; mirror it here and start the kick. */
+    /** The suit plays tool_recoil when the EM projector pushes; start the kick here too. (Chaingun shots kick through
+     *  the suit's synced shot counter, PowerArmorEntity.getRecoil.) */
     private static void pollShot(PowerArmorEntity suit, CockpitView view) {
         AnimationController<?> action = suit.getAnimatableInstanceCache().getManagerForId(suit.getId()).getAnimationControllers().get("action");
         RawAnimation triggered = action == null ? null : action.getTriggeredAnimation();
         boolean shooting = action != null && action.isPlayingTriggeredAnimation() && triggered != null
-                && triggered.getAnimationStages().get(0).animationName().endsWith("rivet_shot");
+                && triggered.getAnimationStages().get(0).animationName().endsWith("tool_recoil");
         if (shooting && !wasShooting) {
-            view.shoot();
             shotAt = RenderUtil.getCurrentTick();
         }
         wasShooting = shooting;

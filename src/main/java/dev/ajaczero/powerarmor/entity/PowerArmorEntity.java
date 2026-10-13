@@ -156,6 +156,14 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** True while the pilot is using the socket tool (button held, tool installed, power): the tool arm is raised. */
     private static final EntityDataAccessor<Boolean> TOOL_ACTIVE =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
+    /** The socket tool's spin (chaingun barrels, 0..1) and heat (0..1), and a counter bumped on every shot: clients
+     *  turn them into the barrel spin, heat glow, motor whine, recoil and muzzle bursts. */
+    private static final EntityDataAccessor<Float> TOOL_SPIN =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> TOOL_HEAT =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Integer> TOOL_SHOTS =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     /** Copies of the two slots, so clients can show the fuel left and (Phase 2) draw the socket tool. */
     private static final EntityDataAccessor<ItemStack> FUEL_ITEM =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
@@ -190,7 +198,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Server: the tool was in use last tick (for the raise sound). */
     private boolean toolWasActive;
     /** Client: the action controller was already playing a shot last tick (for the pilot's own muzzle burst). */
-    private boolean wasShooting;
+    private int seenShots;
+    /** Client: chaingun barrel angle (degrees, this and last tick) and the recoil kick (1 right after a shot, decays). */
+    private float barrelAngle, barrelAngleO, recoil, recoilO;
     /** Client: 0..1, how much the torso follows the pilot's view (eases out on shutdown, in after startup). */
     private float aimBlend;
     /** Client: 0 = tool arm in its hip carry, 1 = raised to aim (follows TOOL_ACTIVE, like raising a shield). */
@@ -218,7 +228,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final RawAnimation SHUTDOWN = RawAnimation.begin().thenPlayAndHold("animation.power_armor.shutdown");
     private static final RawAnimation POWERED_OFF = RawAnimation.begin().thenPlayAndHold("animation.power_armor.powered_off");
     private static final RawAnimation STARTUP = RawAnimation.begin().thenPlay("animation.power_armor.startup");
-    private static final RawAnimation RIVET_SHOT = RawAnimation.begin().thenPlay("animation.power_armor.rivet_shot");
+    private static final RawAnimation TOOL_RECOIL = RawAnimation.begin().thenPlay("animation.power_armor.tool_recoil");
     // Right hand (a_hand.js): carry pose while the pilot holds something, quick reach on every use.
     private static final RawAnimation HOLD_ITEM = RawAnimation.begin().thenLoop("animation.power_armor.hold_item");
     private static final RawAnimation USE_ITEM = RawAnimation.begin().thenPlay("animation.power_armor.use_item");
@@ -262,6 +272,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(BEAM_TARGET, -1);
         builder.define(TOOL_RUNNING, false);
         builder.define(TOOL_ACTIVE, false);
+        builder.define(TOOL_SPIN, 0F);
+        builder.define(TOOL_HEAT, 0F);
+        builder.define(TOOL_SHOTS, 0);
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
     }
 
@@ -501,7 +514,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.consumeEnergy(cost);
             this.toolUses++;
         }
-        this.toolCooldown = tool.cooldownTicks(); // also after a dry click (no rivets): one click per cooldown
+        this.toolCooldown = tool.cooldownTicks(); // also after a dry click: one click per cooldown
     }
 
     /** Server: a tool's state for this suit, created on first use. */
@@ -1215,8 +1228,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         // It is added after "movement", so for the bones it animates it wins; legs keep walking.
         controllers.add(new AnimationController<>(this, "action", 2, state -> PlayState.STOP)
                 .triggerableAnim("hit", HIT)
-                .triggerableAnim("rivet_shot", RIVET_SHOT)
-                .triggerableAnim("tool_recoil", RIVET_SHOT)); // same kick for the EM projector's push
+                .triggerableAnim("tool_recoil", TOOL_RECOIL)); // the EM projector's push
         // Controller 3: the socket tool's own loop (drill spin, chainsaw chain) while it runs. It keys only
         // the tool's bones, so the arm keeps following walk/run and the aim.
         controllers.add(new AnimationController<>(this, "tool", 3, this::toolAnimation));
@@ -1278,15 +1290,27 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return state.setAndContinue(HOLD_ITEM);
     }
 
-    /** Client, our own pilot only: the muzzle burst of a shot, drawn at the muzzle on their screen (the cockpit
-     *  viewmodel's in first person, SocketAim.visualMuzzle). The server sends it to everyone else. */
+    /** Client, every tick: follow the socket tool's synced spin and shots. The chaingun's barrels turn by the spin (up to
+     *  60 degrees a tick, ten turns a second); each new shot kicks the recoil (harder for the heavy slow shots) and, for our
+     *  own pilot only, puffs the muzzle burst at the muzzle on their screen (the cockpit viewmodel's in first person,
+     *  SocketAim.visualMuzzle). The server sends the burst to everyone else. */
     private void tickShotEffects() {
-        AnimationController<?> action = this.getAnimatableInstanceCache().getManagerForId(this.getId()).getAnimationControllers().get("action");
-        RawAnimation triggered = action == null ? null : action.getTriggeredAnimation();
-        boolean shooting = action != null && action.isPlayingTriggeredAnimation() && triggered != null
-                && triggered.getAnimationStages().get(0).animationName().endsWith("rivet_shot");
-        if (shooting && !this.wasShooting && this.getControllingPassenger() instanceof Player pilot && pilot.isLocalPlayer()
-                && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.RivetGunItem) {
+        float spin = this.getToolSpin();
+        this.barrelAngleO = this.barrelAngle;
+        this.barrelAngle += 60F * spin;
+        if (this.barrelAngle > 3600F) { // keep it small; a multiple of 90 so the square cluster doesn't jump
+            this.barrelAngle -= 3600F;
+            this.barrelAngleO -= 3600F;
+        }
+        this.recoilO = this.recoil;
+        this.recoil *= 0.55F;
+        int shots = this.entityData.get(TOOL_SHOTS);
+        if (shots == this.seenShots) {
+            return;
+        }
+        this.seenShots = shots;
+        this.recoil = Math.max(this.recoil, 1F - 0.65F * spin);
+        if (this.getControllingPassenger() instanceof Player pilot && pilot.isLocalPlayer()) {
             Vec3 muzzle = dev.ajaczero.powerarmor.item.SocketAim.visualMuzzle.apply(this, pilot);
             boolean firstPerson = muzzle.distanceTo(pilot.getEyePosition()) < 1.4;
             if (firstPerson) {
@@ -1294,16 +1318,45 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 // little further out along the shot, and without the steam (it covered the target).
                 muzzle = muzzle.add(pilot.getViewVector(1F).scale(1.4));
             }
-            final boolean steam = !firstPerson;
-            dev.ajaczero.powerarmor.item.RivetGunItem.muzzleBurst((type, x, y, z, n, spread, speed) -> {
+            dev.ajaczero.powerarmor.item.ChaingunItem.muzzleBurst((type, x, y, z, n, spread, speed) -> {
                 for (int i = 0; i < n; i++) {
                     this.level().addParticle(type, x + this.random.nextGaussian() * spread, y + this.random.nextGaussian() * spread,
                             z + this.random.nextGaussian() * spread, this.random.nextGaussian() * speed,
                             this.random.nextGaussian() * speed, this.random.nextGaussian() * speed);
                 }
-            }, muzzle, steam);
+            }, muzzle, spin, !firstPerson);
         }
-        this.wasShooting = shooting;
+    }
+
+    /** Server: the socket tool's spin and heat, for every client. */
+    public void setToolSpin(float spin, float heat) {
+        this.entityData.set(TOOL_SPIN, spin);
+        this.entityData.set(TOOL_HEAT, heat);
+    }
+
+    /** Server: a shot was fired (bumps the synced counter: recoil, muzzle burst). */
+    public void countShot() {
+        this.entityData.set(TOOL_SHOTS, this.entityData.get(TOOL_SHOTS) + 1);
+    }
+
+    /** Both sides: chaingun barrel spin, 0 (at rest) .. 1 (full speed). */
+    public float getToolSpin() {
+        return this.entityData.get(TOOL_SPIN);
+    }
+
+    /** Both sides: chaingun barrel heat, 0 (cold) .. 1 (overheated). */
+    public float getToolHeat() {
+        return this.entityData.get(TOOL_HEAT);
+    }
+
+    /** Client: the chaingun barrels' angle this frame, degrees. */
+    public float getBarrelAngle(float partial) {
+        return Mth.lerp(partial, this.barrelAngleO, this.barrelAngle);
+    }
+
+    /** Client: recoil kick this frame, 0..1. */
+    public float getRecoil(float partial) {
+        return Mth.lerp(partial, this.recoilO, this.recoil);
     }
 
     /** Client: the pilot swung their hand (placed a block, used an item on something): reach with the suit's hand.

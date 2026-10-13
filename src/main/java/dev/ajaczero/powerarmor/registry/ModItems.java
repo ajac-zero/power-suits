@@ -2,11 +2,11 @@ package dev.ajaczero.powerarmor.registry;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.ChaingunItem;
 import dev.ajaczero.powerarmor.item.ChainsawItem;
 import dev.ajaczero.powerarmor.item.DrillItem;
 import dev.ajaczero.powerarmor.item.EmProjectorItem;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
-import dev.ajaczero.powerarmor.item.RivetGunItem;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
@@ -22,15 +22,17 @@ public final class ModItems {
                     .durability(PowerArmorEntity.MAX_HEALTH)
                     .rarity(Rarity.UNCOMMON)));
 
-    /** First power tool for the suit's socket: the rivet gun (was the plasma cannon until 2026-10-13). */
-    public static final DeferredItem<RivetGunItem> RIVET_GUN = ITEMS.register("rivet_gun",
-            () -> new RivetGunItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+    /** First power tool for the suit's socket: the chaingun (was the plasma cannon, then briefly the rivet gun). */
+    public static final DeferredItem<ChaingunItem> CHAINGUN = ITEMS.register("chaingun",
+            () -> new ChaingunItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
 
     static {
-        // Worlds saved before the rename store "powerarmor:plasma_cannon": load those stacks as rivet guns instead of
-        // dropping them as unknown items.
-        ITEMS.addAlias(ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "plasma_cannon"),
-                ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "rivet_gun"));
+        // Worlds saved before the renames store "powerarmor:plasma_cannon" or "powerarmor:rivet_gun": load those stacks
+        // as chainguns instead of dropping them as unknown items.
+        for (String old : new String[] {"plasma_cannon", "rivet_gun"}) {
+            ITEMS.addAlias(ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, old),
+                    ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "chaingun"));
+        }
     }
 
     /** Second power tool: electromagnetic grab / throw for items and mobs. */

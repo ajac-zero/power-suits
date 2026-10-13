@@ -92,11 +92,18 @@ would replace them in `sounds.json` only.
    painted in reserved dark colours, `tools/make-glowmasks.py` -> `power_armor_glow_fire/visor.png`; `SuitGlowLayer`
    redraws the model with each mask in `RenderType.eyes`, tinted per frame from `PowerArmorEntity.tickLights`; item
    icon patched; autopilot night scene `ap_lights_*` (piloted, tool, hit, parked, shutdown, off).
-2. Rivet gun (DONE 2026-10-13): new `rivet_gun` bone (receiver, drum, gauge, barrel + collars, nose, piston, vent;
+2. Rivet gun (built 2026-10-13, then replaced by the chaingun, 2b): new `rivet_gun` bone (receiver, drum, gauge, barrel + collars, nose, piston, vent;
    `muzzle` locator, flash block removed), `rivet_shot` (`a_rivet_shot.js`), `RivetGunItem` (nugget ammo, arc aiming),
    `Rivet` entity (sticks, cools, drops a nugget), `RivetRenderer`, vent opened by the raise (`RivetGunParts`), muzzle
    burst (server for others, client for the pilot), raise clunk for every tool, HUD rivet count, item alias
    `plasma_cannon` -> `rivet_gun`. Tests: nugget use, creative, sticking + dropping (51).
+2b. Chaingun (DONE 2026-10-13): `chaingun` bone (motor housing + `chaingun_barrels`: 2 clamp plates, 4 barrels, axle;
+   `muzzle` locator), `ChaingunItem` as a continuous tool (spin-up timing, nugget per bullet, overheat config), `Bullet`
+   tracer (immunity bypass, no_knockback tag + own push), `BulletRenderer`, synced TOOL_SPIN/TOOL_HEAT/TOOL_SHOTS ->
+   code-driven barrel spin (`ChaingunParts`), recoil, muzzle burst, heat glowmask (suit + cockpit viewmodel), motor
+   whine loop with spin pitch (`PowerTool.runSoundPitch`), HUD bullets + heat bar; `rivet_shot` -> arm-only
+   `tool_recoil` (EM push); item aliases plasma_cannon/rivet_gun -> chaingun. Tests: tap, spin-up/coast, nuggets,
+   creative, immunity bypass, overheat (52).
 3. EM projector redstone restyle: model/texture, red-dust beam + sparks.
 
 ## Art (Blockbench, `~/Developer/Models/starcraft_marine.bbmodel`)

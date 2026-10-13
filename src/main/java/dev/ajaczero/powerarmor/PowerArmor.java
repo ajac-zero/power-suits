@@ -47,7 +47,7 @@ public class PowerArmor {
     private static void addToCreativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(ModItems.POWER_ARMOR);
-            event.accept(ModItems.RIVET_GUN);
+            event.accept(ModItems.CHAINGUN);
             event.accept(ModItems.EM_PROJECTOR);
             event.accept(ModItems.DRILL);
             event.accept(ModItems.CHAINSAW);

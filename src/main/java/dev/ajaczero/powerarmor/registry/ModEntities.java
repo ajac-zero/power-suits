@@ -1,7 +1,7 @@
 package dev.ajaczero.powerarmor.registry;
 
 import dev.ajaczero.powerarmor.PowerArmor;
-import dev.ajaczero.powerarmor.entity.Rivet;
+import dev.ajaczero.powerarmor.entity.Bullet;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
@@ -26,13 +26,13 @@ public final class ModEntities {
                     .clientTrackingRange(10)
                     .build("power_armor"));
 
-    /** The rivet gun's projectile. Updated every tick so it stays smooth at 60 blocks/s. */
-    public static final DeferredHolder<EntityType<?>, EntityType<Rivet>> RIVET =
-            ENTITIES.register("rivet", () -> EntityType.Builder.<Rivet>of(Rivet::new, MobCategory.MISC)
-                    .sized(0.25F, 0.25F)
+    /** The chaingun's bullet. Updated every tick so its tracer stays smooth at 80 blocks/s. */
+    public static final DeferredHolder<EntityType<?>, EntityType<Bullet>> BULLET =
+            ENTITIES.register("bullet", () -> EntityType.Builder.<Bullet>of(Bullet::new, MobCategory.MISC)
+                    .sized(0.2F, 0.2F)
                     .clientTrackingRange(8)
                     .updateInterval(1)
-                    .build("rivet"));
+                    .build("bullet"));
 
     private ModEntities() {}
 }

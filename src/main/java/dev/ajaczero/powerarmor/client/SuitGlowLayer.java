@@ -16,7 +16,7 @@ import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 import software.bernie.geckolib.util.RenderUtil;
 
 /**
- * The suit's lights: the firebox fire and the visor, drawn on top of the model at full brightness so they glow
+ * The suit's lights: the firebox fire, the visor and the chaingun's hot barrel tips, drawn on top of the model at full brightness so they glow
  * in the dark. Like GeckoLib's AutoGlowingGeoLayer, the whole model is drawn again with a glowmask texture (black
  * everywhere except the glowing pixels, made by tools/make-glowmasks.py) in vanilla's "eyes" render type (the one
  * spider and enderman eyes use): it ignores light and adds its colour on top. Unlike AutoGlowingGeoLayer, each mask
@@ -25,6 +25,7 @@ import software.bernie.geckolib.util.RenderUtil;
 public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity> {
     private static final ResourceLocation FIRE = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_fire.png");
     private static final ResourceLocation VISOR = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_visor.png");
+    static final ResourceLocation HEAT = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_heat.png");
 
     public SuitGlowLayer(GeoRenderer<PowerArmorEntity> renderer) {
         super(renderer);
@@ -43,6 +44,13 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity> {
         float[] visor = suit.getVisorColor();
         float on = suit.getVisorFlicker(time);
         draw(poseStack, suit, model, buffers, partialTick, VISOR, on, visor[0], visor[1], visor[2]);
+        draw(poseStack, suit, model, buffers, partialTick, HEAT, heatGlow(suit.getToolHeat()), 1F, 1F, 1F);
+    }
+
+    /** Chaingun barrel tips: nothing while cool, a dull red glow from a third of the way, white-hot when overheated. */
+    static float heatGlow(float heat) {
+        float h = Math.max(0F, (heat - 0.3F) / 0.7F);
+        return h * h * (3 - 2 * h);
     }
 
     private void draw(PoseStack poseStack, PowerArmorEntity suit, BakedGeoModel model, MultiBufferSource buffers, float partialTick,

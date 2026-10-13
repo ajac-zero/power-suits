@@ -24,7 +24,7 @@ OUT = ASSETS / 'geo/view/power_armor_view.geo.json'
 # root name: (bone whose cubes it takes, size filter, keep (True) or drop (False) those sizes, bone the cubes go to,
 #             top-level bones re-parented under the root, joint to centre on)
 ROOTS = {
-    'view_tool': ('left_forearm', [[7, 1, 7]], True, 'socket', ['socket', 'rivet_gun', 'em_projector', 'drill', 'chainsaw'], 'socket'),
+    'view_tool': ('left_forearm', [[7, 1, 7]], True, 'socket', ['socket', 'chaingun', 'em_projector', 'drill', 'chainsaw'], 'socket'),
     'view_gauntlet': ('right_forearm', [[8, 8, 8]], False, None, ['right_hand'], 'right_forearm'),
 }
 

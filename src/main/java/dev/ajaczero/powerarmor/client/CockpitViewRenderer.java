@@ -21,7 +21,7 @@ import software.bernie.geckolib.renderer.layer.BlockAndItemGeoLayer;
 final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
     enum Part { TOOL, GAUNTLET }
 
-    static final String[] TOOL_BONES = {"rivet_gun", "em_projector", "drill", "chainsaw"};
+    static final String[] TOOL_BONES = {"chaingun", "em_projector", "drill", "chainsaw"};
 
     Part part = Part.TOOL;
     /** Installed tool's bone (PowerTool.suitBone), or null for the bare socket. */
@@ -32,6 +32,7 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
     CockpitViewRenderer() {
         super(new Model());
         this.addRenderLayer(new HeldItem(this));
+        this.addRenderLayer(new HeatGlow(this));
     }
 
     @Override
@@ -55,11 +56,11 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
         private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor.png");
         private static final ResourceLocation ANIMATIONS = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "animations/entity/power_armor.animation.json");
 
-        /** The rivet gun's vent opens as the tool raises, like on the suit. */
+        /** The chaingun's barrels turn with the suit's spin, like on the suit. */
         @Override
         public void setCustomAnimations(CockpitView view, long instanceId, software.bernie.geckolib.animation.AnimationState<CockpitView> state) {
             if (view.suit != null) {
-                RivetGunParts.raise(getAnimationProcessor(), view.suit.getToolRaise(state.getPartialTick()));
+                ChaingunParts.pose(getAnimationProcessor(), view.suit, state.getPartialTick());
             }
         }
 
@@ -82,6 +83,30 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
         @Override
         public RenderType getRenderType(CockpitView view, ResourceLocation texture) {
             return RenderType.entityCutoutNoCull(texture);
+        }
+    }
+
+    /** The chaingun's hot barrel tips, glowing like on the suit (SuitGlowLayer). */
+    private static final class HeatGlow extends software.bernie.geckolib.renderer.layer.GeoRenderLayer<CockpitView> {
+        private final CockpitViewRenderer renderer;
+
+        HeatGlow(CockpitViewRenderer renderer) {
+            super(renderer);
+            this.renderer = renderer;
+        }
+
+        @Override
+        public void render(PoseStack poseStack, CockpitView view, BakedGeoModel model, RenderType renderType, MultiBufferSource buffers,
+                           com.mojang.blaze3d.vertex.VertexConsumer buffer, float partialTick, int packedLight, int packedOverlay) {
+            float glow = view.suit == null || this.renderer.part != Part.TOOL ? 0F : SuitGlowLayer.heatGlow(view.suit.getToolHeat());
+            if (glow <= 0.01F) {
+                return;
+            }
+            int c = net.minecraft.util.Mth.clamp((int) (glow * 255F), 0, 255);
+            RenderType type = RenderType.eyes(SuitGlowLayer.HEAT);
+            getRenderer().reRender(model, poseStack, buffers, view, type, buffers.getBuffer(type), partialTick,
+                    net.minecraft.client.renderer.LightTexture.FULL_BRIGHT, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,
+                    0xFF000000 | c << 16 | c << 8 | c);
         }
     }
 

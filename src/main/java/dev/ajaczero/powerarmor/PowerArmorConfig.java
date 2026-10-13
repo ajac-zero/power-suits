@@ -41,16 +41,37 @@ public final class PowerArmorConfig {
             .comment("Below this much energy (fuel slot included) the suit warns: flashing gauge, beeps, dark smoke.").translation(key("low_fuel"))
             .defineInRange("low_fuel", 600, 0, 1_000_000);
 
-    // ---- rivet gun ------------------------------------------------------------------------------------
-    public static final ModConfigSpec.IntValue RIVET_ENERGY = B.pop().translation(key("rivet_gun")).push("rivet_gun")
-            .comment("Energy per shot, the steam pressure (60 = 3 s of walking: 26 shots per coal). Each shot also takes an iron nugget.").translation(key("rivet_energy"))
-            .defineInRange("energy_per_shot", 60, 0, 100_000);
-    public static final ModConfigSpec.IntValue RIVET_COOLDOWN = B
-            .comment("Ticks between shots while the tool button is held (20 = 1 s). At least 11: the shot animation lasts 10.").translation(key("rivet_cooldown"))
-            .defineInRange("cooldown_ticks", 12, 11, 200);
-    public static final ModConfigSpec.DoubleValue RIVET_DAMAGE = B
-            .comment("Damage per rivet (2 = one heart).").translation(key("rivet_damage"))
-            .defineInRange("damage", 10.0, 0, 1000);
+    // ---- chaingun ---------------------------------------------------------------------------------------
+    public static final ModConfigSpec.IntValue CHAINGUN_ENERGY = B.pop().translation(key("chaingun")).push("chaingun")
+            .comment("Energy per bullet (each bullet also takes an iron nugget).").translation(key("chaingun_energy"))
+            .defineInRange("energy_per_shot", 15, 0, 100_000);
+    public static final ModConfigSpec.IntValue CHAINGUN_SPIN_ENERGY = B
+            .comment("Energy per tick while the trigger is held and the barrels spin (walking burns 1).").translation(key("chaingun_spin_energy"))
+            .defineInRange("spin_energy_per_tick", 1, 0, 1000);
+    public static final ModConfigSpec.IntValue CHAINGUN_SLOW_INTERVAL = B
+            .comment("Ticks between shots with the barrels at rest (the first shot of a burst, or tapping).").translation(key("chaingun_slow_interval"))
+            .defineInRange("slow_interval_ticks", 12, 1, 200);
+    public static final ModConfigSpec.IntValue CHAINGUN_FAST_INTERVAL = B
+            .comment("Ticks between shots at full spin (2 = 10 bullets per second).").translation(key("chaingun_fast_interval"))
+            .defineInRange("fast_interval_ticks", 2, 1, 200);
+    public static final ModConfigSpec.IntValue CHAINGUN_SPIN_UP = B
+            .comment("Ticks of holding the trigger to reach full spin.").translation(key("chaingun_spin_up"))
+            .defineInRange("spin_up_ticks", 50, 1, 1200);
+    public static final ModConfigSpec.DoubleValue CHAINGUN_DAMAGE_SLOW = B
+            .comment("Damage per bullet with the barrels at rest (2 = one heart).").translation(key("chaingun_damage_slow"))
+            .defineInRange("damage_slow", 8.0, 0, 1000);
+    public static final ModConfigSpec.DoubleValue CHAINGUN_DAMAGE_FAST = B
+            .comment("Damage per bullet at full spin. Bullets ignore the half-second hit immunity, so every one counts.").translation(key("chaingun_damage_fast"))
+            .defineInRange("damage_fast", 3.0, 0, 1000);
+    public static final ModConfigSpec.BooleanValue CHAINGUN_OVERHEAT = B
+            .comment("Barrels heat up: after overheat_shots bullets without a pause the gun must cool down before it fires again.").translation(key("chaingun_overheat"))
+            .define("overheat", true);
+    public static final ModConfigSpec.IntValue CHAINGUN_OVERHEAT_SHOTS = B
+            .comment("Bullets in a row (without letting go) until the barrels overheat.").translation(key("chaingun_overheat_shots"))
+            .defineInRange("overheat_shots", 80, 1, 10_000);
+    public static final ModConfigSpec.IntValue CHAINGUN_COOL_TICKS = B
+            .comment("Ticks for fully hot barrels to cool down (starts once the gun stops firing).").translation(key("chaingun_cool_ticks"))
+            .defineInRange("cool_ticks", 60, 1, 2400);
 
     // ---- EM projector --------------------------------------------------------------------------------
     public static final ModConfigSpec.IntValue EM_HOLD_ENERGY = B.pop().translation(key("em_projector")).push("em_projector")

@@ -18,13 +18,13 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
-| Install a tool | Put a power tool (Rivet Gun, EM Projector, Mining Drill, Chainsaw) in the menu's socket slot; it appears on the suit's left arm |
+| Install a tool | Put a power tool (Chaingun, EM Projector, Mining Drill, Chainsaw) in the menu's socket slot; it appears on the suit's left arm |
 | Your hand | Works as normal while piloting: the suit's right hand holds your selected item; left click punches, fights and mines, right click places, eats, opens doors... 1.5 blocks extra reach |
 | Use the tool | Right-click when your hand has nothing to do (empty hand, a sword, aiming at the air with blocks...), like a shield in the off hand; hold it as long as you need. The tool arm raises while in use |
 | EM Projector | Hold right-click on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 1 fuel/tick while holding, 80 per throw |
 | Mining Drill | Hold right-click on a block: digs it and the 8 around it (a 3x3 face of a wall, floor or ceiling) like a diamond pickaxe + shovel. 20 fuel per block |
 | Chainsaw | Hold right-click on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 15 fuel per log |
-| Fire | Hold right-click while piloting (Rivet Gun): a red-hot rivet every 0.6 s toward your crosshair, one iron nugget each (60 fuel = 3 s of walking, 5 hearts) |
+| Fire | Right-click while piloting (Chaingun): tap for heavy single shots, hold to spin up to a 10-a-second barrage toward your crosshair; one iron nugget per bullet |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
 
 ### Balance and config
@@ -37,7 +37,7 @@ balance pass), with what one piece of coal (1600) buys:
 |---|---|---|
 | Walking / standing / sprinting | 1 / 0.25 / 2 per tick | 80 s / 5:20 / 40 s |
 | Jump | 20 | 80 jumps |
-| Rivet Gun | 60 per shot + 1 iron nugget (5 hearts, every 0.6 s) | 26 shots |
+| Chaingun | 15 per bullet + 1 iron nugget, 1 per tick while spinning (4 hearts heavy, 1.5 barrage) | ~100 bullets |
 | EM Projector | 1 per tick holding, 80 per throw | 80 s of holding, or 20 throws |
 | Mining Drill | 20 per block (180 per 3x3) | ~9 faces (80 blocks) |
 | Chainsaw | 15 per log | ~20 oaks (5 logs each) |
@@ -57,14 +57,16 @@ exhaust coughs dark smoke. At zero the suit powers down and slumps; climb out, r
 and it stands back up (1.4 s). Fuel is needed in creative mode too. Suits from before this version
 start empty: give them some coal.
 
-**Rivet Gun** (crafted: iron ingots top and bottom rows; piston, hopper and iron block in the middle). Steam from the
-engine drives a piston that punches a red-hot rivet out of the barrel. Each shot uses fuel and **one iron nugget** from
-your inventory (off hand first, like a bow's arrows; free in creative); the HUD shows how many you carry, and without
-nuggets the gun just clicks. Rivets fly at 60 blocks/s with a slight drop (the gun aims the arc, so they land on your
-crosshair), hurt the first mob they hit (that rivet is lost), quench in water, and **stick in blocks**: glowing, then
-cooling, and after 10 s, or when you break the block, they drop back out as nuggets (you can also pull them out by
-walking into them on foot). Kills credit you ("riveted by"). Raising the gun opens its steam vent; each shot slams the
-piston and turns the ammo drum. It does nothing on foot. Old Plasma Cannons in your world turn into Rivet Guns.
+**Chaingun** (crafted: iron ingots top and bottom rows; piston, iron block and dispenser in the middle). A cluster of
+four barrels driven by the engine. **Tap** right-click for heavy single shots (4 hearts); **hold** it and the barrels
+spin up over 2.5 s, firing faster and faster up to a barrage of 10 bullets a second (1.5 hearts each). Let go and they
+coast down over 1.5 s; grab the trigger again before they stop and it picks up where it was. Each bullet uses fuel and
+**one iron nugget** from your inventory (off hand first, like a bow's arrows; free in creative); the HUD shows how many
+you carry and the barrels' heat. Bullets are hot tracers at 80 blocks/s: they ignore the half-second of immunity mobs
+get after a hit (so every bullet of a barrage counts), push lightly instead of vanilla's knockback, and spark off
+blocks without breaking them. **Overheat** (on by default, `overheat` in the config): 80 bullets without letting go and
+the barrels glow white-hot and lock until they've cooled (3 s); the tips glow from a third of the way there. Kills
+credit you ("shredded by"). It does nothing on foot. Old Plasma Cannons and Rivet Guns in your world become Chainguns.
 With an empty socket or no fuel the trigger just clicks.
 
 **EM Projector** (crafted: iron ingots in the corners, copper ingots top and bottom middle, redstone either
@@ -122,7 +124,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew runGameTestServer` | Runs the automated in-game tests headless, prints pass/fail |
 | `./gradlew build` | Builds the mod jar into `build/libs/` (put it in a real `mods/` folder, plus GeckoLib) |
 | `node tools/export-model.mjs` | Re-exports model, animations and texture from the open Blockbench project |
-| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (pool, running out of fuel, rivet gun range, right hand, EM projector, drill + chainsaw, tool items on foot), saves `run/screenshots/ap_*.png`, `run/autopilot_{water,fuel,cannon,em,mine}.csv`, quits |
+| `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (pool, running out of fuel, chaingun range, right hand, EM projector, drill + chainsaw, tool items on foot), saves `run/screenshots/ap_*.png`, `run/autopilot_{water,fuel,cannon,em,mine}.csv`, quits |
 | `./gradlew runAutopilotTerrain` | Dev tool: drives a suit over real terrain in a **copy** of `run/saves/New World`, logs `run/autopilot_terrain.csv` (speed, height, ground contact, animation, camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`, `fuel`, `menu`) |
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
@@ -146,14 +148,14 @@ src/main/java/dev/ajaczero/powerarmor/
   menu/PowerArmorMenu.java   menu logic: fuel + socket slots, shift-click, Pack up button
   item/SuitLoadout.java      fuel/tool/half-burnt item carried by a packed suit item
   item/PowerTool.java        what a socket tool is: fuel per use, cooldown, model bone, use()
-  item/RivetGunItem.java     the first tool: nugget ammo, aims the rivet's arc at the crosshair (also a GeckoLib item)
+  item/ChaingunItem.java     the first tool: spin-up, nugget ammo, overheat (continuous tool; also a GeckoLib item)
   item/EmProjectorItem.java  the second tool: grab / hold / collect / throw, slam damage (per-suit state in Beam)
   item/SocketAim.java        muzzle position, crosshair aim point, entity under the crosshair
   item/DrillItem.java        the third tool: 3x3 digging at diamond pickaxe/shovel speed
   item/ChainsawItem.java     the fourth tool: cuts wood, fells natural trees top-down
   item/ToolMining.java       shared block breaking for both (BreakEvent, drops, crack overlay, progress)
   entity/EmBeamEffects.java  client-side violet beam particles
-  entity/Rivet.java          the projectile (flight with a drop, hit, sticking in blocks, dropping back out)
+  entity/Bullet.java         the tracer bullet (flight, hit without immunity, sparks off blocks)
   network/ToolTriggerPayload.java  client -> server "attack pressed/released"
   item/PowerArmorItem.java   deploying / packing / repairing
   PilotProtection.java       redirects damage from the pilot to the suit
@@ -171,8 +173,8 @@ src/main/java/dev/ajaczero/powerarmor/
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
     SuitGlowLayer.java       firebox + visor lights (glowmasks, tinted per frame)
-    RivetRenderer.java       the rivet (two boxes) and its red-hot glow
-    RivetGunParts.java       the rivet gun's vent, opened by the arm's raise
+    BulletRenderer.java      the glowing tracer streak
+    ChaingunParts.java       turns the chaingun's barrels with the synced spin (suit + cockpit viewmodel)
     ClientSetup.java         registers the renderer
     PowerArmorClient.java    client-only @Mod entry: the in-game config screen
     SuitSounds.java          engine + tool loops (tickable sounds that follow the suit)
@@ -182,10 +184,10 @@ src/main/java/dev/ajaczero/powerarmor/
 src/main/resources/
   assets/powerarmor/geo|animations|textures/entity/   exported from Blockbench
   assets/powerarmor/textures/gui/power_armor.png      suit menu background (tools/make-gui.py)
-  assets/powerarmor/geo/item/<tool>.geo.json          rivet gun, EM projector, drill, chainsaw: cut out of the suit model (tools/extract-tool-geo.py)
+  assets/powerarmor/geo/item/<tool>.geo.json          chaingun, EM projector, drill, chainsaw: cut out of the suit model (tools/extract-tool-geo.py)
   assets/powerarmor/geo/view/power_armor_view.geo.json cockpit viewmodel: tools + gauntlet cut out of the suit model (tools/extract-view-geo.py)
-  assets/powerarmor/models/item/rivet_gun.json        how the rivet gun sits in your hand / inventory
-  data/powerarmor/damage_type/rivet.json              "riveted" damage type (+ minecraft is_projectile tag)
+  assets/powerarmor/models/item/chaingun.json         how the chaingun sits in your hand / inventory
+  data/powerarmor/damage_type/bullet.json             "shredded" damage type (+ minecraft is_projectile, no_knockback tags)
   data/powerarmor/damage_type/em_slam.json            "slammed into a wall" (EM throws)
   data/powerarmor/recipe/*.json                       crafting recipes (suit + 4 tools)
   data/powerarmor/structure/test_pad.nbt              floor used by the GameTests
@@ -215,7 +217,7 @@ src/main/resources/
   The torso stops following the view while powered down. Spec: `starcraft_marine_anim/a_power.js`.
 - Socket: the left arm ends in an elbow socket and the installed tool is the forearm, carried at the hip (rest pose:
   upper arm 18 deg forward, elbow 62 deg); `socket` (coupling plate) shows when empty, the installed
-  tool's bone (`rivet_gun`, `em_projector`, `drill`, `chainsaw`) otherwise (`PowerArmorRenderer`). The EM push reuses `rivet_shot` as `tool_recoil`. `rivet_shot` (0.5 s overlay, `a_rivet_shot.js`: recoil, piston slam, drum turn)
+  tool's bone (`chaingun`, `em_projector`, `drill`, `chainsaw`) otherwise (`PowerArmorRenderer`). The EM push plays `tool_recoil` (0.5 s overlay, `a_tool_recoil.js`); the chaingun's barrels spin and its shots kick in code (`ChaingunParts`, `PowerArmorModel`), and `tool_recoil`
   is triggered per shot; it must stay shorter than the cooldown because GeckoLib won't restart a running one.
 - Mining tools: while a continuous tool runs, the suit syncs `TOOL_RUNNING` and a fourth controller (`tool`)
   loops the tool's own animation: `drill_run` spins the `drill_bit` 4 turns/s and buzzes the head,

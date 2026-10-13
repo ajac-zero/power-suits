@@ -7,6 +7,7 @@ dark glass. Each reserved colour maps to a bright colour in one glowmask; everyt
 which adds nothing (SuitGlowLayer draws the masks full-bright and additively, tinted per frame):
   power_armor_glow_fire.png   the firebox coals (yellow at the bottom -> red at the top) and the ember vent slits
   power_armor_glow_visor.png  the visor glass, white (tinted green / amber / red by the suit's state)
+  power_armor_glow_heat.png   the chaingun's barrel tips (tinted by the barrels' heat)
 The script refuses to run if a reserved colour turns up outside the expected amount (someone painted with it).
 """
 from pathlib import Path
@@ -25,8 +26,10 @@ GLOW = {
     H('262c34'): ('visor', H('ebebeb')),  # visor glass
     H('1e232a'): ('visor', H('a0a0a0')),  # visor glass, edge
     H('46505c'): ('visor', H('ffffff')),  # visor glass, highlight
+    H('3c4147'): ('heat', H('ff6a1a')),   # chaingun barrel tip, second row: orange
+    H('353a40'): ('heat', H('ffc860')),   # chaingun barrel tip, last row: yellow-hot
 }
-EXPECTED = {'fire': 15, 'visor': 35}       # pixels per mask (firebox 12 + 3 slits; the whole 7x5 visor)
+EXPECTED = {'fire': 15, 'visor': 35, 'heat': 16}  # pixels per mask (firebox 12 + 3 slits; the 7x5 visor; 4 barrel sides x 2x2)
 
 
 def main():

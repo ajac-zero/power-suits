@@ -14,11 +14,16 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
   when off). Glow is drawn from glowmask textures (full-bright, tinted per frame).
 - Visor: **the whole visor glows and shows the suit's state** (the helmet's own steel is its frame): green = parked with power (free to climb in), amber =
   piloted, red = tool in use or just hit, dark = powered off, flickering while starting up, shutting down or low on fuel.
-- Plasma cannon -> **rivet gun**: fires red-hot rivets using **iron nuggets from the pilot's inventory** (like a bow
+- Plasma cannon -> **rivet gun** (built, then replaced by the chaingun below): fires red-hot rivets using **iron nuggets from the pilot's inventory** (like a bow
   uses arrows; creative: free) plus fuel for steam pressure. Rivets **stick in blocks** (not mobs) for a while and
   drop back as nuggets. Item id `rivet_gun`, with `plasma_cannon` registered as an alias so existing items survive.
   Raising it opens its steam vent; per shot the piston slams, the ammo drum turns, steam puffs; no muzzle-flash block.
   Built 2026-10-13 (step 2).
+- **Rivet gun -> chaingun (decided 2026-10-13, after trying the rivet gun):** the user wasn't moved by the rivet gun. The
+  chaingun spins up: tapping fires single heavy shots (like the rivet gun), holding speeds the barrel cluster up to a
+  barrage. One iron nugget per bullet. Bullets ignore the half-second hit immunity. Optional overheat (config). Model:
+  compact like the EM projector / drill (motor housing + short spinning cluster of barrels), no long thin barrel, no
+  extra accessories (sight, magazine, drum, gauge). Name: Chaingun (pairs with Chainsaw). Built 2026-10-13 (step 2).
 - EM projector -> **redstone electromagnet**: copper coils, glowing redstone core, red-dust beam and sparks. No ammo.
 - Later (not now): dyeable paint like leather armor.
 
@@ -36,7 +41,7 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
 | Item | `power_armor` item deploys the suit (needs 3-block clearance). Durability bar = suit health; anvil + iron ingots repairs. Crafted from iron blocks, iron helmet/chestplate/boots, pistons. Packed items keep fuel, socket tool and the half-burnt item (`powerarmor:loadout` component; shown in the tooltip). |
 | Entering | Right-click empty suit = climb in. Shift = climb out (behind/beside the suit). Sneak + right-click empty suit = suit menu. |
 | Fuel + power (Phase 1) | Furnace-style fuel slot, drain by load, shutdown/startup animations + sounds, exhaust smoke by load, HUD gauge, low-fuel warning. See section 4. |
-| Socket + rivet gun (Phase 2, rivet gun since 2026-10-13) | `PowerTool` items in the socket; hold right-click to use (attack until 2026-10-13). Rivet gun: rivet to the crosshair (arced), 10 damage, 60 energy + 1 iron nugget, 0.6 s cooldown, rivets stick in blocks and drop back out, `rivet_shot` animation, 3D item (cut from the suit model), recipe. See section 3. (Was the plasma cannon.) |
+| Socket + chaingun (Phase 2; plasma cannon, then rivet gun, chaingun since 2026-10-13) | `PowerTool` items in the socket; hold right-click to use (attack until 2026-10-13). Chaingun: tap = heavy shots, hold = spin-up to a 10/s barrage, 1 iron nugget + fuel per bullet, bullets ignore hit immunity, optional overheat, 3D item (cut from the suit model), recipe. See section 3. |
 | Left hand (Phase 3) | Holds the pilot's selected item (3D in third person, vanilla-style lower-left in first person); right-click uses it as normal; carry + reach animations; no attacking or mining; needs power; +1.5 reach. See section 3. |
 | EM projector (Phase 4) | Hold to grab items / mobs (16 blocks) and hold them floating; items are collected; release throws, tap shoves; wall slam damage. Socket only. See section 3. |
 | Drill + chainsaw (Phase 5) | Diamond-tipped 3x3 drill (pickaxe + shovel blocks, diamond tier) and a chainsaw (axe blocks + leaves, fells natural trees above the cut). BreakEvent per block, vanilla drops, crack overlay, tool-bone loop animations. See section 3. |
@@ -46,7 +51,7 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
 | Camera | First person: eye at the visor, only the suit's legs drawn, arms = cockpit viewmodel (tool left, gauntlet + item right), cockpit footfall bob, speed FOV. Third person: camera pulled back to 6.5. |
 | Damage | Hits on the pilot go to the suit (except drowning, starvation, void//kill). Suit: 100 HP, armor 12, toughness 4, full knockback resistance, no fall damage. Death: animation, pilot ejected, drops iron. |
 | Water | Fallout-style: sinks (~2.5 blocks/s), walks the bottom at half speed, suit never drowns, ignores currents. Pilot's air drains normally once their head is under. |
-| Animations | idle, walk (jog), run, jump_charge, jump, fall, land, hit, death, shutdown, powered_off, startup, rivet_shot, hold_item/use_item, drill_run, chainsaw_run (+ unused: attack, throw, stim, electrified, idle_fidget, sneakwalk). Walk/run hold the cannon steady (arm IK stabiliser). |
+| Animations | idle, walk (jog), run, jump_charge, jump, fall, land, hit, death, shutdown, powered_off, startup, tool_recoil, hold_item/use_item, drill_run, chainsaw_run (+ unused: attack, throw, stim, electrified, idle_fidget, sneakwalk). Walk/run hold the cannon steady (arm IK stabiliser). |
 | Old saves | Suits loaded from older versions get current base stats (`readAdditionalSaveData`). |
 
 ## 3. Arms: one hand, one power socket
@@ -75,7 +80,7 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
   - The suit is crafted/deployed with an **empty socket**.
 - Built (Phase 2, reworked later): the left arm ends at the elbow in a steel socket ring, and **each tool is the
   whole forearm** (16-19 px from the elbow, like the right forearm + hand). A `socket` coupling plate (cyan pins)
-  shows when the socket is empty. Each tool is a bone in the suit model (`rivet_gun` for the rivet gun) pivoting
+  shows when the socket is empty. Each tool is a bone in the suit model (`chaingun` for the chaingun) pivoting
   at the socket, shown only while installed, so tools can have their own animated parts. In first person
   `PowerArmorModel` raises the arm, swings it in a little and bends the tool up at the socket so you see its side.
   The hand-held item model is cut from the same bones (plus the socket ring) by `tools/extract-tool-geo.py`.
@@ -86,7 +91,7 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
 ### Power tools
 | Tool | Primary action (attack) | Fuel cost (initial guess) | Notes |
 |---|---|---|---|
-| **Rivet gun** (built; replaced the plasma cannon 2026-10-13) | Fires a red-hot rivet from the muzzle toward the crosshair (60 blocks/s, slight drop, launch arc aimed at the crosshair): 10 damage + knockback, the rivet is lost in a mob; sticks in blocks, cools, drops back as an iron nugget after 10 s or when the block breaks (players on foot can pull it out). Quenched in water. Ammo: 1 iron nugget per shot from the pilot's inventory (off hand first; creative free); without: dry click, no fuel. Cooldown 0.6 s while held. | 60 per shot (the plasma cannon was 120) | Parts: receiver, square ammo drum (turns 90 deg per shot, snaps back invisibly), pressure gauge, collared barrel, piston (slams per shot), louvred vent (opens with the raise, code-driven). Single-shot `rivet_shot` overlay. Damage type `powerarmor:rivet` ("riveted"). Recipe: iron ingots, piston, hopper, iron block. |
+| **Chaingun** (built 2026-10-13; replaced the rivet gun, which replaced the plasma cannon) | Tap: one heavy shot (8 damage, first shot at once, then every 0.6 s at most). Hold: the barrels spin up over 2.5 s, the interval falls from 12 to 2 ticks (10 bullets/s), damage from 8 to 3; release: they coast down over 1.5 s (re-press resumes). Tracer bullets at 80 blocks/s, no drop, spread up to 1.2 deg at full spin, ignore the half-second hit immunity, light own knockback (damage type in `no_knockback`), spark off blocks, fizzle in water. Ammo: 1 iron nugget per bullet (off hand first; creative free); without: dry click. Overheat (config, on): 80 bullets in a row lock the gun until cooled (3 s, after a gap longer than the slow interval). | 15 per bullet + 1 per tick while spinning | Parts: motor housing, barrel cluster (`chaingun_barrels`: 2 clamp plates, 4 barrels, axle) turned in code from the synced spin (`ChaingunParts`); barrel tips glow with the heat (`power_armor_glow_heat.png`); recoil from the synced shot counter. Continuous tool (`holdTick`/`serverTick`). Motor whine pitch follows the spin. Damage type `powerarmor:bullet` ("shredded"). Recipe: iron ingots, piston, iron block, dispenser. |
 | **3x3 drill** (built) | Hold on a block within reach (6 in the suit): the block + the 8 around it in the plane of the hit face crack together and break together, at diamond pickaxe/shovel speed (8) for the hardest of them, then a 4-tick pause. **Decided 2026-10-12:** diamond tier (obsidian yes, bedrock/unbreakable no), **pickaxe + shovel blocks** (axe blocks are the chainsaw's), model with a visible diamond tip. Drops via the block's loot table for a diamond pickaxe (shovel for shovel blocks), XP from ores; none in creative (vanilla). | 20 per block (Phase 6; was 60) | `BlockEvent.BreakEvent` for every block so claim/protection mods can veto (`ToolMining`, exempt from the pilot's no-mining rule). `drill_run` loop: bit spins 4 turns/s. Recipe: diamonds, iron, piston. |
 | **Chainsaw** (built) | Hold on an axe block (logs, planks, wooden things) or leaves: cuts it at diamond-axe speed. A cut log of a natural tree fells every connected log (26-neighbourhood, cap 256) **at or above the cut**, top first, 3 per tick; it keeps falling after release while the suit has power + fuel. Leaves are left to decay normally. | 15 per log (Phase 6; was 40) | "Natural tree" = connected logs touching >= 4 non-persistent leaves, so log cabins only lose the cut block. `chainsaw_run` loop (chain shimmer). Recipe: iron, shears, piston. |
 | **EM projector** (built) | Hold on a dropped item / mob (within 16 blocks): pulled in and held 3.5 blocks in front of the projector; items that arrive go into the pilot's inventory (vacuum: keep holding to grab the next). Release: launch along the view (mobs 32 blocks/s, items 24). Tap: shove. Thrown mobs hitting a wall take (speed - 0.5) x 12 damage. Drops (no throw) when power/pilot/tool is lost. | 1 per tick while holding, 80 per throw (Phase 6; was 2 / 200) | **Decided 2026-10-12:** items + mobs only (no blocks), socket only (no on-foot version). Never players, bosses, other suits, no-AI mobs, riders/ridden, volume > 6 blocks^3. Recipe: iron, copper, redstone, lodestone. |
@@ -130,9 +135,9 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
   running; power-down/up, shots, EM hum and grinding one-shots. All in `sounds.json` (re-pitched vanilla for now).
 
 ## 7. Balance knobs (built, Phase 6: `config/powerarmor-common.toml`, in-game config screen)
-Fuel energy per item, drain per state, jump cost, low-fuel threshold, tool costs, rivet gun cooldown + damage, EM range + slam
+Fuel energy per item, drain per state, jump cost, low-fuel threshold, tool costs, chaingun intervals, spin-up, damage, overheat, EM range + slam
 damage, drill pause, chainsaw cap + felling speed. Not configurable (decided design): drill harvest tier (diamond).
-Default costs per coal (1600): 80 s walking, 26 rivets, 80 s of EM holding or 20 throws, ~9 drill faces,
+Default costs per coal (1600): 80 s walking, ~100 chaingun bullets, 80 s of EM holding or 20 throws, ~9 drill faces,
 ~20 felled oaks.
 
 ## 8. Out of scope for now

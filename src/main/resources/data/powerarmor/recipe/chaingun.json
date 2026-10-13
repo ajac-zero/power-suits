@@ -3,7 +3,7 @@
   "category": "equipment",
   "pattern": [
     "III",
-    "PHB",
+    "PBD",
     "III"
   ],
   "key": {
@@ -13,15 +13,15 @@
     "P": {
       "item": "minecraft:piston"
     },
-    "H": {
-      "item": "minecraft:hopper"
-    },
     "B": {
       "item": "minecraft:iron_block"
+    },
+    "D": {
+      "item": "minecraft:dispenser"
     }
   },
   "result": {
-    "id": "powerarmor:rivet_gun",
+    "id": "powerarmor:chaingun",
     "count": 1
   }
 }

@@ -1,14 +1,46 @@
 {
   "suit.engine": {
     "subtitle": "subtitles.powerarmor.suit.engine",
-    "sounds": [{ "name": "minecraft:entity.minecart.inside", "type": "event", "pitch": 0.6, "volume": 0.6 }]
+    "sounds": [
+      {
+        "name": "minecraft:entity.minecart.inside",
+        "type": "event",
+        "pitch": 0.6,
+        "volume": 0.6
+      }
+    ]
   },
   "tool.drill": {
     "subtitle": "subtitles.powerarmor.tool.drill",
-    "sounds": [{ "name": "minecraft:entity.minecart.riding", "type": "event", "pitch": 1.7, "volume": 0.9 }]
+    "sounds": [
+      {
+        "name": "minecraft:entity.minecart.riding",
+        "type": "event",
+        "pitch": 1.7,
+        "volume": 0.9
+      }
+    ]
   },
   "tool.chainsaw": {
     "subtitle": "subtitles.powerarmor.tool.chainsaw",
-    "sounds": [{ "name": "minecraft:entity.bee.loop_aggressive", "type": "event", "pitch": 0.75, "volume": 1.0 }]
+    "sounds": [
+      {
+        "name": "minecraft:entity.bee.loop_aggressive",
+        "type": "event",
+        "pitch": 0.75,
+        "volume": 1.0
+      }
+    ]
+  },
+  "tool.chaingun": {
+    "subtitle": "subtitles.powerarmor.tool.chaingun",
+    "sounds": [
+      {
+        "name": "minecraft:entity.minecart.riding",
+        "type": "event",
+        "pitch": 1.0,
+        "volume": 0.8
+      }
+    ]
   }
 }

@@ -21,6 +21,8 @@ public final class ModSounds {
     /** Tool loops while the tool runs. */
     public static final DeferredHolder<SoundEvent, SoundEvent> DRILL = register("tool.drill");
     public static final DeferredHolder<SoundEvent, SoundEvent> CHAINSAW = register("tool.chainsaw");
+    /** The chaingun's motor whine while its barrels spin; the pitch follows the spin (ChaingunItem.runSoundPitch). */
+    public static final DeferredHolder<SoundEvent, SoundEvent> CHAINGUN = register("tool.chaingun");
 
     private static DeferredHolder<SoundEvent, SoundEvent> register(String name) {
         return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, name)));

@@ -9,7 +9,6 @@ import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.AnimationState;
 import software.bernie.geckolib.animation.PlayState;
-import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 import software.bernie.geckolib.util.RenderUtil;
 
@@ -17,12 +16,11 @@ import software.bernie.geckolib.util.RenderUtil;
  * The pilot's first-person "viewmodel": the socket tool on the left and the suit's gauntlet on the right, drawn in
  * front of the camera like vanilla's hands (CockpitHands) instead of looking at the suit's own arms from inside.
  * There is one per client. Its bones are named like the suit's (tools/extract-view-geo.py), so it plays the suit's
- * tool animations: the drill bit spins, the chain runs, the muzzle flashes. Keys for bones it doesn't have
+ * tool animations: the drill bit spins, the chain runs (the chaingun's barrels turn in code, ChaingunParts). Keys for bones it doesn't have
  * (the suit's arms) are skipped by GeckoLib.
  */
 final class CockpitView implements GeoAnimatable {
     static final CockpitView INSTANCE = new CockpitView();
-    private static final RawAnimation SHOT = RawAnimation.begin().thenPlay("animation.power_armor.rivet_shot");
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     /** The suit being piloted, set before each render. */
@@ -34,7 +32,6 @@ final class CockpitView implements GeoAnimatable {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "tool", 3, this::toolAnimation));
-        controllers.add(new AnimationController<>(this, "action", 1, state -> PlayState.STOP).triggerableAnim("shot", SHOT));
     }
 
     private PlayState toolAnimation(AnimationState<CockpitView> state) {
@@ -43,11 +40,6 @@ final class CockpitView implements GeoAnimatable {
             return state.setAndContinue(tool.runAnimation());
         }
         return PlayState.STOP;
-    }
-
-    /** The shot's gun-part keys (piston slam, drum turn, small kick) when the suit fires. */
-    void shoot() {
-        this.cache.getManagerForId(0).tryTriggerAnimation("action", "shot");
     }
 
     @Override

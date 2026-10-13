@@ -7,11 +7,11 @@ import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animation.RawAnimation;
 
 /**
- * A power tool for the suit's left-arm socket (rivet gun, EM projector, drill, chainsaw).
+ * A power tool for the suit's left-arm socket (chaingun, EM projector, drill, chainsaw).
  * Only items implementing this fit the socket slot. They do nothing on foot.
  *
  * Two kinds, both run by the suit on the server while the pilot holds the use button (right click; see ToolInput):
- *  - repeating (rivet gun): every time the tool is ready ({@link #cooldownTicks()} after the last use) and
+ *  - repeating (none left; the chaingun times its own shots as a continuous tool): every time the tool is ready ({@link #cooldownTicks()} after the last use) and
  *    there's fuel for {@link #energyPerUse()}, the suit calls {@link #use};
  *  - continuous (EM projector, {@link #isContinuous()}): {@link #holdTick} every tick while held and
  *    {@link #release} when the button goes up or something interrupts (power, pilot gone, tool removed).
@@ -59,6 +59,15 @@ public interface PowerTool {
     @Nullable
     default net.minecraft.sounds.SoundEvent runSound() {
         return null;
+    }
+
+    /** Client: volume and pitch of the run sound for this suit right now (the chaingun's whine follows its spin). */
+    default float runSoundVolume(PowerArmorEntity suit) {
+        return 1F;
+    }
+
+    default float runSoundPitch(PowerArmorEntity suit) {
+        return 1F;
     }
 
     /** Server: keep the run animation going after the trigger is released (a tree still coming down). */

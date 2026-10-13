@@ -15,14 +15,14 @@ import org.jetbrains.annotations.Nullable;
 
 /** Where socket tools fire from and what the pilot is aiming at. Works on both sides. */
 public final class SocketAim {
-    // Muzzle in the torso's frame, in blocks (measured in Blockbench from the rivet gun's muzzle bone with the tool
+    // Muzzle in the torso's frame, in blocks (measured in Blockbench from the chaingun's muzzle bone with the tool
     // arm raised to aim, which it always is while a tool works (PowerArmorModel.raiseTool; the rest pose is a hip carry);
     // the EM projector's tip is within a few pixels): left of centre (the tool arm is the suit's left),
     // up from the feet, forward.
-    // That's where everyone else sees the gun; the pilot's own first-person view draws its rivets from the cockpit
-    // viewmodel's muzzle instead (visualMuzzle + Rivet.visualOffset).
+    // That's where everyone else sees the gun; the pilot's own first-person view draws its bullets from the cockpit
+    // viewmodel's muzzle instead (visualMuzzle + Bullet.visualOffset).
     // The torso pivot is 1.54 up; the torso faces the view and pitches with it (55%).
-    private static final double MUZZLE_LEFT = 0.95, MUZZLE_UP = 1.71, MUZZLE_FORWARD = 1.78, TORSO_PIVOT_UP = 1.54;
+    private static final double MUZZLE_LEFT = 0.95, MUZZLE_UP = 1.74, MUZZLE_FORWARD = 1.65, TORSO_PIVOT_UP = 1.54;
 
     /** Where muzzle effects (EM beam particles) start on this client. The client points it at the cockpit viewmodel's
      *  muzzle for its own pilot in first person (CockpitHands); everywhere else it's the suit's muzzle. */

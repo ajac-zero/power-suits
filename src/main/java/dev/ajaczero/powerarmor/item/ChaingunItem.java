@@ -1,0 +1,290 @@
+package dev.ajaczero.powerarmor.item;
+
+import dev.ajaczero.powerarmor.PowerArmorConfig;
+import dev.ajaczero.powerarmor.entity.Bullet;
+import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.registry.ModSounds;
+import java.util.List;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
+import software.bernie.geckolib.animatable.GeoItem;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.util.GeckoLibUtil;
+
+/**
+ * The suit's gun: a cluster of four barrels driven by the engine. Tap the trigger and it fires single heavy shots; hold
+ * it and the barrels spin up, firing faster and faster until it's a barrage (10 bullets/s by default). Let go and they
+ * coast down; grab the trigger again before they stop and it picks up where it was.
+ *
+ * <p>Each bullet costs fuel and one iron nugget from the pilot's inventory (off hand first, like a bow's arrows; free in
+ * creative); spinning costs a little fuel per tick. Heavy single shots hit harder than the barrage's bullets. With
+ * overheat on (config), too many bullets in a row overheat the barrels: the gun stops until they've cooled.
+ *
+ * <p>A continuous tool (the suit calls {@link #holdTick} every tick the trigger is held and {@link #serverTick} every
+ * tick), so it times its own shots. The spin, heat and a shot counter are synced to every client through the suit:
+ * they drive the barrel spin, the recoil, the muzzle burst, the heat glow and the motor whine.
+ *
+ * <p>Registered as powerarmor:chaingun; the old ids powerarmor:plasma_cannon and powerarmor:rivet_gun are aliases, so
+ * those items in old worlds load as chainguns. A GeckoLib item (GeoItem): the hand-held model is cut from the suit.
+ */
+public class ChaingunItem extends Item implements PowerTool, GeoItem {
+    /** How far the crosshair is traced to find the aim point. */
+    private static final double AIM_RANGE = 96;
+    /** Bullet spread at full spin, degrees (none for the first, slow shot). */
+    private static final float MAX_SPREAD = 1.2F;
+
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+
+    public ChaingunItem(Properties properties) {
+        super(properties);
+    }
+
+    /** Per-suit state (PowerArmorEntity.toolData), server only. */
+    static final class State {
+        float spin;          // 0 = barrels at rest .. 1 = full speed
+        float heat;          // 0 = cold .. 1 = overheated
+        boolean overheated;  // locked until the barrels have cooled (heat back to 0.2)
+        boolean held;        // the trigger was held last tick
+        int timer;           // ticks until the next shot may fire
+        int sinceShot = 100; // ticks since the last shot
+        int noAmmoMessage;   // ticks until the "no bullets" message may show again
+    }
+
+    private static State state(PowerArmorEntity suit) {
+        return suit.toolData(State.class, State::new);
+    }
+
+    @Override
+    public int energyPerUse() {
+        return PowerArmorConfig.CHAINGUN_ENERGY.get();
+    }
+
+    @Override
+    public int cooldownTicks() {
+        return PowerArmorConfig.CHAINGUN_SLOW_INTERVAL.get();
+    }
+
+    @Override
+    public String suitBone() {
+        return "chaingun";
+    }
+
+    @Override
+    public boolean isContinuous() {
+        return true;
+    }
+
+    @Override
+    public boolean use(PowerArmorEntity suit, Player pilot, ItemStack tool) {
+        return false; // continuous: holdTick does the work
+    }
+
+    /** Ticks between shots at this spin. */
+    static float interval(float spin) {
+        return Mth.lerp(spin, PowerArmorConfig.CHAINGUN_SLOW_INTERVAL.get(), PowerArmorConfig.CHAINGUN_FAST_INTERVAL.get());
+    }
+
+    /** Damage of a bullet fired at this spin: heavy single shots, lighter barrage bullets. */
+    public static float damage(float spin) {
+        return (float) Mth.lerp(spin, PowerArmorConfig.CHAINGUN_DAMAGE_SLOW.get(), PowerArmorConfig.CHAINGUN_DAMAGE_FAST.get());
+    }
+
+    /** Every tick, held or not: the timer runs, the barrels coast down when let go, hot barrels cool. */
+    @Override
+    public void serverTick(PowerArmorEntity suit) {
+        State s = state(suit);
+        s.timer = Math.max(0, s.timer - 1);
+        s.sinceShot++;
+        s.noAmmoMessage = Math.max(0, s.noAmmoMessage - 1);
+        if (!s.held) {
+            s.spin = Math.max(0F, s.spin - 1F / 30F); // ~1.5 s to stop from full speed
+        }
+        s.held = false; // holdTick sets it again if the trigger is still down this tick
+        // Barrels cool once you stop firing: a gap longer than the slow interval, so the spin-up's first slow shots
+        // still count as firing in a row.
+        if (s.sinceShot > PowerArmorConfig.CHAINGUN_SLOW_INTERVAL.get() + 3) {
+            s.heat = Math.max(0F, s.heat - 1F / PowerArmorConfig.CHAINGUN_COOL_TICKS.get());
+        }
+        if (s.overheated && s.heat <= 0.2F) {
+            s.overheated = false;
+        }
+        if (!PowerArmorConfig.CHAINGUN_OVERHEAT.get()) {
+            s.heat = 0F;
+            s.overheated = false;
+        }
+        suit.setToolSpin(s.spin, s.heat);
+    }
+
+    /** Every tick the trigger is held (and the suit can operate): spin up, and fire whenever the next shot is due. */
+    @Override
+    public void holdTick(PowerArmorEntity suit, Player pilot, ItemStack tool) {
+        State s = state(suit);
+        s.held = true;
+        if (s.overheated || !suit.tryUseEnergy(PowerArmorConfig.CHAINGUN_SPIN_ENERGY.get())) {
+            return; // overheated (or no fuel to turn the barrels): it can only coast
+        }
+        s.spin = Math.min(1F, s.spin + 1F / PowerArmorConfig.CHAINGUN_SPIN_UP.get());
+        if (s.timer > 0 || !(suit.level() instanceof ServerLevel level)) {
+            return;
+        }
+        s.timer = Math.max(1, Math.round(interval(s.spin)));
+        Vec3 muzzle = SocketAim.muzzlePosition(suit, pilot);
+        if (!suit.hasEnergyFor(this.energyPerUse()) || !takeBullet(pilot)) {
+            level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.6F);
+            if (s.noAmmoMessage == 0 && suit.hasEnergyFor(this.energyPerUse())) {
+                pilot.displayClientMessage(Component.translatable("message.powerarmor.no_bullets"), true);
+                s.noAmmoMessage = 40;
+            }
+            return;
+        }
+        suit.tryUseEnergy(this.energyPerUse());
+        this.fire(level, suit, pilot, muzzle, s);
+    }
+
+    private void fire(ServerLevel level, PowerArmorEntity suit, Player pilot, Vec3 muzzle, State s) {
+        Vec3 look = pilot.getViewVector(1F);
+        Vec3 direction = SocketAim.aimPoint(suit, pilot, AIM_RANGE).subtract(muzzle).normalize();
+        if (direction.dot(look) < 0.5) {
+            direction = look; // the aim point is beside/behind the muzzle (something very close): fire straight
+        }
+        float spread = MAX_SPREAD * s.spin * Mth.DEG_TO_RAD;
+        direction = direction.xRot((float) level.random.nextGaussian() * spread).yRot((float) level.random.nextGaussian() * spread);
+        float spin = s.spin;
+        level.addFreshEntity(new Bullet(level, pilot, muzzle, direction.scale(Bullet.SPEED), damage(spin), 1F - spin));
+        suit.countToolUse();
+        suit.countShot(); // every client: recoil kick, muzzle burst (the pilot's own client draws it on screen)
+        s.sinceShot = 0;
+        if (PowerArmorConfig.CHAINGUN_OVERHEAT.get()) {
+            s.heat = Math.min(1F, s.heat + 1F / PowerArmorConfig.CHAINGUN_OVERHEAT_SHOTS.get());
+            if (s.heat >= 1F - 1e-4F) { // (n x 1/n can land a hair under 1 in floats)
+                s.heat = 1F;
+                s.overheated = true;
+                level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.LAVA_EXTINGUISH, SoundSource.PLAYERS, 0.9F, 0.8F);
+                level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.7F, 1.4F);
+            }
+        }
+        // Heavy single shots: a deep thump and the piston-like clank; the barrage: lighter, higher cracks.
+        level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS,
+                0.9F - 0.3F * spin, 0.65F + 0.55F * spin + level.random.nextFloat() * 0.1F);
+        if (spin < 0.4F) {
+            level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.IRON_GOLEM_DAMAGE, SoundSource.PLAYERS, 0.4F, 1.5F);
+        }
+        for (ServerPlayer viewer : level.players()) {
+            if (viewer != pilot && viewer.distanceToSqr(muzzle) < 64 * 64) {
+                muzzleBurst((type, x, y, z, n, sp, v) -> level.sendParticles(viewer, type, false, x, y, z, n, sp, sp, sp, v), muzzle, spin, true);
+            }
+        }
+    }
+
+    /** A particle sink: (type, x, y, z, count, spread, speed). Lets the server and the client share muzzleBurst. */
+    public interface Particles {
+        void add(ParticleOptions type, double x, double y, double z, int count, double spread, double speed);
+    }
+
+    /** The puff at the muzzle: sparks and smoke, and a burst of steam for the heavy slow shots (not in the pilot's
+     *  own first-person view, where it covered the target). Light at full spin: ten of these a second. */
+    public static void muzzleBurst(Particles out, Vec3 at, float spin, boolean steam) {
+        if (steam && spin < 0.4F) {
+            out.add(ParticleTypes.POOF, at.x, at.y, at.z, 3, 0.06, 0.03);
+        }
+        out.add(ParticleTypes.SMALL_FLAME, at.x, at.y, at.z, spin < 0.4F ? 3 : 1, 0.04, 0.05);
+        out.add(ParticleTypes.SMOKE, at.x, at.y, at.z, 1, 0.05, 0.02);
+    }
+
+    /** Use up one iron nugget (off hand first, like a bow's arrows). False if there is none. Creative: free. */
+    public static boolean takeBullet(Player player) {
+        if (player.hasInfiniteMaterials()) {
+            return true;
+        }
+        ItemStack offhand = player.getOffhandItem();
+        if (offhand.is(Items.IRON_NUGGET)) {
+            offhand.shrink(1);
+            return true;
+        }
+        Inventory inventory = player.getInventory();
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (stack.is(Items.IRON_NUGGET)) {
+                stack.shrink(1);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Both sides: how many bullets (iron nuggets) the player carries, for the HUD. */
+    public static int countBullets(Player player) {
+        return player.getInventory().countItem(Items.IRON_NUGGET);
+    }
+
+    /** Keep the motor whine going while the barrels coast down. */
+    @Override
+    public boolean keepsRunning(PowerArmorEntity suit) {
+        return state(suit).spin > 0.01F;
+    }
+
+    @Override
+    @Nullable
+    public SoundEvent runSound() {
+        return ModSounds.CHAINGUN.get();
+    }
+
+    /** The motor whine rises with the spin. */
+    @Override
+    public float runSoundPitch(PowerArmorEntity suit) {
+        return 0.5F + 1.3F * suit.getToolSpin();
+    }
+
+    @Override
+    public float runSoundVolume(PowerArmorEntity suit) {
+        return 0.25F + 0.75F * suit.getToolSpin();
+    }
+
+    /** On foot it's just a heavy piece of kit: say where it goes. */
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        if (!level.isClientSide()) {
+            player.displayClientMessage(Component.translatable("message.powerarmor.tool_on_foot"), true);
+        }
+        return InteractionResultHolder.pass(player.getItemInHand(hand));
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.translatable("item.powerarmor.chaingun.tooltip").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("item.powerarmor.chaingun.stats",
+                String.format("%.1f", damage(0F) / 2), String.format("%.1f", damage(1F) / 2),
+                String.format("%.0f", 20F / PowerArmorConfig.CHAINGUN_FAST_INTERVAL.get()), this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.add(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
+    }
+
+    // GeckoLib: no animations of its own in the hand.
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.cache;
+    }
+}
