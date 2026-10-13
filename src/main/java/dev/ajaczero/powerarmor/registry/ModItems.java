@@ -5,8 +5,9 @@ import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.ChainsawItem;
 import dev.ajaczero.powerarmor.item.DrillItem;
 import dev.ajaczero.powerarmor.item.EmProjectorItem;
-import dev.ajaczero.powerarmor.item.PlasmaCannonItem;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import dev.ajaczero.powerarmor.item.RivetGunItem;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -21,9 +22,16 @@ public final class ModItems {
                     .durability(PowerArmorEntity.MAX_HEALTH)
                     .rarity(Rarity.UNCOMMON)));
 
-    /** First power tool for the suit's socket. */
-    public static final DeferredItem<PlasmaCannonItem> PLASMA_CANNON = ITEMS.register("plasma_cannon",
-            () -> new PlasmaCannonItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+    /** First power tool for the suit's socket: the rivet gun (was the plasma cannon until 2026-10-13). */
+    public static final DeferredItem<RivetGunItem> RIVET_GUN = ITEMS.register("rivet_gun",
+            () -> new RivetGunItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+
+    static {
+        // Worlds saved before the rename store "powerarmor:plasma_cannon": load those stacks as rivet guns instead of
+        // dropping them as unknown items.
+        ITEMS.addAlias(ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "plasma_cannon"),
+                ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "rivet_gun"));
+    }
 
     /** Second power tool: electromagnetic grab / throw for items and mobs. */
     public static final DeferredItem<EmProjectorItem> EM_PROJECTOR = ITEMS.register("em_projector",

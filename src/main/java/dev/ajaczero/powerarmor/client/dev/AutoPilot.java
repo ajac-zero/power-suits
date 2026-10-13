@@ -161,7 +161,7 @@ public final class AutoPilot {
             case 836 -> shot(mc, "menu_fueled");
             case 845 -> { mc.player.closeContainer(); sideCamera(mc); }
             case 850, 858, 866, 874, 890 -> shot(mc, "fuel_side_startup_" + t);
-            // ---- plasma cannon: climb back in, shoot three pigs 12 blocks ahead and a wall behind them
+            // ---- rivet gun: climb back in, shoot three pigs 12 blocks ahead and a wall behind them
             case 900 -> { closeFuelLog(); mc.setCameraEntity(mc.player); yaw = 0; pitch = 9; cannonRangeSetup(mc); giveHeld(mc, net.minecraft.world.item.ItemStack.EMPTY); } // empty hand: right click goes to the tool
             case 910 -> { o.setCameraType(CameraType.FIRST_PERSON); openCannonLog(mc); }
             case 920 -> hold(o.keyUse, true);
@@ -265,12 +265,15 @@ public final class AutoPilot {
             case 1430 -> { yaw = 0; pitch = 0; boardNearestSuit(mc); } // (the client learns the new time once a second)
             case 1440 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); lightsCamera(mc); }
             case 1446 -> shot(mc, "lights_piloted");
-            case 1448 -> hold(o.keyUse, true);
+            case 1448 -> hold(o.keyUse, true);                    // two rivets into the wall ahead
             case 1454 -> shot(mc, "lights_tool");
-            case 1456 -> hold(o.keyUse, false);
+            case 1462 -> hold(o.keyUse, false);
             case 1468 -> shot(mc, "lights_amber_again");
             case 1470 -> onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) s.hurt(p.serverLevel().damageSources().generic(), 1F); });
             case 1474 -> shot(mc, "lights_hit");
+            case 1475 -> { Vec3 w = lightsPos; if (w != null) lookCamera(mc, w.add(-1.6, 2.4, 4.6), w.add(0, 2.5, 6.9)); }
+            case 1477 -> shot(mc, "lights_rivets");                // red-hot rivets cooling in the wall
+            case 1479 -> lightsCamera(mc);
             case 1480 -> hold(o.keyShift, true);                  // climb out: parked with power -> green
             case 1482 -> hold(o.keyShift, false);
             case 1494 -> shot(mc, "lights_parked");
@@ -554,11 +557,16 @@ public final class AutoPilot {
             Vec3 pos = new Vec3(x + 0.5, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z), z + 0.5);
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 8));
-            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()));
+            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.RIVET_GUN.get()));
             suit.moveTo(pos.x, pos.y, pos.z, 0, 0);
             suit.setYBodyRot(0);
             level.addFreshEntity(suit);
             player.teleportTo(pos.x, pos.y, pos.z - 3);
+            for (int dx = -3; dx <= 3; dx++) {     // a wall 7 blocks ahead of the suit to shoot rivets into
+                for (int dy = 0; dy < 5; dy++) {
+                    level.setBlock(BlockPos.containing(pos).offset(dx, dy, 7), net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                }
+            }
             lightsPos = pos;
         });
     }
@@ -578,8 +586,9 @@ public final class AutoPilot {
                     .min(java.util.Comparator.comparingDouble(s -> s.distanceToSqr(player))).orElse(null);
             if (suit != null) {
                 player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+                player.getInventory().setItem(8, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_NUGGET, 8)); // rivets (survival here), not in the hand
                 suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
-                        new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()));
+                        new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.RIVET_GUN.get()));
                 suit.interact(player, net.minecraft.world.InteractionHand.MAIN_HAND);
             }
         });
@@ -654,13 +663,14 @@ public final class AutoPilot {
     }
 
     private static void giveCannon(Minecraft mc) {
-        // Take the cannon out of the suit (the shot shows the bare socket coupling) and into the player's hand.
+        // Take the rivet gun out of the suit (the shot shows the bare socket coupling) and into the player's hand.
+        mc.player.getInventory().selected = 0;
         onServer(mc, player -> {
             if (fuelSuit != null) {
                 fuelSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, net.minecraft.world.item.ItemStack.EMPTY);
             }
-            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
-                    new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()));
+            player.getInventory().selected = 0; // the hand holds slot 0 (the EM scenes left slot 1 selected)
+            player.getInventory().setItem(0, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.RIVET_GUN.get()));
             player.getInventory().setItem(1, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.EM_PROJECTOR.get()));
             player.getInventory().setItem(2, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.DRILL.get()));
             player.getInventory().setItem(3, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINSAW.get()));
@@ -856,7 +866,7 @@ public final class AutoPilot {
             // GUI on: hiding it (F1) also skips the hand pass, so the viewmodel wouldn't be drawn.
             case 0 -> { o.hideGui = false; o.setCameraType(CameraType.FIRST_PERSON); releaseAll(); yaw = 0; pitch = 10;
                         if (java.nio.file.Files.exists(dir.resolve("tuning.json"))) dev.ajaczero.powerarmor.client.CockpitHands.loadTuning(dir.resolve("tuning.json"));
-                        socket(mc, dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get());
+                        socket(mc, dev.ajaczero.powerarmor.registry.ModItems.RIVET_GUN.get());
                         giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); }
             case 12 -> shot(mc, "view_cannon");
             case 13 -> socket(mc, dev.ajaczero.powerarmor.registry.ModItems.DRILL.get());
@@ -867,7 +877,7 @@ public final class AutoPilot {
             case 51 -> shot(mc, "view_em");
             case 52 -> socket(mc, null);
             case 64 -> shot(mc, "view_empty");
-            case 65 -> { socket(mc, dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()); pitch = 55; hold(o.keyUp, true); }
+            case 65 -> { socket(mc, dev.ajaczero.powerarmor.registry.ModItems.RIVET_GUN.get()); pitch = 55; hold(o.keyUp, true); }
             case 80 -> shot(mc, "view_walkdown");
             case 81 -> { releaseAll(); pitch = 10; giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE, 4)); }
             case 86 -> hold(o.keyUse, true);
@@ -951,7 +961,7 @@ public final class AutoPilot {
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
             // A full stack of blaze rods (~4 hours of walking): enough for any scripted drive.
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64));
-            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.PLASMA_CANNON.get()));
+            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.RIVET_GUN.get()));
             suit.moveTo(player.getX() + 0.5, player.getY(), player.getZ() + 0.5, 0, 0);
             level.addFreshEntity(suit);
             player.startRiding(suit);

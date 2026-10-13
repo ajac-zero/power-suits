@@ -7,11 +7,11 @@ import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animation.RawAnimation;
 
 /**
- * A power tool for the suit's left-arm socket (plasma cannon, EM projector, drill, chainsaw).
+ * A power tool for the suit's left-arm socket (rivet gun, EM projector, drill, chainsaw).
  * Only items implementing this fit the socket slot. They do nothing on foot.
  *
  * Two kinds, both run by the suit on the server while the pilot holds the use button (right click; see ToolInput):
- *  - repeating (cannon): every time the tool is ready ({@link #cooldownTicks()} after the last use) and
+ *  - repeating (rivet gun): every time the tool is ready ({@link #cooldownTicks()} after the last use) and
  *    there's fuel for {@link #energyPerUse()}, the suit calls {@link #use};
  *  - continuous (EM projector, {@link #isContinuous()}): {@link #holdTick} every tick while held and
  *    {@link #release} when the button goes up or something interrupts (power, pilot gone, tool removed).

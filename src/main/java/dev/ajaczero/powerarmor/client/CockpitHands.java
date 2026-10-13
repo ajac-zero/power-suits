@@ -50,8 +50,8 @@ public final class CockpitHands {
     // Eating / drinking: the elbow moves here and the forearm turns in and up, so the food sits low in the middle.
     private static final Vector3f EAT_POS = new Vector3f(0.26F, -0.53F, -0.26F);
     private static final float EAT_YAW = 30F, EAT_PITCH = 148F;
-    /** The cannon's muzzle in the view model (pixels below the socket; muzzle_flash pivot). */
-    private static final float MUZZLE_PX = -14F;
+    /** The rivet gun's muzzle in the view model (pixels below the socket; the muzzle bone's pivot). */
+    private static final float MUZZLE_PX = -17F;
     private static final float RECOIL_TICKS = 6F;
 
     private static boolean wasShooting;
@@ -146,12 +146,12 @@ public final class CockpitHands {
         pose.scale(gauntletScale, gauntletScale, gauntletScale);
     }
 
-    /** The suit plays plasma_shot (cannon shot, EM push) when it fires; mirror it here and start the kick. */
+    /** The suit plays rivet_shot (rivet gun shot, EM push) when it fires; mirror it here and start the kick. */
     private static void pollShot(PowerArmorEntity suit, CockpitView view) {
         AnimationController<?> action = suit.getAnimatableInstanceCache().getManagerForId(suit.getId()).getAnimationControllers().get("action");
         RawAnimation triggered = action == null ? null : action.getTriggeredAnimation();
         boolean shooting = action != null && action.isPlayingTriggeredAnimation() && triggered != null
-                && triggered.getAnimationStages().get(0).animationName().endsWith("plasma_shot");
+                && triggered.getAnimationStages().get(0).animationName().endsWith("rivet_shot");
         if (shooting && !wasShooting) {
             view.shoot();
             shotAt = RenderUtil.getCurrentTick();

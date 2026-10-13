@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor.client;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import dev.ajaczero.powerarmor.item.RivetGunItem;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -19,7 +20,8 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
  * The fuel gauge next to the hotbar while you pilot a suit: a flame that shrinks as the current item
- * burns, the fuel slot's item and count, and how long the fuel lasts at walking pace.
+ * burns, the fuel slot's item and count, how long the fuel lasts at walking pace, and with the rivet gun installed
+ * how many rivets (iron nuggets) you carry.
  * It's a "GUI layer" (registered in ClientSetup), drawn every frame on top of the vanilla hotbar.
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
@@ -54,7 +56,16 @@ public final class FuelGauge {
                 : Component.translatable("gui.powerarmor.no_fuel");
         int colour = energy == 0 ? 0xFFFF5555 : low ? (blink ? 0xFFFF5555 : 0xFFFFB13B) : 0xFFFFFFFF;
         graphics.drawString(mc.font, text, x + 36, y + 3, colour, true);
+        if (suit.getSocketStack().getItem() instanceof RivetGunItem) {
+            // Rivets left (iron nuggets carried), just above the fuel: red when there are none.
+            int rivets = mc.player.hasInfiniteMaterials() ? -1 : RivetGunItem.countRivets(mc.player);
+            graphics.renderItem(RIVET_ICON, x + 16, y - 18);
+            Component count = Component.literal(rivets < 0 ? "\u221e" : Integer.toString(rivets));
+            graphics.drawString(mc.font, count, x + 36, y - 14, rivets == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
+        }
     }
+
+    private static final ItemStack RIVET_ICON = new ItemStack(net.minecraft.world.item.Items.IRON_NUGGET);
 
     /** Warning beep every 2 seconds while running on the last few seconds of fuel. */
     @SubscribeEvent

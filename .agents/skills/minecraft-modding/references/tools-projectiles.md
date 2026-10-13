@@ -1,8 +1,8 @@
 # Vehicle-mounted tools, input packets, projectiles, GeckoLib items (NeoForge 21.1)
 
-Built for the Power Armor plasma cannon. Files: `item/PowerTool.java`, `item/PlasmaCannonItem.java`,
-`entity/PlasmaBolt.java`, `network/ToolTriggerPayload.java`, `client/ToolInput.java`,
-`client/PlasmaBoltRenderer.java`, `PowerArmorEntity.tickTool`, `tools/extract-tool-geo.py`.
+Built for the Power Armor plasma cannon, now its rivet gun. Files: `item/PowerTool.java`, `item/RivetGunItem.java`,
+`entity/Rivet.java`, `network/ToolTriggerPayload.java`, `client/ToolInput.java`,
+`client/RivetRenderer.java`, `PowerArmorEntity.tickTool`, `tools/extract-tool-geo.py`.
 
 ## Hold-to-use input from a vehicle
 - Client, a dedicated button (Power Armor until 2026-10-13: attack): `InputEvent.InteractionKeyMappingTriggered` ->
@@ -37,8 +37,18 @@ Built for the Power Armor plasma cannon. Files: `item/PowerTool.java`, `item/Pla
 - Damage type as data: `data/<mod>/damage_type/x.json` (`message_id`, `scaling`, `exhaustion`), add it to
   `data/minecraft/tags/damage_type/is_projectile.json`, lang `death.attack.<message_id>[.player|.item]`.
   `damageSources().source(KEY, projectile, shooter)`: **projectile first** (parameter names lie).
-- Entity type: small `sized`, `updateInterval(1)` for fast bolts. `isPickable`/`hurt` false so it can't be punched back.
-- Renderer: camera-facing quad like `DragonFireballRenderer`, `RenderType.entityTranslucentEmissive`,
+- Entity type: small `sized`, `updateInterval(1)` for fast projectiles. `isPickable`/`hurt` false so it can't be punched back.
+- **Gravity + still hitting the crosshair**: own gravity in `tick()` (`isNoGravity` true so vanilla's doesn't add);
+  launch with `v = d/n + (0, g(n-1)/2, 0)`, n = distance / speed (it falls g*n*(n-1)/2 in n ticks).
+- **Sticking in blocks** (Rivet): in `onHitBlock` set position to the hit point (minus a hair along the motion), zero
+  the motion, remember the block, set a synced STUCK flag; while stuck count ticks, drop out (ItemEntity) when the
+  block is air or after a timeout; `playerTouch` lets players on foot take it; save the state in NBT.
+- **Ammo from the inventory like a bow**: off hand first, then `inventory.getItem(i)` loop and `shrink(1)`;
+  `player.hasInfiniteMaterials()` = creative. Count with `inventory.countItem(item)` for a HUD.
+- **Renaming an item without breaking worlds**: register the new id and `ITEMS.addAlias(oldId, newId)`.
+- Item-free per-viewer effects: `ServerLevel.sendParticles(ServerPlayer, type, longDistance, x, y, z, n, dx, dy, dz, speed)`
+  to everyone but the shooter, and let the shooter's client spawn its own at the muzzle it sees (first-person viewmodel).
+- Renderer (glowing ball): camera-facing quad like `DragonFireballRenderer`, `RenderType.entityTranslucentEmissive`,
   `LightTexture.FULL_BRIGHT`; trail = client particles in `tick()` (`DustParticleOptions(color, size)`, `END_ROD`).
   Impact effects from the server with `ServerLevel.sendParticles` / `playSound(null, ...)`.
 

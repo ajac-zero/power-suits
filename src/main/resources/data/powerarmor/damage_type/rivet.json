@@ -1,5 +1,5 @@
 {
-  "message_id": "powerarmor.plasma",
+  "message_id": "powerarmor.rivet",
   "scaling": "when_caused_by_living_non_player",
   "exhaustion": 0.1
 }

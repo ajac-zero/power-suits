@@ -21,7 +21,7 @@ import software.bernie.geckolib.renderer.layer.BlockAndItemGeoLayer;
 final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
     enum Part { TOOL, GAUNTLET }
 
-    static final String[] TOOL_BONES = {"cannon", "em_projector", "drill", "chainsaw"};
+    static final String[] TOOL_BONES = {"rivet_gun", "em_projector", "drill", "chainsaw"};
 
     Part part = Part.TOOL;
     /** Installed tool's bone (PowerTool.suitBone), or null for the bare socket. */
@@ -54,6 +54,14 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
         private static final ResourceLocation GEO = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "geo/view/power_armor_view.geo.json");
         private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor.png");
         private static final ResourceLocation ANIMATIONS = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "animations/entity/power_armor.animation.json");
+
+        /** The rivet gun's vent opens as the tool raises, like on the suit. */
+        @Override
+        public void setCustomAnimations(CockpitView view, long instanceId, software.bernie.geckolib.animation.AnimationState<CockpitView> state) {
+            if (view.suit != null) {
+                RivetGunParts.raise(getAnimationProcessor(), view.suit.getToolRaise(state.getPartialTick()));
+            }
+        }
 
         @Override
         public ResourceLocation getModelResource(CockpitView view) {

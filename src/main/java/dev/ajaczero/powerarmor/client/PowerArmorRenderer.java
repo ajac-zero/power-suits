@@ -15,7 +15,7 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity> {
     /** Every tool's bone in the suit model (PowerTool.suitBone). Add new tools here. */
-    private static final String[] TOOL_BONES = {"cannon", "em_projector", "drill", "chainsaw"};
+    private static final String[] TOOL_BONES = {"rivet_gun", "em_projector", "drill", "chainsaw"};
 
     public PowerArmorRenderer(EntityRendererProvider.Context context) {
         super(context, new PowerArmorModel());

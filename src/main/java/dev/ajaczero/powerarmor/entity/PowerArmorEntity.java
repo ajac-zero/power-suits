@@ -187,6 +187,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private Object toolData;
     /** Client: the pilot's arm was mid-swing last tick (to catch the start of each swing). */
     private boolean pilotWasSwinging;
+    /** Server: the tool was in use last tick (for the raise sound). */
+    private boolean toolWasActive;
+    /** Client: the action controller was already playing a shot last tick (for the pilot's own muzzle burst). */
+    private boolean wasShooting;
     /** Client: 0..1, how much the torso follows the pilot's view (eases out on shutdown, in after startup). */
     private float aimBlend;
     /** Client: 0 = tool arm in its hip carry, 1 = raised to aim (follows TOOL_ACTIVE, like raising a shield). */
@@ -214,7 +218,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final RawAnimation SHUTDOWN = RawAnimation.begin().thenPlayAndHold("animation.power_armor.shutdown");
     private static final RawAnimation POWERED_OFF = RawAnimation.begin().thenPlayAndHold("animation.power_armor.powered_off");
     private static final RawAnimation STARTUP = RawAnimation.begin().thenPlay("animation.power_armor.startup");
-    private static final RawAnimation PLASMA_SHOT = RawAnimation.begin().thenPlay("animation.power_armor.plasma_shot");
+    private static final RawAnimation RIVET_SHOT = RawAnimation.begin().thenPlay("animation.power_armor.rivet_shot");
     // Right hand (a_hand.js): carry pose while the pilot holds something, quick reach on every use.
     private static final RawAnimation HOLD_ITEM = RawAnimation.begin().thenLoop("animation.power_armor.hold_item");
     private static final RawAnimation USE_ITEM = RawAnimation.begin().thenPlay("animation.power_armor.use_item");
@@ -461,6 +465,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         boolean active = pilot != null && this.triggerHeld && tool != null && this.canOperate();
         this.entityData.set(TOOL_RUNNING, tool != null && tool.isContinuous() && (active || tool.keepsRunning(this)));
         this.entityData.set(TOOL_ACTIVE, active);
+        if (active && !this.toolWasActive) {
+            // The arm swings up into the aiming pose (PowerArmorModel.raiseTool): a heavy mechanical clunk and a hiss.
+            this.playSound(SoundEvents.PISTON_CONTRACT, 0.5F, 0.7F);
+            this.playSound(SoundEvents.GENERIC_EXTINGUISH_FIRE, 0.15F, 1.9F);
+        }
+        this.toolWasActive = active;
         if (this.activeContinuousTool != null && (this.activeContinuousTool != tool || !active)) {
             boolean interrupted = this.activeContinuousTool != tool || pilot == null || !this.canOperate();
             this.activeContinuousTool.release(this, pilot, interrupted);
@@ -489,9 +499,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         if (tool.use(this, pilot, this.inventory.getItem(SOCKET_SLOT))) {
             this.consumeEnergy(cost);
-            this.toolCooldown = tool.cooldownTicks();
             this.toolUses++;
         }
+        this.toolCooldown = tool.cooldownTicks(); // also after a dry click (no rivets): one click per cooldown
     }
 
     /** Server: a tool's state for this suit, created on first use. */
@@ -1124,6 +1134,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             ExhaustSmoke.tick(this);
             EmBeamEffects.tick(this);
             this.tickHandSwing();
+            this.tickShotEffects();
             // Measure how fast we actually move (blocks/s) and smooth it to avoid flicker
             // between idle and walk.
             double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
@@ -1204,8 +1215,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         // It is added after "movement", so for the bones it animates it wins; legs keep walking.
         controllers.add(new AnimationController<>(this, "action", 2, state -> PlayState.STOP)
                 .triggerableAnim("hit", HIT)
-                .triggerableAnim("plasma_shot", PLASMA_SHOT)
-                .triggerableAnim("tool_recoil", PLASMA_SHOT)); // same kick for the EM projector's push
+                .triggerableAnim("rivet_shot", RIVET_SHOT)
+                .triggerableAnim("tool_recoil", RIVET_SHOT)); // same kick for the EM projector's push
         // Controller 3: the socket tool's own loop (drill spin, chainsaw chain) while it runs. It keys only
         // the tool's bones, so the arm keeps following walk/run and the aim.
         controllers.add(new AnimationController<>(this, "tool", 3, this::toolAnimation));
@@ -1265,6 +1276,34 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             return PlayState.STOP;
         }
         return state.setAndContinue(HOLD_ITEM);
+    }
+
+    /** Client, our own pilot only: the muzzle burst of a shot, drawn at the muzzle on their screen (the cockpit
+     *  viewmodel's in first person, SocketAim.visualMuzzle). The server sends it to everyone else. */
+    private void tickShotEffects() {
+        AnimationController<?> action = this.getAnimatableInstanceCache().getManagerForId(this.getId()).getAnimationControllers().get("action");
+        RawAnimation triggered = action == null ? null : action.getTriggeredAnimation();
+        boolean shooting = action != null && action.isPlayingTriggeredAnimation() && triggered != null
+                && triggered.getAnimationStages().get(0).animationName().endsWith("rivet_shot");
+        if (shooting && !this.wasShooting && this.getControllingPassenger() instanceof Player pilot && pilot.isLocalPlayer()
+                && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.RivetGunItem) {
+            Vec3 muzzle = dev.ajaczero.powerarmor.item.SocketAim.visualMuzzle.apply(this, pilot);
+            boolean firstPerson = muzzle.distanceTo(pilot.getEyePosition()) < 1.4;
+            if (firstPerson) {
+                // The viewmodel's muzzle is under a block from the camera, where particles turn into big blobs: burst a
+                // little further out along the shot, and without the steam (it covered the target).
+                muzzle = muzzle.add(pilot.getViewVector(1F).scale(1.4));
+            }
+            final boolean steam = !firstPerson;
+            dev.ajaczero.powerarmor.item.RivetGunItem.muzzleBurst((type, x, y, z, n, spread, speed) -> {
+                for (int i = 0; i < n; i++) {
+                    this.level().addParticle(type, x + this.random.nextGaussian() * spread, y + this.random.nextGaussian() * spread,
+                            z + this.random.nextGaussian() * spread, this.random.nextGaussian() * speed,
+                            this.random.nextGaussian() * speed, this.random.nextGaussian() * speed);
+                }
+            }, muzzle, steam);
+        }
+        this.wasShooting = shooting;
     }
 
     /** Client: the pilot swung their hand (placed a block, used an item on something): reach with the suit's hand.

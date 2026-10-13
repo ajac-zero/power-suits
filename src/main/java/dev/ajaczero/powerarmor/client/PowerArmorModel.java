@@ -22,7 +22,7 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
 
     /**
      * Runs every frame after the keyframe animations. The legs face yBodyRot; here the torso (and with
-     * it the arms, pads and cannon) twists and leans to face where the pilot looks, and the head adds
+     * it the arms, pads and socket tool) twists and leans to face where the pilot looks, and the head adds
      * a little extra pitch. Values are added on top of the animation, which sets these bones every frame.
      */
     @Override
@@ -69,6 +69,7 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
      */
     private void raiseTool(PowerArmorEntity suit, float partial) {
         float w = suit.getToolRaise(partial);
+        RivetGunParts.raise(getAnimationProcessor(), w);
         if (w <= 0F) {
             return;
         }

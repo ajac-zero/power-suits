@@ -22,7 +22,7 @@ import software.bernie.geckolib.util.RenderUtil;
  */
 final class CockpitView implements GeoAnimatable {
     static final CockpitView INSTANCE = new CockpitView();
-    private static final RawAnimation SHOT = RawAnimation.begin().thenPlay("animation.power_armor.plasma_shot");
+    private static final RawAnimation SHOT = RawAnimation.begin().thenPlay("animation.power_armor.rivet_shot");
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     /** The suit being piloted, set before each render. */
@@ -45,7 +45,7 @@ final class CockpitView implements GeoAnimatable {
         return PlayState.STOP;
     }
 
-    /** Muzzle flash (and the cannon's own small kick keys) when the suit fires. */
+    /** The shot's gun-part keys (piston slam, drum turn, small kick) when the suit fires. */
     void shoot() {
         this.cache.getManagerForId(0).tryTriggerAnimation("action", "shot");
     }

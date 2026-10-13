@@ -18,7 +18,7 @@ SUIT = ASSETS / 'geo/entity/power_armor.geo.json'
 
 TOOLS = {
     # tool name: (bone subtree, extra bone whose cubes of these sizes are included, bones to drop)
-    'plasma_cannon': ('cannon', ('left_forearm', [[7, 1, 7]]), {'muzzle_flash'}),
+    'rivet_gun': ('rivet_gun', ('left_forearm', [[7, 1, 7]]), {'muzzle'}),
     'em_projector': ('em_projector', ('left_forearm', [[7, 1, 7]]), set()),
     'drill': ('drill', ('left_forearm', [[7, 1, 7]]), set()),
     'chainsaw': ('chainsaw', ('left_forearm', [[7, 1, 7]]), set()),

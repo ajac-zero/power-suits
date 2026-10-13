@@ -2,7 +2,7 @@ package dev.ajaczero.powerarmor.test;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
-import dev.ajaczero.powerarmor.entity.PlasmaBolt;
+import dev.ajaczero.powerarmor.entity.Rivet;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.StepSmoothing;
 import dev.ajaczero.powerarmor.entity.SuitFuel;
@@ -351,10 +351,10 @@ public final class PowerArmorTests {
         helper.assertTrue(menu.getSlot(1).mayPlace(new ItemStack(Items.BLAZE_ROD)), "fuel slot takes blaze rods");
         helper.assertTrue(!menu.getSlot(1).mayPlace(new ItemStack(Items.DIRT)), "fuel slot refuses dirt");
         helper.assertTrue(!menu.getSlot(0).mayPlace(new ItemStack(Items.COAL)), "socket only takes power tools");
-        helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(ModItems.PLASMA_CANNON.get())), "socket takes the plasma cannon");
-        player.getInventory().setItem(10, new ItemStack(ModItems.PLASMA_CANNON.get()));
+        helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(ModItems.RIVET_GUN.get())), "socket takes the rivet gun");
+        player.getInventory().setItem(10, new ItemStack(ModItems.RIVET_GUN.get()));
         menu.quickMoveStack(player, 3); // menu slot 3 = player inventory slot 10
-        helper.assertTrue(menu.getSlot(0).getItem().is(ModItems.PLASMA_CANNON.get()), "shift-click should install the cannon");
+        helper.assertTrue(menu.getSlot(0).getItem().is(ModItems.RIVET_GUN.get()), "shift-click should install the rivet gun");
         helper.assertTrue(menu.getSlot(1).getItem().getCount() == 4, "menu shows the suit's fuel");
 
         // Shift-click coal from the player's inventory: it joins the coal in the fuel slot.
@@ -379,20 +379,27 @@ public final class PowerArmorTests {
     private static PowerArmorEntity armedSuit(GameTestHelper helper, BlockPos pos, ItemStack fuel) {
         PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), pos);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, fuel);
-        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.PLASMA_CANNON.get()));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.RIVET_GUN.get()));
         return suit;
+    }
+
+    /** A pilot carrying rivets (iron nuggets) for the rivet gun. */
+    private static Player armedPilot(GameTestHelper helper, PowerArmorEntity suit) {
+        Player pilot = boardedPilot(helper, suit);
+        pilot.getInventory().add(new ItemStack(Items.IRON_NUGGET, 16));
+        return pilot;
     }
 
     /** Holding the tool button fires every cooldown (12 ticks by default), paying the configured energy per shot; releasing stops. */
     @GameTest(template = PAD, timeoutTicks = 80)
-    public static void cannonFiresOnCooldownAndCostsFuel(GameTestHelper helper) {
+    public static void rivetGunFiresOnCooldownAndCostsFuel(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2)); // 9600 energy
-        Player pilot = boardedPilot(helper, suit);
+        Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
         helper.runAfterDelay(2, () -> suit.setTriggerHeld(pilot, true));
         helper.runAfterDelay(6, () -> {
             helper.assertTrue(suit.getToolUses() == 1, "first shot should fire at once, uses " + suit.getToolUses());
-            int used = 2 * PowerArmorConfig.BLAZE_ENERGY.get() - suit.getTotalEnergy(), shot = PowerArmorConfig.CANNON_ENERGY.get();
+            int used = 2 * PowerArmorConfig.BLAZE_ENERGY.get() - suit.getTotalEnergy(), shot = PowerArmorConfig.RIVET_ENERGY.get();
             helper.assertTrue(used >= shot && used < shot + 10, "a shot costs " + shot + " energy (+ idle), used " + used);
         });
         helper.runAfterDelay(12, () -> helper.assertTrue(suit.getToolUses() == 1, "cooldown: no second shot yet"));
@@ -410,7 +417,7 @@ public final class PowerArmorTests {
     @GameTest(template = PAD, timeoutTicks = 40)
     public static void usingAToolRaisesTheArm(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
-        Player pilot = boardedPilot(helper, suit);
+        Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
         helper.runAfterDelay(2, () -> suit.setTriggerHeld(pilot, true));
         helper.runAfterDelay(4, () -> {
@@ -431,15 +438,16 @@ public final class PowerArmorTests {
     @GameTest(template = PAD)
     public static void shotLightsTheNextFuelItem(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.COAL, 1));
-        suit.setBurn(100, 1600); // not enough for a shot by itself
-        Player pilot = boardedPilot(helper, suit);
+        int start = PowerArmorConfig.RIVET_ENERGY.get() / 2;
+        suit.setBurn(start, 1600); // not enough for a shot by itself
+        Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
         suit.setTriggerHeld(pilot, true);
         helper.runAfterDelay(3, () -> {
             helper.assertTrue(suit.getToolUses() == 1, "should fire using the next coal");
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).isEmpty(), "the coal should have been lit");
-            float left = suit.getBurnLeftExact(), expected = 100 + PowerArmorConfig.COAL_ENERGY.get() - PowerArmorConfig.CANNON_ENERGY.get();
-            helper.assertTrue(left > expected - 10 && left <= expected, "100 + coal - shot = " + expected + " left (minus idle), got " + left);
+            float left = suit.getBurnLeftExact(), expected = start + PowerArmorConfig.COAL_ENERGY.get() - PowerArmorConfig.RIVET_ENERGY.get();
+            helper.assertTrue(left > expected - 10 && left <= expected, start + " + coal - shot = " + expected + " left (minus idle), got " + left);
             helper.succeed();
         });
     }
@@ -447,7 +455,7 @@ public final class PowerArmorTests {
     @GameTest(template = PAD)
     public static void emptySocketDoesNothing(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
-        Player pilot = boardedPilot(helper, suit);
+        Player pilot = armedPilot(helper, suit);
         suit.setTriggerHeld(pilot, true);
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(suit.getToolUses() == 0, "no tool, no shots");
@@ -457,9 +465,9 @@ public final class PowerArmorTests {
     }
 
     @GameTest(template = PAD)
-    public static void unpoweredCannonDoesNotFire(GameTestHelper helper) {
+    public static void unpoweredRivetGunDoesNotFire(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, ItemStack.EMPTY);
-        Player pilot = boardedPilot(helper, suit);
+        Player pilot = armedPilot(helper, suit);
         suit.setTriggerHeld(pilot, true);
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(suit.getToolUses() == 0, "no fuel, no shots");
@@ -479,15 +487,15 @@ public final class PowerArmorTests {
         });
     }
 
-    /** The bolt flies from the muzzle to what the pilot looks at and hurts it with plasma damage. */
+    /** The rivet flies from the muzzle to what the pilot looks at and hurts it with rivet damage. */
     @GameTest(template = PAD, timeoutTicks = 60)
-    public static void plasmaBoltHitsWhatThePilotAimsAt(GameTestHelper helper) {
+    public static void rivetHitsWhatThePilotAimsAt(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, new BlockPos(4, 2, 1), new ItemStack(Items.COAL, 4));
         suit.setYRot(0); // facing +Z (south), toward the pig
         suit.setYBodyRot(0);
         Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 7));
         pig.setNoAi(true);
-        Player pilot = boardedPilot(helper, suit);
+        Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
         Vec3 toPig = pig.position().add(0, pig.getBbHeight() / 2, 0).subtract(pilot.getEyePosition());
         pilot.setYRot((float) (Mth.atan2(-toPig.x, toPig.z) * Mth.RAD_TO_DEG));
@@ -497,25 +505,91 @@ public final class PowerArmorTests {
         helper.runAfterDelay(15, () -> {
             helper.assertTrue(suit.getToolUses() == 1, "one shot");
             helper.assertTrue(pig.getHealth() < pig.getMaxHealth(), "the pig should be hit, health " + pig.getHealth());
-            helper.assertTrue(pig.getLastDamageSource() != null && pig.getLastDamageSource().is(PlasmaBolt.PLASMA),
-                    "damage should be plasma, got " + pig.getLastDamageSource());
-            helper.assertTrue(pig.getLastDamageSource().getEntity() == pilot, "the pilot gets the credit (the bolt is the direct cause), got " + pig.getLastDamageSource().getEntity());
-            helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "the bolt must not hit its own suit");
+            helper.assertTrue(pig.getLastDamageSource() != null && pig.getLastDamageSource().is(Rivet.RIVET),
+                    "damage should be rivet, got " + pig.getLastDamageSource());
+            helper.assertTrue(pig.getLastDamageSource().getEntity() == pilot, "the pilot gets the credit (the rivet is the direct cause), got " + pig.getLastDamageSource().getEntity());
+            helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "the rivet must not hit its own suit");
             helper.succeed();
         });
     }
 
     @GameTest(template = PAD)
-    public static void cannonDoesNothingOnFoot(GameTestHelper helper) {
+    public static void rivetGunDoesNothingOnFoot(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         player.moveTo(helper.absoluteVec(new Vec3(4.5, 2, 4.5)));
-        ItemStack cannon = new ItemStack(ModItems.PLASMA_CANNON.get());
-        player.setItemInHand(InteractionHand.MAIN_HAND, cannon);
-        var result = cannon.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+        ItemStack gun = new ItemStack(ModItems.RIVET_GUN.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, gun);
+        var result = gun.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
         helper.assertTrue(!result.getResult().consumesAction(), "using it on foot should do nothing");
-        helper.assertTrue(helper.getLevel().getEntitiesOfClass(PlasmaBolt.class, new AABB(helper.absolutePos(SUIT_POS)).inflate(5)).isEmpty(),
-                "no bolt on foot");
+        helper.assertTrue(helper.getLevel().getEntitiesOfClass(Rivet.class, new AABB(helper.absolutePos(SUIT_POS)).inflate(5)).isEmpty(),
+                "no rivet on foot");
         helper.succeed();
+    }
+
+    /** Each shot uses one iron nugget; without nuggets the gun only clicks and burns no fuel for shots. */
+    @GameTest(template = PAD, timeoutTicks = 80)
+    public static void rivetGunUsesOneNuggetPerShot(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
+        Player pilot = boardedPilot(helper, suit);
+        pilot.getInventory().add(new ItemStack(Items.IRON_NUGGET, 2));
+        suit.positionRider(pilot);
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(50, () -> { // time for 4 shots at the 12-tick cooldown
+            helper.assertTrue(suit.getToolUses() == 2, "two nuggets, two shots, got " + suit.getToolUses());
+            helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 0, "both nuggets used");
+            int used = 2 * PowerArmorConfig.BLAZE_ENERGY.get() - suit.getTotalEnergy(), shots = 2 * PowerArmorConfig.RIVET_ENERGY.get();
+            helper.assertTrue(used >= shots && used < shots + 30, "only the two shots cost fuel (+ idle): " + shots + ", used " + used);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 30)
+    public static void creativePilotNeedsNoRivets(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
+        Player pilot = helper.makeMockPlayer(GameType.CREATIVE);
+        pilot.getAbilities().instabuild = true; // mock players don't take their game mode's abilities by themselves
+        pilot.moveTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        suit.interact(pilot, InteractionHand.MAIN_HAND);
+        suit.positionRider(pilot);
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(5, () -> {
+            helper.assertTrue(suit.getToolUses() == 1, "creative fires without nuggets, uses " + suit.getToolUses());
+            helper.succeed();
+        });
+    }
+
+    /** A rivet that hits a block sticks in it, and drops out as an iron nugget after its time (STUCK_TICKS). */
+    @GameTest(template = PAD, timeoutTicks = Rivet.STUCK_TICKS + 40)
+    public static void rivetSticksThenDropsANugget(GameTestHelper helper) {
+        BlockPos wall = new BlockPos(4, 3, 6);
+        helper.setBlock(wall, Blocks.STONE);
+        Rivet rivet = new Rivet(helper.getLevel(), null, helper.absoluteVec(new Vec3(4.5, 3.5, 2.5)), new Vec3(0, 0, Rivet.SPEED), true);
+        helper.getLevel().addFreshEntity(rivet);
+        helper.runAfterDelay(5, () -> {
+            helper.assertTrue(rivet.isStuck() && rivet.isAlive(), "the rivet should be stuck in the stone");
+            helper.assertTrue(Math.abs(rivet.getZ() - helper.absoluteVec(new Vec3(0, 0, 6)).z) < 0.1, "stuck at the stone's face, z " + rivet.getZ());
+        });
+        helper.runAfterDelay(Rivet.STUCK_TICKS + 15, () -> {
+            helper.assertTrue(rivet.isRemoved(), "the rivet should have dropped out");
+            var nuggets = helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    new AABB(helper.absolutePos(wall)).inflate(2), e -> e.getItem().is(Items.IRON_NUGGET));
+            helper.assertTrue(nuggets.size() == 1, "one iron nugget should drop, got " + nuggets.size());
+            helper.succeed();
+        });
+    }
+
+    /** Breaking the block a rivet is stuck in drops it at once. */
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void rivetDropsWhenItsBlockBreaks(GameTestHelper helper) {
+        BlockPos wall = new BlockPos(4, 3, 6);
+        helper.setBlock(wall, Blocks.STONE);
+        Rivet rivet = new Rivet(helper.getLevel(), null, helper.absoluteVec(new Vec3(4.5, 3.5, 2.5)), new Vec3(0, 0, Rivet.SPEED), true);
+        helper.getLevel().addFreshEntity(rivet);
+        helper.runAfterDelay(5, () -> helper.setBlock(wall, Blocks.AIR));
+        helper.runAfterDelay(8, () -> {
+            helper.assertTrue(rivet.isRemoved(), "the rivet should fall out with its block gone");
+            helper.succeed();
+        });
     }
 
     // =========================================================================================

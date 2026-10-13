@@ -92,8 +92,11 @@ would replace them in `sounds.json` only.
    painted in reserved dark colours, `tools/make-glowmasks.py` -> `power_armor_glow_fire/visor.png`; `SuitGlowLayer`
    redraws the model with each mask in `RenderType.eyes`, tinted per frame from `PowerArmorEntity.tickLights`; item
    icon patched; autopilot night scene `ap_lights_*` (piloted, tool, hit, parked, shutdown, off).
-2. Rivet gun: model (replaces the cannon; no flash block), raise transformation, rivet projectile that sticks in
-   blocks and drops a nugget, iron-nugget ammo from the inventory, steam/piston sounds and particles.
+2. Rivet gun (DONE 2026-10-13): new `rivet_gun` bone (receiver, drum, gauge, barrel + collars, nose, piston, vent;
+   `muzzle` locator, flash block removed), `rivet_shot` (`a_rivet_shot.js`), `RivetGunItem` (nugget ammo, arc aiming),
+   `Rivet` entity (sticks, cools, drops a nugget), `RivetRenderer`, vent opened by the raise (`RivetGunParts`), muzzle
+   burst (server for others, client for the pilot), raise clunk for every tool, HUD rivet count, item alias
+   `plasma_cannon` -> `rivet_gun`. Tests: nugget use, creative, sticking + dropping (51).
 3. EM projector redstone restyle: model/texture, red-dust beam + sparks.
 
 ## Art (Blockbench, `~/Developer/Models/starcraft_marine.bbmodel`)

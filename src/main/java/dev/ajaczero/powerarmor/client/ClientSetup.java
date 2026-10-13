@@ -14,7 +14,7 @@ import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import dev.ajaczero.powerarmor.item.ChainsawItem;
 import dev.ajaczero.powerarmor.item.DrillItem;
 import dev.ajaczero.powerarmor.item.EmProjectorItem;
-import dev.ajaczero.powerarmor.item.PlasmaCannonItem;
+import dev.ajaczero.powerarmor.item.RivetGunItem;
 import net.minecraft.world.item.Item;
 import software.bernie.geckolib.animatable.GeoItem;
 import dev.ajaczero.powerarmor.registry.ModItems;
@@ -32,13 +32,13 @@ public final class ClientSetup {
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         SocketAim.visualMuzzle = CockpitHands::visualMuzzle; // muzzle effects start at the cockpit viewmodel's muzzle
         event.registerEntityRenderer(ModEntities.POWER_ARMOR.get(), PowerArmorRenderer::new);
-        event.registerEntityRenderer(ModEntities.PLASMA_BOLT.get(), PlasmaBoltRenderer::new);
+        event.registerEntityRenderer(ModEntities.RIVET.get(), RivetRenderer::new);
     }
 
     /** Items whose model is "builtin/entity" are drawn by code. Point the socket tools at GeckoLib's item renderer. */
     @SubscribeEvent
     public static void registerItemRenderers(RegisterClientExtensionsEvent event) {
-        event.registerItem(ClientSetup.<PlasmaCannonItem>geoItem("plasma_cannon"), ModItems.PLASMA_CANNON.get());
+        event.registerItem(ClientSetup.<RivetGunItem>geoItem("rivet_gun"), ModItems.RIVET_GUN.get());
         event.registerItem(ClientSetup.<EmProjectorItem>geoItem("em_projector"), ModItems.EM_PROJECTOR.get());
         event.registerItem(ClientSetup.<DrillItem>geoItem("drill"), ModItems.DRILL.get());
         event.registerItem(ClientSetup.<ChainsawItem>geoItem("chainsaw"), ModItems.CHAINSAW.get());

@@ -41,15 +41,15 @@ public final class PowerArmorConfig {
             .comment("Below this much energy (fuel slot included) the suit warns: flashing gauge, beeps, dark smoke.").translation(key("low_fuel"))
             .defineInRange("low_fuel", 600, 0, 1_000_000);
 
-    // ---- plasma cannon ----------------------------------------------------------------------------
-    public static final ModConfigSpec.IntValue CANNON_ENERGY = B.pop().translation(key("plasma_cannon")).push("plasma_cannon")
-            .comment("Energy per shot (120 = 6 s of walking: 13 shots per coal).").translation(key("cannon_energy"))
-            .defineInRange("energy_per_shot", 120, 0, 100_000);
-    public static final ModConfigSpec.IntValue CANNON_COOLDOWN = B
-            .comment("Ticks between shots while the tool button is held (20 = 1 s). At least 11: the shot animation lasts 10.").translation(key("cannon_cooldown"))
+    // ---- rivet gun ------------------------------------------------------------------------------------
+    public static final ModConfigSpec.IntValue RIVET_ENERGY = B.pop().translation(key("rivet_gun")).push("rivet_gun")
+            .comment("Energy per shot, the steam pressure (60 = 3 s of walking: 26 shots per coal). Each shot also takes an iron nugget.").translation(key("rivet_energy"))
+            .defineInRange("energy_per_shot", 60, 0, 100_000);
+    public static final ModConfigSpec.IntValue RIVET_COOLDOWN = B
+            .comment("Ticks between shots while the tool button is held (20 = 1 s). At least 11: the shot animation lasts 10.").translation(key("rivet_cooldown"))
             .defineInRange("cooldown_ticks", 12, 11, 200);
-    public static final ModConfigSpec.DoubleValue CANNON_DAMAGE = B
-            .comment("Damage per bolt (2 = one heart).").translation(key("cannon_damage"))
+    public static final ModConfigSpec.DoubleValue RIVET_DAMAGE = B
+            .comment("Damage per rivet (2 = one heart).").translation(key("rivet_damage"))
             .defineInRange("damage", 10.0, 0, 1000);
 
     // ---- EM projector --------------------------------------------------------------------------------
