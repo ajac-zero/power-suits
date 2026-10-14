@@ -1,6 +1,6 @@
 ---
 name: minecraft-modding
-description: Use when building or changing a Minecraft Java mod with NeoForge 1.21.x and GeckoLib, especially animated Blockbench models as entities, rideable/enterable vehicles or mechs, GameTests, scripted in-game autopilot verification (screenshots, CSV logs), camera/HUD tweaks, water/terrain movement, saved-data migration, or teaching a first-time modder. Covers project setup on macOS, the Blockbench -> GeckoLib export pipeline, vanilla riding hooks, verification loops and the pitfalls that cost real debugging rounds on the Power Armor mod.
+description: Use when building or changing a Minecraft Java mod with NeoForge (1.21.x or 26.x) and GeckoLib (4 or 5), or porting one between them, especially animated Blockbench models as entities, rideable/enterable vehicles or mechs, GameTests, scripted in-game autopilot verification (screenshots, CSV logs), camera/HUD tweaks, water/terrain movement, saved-data migration, or teaching a first-time modder. Covers project setup on macOS, the Blockbench -> GeckoLib export pipeline, vanilla riding hooks, verification loops and the pitfalls that cost real debugging rounds on the Power Armor mod.
 ---
 
 # Minecraft modding (NeoForge + GeckoLib)
@@ -11,6 +11,7 @@ model) with a user who had never modded before. Read the reference that matches 
 | Reference | Read when |
 |---|---|
 | [references/setup.md](references/setup.md) | new project, Java/Gradle setup, finding the real API (sources jars), commands |
+| [references/porting-26.md](references/porting-26.md) | porting 1.21.1 -> 26.3 / GeckoLib 4 -> 5: rename table, saving, rendering, GameTests, measured differences (the other references' snippets are 1.21.1-era unless marked) |
 | [references/geckolib.md](references/geckolib.md) | Blockbench model -> GeckoLib entity, animation controllers, rendering, flicker |
 | [references/rideable-entity.md](references/rideable-entity.md) | vehicles/mechs: riding, movement, camera, damage, terrain, water, saved data |
 | [references/testing.md](references/testing.md) | GameTests (incl. menus), the autopilot client harness, measuring in-game, protecting user worlds |

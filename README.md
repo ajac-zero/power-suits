@@ -1,6 +1,6 @@
 # Power Armor
 
-A Minecraft mod (NeoForge 1.21.1 + GeckoLib 4.9.3) that adds a power armor suit you climb into,
+A Minecraft mod (Minecraft 26.3, NeoForge 26.3.0.76 + GeckoLib 5.5.7) that adds a power armor suit you climb into,
 Fallout / Titanfall style. Model and animations come from `model/power_armor.bbmodel`.
 
 Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Working notes for agents: `AGENTS.md`.
@@ -127,13 +127,17 @@ up a slope or stairs, or jump (weaker underwater).
 
 ## Developing
 
-Java 21 is installed with Homebrew but not on the PATH by default. Every terminal needs:
+Minecraft 26.3 needs Java 25. It's installed with Homebrew (`brew install openjdk@25`) but not on the PATH by default.
+Every terminal needs:
 
 ```sh
-export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
+export JAVA_HOME=$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home
 ```
 
 (add that line to `~/.zshrc` to make it permanent)
+
+Worlds saved by the 1.21.1 version of the mod open in 26.3 (suits keep their fuel, tools, owner and home), but Minecraft
+upgrades a world the first time it's opened and there's no way back: let it make the backup it offers.
 
 | Command | What it does |
 |---|---|
@@ -148,7 +152,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
 | `python3 tools/extract-tool-geo.py` | Rebuilds the tool item models from the suit model (run after `export-model.mjs`) |
 | `uv run --with pillow python3 tools/make-item-icons.py` | Redraws the tool items' icons from those tool models (run after `extract-tool-geo.py`) |
-| `python3 tools/extract-view-geo.py` | Rebuilds the cockpit viewmodel (`geo/view`) from the suit model (run after `export-model.mjs`) |
+| `python3 tools/extract-view-geo.py` | Rebuilds the cockpit viewmodel (`geckolib/models/view`) from the suit model (run after `export-model.mjs`) |
 | `uv run --with pillow python3 tools/make-glowmasks.py` | Rebuilds the glowmasks (`power_armor_glow_{fire,visor,heat,heat_barrel,em_core,em_arc}.png`) from the texture's reserved colours (run after `export-model.mjs`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | Live-tunes the cockpit viewmodel's placement (`run/view/tuning.json`, shots `run/screenshots/ap_view_*.png`) |
 | `python3 tools/terrain-report.py` | Summarizes `run/autopilot_terrain.csv` per leg (speed, air time, drops, step-ups, animations) |
@@ -192,11 +196,13 @@ src/main/java/dev/ajaczero/powerarmor/
   PowerArmorConfig.java      balance knobs (config/powerarmor-common.toml)
   registry/ModSounds.java    engine + tool loop sound events (audio picked in assets/powerarmor/sounds.json)
   client/                    rendering only (never loaded on servers)
-    PowerArmorModel.java     points GeckoLib at the asset files, head follows your view
-    PowerArmorRenderer.java  draws only the legs in first person (cockpit)
+    PowerArmorModel.java     points GeckoLib at the asset files
+    PowerArmorRenderer.java  copies the suit's state for the frame (SuitRenderData), aims the torso/head, raises the tool
+                             arm, shows the installed tool; draws only the legs in first person (cockpit)
+    SuitRenderData.java      what the renderer and its layers read from the suit each frame (GeckoLib DataTickets)
     PilotView.java           hides the pilot and vanilla hands, pulls the camera back
     CockpitHands.java        first-person viewmodel: socket tool on the left, gauntlet + held item on the right
-    CockpitView*.java        its GeckoLib animatable/renderer (geo/view, cut from the suit by tools/extract-view-geo.py)
+    CockpitView*.java        its GeckoLib animatable/renderer (geckolib/models/view, cut from the suit by tools/extract-view-geo.py)
     PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
     FuelGauge.java           HUD fuel gauge + low-fuel beep
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
@@ -209,18 +215,19 @@ src/main/java/dev/ajaczero/powerarmor/
     SuitSounds.java          engine + tool loops (tickable sounds that follow the suit)
     FuelTooltip.java         "Power Armor fuel: 1:20 of walking" on coal, lava, blaze rods
     dev/AutoPilot.java       scripted screenshot test drive (only with -Dpowerarmor.autopilot)
-  test/PowerArmorTests.java  GameTests
+  test/PowerArmorTests.java  GameTests (@SuitTest methods, registered by test/SuitTests.java)
 src/main/resources/
-  assets/powerarmor/geo|animations|textures/entity/   exported from Blockbench
+  assets/powerarmor/geckolib/models|animations/entity/, textures/entity/   exported from Blockbench
   assets/powerarmor/textures/gui/power_armor.png      suit menu background (tools/make-gui.py)
-  assets/powerarmor/geo/item/<tool>.geo.json          chaingun, EM projector, drill, chainsaw: cut out of the suit model, source of the item icons (tools/extract-tool-geo.py)
-  assets/powerarmor/geo/view/power_armor_view.geo.json cockpit viewmodel: tools + gauntlet cut out of the suit model (tools/extract-view-geo.py)
+  assets/powerarmor/geckolib/models/item/<tool>.geo.json  chaingun, EM projector, drill, chainsaw: cut out of the suit model, source of the item icons (tools/extract-tool-geo.py)
+  assets/powerarmor/geckolib/models/view/power_armor_view.geo.json  cockpit viewmodel: tools + gauntlet cut out of the suit model (tools/extract-view-geo.py)
   assets/powerarmor/models/item/chaingun.json         a flat hand-held item, like a vanilla tool (item/handheld)
+  assets/powerarmor/items/<item>.json                 which model each item shows (needed since 1.21.4)
   assets/powerarmor/textures/item/<tool>.png          the tools' item icons, rendered from their 3D models (tools/make-item-icons.py)
-  data/powerarmor/damage_type/bullet.json             "shredded" damage type (+ minecraft is_projectile, no_knockback tags)
+  data/powerarmor/damage_type/bullet.json             "shredded" damage type (+ minecraft is_projectile, no_knockback, bypasses_cooldown tags)
   data/powerarmor/damage_type/em_slam.json            "slammed into a wall" (EM throws)
   data/powerarmor/recipe/*.json                       crafting recipes (suit + 4 tools)
-  data/powerarmor/structure/test_pad.nbt              floor used by the GameTests
+  data/powerarmor/structure/test_pad.nbt              floor used by the GameTests (9x11x9, floor on its second layer)
 ```
 
 ## Notes
@@ -238,7 +245,7 @@ src/main/resources/
   launches 2 ticks later, then `fall` loops; `land` plays after ~0.5 s in the air. Other players
   see the jump via a synced counter bumped by the server.
 - Turning: legs (`yBodyRot`) follow the direction of travel; the torso (with arms and tool) twists
-  up to 90 degrees and leans to face where the pilot looks (`PowerArmorModel.setCustomAnimations`).
+  up to 90 degrees and leans to face where the pilot looks (`PowerArmorRenderer.adjustModelBonesForRender`).
 - First person: the eye sits at the visor (0.55 forward), the head/torso/hip shell is hidden and the
   suit is drawn with back-face culling, so no insides of cubes show.
 - Animation sources (procedural specs) live in `model/anim/`.
@@ -247,7 +254,7 @@ src/main/resources/
   The torso stops following the view while powered down. Spec: `model/anim/a_power.js`.
 - Socket: the left arm ends in an elbow socket and the installed tool is the forearm, carried at the hip (rest pose:
   upper arm 18 deg forward, elbow 62 deg); `socket` (coupling plate) shows when empty, the installed
-  tool's bone (`chaingun`, `em_projector`, `drill`, `chainsaw`) otherwise (`PowerArmorRenderer`). The EM push plays `tool_recoil` (0.5 s overlay, `a_tool_recoil.js`); the chaingun's barrels spin and its shots kick in code (`ChaingunParts`, `PowerArmorModel`), and `tool_recoil`
+  tool's bone (`chaingun`, `em_projector`, `drill`, `chainsaw`) otherwise (`PowerArmorRenderer`). The EM push plays `tool_recoil` (0.5 s overlay, `a_tool_recoil.js`); the chaingun's barrels spin and its shots kick in code (`ChaingunParts`, `PowerArmorRenderer`), and `tool_recoil`
   is triggered per shot; it must stay shorter than the cooldown because GeckoLib won't restart a running one.
 - Mining tools: while a continuous tool runs, the suit syncs `TOOL_RUNNING` and a fourth controller (`tool`)
   loops the tool's own animation: `drill_run` spins the `drill_bit` 4 turns/s and buzzes the head,

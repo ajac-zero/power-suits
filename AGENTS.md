@@ -1,8 +1,9 @@
 # Working on Power Armor
 
-A NeoForge 1.21.1 + GeckoLib 4.9.3 Minecraft mod: an enterable power-armor suit. Start with
+A NeoForge 26.3 + GeckoLib 5.5.7 Minecraft mod (Java 25): an enterable power-armor suit. Start with
 `docs/design.md` (spec), `docs/implementation-plan.md` (next phases) and `README.md` (controls, files).
-The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is the project skill
+Ported from 1.21.1 / GeckoLib 4 on 2026-10-14 (branch `port-26.3`); the porting notes below marked *(26.3)*
+replace older advice. The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is the project skill
 `.agents/skills/minecraft-modding/SKILL.md`; model/animation work uses
 `.agents/skills/blockbench-mcp/SKILL.md`.
 
@@ -28,10 +29,13 @@ The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is
 - `.agents/skills/`: `minecraft-modding` (this mod's how-to) and `blockbench-mcp` (Blockbench work).
 
 ## Setup
-Java 21 from Homebrew is keg-only. Every shell needs:
+Java 25 from Homebrew (`brew install openjdk@25`) is keg-only. Every shell needs:
 ```sh
-export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
+export JAVA_HOME=$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home
 ```
+Reference sources: Minecraft (NeoForge-patched) in `build/moddev/artifacts/minecraft-patched-*-sources.jar`, NeoForge in
+the Gradle cache (`neoforge-*-sources.jar`), GeckoLib on GitHub (`bernie-g/geckolib`, branch per Minecraft version).
+Mojang's names are official since 26.1 (no Parchment). Porting primers: `neoforged/.github` repo, `primers/<version>`.
 
 ## Verification loop (do this for every change)
 | Command | Use |
@@ -53,18 +57,48 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   `BASE_STATS` and is re-applied in `readAdditionalSaveData`. Do the same for any new persisted tuning.
 - **Ridden movement is client-authoritative.** `travel`/`tickRidden` run on the pilot's client for a
   piloted suit and on the server for an empty one. Gate movement on synced state (e.g. powered).
-- **Speed constant is measured, not derived**: 42.14 blocks/s per movement-speed point (autopilot log).
-- **GeckoLib animation speed multiplies the whole elapsed time**: changing it smoothly mid-loop makes the
-  animation jump; use constant rates per state. Controllers added later override earlier ones per bone.
-  `setCustomAnimations` runs after keyframes: add to bone values, don't replace them.
-- **GeckoLib draws both faces** (`entityCutoutNoCull`): coplanar same-direction faces flicker
+- **Speed constant is measured, not derived**: 43.15 blocks/s per movement-speed point on 26.3 (42.14 on 1.21.1:
+  the same attribute went 2.4% further after the port). Re-measure with the autopilot's `walk speed` log line.
+- *(26.3)* **GeckoLib 5 advances an animation by (time passed x speed) each frame**, so its speed may change any time
+  (GeckoLib 4 scaled the whole elapsed time and the animation jumped). Set it in the state handler
+  (`state.controller().setAnimationSpeed`). Controllers added later override earlier ones per bone.
+- *(26.3)* **GeckoLib 5 renders from a snapshot**: `addRenderData` (renderer or layer) copies what's needed from the
+  entity into the render state (DataTickets, `SuitRenderData`); the model is posed later in
+  `adjustModelBonesForRender`, from that state only. Each frame every bone starts from a fresh `BoneSnapshot` holding
+  the animation's offset from its rest pose, so add to it (offsets no longer pile up between frames). Drawing is only
+  queued ("submitted"); anything a renderer changes on itself (a field) is gone by then: put it in the render state.
+- *(26.3)* **GeckoLib 5 assets** live in `assets/<mod>/geckolib/models/<id>.geo.json` and
+  `geckolib/animations/<id>.animation.json` (id `entity/power_armor`), not `geo/` + `animations/`.
+- *(26.3)* **Render type names flipped**: `RenderTypes.entityCutout` is the old *NoCull* (GeckoLib's default, both faces),
+  `entityCutoutCull` culls. `LightTexture.FULL_BRIGHT` is `LightCoordsUtil.FULL_BRIGHT`.
+- *(26.3)* **`LivingEntityRenderState` is a `GeoRenderState`** only through GeckoLib's interface injection: the build
+  pulls it in with `interfaceInjectionData "com.geckolib:..."` (without it nothing compiles).
+- **GeckoLib draws both faces** (`entityCutout` since 26.3, was `entityCutoutNoCull`): coplanar same-direction faces flicker
   (z-fighting); fix in Blockbench with `inflate` 0.1 (keeps box UVs). Scan with
   `.agents/skills/blockbench-mcp/scripts/zfight.mjs`. The cockpit uses back-face culling.
 - **Animation state flicker** comes from states toggling every few ticks (e.g. run/fall on slopes); check the
   `anim` column of the terrain CSV for rapid switches.
-- **GameTest structures sit one block above the test origin** (floor at relative y=1, stand at y=2) and are
-  sealed by an invisible barrier box the size of the structure (`test_pad` is 9x10x9); tests run side by
-  side, so search for entities near your own position only.
+- *(26.3)* **GameTest structures start at the test origin** (1.21.1 placed them one block higher): `test_pad` keeps its
+  floor at relative y=1 (stand at y=2) by having an empty bottom layer; it's 9x11x9 and sealed by an invisible barrier
+  box the size of the structure. Tests run side by side, so search for entities near your own position only.
+- *(26.3)* **GameTests are registry entries** (no `@GameTest` annotation): `@SuitTest` methods are registered as test
+  functions + instances by `test/SuitTests` (ids are the lower-cased method names, e.g. `powerarmor:pilotclimbsinandout`).
+- *(26.3)* **NeoForge won't send mod packets on a connection that didn't negotiate them**: `makeMockServerPlayerInLevel`
+  players crashed the test server on GeckoLib's animation triggers. Tests create them with `mockServerPlayer` (adds
+  GeckoLib's channels to the fake connection).
+- *(26.3)* **The server doesn't get a passenger's `xxa` / `zza` any more** (the input packet only fills
+  `ServerPlayer.getLastClientInput()`, keys pressed): read the pilot's WASD on the server through
+  `PowerArmorEntity.pilotInput` (smashing blocks and the fuel drain both broke silently on 0 input).
+- *(26.3)* **No `ItemStack` in static initializers** ("Components not bound yet" crashed the client at startup):
+  create them on first use.
+- *(26.3)* **Items need `assets/<mod>/items/<item>.json`** (which model to show) next to `models/item/`; recipe
+  ingredients are plain strings (`"minecraft:iron_ingot"`, `"#tag"`); config types are LOCAL / CLIENT / SYNCED /
+  STARTUP (ours is LOCAL, file name kept as `powerarmor-common.toml`).
+- *(26.3)* **Opening a 1.21.1 world upgrades it for good** (Minecraft asks to back it up first). The user's `New World`
+  is theirs to upgrade; `runAutopilotTerrain` clicks "Load without backup" on its copy.
+- *(26.3)* **Entities save through `ValueInput` / `ValueOutput`** (`getIntOr`, `read(name, codec)`...), saved data through a
+  codec (`SavedDataType`); keep the old keys and formats (UUID / BlockPos codecs write the same int arrays) so 1.21.1
+  saves still load.
 - **Vanilla keeps sprinting after the sprint key is released**; call `setSprinting(false)` in scripts.
 - **Suits need fuel now.** Anything that spawns or boards a suit (autopilots, tests that move) must put fuel in
   `FUEL_SLOT`, or the suit sits slumped (`powered_off`). The user's world contains old unfuelled suits and
@@ -95,9 +129,9 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   model a block below the camera for a frame on every step. `stepsDoNotJerkTheModelAgainstTheCamera` checks this frame
   by frame; in game, `ViewportEvent.ComputeCameraAngles` still holds last frame's camera position, so measure with
   `player.getEyePosition(partial)`.
-- **Never add to an unkeyed bone in `setCustomAnimations`**: GeckoLib only resets bones the playing animation keys
-  (others ease back to rest over time), so a per-frame `+=` piles up and the bone flickers. Put code-driven offsets
-  on a bone no animation keys and set absolute values every render (0 when off).
+- **(GeckoLib 4 only) Never add to an unkeyed bone in `setCustomAnimations`**: GeckoLib 4 only reset bones the playing
+  animation keyed, so a per-frame `+=` piled up and the bone flickered. GeckoLib 5's per-frame snapshots fixed that; code
+  offsets still go on bones no animation keys (the chaingun barrels: `ChaingunParts`), set every frame.
 - **The cockpit shows a viewmodel, not the suit's arms.** Looking at the external model from inside never lined up
   (hands raised where yours aren't, tools hidden behind their base, pads clipping), so in first person only the
   suit's legs are drawn and `CockpitHands` draws the tool + gauntlet in the hand pass (`geo/view`, rebuilt by
@@ -113,7 +147,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   (same place and motions as on foot, no arm, as in vanilla); only an empty hand is ours, the gauntlet laid along
   vanilla's empty-arm pose (`CockpitHands.gauntletTransform`). Don't give items a custom cockpit pose. The view tuner
   shoots `view_vanilla_*` on foot next to `view_*` in the suit to compare.
-- **F1 (hideGui) also skips the hand pass**: screenshots with the GUI hidden show no viewmodel. The autopilots keep
+- **F1 (hide HUD, `mc.gui.hud.isHidden()` since 26.x) also skips the hand pass**: screenshots with the GUI hidden show no viewmodel. The autopilots keep
   the GUI on. Tune the viewmodel live with `tools/view-tuner.sh start|shoot|stop` (edit `run/view/tuning.json`).
 - **Dev games must not linger**: `pkill -f` on a system property doesn't match the game's command line. The view
   tuner writes its PID, quits on `run/view/quit` and after 10 idle minutes; always `tools/view-tuner.sh stop`, or use `once` (start, shoot, stop).
@@ -148,7 +182,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   `cannon_side_lowered`): one shot with torso twist and recoil was misread as the wrong sign.
 - **Glowing pixels are painted in reserved colours** (dark coal / smoked glass, listed in `tools/make-glowmasks.py`):
   the masks are generated from them, so never reuse those colours elsewhere (the script counts them and refuses).
-  The glow is additive (`RenderType.eyes`): dark base + bright mask = dead when off, glowing when on, also by day.
+  The glow is additive (`RenderTypes.eyes`): dark base + bright mask = dead when off, glowing when on, also by day.
 - **Night shots in the autopilot**: the client hears the new time of day only once a second, and place scene cameras
   from the ground height (`Heightmap`), not from where the player happens to stand.
 - **Projectile orientation**: `ProjectileUtil.rotateTowardsMovement` stores yaw as `atan2(z, x) + 90` and pitch with up

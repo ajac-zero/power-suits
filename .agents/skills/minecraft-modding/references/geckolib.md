@@ -1,18 +1,66 @@
 # Blockbench model -> GeckoLib entity
 
 ## Export (Bedrock-format Blockbench project)
-GeckoLib 4 reads Bedrock geometry (`format_version 1.12.0`) and Bedrock animation JSON, so use
+GeckoLib (4 and 5) reads Bedrock geometry (`format_version 1.12.0`) and Bedrock animation JSON, so use
 Blockbench's own exporter through the MCP (`risky_eval`, read-only):
 - geometry: `JSON.stringify(Codecs.bedrock.compile({raw: true}))`
 - animations: `JSON.stringify(Animator.buildFile())`
 - texture: `Texture.all[0].getDataURL()` (base64 PNG)
-`../scripts/export_model.mjs` does all three over HTTP MCP and writes
+`../scripts/export_model.mjs` does all three over HTTP MCP and writes (GeckoLib 4 layout; Power Armor's
+`tools/export-model.mjs` writes the GeckoLib 5 one: `assets/<modid>/geckolib/models/entity/<name>.geo.json`,
+`geckolib/animations/entity/<name>.animation.json`, model id `<modid>:entity/<name>`)
 `assets/<modid>/geo/entity/<name>.geo.json`, `animations/entity/<name>.animation.json`,
 `textures/entity/<name>.png` (the `DefaultedEntityGeoModel` naming convention), renaming
 `animation.<old>.*` to `animation.<name>.*`. Verify a re-export of an unchanged model is byte-identical
 in content (JSON compare). Catmull-Rom keys and simple Molang (`math.sin(q.anim_time*…)`) work.
 Item icon trick: an offscreen Blockbench view screenshot (`set_camera_angle`, png) has a transparent
 background; crop to the bbox, resize to 32x32 LANCZOS, threshold alpha, add a dark 1 px outline.
+
+## GeckoLib 5 (Minecraft 1.21.2+, used by Power Armor on 26.3)
+Rendering is split like vanilla's: **extract** (with the entity: copy what you need into the render state) then
+**render** (only the render state; drawing is queued and runs later).
+```java
+public class MyEntity extends Mob implements GeoEntity {
+  private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+  public void registerControllers(AnimatableManager.ControllerRegistrar c) {          // com.geckolib.animatable.manager
+    c.add(new AnimationController<>("movement", 5, this::movement));                   // no `this` argument any more
+    c.add(new AnimationController<MyEntity>("action", 2, t -> PlayState.STOP).triggerableAnim("hit", HIT));
+  }
+  private PlayState movement(AnimationTest<MyEntity> t) {                            // was AnimationState
+    t.controller().setAnimationSpeed(rate());     // speed integrates per frame now: may change any time
+    t.controller().setTransitionTicks(2);         // was transitionLength
+    return t.setAndContinue(WALK);
+  }
+}
+public class MyRenderer extends GeoEntityRenderer<MyEntity, LivingEntityRenderState> {
+  static final DataTicket<Float> AIM = DataTicket.create("mymod_aim", Float.class);
+  public MyRenderer(EntityRendererProvider.Context ctx) { super(ctx, new MyModel()); withRenderLayer(new MyLayer(this)); }
+  @Override public void addRenderData(MyEntity e, Void v, LivingEntityRenderState s, float partial) {
+    s.addGeckolibData(AIM, e.getAim(partial));                                       // extract
+  }
+  @Override public void adjustModelBonesForRender(RenderPassInfo<LivingEntityRenderState> info, BoneSnapshots bones) {
+    float aim = info.getOrDefaultGeckolibData(AIM, 0F);                             // render: state only
+    bones.ifPresent("torso", b -> b.setRotY(b.getRotY() + info.renderState().yRot * Mth.DEG_TO_RAD));
+    bones.ifPresent("body", b -> b.skipRender(true).skipChildrenRender(true));      // hide (per frame)
+  }
+}
+```
+- Bone snapshots are fresh every frame and hold the animation's offset from the bone's rest pose (the rest pose is
+  added at render time), so adding to them never piles up. Unkeyed bones start at 0: set code-driven angles directly.
+- `LivingEntityRenderState.yRot` = head yaw - body yaw (wrapped), `xRot` = pitch (replace `EntityModelData`).
+- Layers: `GeoRenderLayer<T, Void, R>` with `addRenderData` (extract) and `submitRenderTask(info, collector)`;
+  re-draw the model with another render type through `renderer.submitRenderTasks(info, collector.order(1), type)`
+  (it reads tint / light / overlay from the state's `RENDER_COLOR` / `PACKED_LIGHT` / `PACKED_OVERLAY` tickets when
+  called: set, submit, restore). Items on bones: `BlockAndItemGeoLayer` with `RenderData.item(bone, context,
+  RenderUtil.createRenderStateForItem(stack, itemModelResolver, context, entity))`.
+- Objects that aren't entities (Power Armor's cockpit viewmodel): `GeoObjectRenderer<T, Void, GeoRenderState>` and
+  `performRenderPass(animatable, null, poseStack, collector, cameraState, light, partial)`; anything that differs
+  between two passes in a frame must go into the render state (fields are read too late).
+- Paths: `assets/<mod>/geckolib/models/<id>.geo.json`, `geckolib/animations/<id>.animation.json`; textures unchanged.
+- Render types: `RenderTypes.entityCutout` (default, both faces) / `entityCutoutCull` / `eyes`.
+- `getDeathMaxRotation(GeoRenderState)`; `withScale`; `shadowRadius` field as before.
+
+## GeckoLib 4 (1.21.1) — kept for reference
 
 ## Entity side
 ```java

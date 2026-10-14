@@ -59,6 +59,14 @@ public final class TerrainPilot {
                 worldRequested = true;
                 openCopy(mc, MODE.substring("terrain:".length()));
             }
+            // A world saved by an older Minecraft asks whether to back it up before upgrading it. This is our throwaway
+            // copy (the original is never opened): press "Load without backup".
+            if (mc.gui.screen() instanceof net.minecraft.client.gui.screens.BackupConfirmScreen confirm) {
+                confirm.children().stream()
+                        .filter(w -> w instanceof net.minecraft.client.gui.components.Button b
+                                && b.getMessage().equals(net.minecraft.network.chat.Component.translatable("selectWorld.backupJoinSkipButton")))
+                        .findFirst().ifPresent(b -> ((net.minecraft.client.gui.components.Button) b).onPress(null));
+            }
             return;
         }
         mc.options.pauseOnLostFocus = false;

@@ -68,9 +68,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     // ---- Movement tuning -----------------------------------------------------------------
     // Attribute speed -> blocks per second on flat ground for ridden entities. Measured in game with
-    // ./gradlew runAutopilot (speed 0.1158 gave 4.88 blocks/s), so x42.14.
-    private static final double BLOCKS_PER_SECOND_PER_SPEED = 42.14;
-    private static final double WALK_SPEED = 0.11865;     // ~5.0 blocks/s jog (a player walks at 4.3)
+    // ./gradlew runAutopilot: 42.14 on 1.21.1; on 26.3 the same speed attribute went 2.4% further (0.11865 gave
+    // 5.12 blocks/s instead of 5.00), so x43.15.
+    private static final double BLOCKS_PER_SECOND_PER_SPEED = 43.15;
+    private static final double WALK_SPEED = 0.11587;     // ~5.0 blocks/s jog (a player walks at 4.3)
     private static final float SPRINT_MULTIPLIER = 2.0F;  // ~10 blocks/s (a player sprints at 5.6)
 
     // The ground speed each Blockbench animation was authored for (blocks/s, measured from the
@@ -654,10 +655,27 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.entityData.set(BURN_TOTAL, this.burnTotal);
     }
 
-    /** Load on the engine. The server learns the pilot's WASD from the input packet vanilla sends for
-     *  every passenger (that's how a boat knows you're paddling). */
+    /**
+     * The pilot's WASD as (strafe, 0, forward), each -1..1 (+x = left, +z = forward, like the player's xxa / zza).
+     * The pilot's own client moves the suit with its xxa / zza. The server learns the keys from the input packet vanilla
+     * sends for every passenger (that's how a boat knows you're paddling); since 1.21.2 that packet no longer fills the
+     * server player's xxa / zza, only its "last client input" (keys pressed). GameTests' mock players set xxa / zza.
+     */
+    public static Vec3 pilotInput(Player pilot) {
+        if (pilot instanceof net.minecraft.server.level.ServerPlayer sp) {
+            var keys = sp.getLastClientInput();
+            float strafe = keys.left() == keys.right() ? 0F : keys.left() ? 1F : -1F;
+            float forward = keys.forward() == keys.backward() ? 0F : keys.forward() ? 1F : -1F;
+            if (strafe != 0F || forward != 0F) {
+                return new Vec3(strafe, 0, forward);
+            }
+        }
+        return new Vec3(pilot.xxa, 0, pilot.zza);
+    }
+
+    /** Load on the engine, from the pilot's keys (pilotInput). */
     private static float drainPerTick(Player pilot) {
-        boolean moving = pilot.zza != 0 || pilot.xxa != 0;
+        boolean moving = pilotInput(pilot).lengthSqr() > 1e-4;
         if (!moving) {
             return PowerArmorConfig.DRAIN_IDLE.get().floatValue();
         }

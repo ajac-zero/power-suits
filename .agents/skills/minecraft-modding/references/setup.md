@@ -1,26 +1,33 @@
 # Setup, build and finding the real API
 
 ## Java (macOS, Homebrew)
-- Minecraft 1.21.1 needs Java 21. `brew install openjdk@21` (keg-only, no sudo; `/usr/bin/java` stays a stub).
+- Minecraft 26.3 needs Java 25 (1.21.1 needed 21). `brew install openjdk@25` (keg-only, no sudo; `/usr/bin/java`
+  stays a stub).
 - Every shell that runs Gradle needs:
   ```sh
-  export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
+  export JAVA_HOME=$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home
   ```
   Don't edit the user's shell config without asking; document the line in README/AGENTS.md.
 
 ## New project from the official MDK
 ```sh
-curl -sL https://api.github.com/repos/NeoForgeMDKs/MDK-1.21.1-ModDevGradle/tarball -o /tmp/mdk.tgz
+curl -sL https://api.github.com/repos/NeoForgeMDKs/MDK-26.3-ModDevGradle/tarball -o /tmp/mdk.tgz
 mkdir MyMod && tar xzf /tmp/mdk.tgz -C MyMod --strip-components=1 && cd MyMod && git init
 ```
-- `gradle.properties`: set `mod_id` (lowercase), `mod_name`, `mod_group_id`; add `geckolib_version=4.9.3`.
-- `build.gradle`: add the GeckoLib repo and dependency:
+- `gradle.properties`: set `mod_id` (lowercase), `mod_name`, `mod_group_id`; add `geckolib_version=5.5.7`.
+- `build.gradle`: add the GeckoLib repo and dependency (GeckoLib 5 moved to the `com.geckolib` group):
   ```groovy
   repositories { maven { url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
-      content { includeGroupByRegex("software\\.bernie.*") } } }
-  dependencies { implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}" }
+      content { includeGroup("com.geckolib") } } }
+  dependencies {
+    implementation "com.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+    interfaceInjectionData "com.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}" // GeoRenderState on vanilla render states
+  }
   ```
-  Latest versions: `curl -s https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/software/bernie/geckolib/geckolib-neoforge-1.21.1/maven-metadata.xml`.
+  Latest versions: `curl -s https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/com/geckolib/geckolib-neoforge-26.3/maven-metadata.xml`
+  or Modrinth's API (`api.modrinth.com/v2/project/geckolib/version?loaders=["neoforge"]&game_versions=["26.3"]`).
+  NeoForge: `maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml`. Mojang's names are official
+  since 26.1: no Parchment block.
 - `src/main/templates/META-INF/neoforge.mods.toml`: add a required `geckolib` dependency block.
 - Delete the example mod sources; package e.g. `dev.<user>.<modid>`.
 - Extra run configs in `neoForge { runs { ... } }`, e.g. a scripted client:
@@ -33,11 +40,11 @@ mkdir MyMod && tar xzf /tmp/mdk.tgz -C MyMod --strip-components=1 && cd MyMod &&
 ```sh
 ./gradlew createMinecraftArtifacts   # first run downloads/decompiles (~2 min)
 mkdir -p /tmp/mcsrc && cd /tmp/mcsrc
-unzip -qo ~/MyMod/build/moddev/artifacts/neoforge-21.1.*-sources.jar 'net/minecraft/world/entity/LivingEntity.java'
+unzip -qo ~/MyMod/build/moddev/artifacts/minecraft-patched-*-sources.jar 'net/minecraft/world/entity/LivingEntity.java'
 grep -n "travelRidden\|getRiddenInput\|tickRidden" net/minecraft/world/entity/LivingEntity.java
-# GeckoLib
-curl -sLO https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/software/bernie/geckolib/geckolib-neoforge-1.21.1/4.9.3/geckolib-neoforge-1.21.1-4.9.3-sources.jar
-unzip -qo geckolib-*-sources.jar -d gl && grep -rn "public .*(" gl/software/bernie/geckolib/animation/AnimationController.java
+# NeoForge's own classes (events, registries): ~/.gradle/caches/modules-2/files-2.1/net.neoforged/neoforge/<v>/*/neoforge-<v>-sources.jar
+# GeckoLib 5: the source on GitHub (branch main = newest Minecraft, or the version's branch)
+git clone --depth 1 https://github.com/bernie-g/geckolib /tmp/geckolib && grep -rn "public .*(" /tmp/geckolib/common/src/main/java/com/geckolib/animation/AnimationController.java
 ```
 Read how vanilla does the closest existing feature (horses for riding, `LocalPlayer` for input/sprint/jump,
 `ProjectileUtil` for crosshair picking, `GameTestHelper` for test helpers) and copy the pattern.
@@ -67,7 +74,7 @@ entity/…Entity.java        gameplay; item/…Item.java
 SomeGameEvents.java        @EventBusSubscriber(modid=...) game-bus events (damage etc.)
 client/                    @EventBusSubscriber(modid=..., value=Dist.CLIENT): renderers, model, camera/HUD events
 client/dev/                autopilot harnesses, inert unless a system property is set
-test/                      @GameTestHolder(MODID) @PrefixGameTestTemplate(false) tests
+test/                      GameTests (registered as registry entries on 26.x, see testing.md)
 ```
-NeoForge 21.1 routes mod-bus events automatically: `@EventBusSubscriber(bus = Bus.MOD)` is deprecated.
+NeoForge (21.1 and later) routes mod-bus events automatically: `@EventBusSubscriber(bus = Bus.MOD)` is deprecated.
 Recipes live in `data/<modid>/recipe/` (singular in 1.21), structures in `data/<modid>/structure/`.

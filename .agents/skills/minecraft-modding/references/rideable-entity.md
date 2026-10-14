@@ -14,10 +14,11 @@ All of this is in `src/main/java/dev/ajaczero/powerarmor/entity/PowerArmorEntity
 | `PlayerRideableJumping` | horse jump bar: `onPlayerJump(power)` runs on the pilot's client at release; `handleStartJump` on the server; `getJumpCooldown()!=0` blocks charging |
 | `getDismountLocationForPassenger` | default is the top of the hitbox: search behind/beside with `getCollisionHorizontalEscapeVector` + `DismountHelper` like `AbstractHorse` |
 - **Movement is client-authoritative**: `travelRidden` calls `travel` only where
-  `isControlledByLocalInstance()` (pilot's client; the server for an empty mob). Logic in `travel` /
+  `isControlledByLocalInstance()` (26.x: `isLocalInstanceAuthoritative()`) (pilot's client; the server for an empty mob). Logic in `travel` /
   `tickRidden` runs there; sync anything the server must enforce.
 - Ground speed: measured **42.14 blocks/s per point of movement speed** for a ridden mob on normal
-  ground (input 0.98, friction 0.546). Calibrate with an autopilot log; don't trust the derivation.
+  ground on 1.21.1, **43.15 on 26.3**. Calibrate with an autopilot log after every Minecraft update; don't trust the derivation.
+- 26.x: the server no longer gets a passenger's `xxa` / `zza`; read `ServerPlayer.getLastClientInput()` (keys) there.
 - Air control is speed x 0.1 by default, so jumps/falls bleed speed.
 - Shift dismounts (vanilla), so don't plan a "sneak" gait for the pilot.
 

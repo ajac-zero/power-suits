@@ -8,7 +8,7 @@
 # The game also quits by itself after 10 minutes without a shot request.
 set -e
 cd "$(dirname "$0")/.."
-export JAVA_HOME="$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home"
+export JAVA_HOME="$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home"
 V=run/view
 wait_done() { i=0; while [ ! -f $V/done ] && [ $i -lt 120 ]; do sleep 2; i=$((i+1)); done; [ -f $V/done ] && echo "shots ready" || echo "timed out (see .scratch/view.log)"; }
 case "$1" in

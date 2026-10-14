@@ -5,17 +5,26 @@ screenshots + per-tick CSV). Example implementations: `src/main/java/dev/ajaczer
 and `client/dev/` in `~/Developer/PowerArmor`.
 
 ## GameTests (headless server)
+**On 26.x** (since 1.21.5) a GameTest is two registry entries: a test *function* (`Registries.TEST_FUNCTION`, a
+`Consumer<GameTestHelper>`) and a test *instance* (`FunctionGameTestInstance(functionKey, new TestData<>(environment,
+structureId, maxTicks, setupTicks, required))`, registered in NeoForge's `RegisterGameTestsEvent` on the mod bus,
+together with a test environment: tests are batched per environment). There is no `@GameTest` annotation any more.
+Power Armor keeps the old style with its own annotation: `test/SuitTest.java` (`@SuitTest(timeoutTicks = 200, batch =
+"...")`) and `test/SuitTests.java` (finds the methods by reflection, registers both entries, only when
+`GameTestHooks.isGametestEnabled()`). Test ids are lower-case (`mymod:mytestname`).
 ```java
-@GameTestHolder(MyMod.MODID) @PrefixGameTestTemplate(false)
-public final class MyTests {
-  @GameTest(template = "test_pad", timeoutTicks = 200)
-  public static void sinks(GameTestHelper h) { ...; h.runAfterDelay(150, () -> { h.assertTrue(...); h.succeed(); }); }
-}
+@SuitTest(timeoutTicks = 200)
+public static void sinks(GameTestHelper h) { ...; h.runAfterDelay(150, () -> { h.assertTrue(...); h.succeed(); }); }
 ```
+(1.21.1: `@GameTestHolder(MODID) @PrefixGameTestTemplate(false)` on the class, `@GameTest(template = "test_pad")`.)
 - Template = `data/<modid>/structure/<name>.nbt`. Make one without NBT libraries:
   `python3 <skill>/scripts/make_test_structure.py out.nbt --size 9 10 9` (stone floor at y=0).
-- **Coordinates**: the structure is placed one block above the test origin. Relative floor is y=1 and
-  entities stand at y=2 (`helper.spawn(type, new BlockPos(4, 2, 4))` uses the bottom centre).
+- **Coordinates**: on 1.21.1 the structure was placed one block above the test origin; on 26.x it starts at the
+  origin. Power Armor's `test_pad` therefore has an empty bottom layer (9x11x9, floor at y=1), so the relative floor
+  is y=1 and entities stand at y=2 on both (`helper.spawn(type, new BlockPos(4, 2, 4))` uses the bottom centre).
+- **Mock server players** (`makeMockServerPlayerInLevel`) have a connection that never negotiated mod channels; on
+  26.x NeoForge throws when anything sends them a mod packet (GeckoLib's `entity_anim_trigger`). Add the channels:
+  `ChannelAttributes.getOrCreateCommonChannels(player.connection.getConnection(), ConnectionProtocol.PLAY).add(id)`.
 - **Barrier box**: each test is sealed in barriers the size of the structure. Make it tall enough for tall
   entities (an entity whose eyes reach the ceiling takes suffocation damage, which looks like a bug).
 - Tests run **side by side** (~14 blocks apart): search for entities in a small box around your own
@@ -28,7 +37,8 @@ public final class MyTests {
   and test `mayPlace`, `quickMoveStack`, `stillValid`, `clickMenuButton`; check the real screen in the autopilot
   (open it server-side with `entity.interact(serverPlayer, hand)` while `setShiftKeyDown(true)`, then screenshot).
 - Things that tick on the server (fuel burn, timers) work with a mock pilot: set `pilot.zza = 1` /
-  `setSprinting(true)` to simulate WASD (the server reads the same fields from the input packet).
+  `setSprinting(true)` to simulate WASD. On 26.x a real `ServerPlayer`'s `xxa/zza` stay 0 (the input packet fills
+  `getLastClientInput()` instead), so server code reads both (Power Armor: `PowerArmorEntity.pilotInput`).
 - Build scenes with `helper.setBlock`; use `helper.absolutePos/absoluteVec` for world coordinates.
 - Trace a mystery failure by sampling state every few ticks (`runAfterDelay` loop) and putting it in the
   assertion message; `getLastDamageSource()` forgets after 40 ticks.

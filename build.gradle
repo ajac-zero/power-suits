@@ -216,6 +216,3 @@ idea {
         downloadJavadoc = true
     }
 }
-
-// PORT-TMP: show every compile error while porting
-tasks.withType(JavaCompile).configureEach { options.compilerArgs += ['-Xmaxerrs', '5000'] }
