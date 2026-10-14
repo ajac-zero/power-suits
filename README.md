@@ -24,13 +24,14 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | EM Projector | Hold right-click on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 1 fuel/tick while holding, 80 per throw |
 | Mining Drill | Hold right-click on a block: digs it and the 8 around it (a 3x3 face of a wall, floor or ceiling) like a diamond pickaxe + shovel. 20 fuel per block |
 | Chainsaw | Hold right-click on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 15 fuel per log |
-| Fire | Right-click while piloting (Chaingun): tap for heavy single shots, hold to spin up to a 10-a-second barrage toward your crosshair; one iron nugget per bullet |
+| Fire | Right-click while piloting (Chaingun): tap for heavy single shots, hold to spin up to a 10-a-second barrage toward your crosshair; one iron nugget per bullet (yours first, then the suit's store) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
 | Sealed suit | While powered: fire, frost, magma, cactus/berry bushes and harmful effects (poison, wither, slowness...) don't reach you or the hull; keeping them out costs fuel. You breathe under water (0.5 fuel/tick extra). A running suit never catches fire (lava excepted: it burns while in it, the flames die as it steps out). Lava still eats the hull (wade through at a third of your speed). No power, no seal: an empty or knocked-out suit burns like anything else. What's already inside you stays yours: poison or wither you had when you climbed in (food poisoning) hurts you, not the suit |
 | Strength | Every melee hit from inside (bare hand, sword, axe...) does +4 damage |
 | Stomp | Landing from 3.5+ blocks hurts everything around you (not you): 2 damage per block fallen, up to 30, half at the edge of the shock wave (2-3.5 blocks); things get thrown. A normal jump doesn't stomp |
 | Smashing through | Walking breaks leaves, glass panes, cobwebs, snow layers, berry bushes, bamboo...; sprinting also breaks glass and ice. Nothing drops. Block tags `powerarmor:suit_smashes_walking` / `_sprinting`; can be switched off in the config |
-| Machine mind | A powered suit with nobody inside is driven by its own mind (green visor): it works for its owner (whoever last piloted it, or deployed it) from its home (the block where the pilot got out, or where it was deployed). For now it stands guard at home, looks at people nearby and walks back if pushed away; jobs per tool come next (design sec. 8). It burns fuel like a piloted suit (idle 0.25/tick): **to park a suit, take the fuel out** |
+| Machine mind | A powered suit with nobody inside is driven by its own mind (green visor): it works for its owner (whoever last piloted it, or deployed it) from its home (the block where the pilot got out, or where it was deployed). Its job depends on the socket tool: none (or a tool whose job isn't built yet) = stand guard at home, look at people nearby, walk back if pushed away; **chaingun** = follow its owner like a tamed wolf (walks over 7 blocks away, sprints past 16, stops at 4, no teleporting) and defend them: it shoots whatever attacks the owner or the suit, whatever the owner attacks, and monsters within 16 blocks of the owner, never with the owner, a villager, a pet or another suit in the line of fire; with no nuggets left it walks up and punches (1 + melee bonus). Design sec. 8. It burns fuel like a piloted suit (idle 0.25/tick): **to park a suit, take the fuel out** |
+| Load ammo | Right-click the suit with iron nuggets: the stack goes into its hidden store (up to 640, config). The menu shows it (Ammo), a packed suit keeps it, a wreck drops it. The mind's chaingun uses it; yours too, after the nuggets in your own inventory |
 | Lightning | A strike knocks a fuelled suit out: it convulses, slumps (you're stuck, the seal is off, so the fire the bolt leaves at your feet usually catches it) and restarts by itself after 5 s; the flames die as it powers up |
 
 ### Balance and config
@@ -164,7 +165,9 @@ src/main/java/dev/ajaczero/powerarmor/
   item/PowerTool.java        what a socket tool is: fuel per use, cooldown, model bone, use(); worked by an operator
                              (the pilot, or the suit itself while its mind drives: aim, ammo, credit)
   entity/SuitMind.java       friendly / rogue (synced: the visor colour)
-  entity/ai/SuitGoals.java   the machine mind's goals (vanilla goal system): walk home, look around
+  entity/ai/SuitGoals.java   the machine mind's goals (vanilla goal system): walk home, look around, follow the owner,
+                             pick a target, shoot / punch
+  entity/ai/SuitTargets.java who the mind may shoot, what to shoot first, line-of-fire check
   item/ChaingunItem.java     the first tool: spin-up, nugget ammo, overheat (continuous tool; also a GeckoLib item)
   item/EmProjectorItem.java  the second tool: grab / hold / collect / throw, slam damage (per-suit state in Beam)
   item/SocketAim.java        muzzle position, crosshair aim point, entity under the crosshair

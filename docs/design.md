@@ -163,7 +163,7 @@ the usual trick (invisible light blocks following the suit) was judged not worth
 Default costs per coal (1600): 80 s walking, ~100 chaingun bullets, 80 s of EM holding or 20 throws, ~9 drill faces,
 ~20 felled oaks.
 
-## 8. Suit AI (decided 2026-10-13; step 1 built: mind, owner, home, visor, tool operator, idle job)
+## 8. Suit AI (decided 2026-10-13; built: step 1 mind, owner, home, visor, tool operator, idle job; step 2 nugget store + chaingun job)
 An empty suit is a mob, like a horse: a machine mind drives it whenever nobody else does.
 
 - **Who**: every *powered* suit without a pilot is AI-driven. To park a suit, take its fuel out (or run it dry):
@@ -178,7 +178,7 @@ An empty suit is a mob, like a horse: a machine mind drives it whenever nobody e
   | none | Idle at home: stands, looks around, walks back if pushed away. |
   | Drill | Mines **horizontally** at the home level within the radius: clears an open hall row by row, out from home. Never digs down, never steps where it would fall (a drop under the next floor block) and skips any face next to lava or other liquids. Drops stay on the floor as vanilla items. |
   | Chainsaw | Fells natural trees whose trunk stands within the radius, then goes back home. Drops stay where they fall. |
-  | Chaingun | Follows the owner like a tamed wolf and defends them: shoots what attacks the owner, what the owner attacks and hostile monsters nearby. Never fires with the owner, other players, villagers, pets or suits in the line of fire. Ammo: the suit's hidden nugget store (below); empty: punches (+4 melee bonus). |
+  | Chaingun (built) | Follows the owner like a tamed wolf (walks when over 7 blocks away, sprints past 16, stops at 4; no teleport: a ton of steel) and defends them: shoots what attacks the owner (or the suit), what the owner attacks and monsters within 16 blocks of the owner (config `guard_range`). Players only if they started it and PvP is on; never villagers, golems, the owner's pets or friendly suits; rogue suits always. Never fires with the owner, other players, villagers, pets or suits in the line of fire. Ammo: the suit's hidden nugget store (below); empty: punches (+4 melee bonus). |
   | EM projector | Guards an area around home: grabs hostile monsters and flings them straight up so the fall kills them (~24 blocks for a zombie; creepers get thrown away). Never players, pets, villagers, suits. |
 - **Collecting the drops = allays** (vanilla 1.21.1, decided 2026-10-13; copper golems don't exist before 1.21.9 and
   only sort chests anyway). An allay picks up dropped items matching the one it holds and brings them to its player or

@@ -171,6 +171,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Who the machine mind works for (SuitMind ordinal): the visor shows it. */
     private static final EntityDataAccessor<Byte> MIND =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BYTE);
+    /** Iron nuggets in the hidden ammo store (synced: the menu and the pilot's HUD show it). */
+    private static final EntityDataAccessor<Integer> NUGGETS =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> STUNNED =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     /** Copies of the two slots, so clients can show the fuel left and (Phase 2) draw the socket tool. */
@@ -312,12 +315,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
         builder.define(STUNNED, false);
         builder.define(MIND, (byte) SuitMind.FRIENDLY.ordinal());
+        builder.define(NUGGETS, 0);
     }
 
     /** The machine mind's goals (see SuitGoals). Vanilla calls this once, from Mob's constructor. */
     @Override
     protected void registerGoals() {
-        dev.ajaczero.powerarmor.entity.ai.SuitGoals.register(this, this.goalSelector);
+        dev.ajaczero.powerarmor.entity.ai.SuitGoals.register(this, this.goalSelector, this.targetSelector);
     }
 
     /** Base stats. The single source of truth: also re-applied to suits loaded from old saves. */
@@ -327,6 +331,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             Attributes.ARMOR_TOUGHNESS, 4.0,
             Attributes.KNOCKBACK_RESISTANCE, 1.0,
             Attributes.MOVEMENT_SPEED, WALK_SPEED,
+            Attributes.FOLLOW_RANGE, 48.0, // how far the mind's paths may reach (vanilla's 16 lost an owner who walked on)
             Attributes.STEP_HEIGHT, 1.1); // walks up full blocks without jumping
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -356,6 +361,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.setMind(SuitMind.byName(tag.getString("Mind"))); // suits from before the AI: "" -> friendly
         this.ownerId = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
         this.home = net.minecraft.nbt.NbtUtils.readBlockPos(tag, "Home").orElse(null);
+        this.setStoredNuggets(tag.getInt("Nuggets"));
         this.syncSlots();
         this.syncBurn();
         this.entityData.set(POWERED, this.hasEnergy());
@@ -369,6 +375,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         tag.putFloat("BurnLeft", this.burnLeft);
         tag.putInt("BurnTotal", this.burnTotal);
         tag.putString("Mind", this.getMind().name());
+        tag.putInt("Nuggets", this.getStoredNuggets());
         if (this.ownerId != null) {
             tag.putUUID("Owner", this.ownerId);
         }
@@ -401,6 +408,39 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     public boolean isRogue() {
         return this.getMind() == SuitMind.ROGUE;
+    }
+
+    /** Server: the owner if they're online in this dimension (not spectating), else null. */
+    @Nullable
+    public Player getOwner() {
+        if (this.ownerId == null || !(this.level() instanceof ServerLevel level)) {
+            return null;
+        }
+        Player owner = level.getPlayerByUUID(this.ownerId);
+        return owner != null && owner.isAlive() && !owner.isSpectator() ? owner : null;
+    }
+
+    /** Both sides: the chaingun job (design sec. 8): a friendly mind with a chaingun follows its owner and defends them. */
+    public boolean followsOwner() {
+        return !this.isRogue() && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.ChaingunItem;
+    }
+
+    /** Server: bullets for the mind's chaingun (its hidden store). */
+    public boolean hasAmmo() {
+        return this.getStoredNuggets() > 0;
+    }
+
+    /** Server: the mind's bare-handed blow (no bullets left): a pilot's punch, 1 + the melee bonus, with a shove. */
+    public void punch(LivingEntity target) {
+        float damage = 1F + PowerArmorConfig.MELEE_BONUS.get().floatValue();
+        this.triggerAnim("right_hand", "use_item"); // the right arm reaches out (the hand's use animation)
+        this.swing(InteractionHand.MAIN_HAND);
+        if (target.hurt(this.damageSources().mobAttack(this), damage)) {
+            Vec3 push = target.position().subtract(this.position()).multiply(1, 0, 1).normalize();
+            target.knockback(0.6, -push.x, -push.z);
+            this.setLastHurtMob(target);
+        }
+        this.playSound(SoundEvents.IRON_GOLEM_ATTACK, 1.0F, 0.8F);
     }
 
     /** Server: the player the mind works for (null: nobody yet, e.g. a rebooted wild suit). */
@@ -853,7 +893,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** What a packed suit item keeps: both slots and the half-burnt item. */
     public SuitLoadout getLoadout() {
         return new SuitLoadout(this.inventory.getItem(FUEL_SLOT).copy(), this.inventory.getItem(SOCKET_SLOT).copy(),
-                Mth.ceil(this.burnLeft), this.burnTotal);
+                Mth.ceil(this.burnLeft), this.burnTotal, this.getStoredNuggets());
     }
 
     public void applyLoadout(SuitLoadout loadout) {
@@ -861,6 +901,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.inventory.setItem(SOCKET_SLOT, loadout.socket().copy());
         this.burnLeft = loadout.burnLeft();
         this.burnTotal = loadout.burnTotal();
+        this.setStoredNuggets(loadout.nuggets());
         this.syncBurn();
         this.entityData.set(POWERED, this.hasEnergy());
     }
@@ -923,6 +964,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (this.isRogue()) {
             return InteractionResult.PASS; // a rogue mind won't open up: no boarding, no menu
         }
+        ItemStack held = player.getItemInHand(hand);
+        if (held.is(Items.IRON_NUGGET) && !player.isSecondaryUseActive()) {
+            return this.loadNuggets(player, held); // feeding it ammo, like feeding a horse: no climbing in
+        }
         if (!this.level().isClientSide()) {
             if (player.isSecondaryUseActive()) {
                 // Sneak + right-click: open the suit's menu (fuel, socket, pack up), like a horse's inventory.
@@ -933,6 +978,51 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             }
         }
         return InteractionResult.sidedSuccess(this.level().isClientSide());
+    }
+
+    // ---- The hidden ammo store (no slot: one tool uses it) ------------------------------------------------
+
+    /** Right-click with iron nuggets: the whole stack goes into the store, up to its size (config). */
+    private InteractionResult loadNuggets(Player player, ItemStack held) {
+        int room = PowerArmorConfig.NUGGET_STORE_MAX.get() - this.getStoredNuggets();
+        if (room <= 0) {
+            if (!this.level().isClientSide()) {
+                player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.nuggets_full",
+                        this.getStoredNuggets()), true);
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide());
+        }
+        if (!this.level().isClientSide()) {
+            int n = Math.min(room, held.getCount());
+            this.setStoredNuggets(this.getStoredNuggets() + n);
+            if (!player.hasInfiniteMaterials()) {
+                held.shrink(n);
+            }
+            this.playSound(SoundEvents.ARMOR_EQUIP_CHAIN.value(), 1.0F, 0.8F);
+            this.playSound(SoundEvents.CHAIN_PLACE, 0.8F, 0.7F);
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.nuggets_loaded",
+                    n, this.getStoredNuggets()), true);
+        }
+        return InteractionResult.sidedSuccess(this.level().isClientSide());
+    }
+
+    /** Both sides: nuggets in the hidden store. */
+    public int getStoredNuggets() {
+        return this.entityData.get(NUGGETS);
+    }
+
+    public void setStoredNuggets(int nuggets) {
+        this.entityData.set(NUGGETS, Math.max(0, nuggets));
+    }
+
+    /** Server: take one nugget from the store, if there is one. */
+    public boolean takeStoredNugget() {
+        int n = this.getStoredNuggets();
+        if (n <= 0) {
+            return false;
+        }
+        this.setStoredNuggets(n - 1);
+        return true;
     }
 
     /** The first player passenger drives the suit. */
@@ -1416,6 +1506,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         for (ItemStack stack : this.inventory.removeAllItems()) {
             this.spawnAtLocation(stack); // the fuel and the socket tool survive the wreck
         }
+        for (int left = this.getStoredNuggets(); left > 0; left -= 64) {
+            this.spawnAtLocation(new ItemStack(Items.IRON_NUGGET, Math.min(64, left))); // and so does the ammo
+        }
+        this.setStoredNuggets(0);
     }
 
     // A placed suit stays forever (mobs normally despawn when far from players).

@@ -23,8 +23,8 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
     private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/gui/power_armor.png");
     private static final ResourceLocation LIT_PROGRESS = ResourceLocation.withDefaultNamespace("container/furnace/lit_progress");
     private static final int FLAME_X = 73, FLAME_Y = 35;
-    private static final int DISPLAY_X = 98, DISPLAY_Y = 21;
-    private static final int GREEN = 0xFF7CFF6B, AMBER = 0xFFFFB13B, RED = 0xFFFF5555;
+    private static final int DISPLAY_X = 98, DISPLAY_Y = 18, LINE = 8; // four lines in the status display
+    private static final int GREEN = 0xFF7CFF6B, AMBER = 0xFFFFB13B, RED = 0xFFFF5555, DIM = 0xFF5E7A5A;
 
     public PowerArmorScreen(PowerArmorMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -37,7 +37,7 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         // server, which calls PowerArmorMenu.clickMenuButton.
         this.addRenderableWidget(Button.builder(Component.translatable("gui.powerarmor.pack_up"),
                         b -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_PACK))
-                .bounds(this.leftPos + 94, this.topPos + 51, 76, 18)
+                .bounds(this.leftPos + 94, this.topPos + 53, 76, 16)
                 .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("gui.powerarmor.pack_up.tooltip")))
                 .build());
     }
@@ -79,9 +79,13 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         int hullColour = hull < max / 4 ? RED : hull < max / 2 ? AMBER : GREEN;
         int fuelColour = energy == 0 ? RED : suit.isLowOnFuel() ? AMBER : GREEN;
         graphics.drawString(this.font, Component.translatable("gui.powerarmor.hull", hull, max), DISPLAY_X, DISPLAY_Y, hullColour, false);
-        graphics.drawString(this.font, Component.translatable("gui.powerarmor.range", PowerArmorItem.formatWalkTime(energy)), DISPLAY_X, DISPLAY_Y + 9, fuelColour, false);
+        graphics.drawString(this.font, Component.translatable("gui.powerarmor.range", PowerArmorItem.formatWalkTime(energy)), DISPLAY_X, DISPLAY_Y + LINE, fuelColour, false);
         Component status = Component.translatable(suit.isPowered() ? "gui.powerarmor.online" : "gui.powerarmor.offline");
-        graphics.drawString(this.font, status, DISPLAY_X, DISPLAY_Y + 18, suit.isPowered() ? GREEN : RED, false);
+        graphics.drawString(this.font, status, DISPLAY_X, DISPLAY_Y + 2 * LINE, suit.isPowered() ? GREEN : RED, false);
+        // The hidden nugget store (no slot: right-click the suit with nuggets to load it). Dim when empty.
+        int nuggets = suit.getStoredNuggets();
+        graphics.drawString(this.font, Component.translatable("gui.powerarmor.ammo", nuggets), DISPLAY_X, DISPLAY_Y + 3 * LINE,
+                nuggets > 0 ? GREEN : DIM, false);
     }
 
     /** Explain the two special slots while they're empty. */

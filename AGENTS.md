@@ -204,6 +204,9 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **Paths of wide mobs end short**: vanilla's path for the 1.4-wide suit stopped 1.7 blocks from home (node offsets);
   `ReturnHome` walks the last stretch with `MoveControl.setWantedPosition`. The pathfinder returns null for a mob in
   the air (just spawned): wait for `onGround()`.
+- **Autopilot worlds are peaceful** (`AutoPilot` creates them so): monsters spawned by a scene vanish the same tick. Set
+  the difficulty in the scene (the mind scene sets NORMAL before its zombies).
+- **`AABB.clip` misses a segment that starts inside the box**: line-of-fire checks also test `box.contains(start)`.
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
   `model/anim/` (walk/run carry a tool-arm `stabilize()` wrapper). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.

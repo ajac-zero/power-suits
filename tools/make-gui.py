@@ -41,6 +41,6 @@ inset(7, 17, 54, 54, (0, 0, 0, 255))        # suit preview window
 inset(71, 17, 18, 18, SLOT)                 # socket slot (item at 72,18)
 inset(71, 51, 18, 18, SLOT)                 # fuel slot (item at 72,52)
 img.paste(flame_bg, (73, 35))               # flame between them
-inset(94, 17, 76, 31, (24, 26, 24, 255))    # status display
+inset(94, 17, 76, 35, (24, 26, 24, 255))    # status display (4 lines: hull, fuel, power, ammo)
 img.save('src/main/resources/assets/powerarmor/textures/gui/power_armor.png')
 print('wrote textures/gui/power_armor.png')

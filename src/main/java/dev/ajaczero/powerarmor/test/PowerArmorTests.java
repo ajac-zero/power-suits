@@ -1547,6 +1547,184 @@ public final class PowerArmorTests {
         });
     }
 
+    // =========================================================================================
+    // Phase 8 step 2: the hidden nugget store, the chaingun job (follow + defend the owner, fists without ammo)
+    // =========================================================================================
+
+    @GameTest(template = PAD)
+    public static void nuggetsLoadIntoTheHiddenStore(GameTestHelper helper) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_NUGGET, 64));
+        helper.assertTrue(suit.interact(player, InteractionHand.MAIN_HAND).consumesAction(), "right-click with nuggets loads them");
+        helper.assertTrue(suit.getStoredNuggets() == 64 && player.getMainHandItem().isEmpty(), "the whole stack goes in, got " + suit.getStoredNuggets());
+        helper.assertTrue(player.getVehicle() == null, "loading ammo doesn't climb in");
+        int max = PowerArmorConfig.NUGGET_STORE_MAX.get();
+        suit.setStoredNuggets(max - 10);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_NUGGET, 64));
+        suit.interact(player, InteractionHand.MAIN_HAND);
+        helper.assertTrue(suit.getStoredNuggets() == max && player.getMainHandItem().getCount() == 54, "fills up to the store size, keeps the rest");
+        helper.succeed();
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 120)
+    public static void nuggetStoreSurvivesSavingPackingAndTheWreck(GameTestHelper helper) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        suit.setStoredNuggets(100);
+        CompoundTag saved = new CompoundTag();
+        suit.saveWithoutId(saved);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel());
+        loaded.load(saved);
+        helper.assertTrue(loaded.getStoredNuggets() == 100, "saved with the suit");
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        suit.packUp(player);
+        ItemStack packed = packedSuit(player);
+        helper.assertTrue(packed.get(ModDataComponents.LOADOUT.get()).nuggets() == 100, "kept on the packed item");
+        player.setItemInHand(InteractionHand.MAIN_HAND, packed);
+        useOnFloor(helper, player, packed, new BlockPos(4, 1, 4));
+        PowerArmorEntity deployed = suitsInTest(helper).get(0);
+        helper.assertTrue(deployed.getStoredNuggets() == 100, "back in the deployed suit");
+        deployed.hurt(helper.getLevel().damageSources().genericKill(), 1000F);
+        helper.runAfterDelay(70, () -> {
+            helper.assertTrue(dropped(helper, Items.IRON_NUGGET) == 100, "the wreck drops its ammo, got " + dropped(helper, Items.IRON_NUGGET));
+            helper.succeed();
+        });
+    }
+
+    /** Decided 2026-10-13: a pilot's chaingun takes their own nuggets first, then the suit's store. */
+    @GameTest(template = PAD)
+    public static void pilotChaingunUsesOwnNuggetsBeforeTheStore(GameTestHelper helper) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        suit.setStoredNuggets(5);
+        Player pilot = helper.makeMockPlayer(GameType.SURVIVAL);
+        pilot.getInventory().setItem(3, new ItemStack(Items.IRON_NUGGET, 1));
+        for (int i = 0; i < 3; i++) {
+            helper.assertTrue(dev.ajaczero.powerarmor.item.ChaingunItem.takeBullet(suit, pilot), "a bullet each time");
+        }
+        helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 0 && suit.getStoredNuggets() == 3,
+                "1 from the pocket, then 2 from the store; store " + suit.getStoredNuggets());
+        helper.succeed();
+    }
+
+    /** An owner who is really in the level (the mind looks its owner up by UUID): a creative mock server player. */
+    @SuppressWarnings("removal")
+    private static net.minecraft.server.level.ServerPlayer ownerAt(GameTestHelper helper, PowerArmorEntity suit, Vec3 at) {
+        net.minecraft.server.level.ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Vec3 abs = helper.absoluteVec(at);
+        owner.teleportTo(helper.getLevel(), abs.x, abs.y, abs.z, 0F, 0F);
+        suit.setOwnerId(owner.getUUID());
+        return owner;
+    }
+
+    private static void dismiss(GameTestHelper helper, net.minecraft.server.level.ServerPlayer player) {
+        helper.getLevel().getServer().getPlayerList().remove(player);
+    }
+
+    /** A husk that stands still (no AI) and doesn't burn by day: a monster target that stays where it was put. */
+    private static net.minecraft.world.entity.monster.Husk statueHusk(GameTestHelper helper, Vec3 at) {
+        var husk = helper.spawn(EntityType.HUSK, at);
+        husk.setNoAi(true);
+        return husk;
+    }
+
+    private static PowerArmorEntity chaingunMind(GameTestHelper helper, BlockPos at, int nuggets) {
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), at);
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
+        suit.setStoredNuggets(nuggets);
+        return suit;
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 100)
+    public static void chaingunMindShootsMonstersNearItsOwner(GameTestHelper helper) {
+        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 64);
+        var owner = ownerAt(helper, suit, new Vec3(1.5, 2, 1.5));
+        var husk = statueHusk(helper, new Vec3(4.5, 2, 7.5));
+        helper.runAfterDelay(80, () -> {
+            dismiss(helper, owner);
+            helper.assertTrue(!husk.isAlive(), "the husk should be shot down, health " + husk.getHealth());
+            helper.assertTrue(husk.getLastHurtByMob() == suit, "killed by the suit itself (it owns its bullets)");
+            helper.assertTrue(suit.getStoredNuggets() < 64 && suit.getToolUses() == 64 - suit.getStoredNuggets(),
+                    "one nugget from the store per bullet, store " + suit.getStoredNuggets() + " shots " + suit.getToolUses());
+            helper.succeed();
+        });
+    }
+
+    /** Never through the owner: the line of fire is checked before every burst. (With the owner in the way the suit also
+     *  walks for a clear shot, e.g. over their head, so the hold is checked over the first ticks, before it has moved.) */
+    @GameTest(template = PAD, timeoutTicks = 60)
+    public static void chaingunMindHoldsFireWithTheOwnerInTheWay(GameTestHelper helper) {
+        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 64);
+        var owner = ownerAt(helper, suit, new Vec3(4.5, 2, 3.5));
+        var husk = statueHusk(helper, new Vec3(4.5, 2, 6.5));
+        helper.assertTrue(!dev.ajaczero.powerarmor.entity.ai.SuitTargets.lineOfFireClear(suit, husk, husk.getBoundingBox().getCenter()),
+                "the owner blocks the line");
+        boolean[] blockedShot = {false};
+        helper.onEachTick(() -> blockedShot[0] |= suit.getToolUses() > 0 && suit.tickCount <= 6);
+        helper.runAfterDelay(6, () -> {
+            helper.assertTrue(suit.getTarget() == husk, "it has picked the husk");
+            helper.assertTrue(!blockedShot[0] && husk.getHealth() == husk.getMaxHealth(), "but must not fire through its owner");
+            Vec3 aside = helper.absoluteVec(new Vec3(1.5, 2, 3.5));
+            owner.teleportTo(helper.getLevel(), aside.x, aside.y, aside.z, 0F, 0F);
+        });
+        helper.runAfterDelay(50, () -> {
+            dismiss(helper, owner);
+            helper.assertTrue(!husk.isAlive(), "then it fires, health " + husk.getHealth());
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 90)
+    public static void chaingunMindFollowsItsOwner(GameTestHelper helper) {
+        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(1, 2, 1), 64);
+        var owner = ownerAt(helper, suit, new Vec3(7.5, 2, 7.5));
+        helper.runAfterDelay(70, () -> {
+            double d = suit.distanceTo(owner);
+            dismiss(helper, owner);
+            helper.assertTrue(d < 5.5, "it should catch up with its owner (stops at 4), distance " + d);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 100)
+    public static void chaingunMindPunchesWhenOutOfNuggets(GameTestHelper helper) {
+        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 0);
+        var owner = ownerAt(helper, suit, new Vec3(1.5, 2, 1.5));
+        var husk = statueHusk(helper, new Vec3(4.5, 2, 5.5));
+        helper.runAfterDelay(80, () -> {
+            dismiss(helper, owner);
+            float lost = husk.getMaxHealth() - husk.getHealth();
+            helper.assertTrue(suit.getToolUses() == 0, "no nuggets: no shots");
+            helper.assertTrue(lost >= 1F + PowerArmorConfig.MELEE_BONUS.get() - 0.01, "walks up and punches (1 + melee bonus), lost " + lost);
+            helper.succeed();
+        });
+    }
+
+    /** Who the mind may shoot: monsters, and anything that started it; never the owner, their pets, villagers or friendly suits. */
+    @GameTest(template = PAD)
+    public static void mindTargetRules(GameTestHelper helper) {
+        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 0);
+        Player ownerPlayer = helper.makeMockPlayer(GameType.SURVIVAL);
+        suit.setOwnerId(ownerPlayer.getUUID());
+        var rules = (java.util.function.BiPredicate<net.minecraft.world.entity.Entity, Boolean>) (e, provoked) ->
+                dev.ajaczero.powerarmor.entity.ai.SuitTargets.canAttack(suit, e, provoked);
+        var husk = statueHusk(helper, new Vec3(2.5, 2, 6.5));
+        var villager = helper.spawn(EntityType.VILLAGER, new Vec3(6.5, 2, 6.5));
+        var cow = helper.spawn(EntityType.COW, new Vec3(1.5, 2, 4.5));
+        var wolf = helper.spawn(EntityType.WOLF, new Vec3(7.5, 2, 4.5));
+        wolf.tame(ownerPlayer);
+        PowerArmorEntity friend = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(7, 2, 1));
+        PowerArmorEntity rogue = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(1, 2, 7));
+        rogue.setMind(dev.ajaczero.powerarmor.entity.SuitMind.ROGUE);
+        helper.assertTrue(rules.test(husk, false), "monsters: always");
+        helper.assertTrue(!rules.test(cow, false) && rules.test(cow, true), "animals: only if they started it");
+        helper.assertTrue(!rules.test(villager, true), "villagers: never");
+        helper.assertTrue(!rules.test(wolf, true), "the owner's pets: never");
+        helper.assertTrue(!rules.test(ownerPlayer, true), "the owner: never");
+        helper.assertTrue(!rules.test(friend, true) && rules.test(rogue, false), "friendly suits never, rogues always");
+        helper.succeed();
+    }
+
     private static ItemStack packedSuit(Player player) {
         return player.getInventory().items.stream().filter(s -> s.is(ModItems.POWER_ARMOR.get())).findFirst().orElse(ItemStack.EMPTY);
     }

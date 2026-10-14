@@ -137,6 +137,15 @@ public final class PowerArmorConfig {
                     "breaks glass and ice (powerarmor:suit_smashes_sprinting). Nothing drops.").translation(key("smash_blocks"))
             .define("smash_blocks", true);
 
+    // ---- The machine mind (design sec. 8): what a powered suit does with nobody inside
+    public static final ModConfigSpec.IntValue NUGGET_STORE_MAX = B.pop().translation(key("mind")).push("mind")
+            .comment("Most iron nuggets a suit's hidden ammo store holds (right-click the suit with nuggets to load it). The",
+                    "chaingun uses it: the machine mind always, a pilot after the nuggets in their own inventory.").translation(key("nugget_store_max"))
+            .defineInRange("nugget_store_max", 640, 0, 100_000);
+    public static final ModConfigSpec.DoubleValue GUARD_RANGE = B
+            .comment("A friendly suit with a chaingun shoots monsters within this many blocks of its owner (or of itself).").translation(key("guard_range"))
+            .defineInRange("guard_range", 16.0, 0, 64);
+
     public static final ModConfigSpec SPEC = B.pop().build();
 
     private static String key(String name) {

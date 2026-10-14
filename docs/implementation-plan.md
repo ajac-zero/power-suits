@@ -121,8 +121,15 @@ Each step: GameTests for the logic, an autopilot scene with numbers in a CSV, th
    walk home speed + arrival, unpowered stays, boarding stops the mind, rogue, visor, the mind drills as its owner,
    the mind's chaingun needs ammo. Autopilot (mech run): `ap_ai_home_*`, `ap_ai_drill_*`, `ap_ai_visor`,
    `run/autopilot_mind.csv`.
-2. Idle job + chaingun follow/defend (wolf-style targeting, line-of-fire check, hidden nugget store loaded by
-   right-clicking the suit with nuggets, shown as text in the menu; punch fallback).
+2. (DONE 2026-10-13) Hidden nugget store (`NUGGETS` synced, right-click with nuggets loads the stack up to
+   `nugget_store_max` 640, menu line "Ammo N", kept in `SuitLoadout.nuggets`, dropped by a wreck; a pilot's chaingun
+   uses their inventory first, then the store). Chaingun job (`SuitGoals`): `DefendOwner` target goal
+   (`SuitTargets.pick`: the owner's attacker, the owner's victim, the suit's attacker, then the nearest monster within
+   `guard_range` 16 of the owner), `ChaingunAttack` (aims with `setAiAim`, holds the trigger while
+   `SuitTargets.lineOfFireClear`, walks for a clear shot, punches when the store is empty), `FollowOwner` (7 / 4 / sprint
+   past 16, no teleport). Tests (81): loading, store survives save/pack/wreck, pilot pays pocket-first, the mind shoots
+   a husk near its owner, holds fire with the owner in the way, follows, punches when empty, target rules. Autopilot
+   (mech run): `ap_ai_menu_ammo`, `ap_ai_follow_*`, `ap_ai_defend_*`, `ap_ai_fists_*`.
 3. EM area guard (fling hostiles up, creepers away).
 4. Chainsaw + drill workers (radius, open hall at home level, drop/lava/liquid checks); autopilot scene with an allay
    holding an ore and a note block + hopper at home, logging items delivered vs dropped and item-entity counts (lag).

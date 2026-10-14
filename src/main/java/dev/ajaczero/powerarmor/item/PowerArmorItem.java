@@ -104,6 +104,9 @@ public class PowerArmorItem extends Item {
             if (energy > 0) {
                 tooltip.add(Component.translatable("item.powerarmor.power_armor.range", formatWalkTime(energy)).withStyle(ChatFormatting.GOLD));
             }
+            if (loadout.nuggets() > 0) {
+                tooltip.add(Component.translatable("item.powerarmor.power_armor.nuggets", loadout.nuggets()).withStyle(ChatFormatting.GRAY));
+            }
             if (!loadout.socket().isEmpty()) {
                 tooltip.add(Component.translatable("item.powerarmor.power_armor.socket", loadout.socket().getHoverName()).withStyle(ChatFormatting.AQUA));
             }

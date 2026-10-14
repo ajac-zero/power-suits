@@ -96,6 +96,11 @@ public class ChaingunItem extends Item implements PowerTool {
         return false; // continuous: holdTick does the work
     }
 
+    /** Server: the barrels are too hot to fire (overheat on): the mind waits instead of clicking. */
+    public static boolean isOverheated(PowerArmorEntity suit) {
+        return state(suit).overheated;
+    }
+
     /** Ticks between shots at this spin. */
     static float interval(float spin) {
         return Mth.lerp(spin, PowerArmorConfig.CHAINGUN_SLOW_INTERVAL.get(), PowerArmorConfig.CHAINGUN_FAST_INTERVAL.get());
@@ -146,7 +151,7 @@ public class ChaingunItem extends Item implements PowerTool {
         }
         s.timer = Math.max(1, Math.round(interval(s.spin)));
         Vec3 muzzle = SocketAim.muzzlePosition(suit, operator);
-        if (!suit.hasEnergyFor(this.energyPerUse()) || !takeBullet(operator)) {
+        if (!suit.hasEnergyFor(this.energyPerUse()) || !takeBullet(suit, operator)) {
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.6F);
             if (s.noAmmoMessage == 0 && suit.hasEnergyFor(this.energyPerUse())) {
                 if (operator instanceof Player pilot) {
@@ -214,9 +219,10 @@ public class ChaingunItem extends Item implements PowerTool {
     }
 
     /** Use up one iron nugget (off hand first, like a bow's arrows). False if there is none. Creative: free. */
-    /** One bullet for this operator: a pilot pays from their inventory. The machine mind has no pockets: no bullets. */
-    public static boolean takeBullet(LivingEntity operator) {
-        return operator instanceof Player player && takeBullet(player);
+    /** One bullet for this operator: a pilot pays from their own inventory first, then from the suit's hidden store
+     *  (decided 2026-10-13: what you loaded is never wasted); the machine mind only has the store. */
+    public static boolean takeBullet(PowerArmorEntity suit, LivingEntity operator) {
+        return operator instanceof Player player && takeBullet(player) || suit.takeStoredNugget();
     }
 
     public static boolean takeBullet(Player player) {
@@ -239,9 +245,10 @@ public class ChaingunItem extends Item implements PowerTool {
         return false;
     }
 
-    /** Both sides: how many bullets (iron nuggets) the player carries, for the HUD. */
+    /** Both sides: how many bullets (iron nuggets) the pilot can fire: their own plus the suit's store (HUD). */
     public static int countBullets(Player player) {
-        return player.getInventory().countItem(Items.IRON_NUGGET);
+        int own = player.getInventory().countItem(Items.IRON_NUGGET);
+        return player.getVehicle() instanceof PowerArmorEntity suit ? own + suit.getStoredNuggets() : own;
     }
 
     /** Keep the motor whine going while the barrels coast down. */
