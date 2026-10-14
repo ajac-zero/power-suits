@@ -143,8 +143,16 @@ Each step: GameTests for the logic, an autopilot scene with numbers in a CSV, th
    `ap_work_drill_*`, `ap_work_saw_*`, `run/autopilot_work.csv`: 230 of 287 rock blocks in 27 s, lava walls and hole
    column intact, two allays (coal, raw iron) delivered 17 + 13 to the player (they used the liked-player memory, not a
    note block), ~210 items lying on the floor (despawn after 5 min), 3 oaks felled in 9 s.
-5. Rogue spawner (wandering-trader style, config chance), rogue targeting, unlimited fuel/ammo, leaves after ~1 day when unwatched, tool-only drop,
-   lightning reboot to friendly + claim on boarding.
+5. (DONE 2026-10-13) Rogue suits: `RogueSpawner` (overworld, a saved day countdown, `rogue_spawn_chance`, one at a
+   time, not on peaceful / with mob spawning off, 48-64 blocks from a random player on dry solid ground with room);
+   rogue mind: no fuel or nugget use, targets the nearest player it sees (the suit if they pilot one), else any mob
+   (`SuitTargets.pickRogue`), chaingun fires at will, EM beam catches players too (`EmProjectorItem.canHold`) and hurls
+   them, fists for what the beam can't hold, roams when idle; can't be boarded; drops only its tool; lightning reboots
+   it friendly (nobody's, no home, 1600 fuel); leaves after `rogue_lifetime` once no player is within 64; name "Rogue
+   Power Armor". Tests (91): runs on nothing + shoots a cow, tool-only drop, lightning reboot + claim, leaves only
+   unwatched (own batch), friendly chaingun shoots rogues. Autopilot: `RogueScene` (`ap_rogue_*`,
+   `run/autopilot_rogue.csv`): spawner placed it 57 blocks out; shoot-out with the player's suit; lightning reboot,
+   claimed; an EM rogue lifts and throws the player 4 blocks up, killed by two friendly suits, drops its projector.
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint

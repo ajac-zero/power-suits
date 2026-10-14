@@ -106,6 +106,12 @@ public class EmProjectorItem extends Item implements PowerTool {
         return box.getXsize() * box.getZsize() * box.getYsize() <= MAX_VOLUME;
     }
 
+    /** What this suit's projector may hold. A pilot or a friendly mind: canGrab. A rogue mind also takes players
+     *  (design sec. 8: it attacks anyone; a player in a suit is safe, suits are too heavy). */
+    public static boolean canHold(PowerArmorEntity suit, Entity e) {
+        return canGrab(e) || suit.isRogue() && e instanceof Player p && p.isAlive() && !p.isSpectator() && !p.isCreative() && !p.isPassenger();
+    }
+
     // ---- PowerTool -------------------------------------------------------------------------------
 
     @Override
@@ -149,7 +155,7 @@ public class EmProjectorItem extends Item implements PowerTool {
             // A pilot grabs whatever they point at; the machine mind only the monster it picked (never an item, a cow or
             // a villager that happens to be in the line).
             java.util.function.Predicate<Entity> grabbable = operator instanceof Player ? EmProjectorItem::canGrab
-                    : e -> e == suit.getTarget() && canGrab(e);
+                    : e -> e == suit.getTarget() && canHold(suit, e);
             Entity found = SocketAim.entityInView(suit, operator, PowerArmorConfig.EM_RANGE.get(), grabbable, 0.6F);
             if (found != null && suit.tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
                 grab(suit, beam, found);
@@ -157,7 +163,7 @@ public class EmProjectorItem extends Item implements PowerTool {
             return;
         }
         Entity target = beam.target;
-        if (!canGrab(target) || target.distanceTo(suit) > PowerArmorConfig.EM_RANGE.get() * KEEP_RANGE_FACTOR
+        if (!canHold(suit, target) || target.distanceTo(suit) > PowerArmorConfig.EM_RANGE.get() * KEEP_RANGE_FACTOR
                 || !suit.tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
             drop(suit, beam); // died, got away, or out of fuel
             return;
@@ -205,7 +211,7 @@ public class EmProjectorItem extends Item implements PowerTool {
         Vec3 view = operator.getViewVector(1F);
         // The guarding mind flings harder than a pilot throws: straight up, the fall has to kill (EM_GUARD_LAUNCH).
         double speed = target instanceof ItemEntity ? ITEM_PUSH
-                : operator instanceof Player ? MOB_PUSH : PowerArmorConfig.EM_GUARD_LAUNCH.get() / 20.0;
+                : operator instanceof Player || suit.isRogue() ? MOB_PUSH : PowerArmorConfig.EM_GUARD_LAUNCH.get() / 20.0;
         target.setNoGravity(beam.targetHadNoGravity);
         target.setDeltaMovement(view.scale(speed).add(0, 0.1, 0));
         target.hurtMarked = true;

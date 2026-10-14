@@ -1860,6 +1860,106 @@ public final class PowerArmorTests {
         });
     }
 
+    // =========================================================================================
+    // Phase 8 step 5: rogue suits
+    // =========================================================================================
+
+    private static PowerArmorEntity rogue(GameTestHelper helper, BlockPos at, boolean chaingun) {
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), at);
+        dev.ajaczero.powerarmor.entity.RogueSpawner.makeRogue(suit, chaingun);
+        return suit;
+    }
+
+    /** No fuel, no nuggets: a rogue runs anyway, and shoots any mob it sees (a cow here). */
+    @GameTest(template = PAD, timeoutTicks = 120)
+    public static void rogueRunsOnNothingAndShootsAnyMob(GameTestHelper helper) {
+        PowerArmorEntity suit = rogue(helper, new BlockPos(4, 2, 1), true);
+        var cow = helper.spawn(EntityType.COW, new Vec3(4.5, 2, 6.5));
+        helper.runAfterDelay(3, () -> helper.assertTrue(suit.isPowered() && suit.isAiDriven(), "a rogue needs no fuel"));
+        helper.succeedWhen(() -> {
+            helper.assertTrue(!cow.isAlive(), "the cow should be shot");
+            helper.assertTrue(suit.getTotalEnergy() == 0 && suit.getStoredNuggets() == 0 && suit.getToolUses() > 0,
+                    "fired without fuel or nuggets");
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 120)
+    public static void defeatedRogueDropsOnlyItsTool(GameTestHelper helper) {
+        PowerArmorEntity suit = rogue(helper, SUIT_POS, false);
+        suit.hurt(helper.getLevel().damageSources().genericKill(), 1000F);
+        helper.runAfterDelay(70, () -> {
+            helper.assertItemEntityPresent(ModItems.EM_PROJECTOR.get());
+            helper.assertItemEntityNotPresent(Items.IRON_INGOT);
+            helper.assertItemEntityNotPresent(ModItems.POWER_ARMOR.get());
+            helper.succeed();
+        });
+    }
+
+    /** Lightning reboots the mind friendly: nobody's, no home, one coal's worth of fuel; the first pilot claims it. */
+    @GameTest(template = PAD, timeoutTicks = 200)
+    public static void lightningRebootsARogueFriendly(GameTestHelper helper) {
+        PowerArmorEntity suit = rogue(helper, SUIT_POS, true);
+        helper.runAfterDelay(3, () -> {
+            helper.assertTrue(suit.isRogue() && suit.isPowered(), "a running rogue");
+            var bolt = EntityType.LIGHTNING_BOLT.create(helper.getLevel());
+            bolt.moveTo(suit.position());
+            suit.thunderHit(helper.getLevel(), bolt);
+            helper.assertTrue(!suit.isRogue() && suit.getOwnerId() == null && suit.getHome() == null, "rebooted friendly, nobody's");
+            helper.assertTrue(suit.isStunned() && !suit.isPowered(), "knocked out first");
+        });
+        helper.runAfterDelay(PowerArmorConfig.LIGHTNING_STUN_TICKS.get() + 40, () -> {
+            helper.assertTrue(suit.isAiDriven(), "back up as a friendly mind on its last fuel");
+            suit.clearFire();
+            Player pilot = boardedPilot(helper, suit);
+            helper.assertTrue(pilot.getVehicle() == suit && pilot.getUUID().equals(suit.getOwnerId()), "the first pilot claims it");
+            helper.succeed();
+        });
+    }
+
+    /** It leaves after its lifetime, but only unwatched. Own batch: other tests' mock players must not be around. */
+    @SuppressWarnings("removal")
+    @GameTest(template = PAD, timeoutTicks = 100, batch = "rogue_lifetime")
+    public static void rogueLeavesAfterItsTimeWhenUnwatched(GameTestHelper helper) {
+        PowerArmorEntity suit = rogue(helper, SUIT_POS, true);
+        suit.setRogueAge(PowerArmorConfig.ROGUE_LIFETIME.get());
+        var watcher = helper.makeMockServerPlayerInLevel();
+        Vec3 near = helper.absoluteVec(new Vec3(1.5, 2, 1.5));
+        watcher.teleportTo(helper.getLevel(), near.x, near.y, near.z, 0F, 0F);
+        helper.runAfterDelay(40, () -> {
+            helper.assertTrue(!suit.isRemoved(), "not while a player watches");
+            dismiss(helper, watcher);
+        });
+        helper.runAfterDelay(80, () -> {
+            helper.assertTrue(suit.isRemoved(), "gone once nobody is near");
+            helper.succeed();
+        });
+    }
+
+    /** A friendly chaingun mind defends against rogues like against monsters. */
+    @GameTest(template = PAD, timeoutTicks = 80)
+    public static void friendlyChaingunShootsRogues(GameTestHelper helper) {
+        PowerArmorEntity friend = chaingunMind(helper, new BlockPos(4, 2, 1), 64);
+        var owner = ownerAt(helper, friend, new Vec3(1.5, 2, 1.5));
+        PowerArmorEntity rogue = rogue(helper, new BlockPos(4, 2, 7), false);
+        helper.runAfterDelay(60, () -> {
+            dismiss(helper, owner);
+            helper.assertTrue(friend.getTarget() == rogue || rogue.getHealth() < rogue.getMaxHealth(), "it should take on the rogue");
+            helper.assertTrue(rogue.getHealth() < rogue.getMaxHealth(), "and hit it, health " + rogue.getHealth());
+            helper.succeed();
+        });
+    }
+
+    /** The /summon line in the README makes a chaingun rogue. */
+    @GameTest(template = PAD)
+    public static void readmeSummonMakesARogue(GameTestHelper helper) throws Exception {
+        CompoundTag tag = net.minecraft.nbt.TagParser.parseTag(
+                "{id:\"powerarmor:power_armor\",Mind:\"ROGUE\",Inventory:{Items:[{Slot:1b,id:\"powerarmor:chaingun\",count:1}]}}");
+        var entity = EntityType.loadEntityRecursive(tag, helper.getLevel(), e -> e);
+        helper.assertTrue(entity instanceof PowerArmorEntity suit && suit.isRogue()
+                && suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(ModItems.CHAINGUN.get()), "a chaingun rogue");
+        helper.succeed();
+    }
+
     private static ItemStack packedSuit(Player player) {
         return player.getInventory().items.stream().filter(s -> s.is(ModItems.POWER_ARMOR.get())).findFirst().orElse(ItemStack.EMPTY);
     }

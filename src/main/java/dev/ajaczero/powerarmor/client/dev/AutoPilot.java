@@ -501,7 +501,8 @@ public final class AutoPilot {
 
     private static BlockPos mineBase = BlockPos.ZERO, treeBase = BlockPos.ZERO;
     /** While set, the pilot keeps looking at this point. */
-    private static Vec3 aimTarget;
+    /** The player looks here every tick (null: the yaw/pitch fields). Package-private: the scene classes aim too. */
+    static Vec3 aimTarget;
     private static java.io.BufferedWriter mineCsv;
 
     /** Server: drill in the socket, survival (creative breaks drop nothing), a cleared work area with a
@@ -1212,8 +1213,12 @@ public final class AutoPilot {
             case 940 -> closeMindLog();
             default -> {}
         }
-        // the drill and chainsaw workers (step 4): their own scene class, then the run ends
-        if (m >= 945 && !WorkScene.step(mc, m - 945)) {
+        // the drill and chainsaw workers (step 4), then the rogue suits (step 5): their own scene classes; then the run ends
+        if (m >= 945 && workRunning && !WorkScene.step(mc, m - 945)) {
+            workRunning = false;
+            rogueStart = m + 1;
+        }
+        if (!workRunning && m >= rogueStart && !RogueScene.step(mc, m - rogueStart)) {
             mc.stop();
         }
         if (m >= 10 && m < 420) {
@@ -1226,6 +1231,8 @@ public final class AutoPilot {
 
     // ---- the machine mind scene -----------------------------------------------------------------------------------
 
+    private static boolean workRunning = true;
+    private static int rogueStart = Integer.MAX_VALUE;
     private static PowerArmorEntity mindSuit;
     // Filled on the server thread, read by the client thread (logMind): a copy-on-write list (an ArrayList threw mid-iteration).
     private static final java.util.List<net.minecraft.world.entity.Mob> mindMobs = new java.util.concurrent.CopyOnWriteArrayList<>();

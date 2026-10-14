@@ -80,9 +80,40 @@ public final class SuitTargets {
         double range = PowerArmorConfig.GUARD_RANGE.get();
         Vec3 centre = owner != null && owner.distanceTo(suit) < 32 ? owner.position() : suit.position();
         return suit.level().getEntitiesOfClass(LivingEntity.class, new AABB(centre, centre).inflate(range, 8, range),
-                        e -> e instanceof Enemy && canAttack(suit, e, false) && e.distanceToSqr(centre) < range * range
+                        e -> (e instanceof Enemy || e instanceof PowerArmorEntity other && other.isRogue()) && canAttack(suit, e, false)
+                                && e.distanceToSqr(centre) < range * range
                                 && suit.getSensing().hasLineOfSight(e))
                 .stream().min(Comparator.comparingDouble(e -> e.distanceToSqr(suit))).orElse(null);
+    }
+
+    /** How far a rogue sees its victims, blocks. */
+    public static final double ROGUE_SIGHT = 24;
+
+    /**
+     * A rogue's next victim (design sec. 8: it attacks any mob or player on sight): the nearest player it can see (a
+     * player in a suit: the suit), else the nearest mob it can see. Never other rogues; creative and spectating players
+     * can't be seen as enemies; mobs under water are left alone (bullets fizzle there).
+     */
+    @Nullable
+    public static LivingEntity pickRogue(PowerArmorEntity suit) {
+        AABB box = suit.getBoundingBox().inflate(ROGUE_SIGHT, 8, ROGUE_SIGHT);
+        LivingEntity best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Player player : suit.level().getEntitiesOfClass(Player.class, box, p -> p.isAlive() && p.canBeSeenAsEnemy())) {
+            LivingEntity victim = player.getVehicle() instanceof PowerArmorEntity ridden ? ridden : player;
+            double d = victim.distanceToSqr(suit);
+            if (d < bestDist && d < ROGUE_SIGHT * ROGUE_SIGHT && suit.getSensing().hasLineOfSight(victim)) {
+                best = victim;
+                bestDist = d;
+            }
+        }
+        if (best != null) {
+            return best;
+        }
+        return suit.level().getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box, e -> e != suit && e.isAlive()
+                        && !(e instanceof PowerArmorEntity other && (other.isRogue() || other.isVehicle())) && !e.isUnderWater()
+                        && e.distanceToSqr(suit) < ROGUE_SIGHT * ROGUE_SIGHT && suit.getSensing().hasLineOfSight(e))
+                .stream().min(Comparator.comparingDouble(e -> e.distanceToSqr(suit))).map(e -> (LivingEntity) e).orElse(null);
     }
 
     /** Was this target provoked (so non-monsters stay valid while the fight lasts)? */

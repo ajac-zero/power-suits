@@ -206,6 +206,9 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   the air (just spawned): wait for `onGround()`.
 - **Vanilla's pathfinder wants floor(height + 1) free blocks above each step** (and floor(width + 1) across): the suit
   at 3.0 high couldn't path through its own 3-high drill hall; its hitbox is 2.95 now.
+- **A scripted camera entity freezes the player on the server**: the client only sends the player's position while the
+  player is the camera entity (`LocalPlayer.isControlledCamera`). A scene that moves the player (an EM rogue lifting
+  them) must use the player's own (third-person) camera, or the server never sees them move.
 - **Autopilot worlds are peaceful** (`AutoPilot` creates them so): monsters spawned by a scene vanish the same tick. Set
   the difficulty in the scene (the mind scene sets NORMAL before its zombies).
 - **`AABB.clip` misses a segment that starts inside the box**: line-of-fire checks also test `box.contains(start)`.

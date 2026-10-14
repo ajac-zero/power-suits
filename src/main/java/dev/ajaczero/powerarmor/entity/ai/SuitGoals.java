@@ -26,6 +26,7 @@ import net.minecraft.world.entity.player.Player;
  * chaingun = follow the owner and defend them (a target goal picks who, an attack goal aims, fires and moves);
  * EM projector = guard the area round home: grab a monster, lift it overhead and fling it up (creepers: away);
  * drill = clear an open hall round home; chainsaw = fell the natural trees round home (SuitWork says where).
+ * A rogue mind has no owner and no home: it wanders and attacks anything it sees with its chaingun or EM projector.
  * A mob has two goal lists: {@code targetSelector} decides who to fight (setTarget), {@code goalSelector} what to do.
  */
 public final class SuitGoals {
@@ -34,6 +35,9 @@ public final class SuitGoals {
 
     public static void register(PowerArmorEntity suit, GoalSelector goals, GoalSelector targets) {
         targets.addGoal(1, new DefendOwner(suit));
+        targets.addGoal(1, new RogueTarget(suit));
+        goals.addGoal(2, new RogueEmAttack(suit));
+        goals.addGoal(7, new RogueWander(suit));
         goals.addGoal(2, new ChaingunAttack(suit));
         goals.addGoal(2, new EmGuard(suit));
         goals.addGoal(3, new DrillWorker(suit));
@@ -204,7 +208,7 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            return this.suit.isAiDriven() && this.suit.followsOwner() && this.suit.getTarget() != null && this.suit.getTarget().isAlive();
+            return this.suit.isAiDriven() && this.suit.hasChaingun() && this.suit.getTarget() != null && this.suit.getTarget().isAlive();
         }
 
         @Override
@@ -236,7 +240,8 @@ public final class SuitGoals {
             }
             if (this.suit.hasAmmo()) {
                 boolean inRange = this.suit.distanceTo(target) < FIRE_RANGE;
-                boolean clear = sees && inRange && SuitTargets.lineOfFireClear(this.suit, target, aim);
+                // A rogue fires at will; a friendly mind never through someone it must not hurt.
+                boolean clear = sees && inRange && (this.suit.isRogue() || SuitTargets.lineOfFireClear(this.suit, target, aim));
                 this.suit.setAiTrigger(clear && !ChaingunItem.isOverheated(this.suit));
                 if (clear) {
                     this.suit.getNavigation().stop(); // plant the feet and fire
@@ -247,9 +252,7 @@ public final class SuitGoals {
             }
             // No bullets: the fists (1 + the melee bonus, like a pilot's bare hand).
             this.suit.setAiTrigger(false);
-            double gap = Math.sqrt(this.suit.getBoundingBox().distanceToSqr(target.getBoundingBox().getCenter()))
-                    - Math.max(target.getBbWidth(), target.getBbHeight()) / 2;
-            if (gap > PUNCH_REACH || !sees) {
+            if (!inPunchReach(this.suit, target) || !sees) {
                 this.approach(target);
             } else {
                 this.suit.getNavigation().stop();
@@ -271,6 +274,197 @@ public final class SuitGoals {
         public void stop() {
             this.suit.setAiTrigger(false);
             this.suit.setAiAim(null);
+            this.suit.getNavigation().stop();
+        }
+    }
+
+    /** Close enough for the suit's fist: from its box to the target's box (roughly), blocks. */
+    static boolean inPunchReach(PowerArmorEntity suit, LivingEntity target) {
+        double gap = Math.sqrt(suit.getBoundingBox().distanceToSqr(target.getBoundingBox().getCenter()))
+                - Math.max(target.getBbWidth(), target.getBbHeight()) / 2;
+        return gap <= ChaingunAttack.PUNCH_REACH;
+    }
+
+    /** Target selector, rogue mind: the nearest player it sees, else the nearest mob (SuitTargets.pickRogue); re-picks
+     *  every second, so a player who comes into view takes over from a cow. */
+    static class RogueTarget extends TargetGoal {
+        private final PowerArmorEntity suit;
+        private int recheck;
+
+        RogueTarget(PowerArmorEntity suit) {
+            super(suit, false);
+            this.suit = suit;
+        }
+
+        @Override
+        public boolean canUse() {
+            if (!this.suit.isAiDriven() || !this.suit.isRogue()) {
+                return false;
+            }
+            this.targetMob = SuitTargets.pickRogue(this.suit);
+            return this.targetMob != null;
+        }
+
+        @Override
+        public void start() {
+            this.suit.setTarget(this.targetMob);
+            this.recheck = 20;
+            super.start();
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            LivingEntity target = this.suit.getTarget();
+            return this.suit.isAiDriven() && this.suit.isRogue() && target != null && target.isAlive() && target.canBeSeenAsEnemy()
+                    && target.distanceToSqr(this.suit) < 32 * 32;
+        }
+
+        @Override
+        public void tick() {
+            if (--this.recheck <= 0) {
+                this.recheck = 20;
+                LivingEntity better = SuitTargets.pickRogue(this.suit);
+                if (better != null && better != this.suit.getTarget() && !(this.suit.getTarget() instanceof net.minecraft.world.entity.player.Player)) {
+                    this.targetMob = better;
+                    this.suit.setTarget(better);
+                }
+            }
+        }
+
+        @Override
+        public void stop() {
+            this.suit.setTarget(null);
+            super.stop();
+        }
+    }
+
+    /**
+     * Rogue mind with an EM projector: catch the target in the beam (a player too: the rogue's beam takes players), lift
+     * it and hurl it away with a pilot's strength (32 blocks/s, a little upward): the landing and anything it slams into
+     * hurt. What the beam can't hold (a piloted suit, a big mob) gets walked up to and punched.
+     */
+    static class RogueEmAttack extends Goal {
+        private static final int LIFT_TICKS = 8;
+        private static final double REACH = 13;
+        private final PowerArmorEntity suit;
+        private int lift, repath, punchCooldown;
+
+        RogueEmAttack(PowerArmorEntity suit) {
+            this.suit = suit;
+            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            return this.suit.isAiDriven() && this.suit.isRogue() && this.suit.hasEmProjector() && this.suit.getTarget() != null
+                    && this.suit.getTarget().isAlive();
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return this.canUse();
+        }
+
+        @Override
+        public boolean requiresUpdateEveryTick() {
+            return true;
+        }
+
+        @Override
+        public void start() {
+            this.lift = 0;
+            this.repath = 0;
+        }
+
+        @Override
+        public void tick() {
+            LivingEntity target = this.suit.getTarget();
+            if (target == null) {
+                return;
+            }
+            if (this.punchCooldown > 0) {
+                this.punchCooldown--;
+            }
+            boolean sees = this.suit.getSensing().hasLineOfSight(target);
+            if (this.suit.getBeamTarget() == target) {
+                // Caught: swing it up and away (from the suit toward where it was), then let go: the projector throws it.
+                this.suit.getNavigation().stop();
+                Vec3 away = target.position().subtract(this.suit.position()).multiply(1, 0, 1);
+                away = away.lengthSqr() < 1.0E-4 ? this.suit.getLookAngle().multiply(1, 0, 1) : away;
+                this.suit.setAiAim(this.suit.getEyePosition().add(away.normalize().scale(10)).add(0, 4, 0));
+                this.suit.setAiTrigger(++this.lift < LIFT_TICKS);
+                return;
+            }
+            this.lift = 0;
+            if (dev.ajaczero.powerarmor.item.EmProjectorItem.canHold(this.suit, target)) {
+                // Only from the ground (or water): re-catching a thrown one mid-flight would juggle it and spare it the landing.
+                boolean landed = target.onGround() || target.isInLiquid() || target instanceof net.minecraft.world.entity.FlyingMob;
+                boolean inReach = sees && landed && this.suit.distanceTo(target) < REACH;
+                this.suit.setAiAim(target.getBoundingBox().getCenter());
+                this.suit.setAiTrigger(inReach && this.suit.isToolReady());
+                if (inReach) {
+                    this.suit.getNavigation().stop();
+                } else {
+                    this.approach(target);
+                }
+                return;
+            }
+            // Too heavy for the beam: the fists.
+            this.suit.setAiTrigger(false);
+            this.suit.setAiAim(target.getBoundingBox().getCenter());
+            if (!sees || !inPunchReach(this.suit, target)) {
+                this.approach(target);
+            } else {
+                this.suit.getNavigation().stop();
+                if (this.punchCooldown == 0) {
+                    this.suit.punch(target);
+                    this.punchCooldown = 20;
+                }
+            }
+        }
+
+        private void approach(LivingEntity target) {
+            if (--this.repath <= 0) {
+                this.repath = 10;
+                this.suit.getNavigation().moveTo(target, 1.0);
+            }
+        }
+
+        @Override
+        public void stop() {
+            this.suit.setAiTrigger(false);
+            this.suit.setAiAim(null);
+            this.suit.getNavigation().stop();
+        }
+    }
+
+    /** Rogue mind with nothing to attack: roams, a walk to a random spot up to 12 blocks away every few seconds. */
+    static class RogueWander extends Goal {
+        private final PowerArmorEntity suit;
+
+        RogueWander(PowerArmorEntity suit) {
+            this.suit = suit;
+            this.setFlags(EnumSet.of(Flag.MOVE));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (!this.suit.isAiDriven() || !this.suit.isRogue() || this.suit.getTarget() != null || this.suit.getRandom().nextInt(60) != 0) {
+                return false;
+            }
+            var random = this.suit.getRandom();
+            int x = this.suit.getBlockX() + random.nextInt(25) - 12, z = this.suit.getBlockZ() + random.nextInt(25) - 12;
+            int y = this.suit.level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            return Math.abs(y - this.suit.getBlockY()) < 6 && this.suit.getNavigation().moveTo(x + 0.5, y, z + 0.5, 1.0);
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return this.suit.isAiDriven() && this.suit.isRogue() && this.suit.getTarget() == null && !this.suit.getNavigation().isDone();
+        }
+
+        @Override
+        public void stop() {
             this.suit.getNavigation().stop();
         }
     }

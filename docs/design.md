@@ -163,7 +163,7 @@ the usual trick (invisible light blocks following the suit) was judged not worth
 Default costs per coal (1600): 80 s walking, ~100 chaingun bullets, 80 s of EM holding or 20 throws, ~9 drill faces,
 ~20 felled oaks.
 
-## 8. Suit AI (decided 2026-10-13; built: step 1 mind, owner, home, visor, tool operator, idle job; step 2 nugget store + chaingun job; step 3 EM guard job; step 4 drill + chainsaw workers)
+## 8. Suit AI (decided 2026-10-13; built: step 1 mind, owner, home, visor, tool operator, idle job; step 2 nugget store + chaingun job; step 3 EM guard job; step 4 drill + chainsaw workers; step 5 rogue suits)
 An empty suit is a mob, like a horse: a machine mind drives it whenever nobody else does.
 
 - **Who**: every *powered* suit without a pilot is AI-driven. To park a suit, take its fuel out (or run it dry):
@@ -191,7 +191,9 @@ An empty suit is a mob, like a horse: a machine mind drives it whenever nobody e
   nuggets in hand loads the whole stack into it instead of climbing in (like feeding a horse). The count is saved with
   the suit, kept when packed up and dropped as nuggets when the suit is destroyed; the menu shows it as text only.
   A pilot's chaingun also uses it, after the nuggets in their own inventory (decided 2026-10-13).
-- **Rogue suits** (extremely rare, natural only): spawned like the wandering trader (one roll per in-game day, tiny
+- **Rogue suits** (built 2026-10-13; `RogueSpawner`, goals `RogueTarget`, `ChaingunAttack`, `RogueEmAttack`, `RogueWander`;
+  chance `rogue_spawn_chance` 0.02/day, `rogue_lifetime` 24000; the EM rogue's beam takes players too and throws with a
+  pilot's strength, a piloted suit gets punched; friendly chaingun minds treat rogues like monsters) (extremely rare, natural only): spawned like the wandering trader (one roll per in-game day, tiny
   chance, far from a random player in the overworld, one at a time; chance in config). **They leave after a while**
   (decided 2026-10-13), like the trader: after about an in-game day (config) a rogue vanishes once no player is near
   enough to watch it go. Red visor, a chaingun or an EM

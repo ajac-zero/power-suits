@@ -147,5 +147,11 @@
   "powerarmor.configuration.em_guard_launch": "EM guard launch speed",
   "powerarmor.configuration.em_guard_launch.tooltip": "How hard the guarding mind flings a monster, blocks per second (straight up: 44 = ~24 blocks high, enough for the fall to kill a zombie; a pilot's throws are 32). Creepers are thrown away from home instead.",
   "powerarmor.configuration.work_radius": "Work radius",
-  "powerarmor.configuration.work_radius.tooltip": "How far from home a friendly suit's drill (an open hall at home level, 3 blocks high) and chainsaw (natural trees) work, in blocks. Keep it under 32: allays only see dropped items within 32 blocks."
+  "powerarmor.configuration.work_radius.tooltip": "How far from home a friendly suit's drill (an open hall at home level, 3 blocks high) and chainsaw (natural trees) work, in blocks. Keep it under 32: allays only see dropped items within 32 blocks.",
+  "powerarmor.configuration.rogue_spawn_chance": "Rogue suit chance per day",
+  "powerarmor.configuration.rogue_spawn_chance.tooltip": "Rogue suits: once per in-game day (like the wandering trader) this is the chance that one turns up 48-64 blocks from a random player in the overworld (only one at a time, not on peaceful). 0.02 = about once in 50 days. 0 = never.",
+  "powerarmor.configuration.rogue_lifetime": "Rogue suit lifetime",
+  "powerarmor.configuration.rogue_lifetime.tooltip": "A rogue suit leaves after this many ticks (24000 = an in-game day), as soon as no player is within 64 blocks to watch it go.",
+  "entity.powerarmor.power_armor.rogue": "Rogue Power Armor",
+  "message.powerarmor.rogue_rebooted": "The rogue suit's mind rebooted: it's friendly now. Climb in to claim it."
 }

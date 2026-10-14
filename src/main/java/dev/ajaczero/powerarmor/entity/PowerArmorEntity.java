@@ -362,6 +362,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.ownerId = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
         this.home = net.minecraft.nbt.NbtUtils.readBlockPos(tag, "Home").orElse(null);
         this.setStoredNuggets(tag.getInt("Nuggets"));
+        this.rogueAge = tag.getInt("RogueAge");
         this.syncSlots();
         this.syncBurn();
         this.entityData.set(POWERED, this.hasEnergy());
@@ -376,6 +377,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         tag.putInt("BurnTotal", this.burnTotal);
         tag.putString("Mind", this.getMind().name());
         tag.putInt("Nuggets", this.getStoredNuggets());
+        tag.putInt("RogueAge", this.rogueAge);
         if (this.ownerId != null) {
             tag.putUUID("Owner", this.ownerId);
         }
@@ -420,6 +422,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return owner != null && owner.isAlive() && !owner.isSpectator() ? owner : null;
     }
 
+    /** Both sides: a chaingun in the socket (the friendly job below, or a rogue's weapon). */
+    public boolean hasChaingun() {
+        return this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.ChaingunItem;
+    }
+
+    /** Both sides: an EM projector in the socket (the guard job, or a rogue's weapon). */
+    public boolean hasEmProjector() {
+        return this.getSocketStack().getItem() instanceof EmProjectorItem;
+    }
+
     /** Both sides: the chaingun job (design sec. 8): a friendly mind with a chaingun follows its owner and defends them. */
     public boolean followsOwner() {
         return !this.isRogue() && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.ChaingunItem;
@@ -449,7 +461,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** Server: bullets for the mind's chaingun (its hidden store). */
     public boolean hasAmmo() {
-        return this.getStoredNuggets() > 0;
+        return this.isRogue() || this.getStoredNuggets() > 0;
     }
 
     /** Server: the mind's bare-handed blow (no bullets left): a pilot's punch, 1 + the melee bonus, with a shove. */
@@ -609,7 +621,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (this.stunTicks > 0 && --this.stunTicks == 0) {
             this.entityData.set(STUNNED, false); // back on: setPowered below plays the startup
         }
-        if (this.stunTicks == 0 && (pilot != null || this.hasEnergy())) { // a knocked-out engine burns nothing
+        if (this.stunTicks == 0 && !this.isRogue() && (pilot != null || this.hasEnergy())) { // a knocked-out engine burns nothing
             if (this.burnLeft <= 0) {
                 this.igniteNextItem();
             }
@@ -675,7 +687,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** Energy available right now: the burning item, or an item waiting in the slot. */
     private boolean hasEnergy() {
-        return this.burnLeft > 0 || SuitFuel.isFuel(this.inventory.getItem(FUEL_SLOT));
+        // A rogue runs on nothing (design sec. 8: unlimited fuel and ammo, it never sits slumped waiting to be looted).
+        return this.isRogue() || this.burnLeft > 0 || SuitFuel.isFuel(this.inventory.getItem(FUEL_SLOT));
     }
 
     private void setPowered(boolean powered) {
@@ -875,12 +888,18 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** Server: is there this much energy on board (burning item + fuel slot)? */
     public boolean hasEnergyFor(int amount) {
+        if (this.isRogue()) {
+            return true;
+        }
         ItemStack fuel = this.inventory.getItem(FUEL_SLOT);
         return this.burnLeft + (float) fuel.getCount() * SuitFuel.energyOf(fuel) >= amount;
     }
 
     /** Server: take energy, lighting more fuel items if the burning one hasn't got enough left. */
     private void consumeEnergy(int amount) {
+        if (this.isRogue()) {
+            return;
+        }
         while (this.burnLeft < amount && SuitFuel.isFuel(this.inventory.getItem(FUEL_SLOT))) {
             this.igniteNextItem();
         }
@@ -1039,6 +1058,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** Server: take one nugget from the store, if there is one. */
     public boolean takeStoredNugget() {
+        if (this.isRogue()) {
+            return true; // unlimited ammo
+        }
         int n = this.getStoredNuggets();
         if (n <= 0) {
             return false;
@@ -1479,6 +1501,18 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     @Override
     public void thunderHit(ServerLevel level, net.minecraft.world.entity.LightningBolt lightning) {
         boolean wasPowered = this.isPowered();
+        if (this.isRogue() && this.isAlive()) {
+            // The rogue mind reboots friendly (design sec. 8): nobody's (the first pilot claims it), no home, and only the
+            // fuel left in its firebox (one coal's worth) to restart with after the knock-out below.
+            this.setMind(SuitMind.FRIENDLY);
+            this.ownerId = null;
+            this.home = null;
+            this.setTarget(null);
+            this.setBurn(1600, 1600);
+            for (Player near : level.getEntitiesOfClass(Player.class, this.getBoundingBox().inflate(32))) {
+                near.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.rogue_rebooted"), true);
+            }
+        }
         // Knock it out first, so the strike's damage below finds it already off: no flinch over the convulsion.
         int ticks = PowerArmorConfig.LIGHTNING_STUN_TICKS.get();
         if (this.isAlive() && ticks > 0 && this.hasEnergy()) {
@@ -1494,6 +1528,42 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             // out, the fire the bolt usually leaves at the suit's feet will catch it.
             this.hurt(this.damageSources().lightningBolt(), lightning.getDamage());
         }
+    }
+
+    // ---- Rogues: they leave after a while (design sec. 8), like the wandering trader ---------------------------
+
+    /** Server: ticks this rogue has been around (saved). */
+    private int rogueAge;
+
+    /** Server, every tick: a rogue past its lifetime vanishes once no player is near enough to watch it go. */
+    private void tickRogueLifetime() {
+        if (!this.isRogue()) {
+            this.rogueAge = 0;
+            return;
+        }
+        this.rogueAge++;
+        if (this.mayRogueLeave()) {
+            if (this.level() instanceof ServerLevel level) {
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, this.getX(), this.getY() + 1.5, this.getZ(), 20, 0.5, 1, 0.5, 0.02);
+            }
+            this.discard();
+        }
+    }
+
+    /** Server: old enough, and no player within 64 blocks (checked once a second). */
+    public boolean mayRogueLeave() {
+        return this.isRogue() && this.rogueAge >= PowerArmorConfig.ROGUE_LIFETIME.get() && this.tickCount % 20 == 0
+                && this.level().getNearestPlayer(this, 64) == null;
+    }
+
+    public void setRogueAge(int ticks) {
+        this.rogueAge = ticks;
+    }
+
+    /** Death messages and the like say "Rogue Power Armor" for a rogue (synced mind: right on both sides). */
+    @Override
+    protected net.minecraft.network.chat.Component getTypeName() {
+        return this.isRogue() ? net.minecraft.network.chat.Component.translatable("entity.powerarmor.power_armor.rogue") : super.getTypeName();
     }
 
     /** Both sides: knocked out by lightning (synced). */
@@ -1524,6 +1594,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     @Override
     protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
         super.dropCustomDeathLoot(level, source, recentlyHit);
+        if (this.isRogue()) {
+            // Design sec. 8: a defeated rogue gives up its tool only, not a suit's worth of scrap (that's the lightning
+            // reboot's reward: the whole suit).
+            this.spawnAtLocation(this.inventory.getItem(SOCKET_SLOT).copy());
+            this.inventory.clearContent();
+            return;
+        }
         this.spawnAtLocation(new ItemStack(Items.IRON_INGOT, 4 + this.random.nextInt(5)));
         for (ItemStack stack : this.inventory.removeAllItems()) {
             this.spawnAtLocation(stack); // the fuel and the socket tool survive the wreck
@@ -1575,6 +1652,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (!this.level().isClientSide() && this.isAlive()) {
             this.tickFuel();
             this.tickTool();
+            this.tickRogueLifetime();
             this.putOutFire();
             if (this.getControllingPassenger() instanceof Player pilot) {
                 dev.ajaczero.powerarmor.PilotHands.refreshBonuses(pilot);
