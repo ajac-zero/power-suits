@@ -823,12 +823,12 @@ public final class AutoPilot {
         });
     }
 
-    private static void hold(KeyMapping key, boolean down) {
+    static void hold(KeyMapping key, boolean down) {
         held.put(key, down);
         key.setDown(down);
     }
 
-    private static void releaseAll() {
+    static void releaseAll() {
         held.replaceAll((k, v) -> false);
         held.forEach(KeyMapping::setDown);
         KeyMapping.releaseAll();

@@ -392,7 +392,8 @@ public final class SuitGoals {
                 Vec3 away = target.position().subtract(this.suit.position()).multiply(1, 0, 1);
                 away = away.lengthSqr() < 1.0E-4 ? this.suit.getLookAngle().multiply(1, 0, 1) : away;
                 this.suit.setAiAim(this.suit.getEyePosition().add(away.normalize().scale(10)).add(0, 4, 0));
-                this.suit.setAiTrigger(++this.lift < LIFT_TICKS);
+                // Something heavy (a suit, a boss) can't be lifted: pin it down for a couple of seconds before the shove.
+                this.suit.setAiTrigger(++this.lift < (dev.ajaczero.powerarmor.item.EmProjectorItem.isHeavy(target) ? 40 : LIFT_TICKS));
                 return;
             }
             this.lift = 0;
@@ -569,6 +570,7 @@ public final class SuitGoals {
                             e -> e instanceof net.minecraft.world.entity.monster.Enemy && e.distanceToSqr(centre) < radius * radius
                                     && (e.onGround() || e.isInLiquid() || e instanceof net.minecraft.world.entity.FlyingMob)
                                     && e.distanceTo(this.suit) < reach - 1 && dev.ajaczero.powerarmor.item.EmProjectorItem.canGrab(e)
+                                    && !dev.ajaczero.powerarmor.item.EmProjectorItem.isHeavy(e) // can't be lifted: no fling
                                     && SuitTargets.canAttack(this.suit, e, false) && this.suit.getSensing().hasLineOfSight(e))
                     .stream().min(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(centre))).orElse(null);
         }

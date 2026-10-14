@@ -153,6 +153,10 @@ Each step: GameTests for the logic, an autopilot scene with numbers in a CSV, th
    unwatched (own batch), friendly chaingun shoots rogues. Autopilot: `RogueScene` (`ap_rogue_*`,
    `run/autopilot_rogue.csv`): spawner placed it 57 blocks out; shoot-out with the player's suit; lightning reboot,
    claimed; an EM rogue lifts and throws the player 4 blocks up, killed by two friendly suits, drops its projector.
+   EM correction (2026-10-13, user): the EM grabs players for everyone (PvP setting for pilots); bosses, suits and very
+   big mobs are heavy (pinned, not lifted); then the size rule became the entity tag `powerarmor:em_heavy` (bosses,
+   iron golem, ravager, warden). Autopilot `ap_rogue_heavy_*`: the player's suit walking at an EM rogue
+   crawled at 1.75 blocks/s while held (5 free); tests `emGrabRules`, `heavyThingsFightTheField` (93).
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint

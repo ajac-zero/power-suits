@@ -25,19 +25,23 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.Tags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.EntityType;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Second power tool: an electromagnetic field projector (a redstone electromagnet: copper-wound prongs, a redstone
- * lens), a gravity gun for items and mobs (no blocks).
- *  - Hold use (right click) on a dropped item or a mob: the beam pulls it in front of the suit and holds it there.
- *    Items that arrive go straight into the pilot's inventory.
+ * lens), a gravity gun for items, mobs and players (no blocks).
+ *  - Hold use (right click) on a dropped item, a mob or a player: the beam pulls it in front of the suit and holds it
+ *    there. Items that arrive go straight into the pilot's inventory.
  *  - Release: whatever is held is launched along the view. A quick tap shoves a target away.
- *  - Thrown mobs that hit a wall take damage.
- * Never grabs players, bosses, other suits, no-AI mobs, anything riding or being ridden, or very big mobs.
+ *  - Thrown mobs and players that hit a wall take damage.
+ *  - Heavy things fight the field (decided 2026-10-13): other power armor suits and the entity tag powerarmor:em_heavy
+ *    (bosses, iron golems, ravagers, wardens; datapacks can add more) aren't lifted. The beam holds them in place (they slow to a crawl) and drags them a little; letting go only
+ *    shoves them.
+ * Players (and a mount or suit with a player on it) only where the server allows PvP; a rogue mind ignores that. Never
+ * spectators, creative players or no-AI mobs (map statues); a rider is caught by their mount.
  * Like all tools it only works in a powered suit's socket.
  */
 public class EmProjectorItem extends Item implements PowerTool {
@@ -48,11 +52,16 @@ public class EmProjectorItem extends Item implements PowerTool {
     private static final double HOLD_DISTANCE = 3.5;
     /** Launch speeds, blocks per tick (x20 = blocks per second). */
     public static final double MOB_PUSH = 1.6, ITEM_PUSH = 1.2;
-    /** Mobs bigger than this (width x width x height, blocks^3) are too heavy: an iron golem (5.3) is fine, a ravager (8.4) isn't. */
-    private static final double MAX_VOLUME = 6.0;
+    /** "powerarmor:em_heavy" (data/powerarmor/tags/entity_type/em_heavy.json): too heavy to lift. A tag, not a size
+     *  rule: hitbox size was a poor guess at weight (a warden is thinner than an iron golem), and a tag lets datapacks
+     *  and other mods add their own heavyweights. */
+    public static final TagKey<EntityType<?>> HEAVY = TagKey.create(Registries.ENTITY_TYPE,
+            ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "em_heavy"));
     /** Wall impacts faster than this (blocks per tick) hurt: damage = (speed - this) * config slam damage. */
     private static final double SLAM_SPEED = 0.5;
     private static final int COOLDOWN_TICKS = 8;
+    /** Heavy things are only shoved: this fraction of a throw. */
+    private static final double HEAVY_SHOVE = 0.25;
     /** "powerarmor:em_slam" (data/powerarmor/damage_type/em_slam.json): "slammed into a wall". */
     public static final ResourceKey<DamageType> EM_SLAM = ResourceKey.create(Registries.DAMAGE_TYPE,
             ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "em_slam"));
@@ -90,26 +99,35 @@ public class EmProjectorItem extends Item implements PowerTool {
         }
     }
 
-    /** Items and mobs only, nothing too precious or too heavy. */
+    /** What the field can catch at all: dropped items, players and mobs. A rider is caught by their mount (it's attached:
+     *  grab the horse, or the suit, not the person on it). */
     public static boolean canGrab(Entity e) {
-        if (!e.isAlive() || e.isVehicle() || e.isPassenger()) {
+        if (!e.isAlive() || e.isPassenger()) {
             return false;
         }
         if (e instanceof ItemEntity) {
             return true;
         }
-        // No-AI mobs are statues / shopkeepers placed by map makers (and Minecraft doesn't move them by velocity anyway).
-        if (!(e instanceof Mob mob) || mob.isNoAi() || e instanceof PowerArmorEntity || e.getType().is(Tags.EntityTypes.BOSSES)) {
-            return false;
+        if (e instanceof Player player) {
+            return !player.isSpectator() && !player.isCreative();
         }
-        AABB box = e.getBoundingBox();
-        return box.getXsize() * box.getZsize() * box.getYsize() <= MAX_VOLUME;
+        // No-AI mobs are statues / shopkeepers placed by map makers (and Minecraft doesn't move them by velocity anyway).
+        return e instanceof Mob mob && !mob.isNoAi();
     }
 
-    /** What this suit's projector may hold. A pilot or a friendly mind: canGrab. A rogue mind also takes players
-     *  (design sec. 8: it attacks anyone; a player in a suit is safe, suits are too heavy). */
+    /** Too heavy to lift: other power armor suits (always) and anything in the em_heavy tag. They fight the field. */
+    public static boolean isHeavy(Entity e) {
+        return e instanceof PowerArmorEntity || e.getType().is(HEAVY);
+    }
+
+    /** What this suit's projector may hold: anything it can catch, but players (or a mount or suit carrying one) only
+     *  where the server allows PvP. A rogue mind doesn't ask. */
     public static boolean canHold(PowerArmorEntity suit, Entity e) {
-        return canGrab(e) || suit.isRogue() && e instanceof Player p && p.isAlive() && !p.isSpectator() && !p.isCreative() && !p.isPassenger();
+        if (!canGrab(e)) {
+            return false;
+        }
+        boolean player = e instanceof Player || e.hasPassenger(p -> p instanceof Player);
+        return !player || suit.isRogue() || suit.level().getServer() != null && suit.level().getServer().isPvpAllowed();
     }
 
     // ---- PowerTool -------------------------------------------------------------------------------
@@ -154,7 +172,7 @@ public class EmProjectorItem extends Item implements PowerTool {
             }
             // A pilot grabs whatever they point at; the machine mind only the monster it picked (never an item, a cow or
             // a villager that happens to be in the line).
-            java.util.function.Predicate<Entity> grabbable = operator instanceof Player ? EmProjectorItem::canGrab
+            java.util.function.Predicate<Entity> grabbable = operator instanceof Player ? e -> canHold(suit, e)
                     : e -> e == suit.getTarget() && canHold(suit, e);
             Entity found = SocketAim.entityInView(suit, operator, PowerArmorConfig.EM_RANGE.get(), grabbable, 0.6F);
             if (found != null && suit.tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
@@ -182,6 +200,22 @@ public class EmProjectorItem extends Item implements PowerTool {
                 return;
             }
             item.setNoGravity(true); // inventory full: keep it floating
+        }
+        if (isHeavy(target)) {
+            // Fights the field: gravity still holds it down, its own motion is damped to a crawl, and the beam drags it
+            // toward the hold point only slowly (at most 1.2 blocks/s).
+            Vec3 v = target.getDeltaMovement();
+            Vec3 drag = toHold.multiply(1, 0, 1);
+            drag = drag.length() > 0.06 ? drag.normalize().scale(0.06) : drag;
+            target.setDeltaMovement(v.x * 0.2 + drag.x, v.y, v.z * 0.2 + drag.z);
+            target.hurtMarked = true;
+            if (target instanceof PowerArmorEntity held) {
+                held.holdInField(); // a piloted suit is moved by its pilot's client: tell it to crawl
+            }
+            if (beam.heldTicks % 20 == 0) {
+                suit.playSound(SoundEvents.BEACON_AMBIENT, 0.8F, 1.2F); // the field straining
+            }
+            return;
         }
         // Steer toward the hold point: fast when far, settling gently (no overshoot) when close.
         Vec3 pull = toHold.scale(0.3);
@@ -212,6 +246,9 @@ public class EmProjectorItem extends Item implements PowerTool {
         // The guarding mind flings harder than a pilot throws: straight up, the fall has to kill (EM_GUARD_LAUNCH).
         double speed = target instanceof ItemEntity ? ITEM_PUSH
                 : operator instanceof Player || suit.isRogue() ? MOB_PUSH : PowerArmorConfig.EM_GUARD_LAUNCH.get() / 20.0;
+        if (isHeavy(target)) {
+            speed *= HEAVY_SHOVE; // too heavy to throw: a shove
+        }
         target.setNoGravity(beam.targetHadNoGravity);
         target.setDeltaMovement(view.scale(speed).add(0, 0.1, 0));
         target.hurtMarked = true;
@@ -254,7 +291,9 @@ public class EmProjectorItem extends Item implements PowerTool {
         beam.target = target;
         beam.targetHadNoGravity = target.isNoGravity();
         beam.heldTicks = 0;
-        target.setNoGravity(true);
+        if (!isHeavy(target)) {
+            target.setNoGravity(true); // lifted; heavy things stay on the ground
+        }
         suit.setBeamTarget(target);
         suit.playSound(SoundEvents.BEACON_POWER_SELECT, 0.8F, 1.6F);
     }

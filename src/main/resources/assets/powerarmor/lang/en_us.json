@@ -23,7 +23,7 @@
   "message.powerarmor.tool_on_foot": "Too heavy to use on foot. Install it in a Power Armor's socket.",
   "message.powerarmor.hand_unpowered": "No power: the suit's hand won't move.",
   "item.powerarmor.em_projector": "EM Projector",
-  "item.powerarmor.em_projector.tooltip": "Power tool: hold use (right-click) to pull and hold items or mobs, release to throw them. Pulled items go into your inventory.",
+  "item.powerarmor.em_projector.tooltip": "Power tool: hold use (right-click) to pull and hold items, mobs or players, release to throw them. Pulled items go into your inventory. Suits, bosses, iron golems, ravagers and wardens are too heavy: they are only pinned in place.",
   "item.powerarmor.em_projector.stats": "%s fuel per second while holding, %s per throw",
   "death.attack.powerarmor.em_slam": "%1$s was slammed into a wall",
   "death.attack.powerarmor.em_slam.player": "%1$s was slammed into a wall by %2$s",

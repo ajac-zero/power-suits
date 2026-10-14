@@ -77,16 +77,38 @@ final class RogueScene {
             // player's position (LocalPlayer only does for the camera entity), so the server never saw them lifted.
             case 318 -> { mc.setCameraEntity(mc.player); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); mc.options.hideGui = false; }
             case 330, 340, 350, 360, 370, 380, 392, 404, 416, 430, 450, 480 -> AutoPilot.shot(mc, "rogue_em_" + s);
-            case 520 -> { close(); return false; }
+            // a heavy target (decided 2026-10-13): the player pilots the rebooted suit (its gun taken out) and walks at a new
+            // EM rogue; the beam can't lift a suit, it holds it: the walk slows to a crawl, the field drags it a little
+            case 520 -> { phase = "heavy"; AutoPilot.onServer(mc, p -> {
+                              if (friend != null) {
+                                  friend.getInventory().clearContent(); // the player's other suit sits this one out
+                                  friend.setBurn(0, 0);
+                              }
+                              if (rogue != null && rogue.isAlive() && base != null) {
+                                  rogue.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, ItemStack.EMPTY);
+                                  rogue.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 8));
+                                  rogue.teleportTo(base.getX() + 0.5, base.getY(), base.getZ() - 6.5);
+                                  p.teleportTo(base.getX() - 1.5, base.getY(), base.getZ() - 6.5);
+                                  rogue.interact(p, net.minecraft.world.InteractionHand.MAIN_HAND);
+                                  PowerArmorEntity r = ModEntities.POWER_ARMOR.get().create(p.serverLevel());
+                                  RogueSpawner.makeRogue(r, false);
+                                  r.moveTo(base.getX() + 0.5, base.getY(), base.getZ() + 9.5, 180, 0);
+                                  p.serverLevel().addFreshEntity(r);
+                                  emRogue = r;
+                              } }); }
+            case 530 -> AutoPilot.hold(mc.options.keyUp, true); // walk at it
+            case 540, 555, 570, 590 -> AutoPilot.shot(mc, "rogue_heavy_" + s);
+            case 600 -> AutoPilot.releaseAll();
+            case 610 -> { close(); return false; }
             default -> {}
         }
-        if (s >= 318 && s < 520 && emRogue != null) {
+        if (s >= 318 && s < 610 && emRogue != null) {
             AutoPilot.aimTarget = emRogue.position().add(0, 2, 0); // keep facing the EM rogue
         }
-        if (s >= 520) {
+        if (s >= 610) {
             AutoPilot.aimTarget = null;
         }
-        if (s >= 5 && s < 520) {
+        if (s >= 5 && s < 610) {
             log(mc, s);
         }
         return true;
@@ -178,7 +200,7 @@ final class RogueScene {
         try {
             csv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_rogue.csv"));
             csv.write("tick,phase,spawnDistance,rogueMind,rogueHealth,roguePowered,rogueStunned,rogueTarget,rogueShots,rogueEnergy,visorR,visorG,visorB,"
-                    + "rogueOwner,friendTarget,friendShots,cowsAlive,playerY,playerVy,playerHealth,playerVehicle,emHealth,emTarget,emBeam,emToolDropped,clientY,clientVy,clientNoGravity\n");
+                    + "rogueOwner,friendTarget,friendShots,cowsAlive,playerY,playerVy,playerHealth,playerVehicle,emHealth,emTarget,emBeam,emToolDropped,clientY,clientVy,clientNoGravity,vehicleSpeed\n");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -195,14 +217,16 @@ final class RogueScene {
         boolean emDropped = !player.serverLevel().getEntitiesOfClass(ItemEntity.class, new AABB(base).inflate(40),
                 e -> e.getItem().is(ModItems.EM_PROJECTOR.get())).isEmpty();
         try {
-            csv.write(String.format(Locale.ROOT, "%d,%s,%.1f,%s,%.1f,%b,%b,%s,%d,%d,%.2f,%.2f,%.2f,%b,%s,%d,%d,%.2f,%.2f,%.1f,%s,%.1f,%s,%s,%b,%.2f,%.2f,%b%n",
+            csv.write(String.format(Locale.ROOT, "%d,%s,%.1f,%s,%.1f,%b,%b,%s,%d,%d,%.2f,%.2f,%.2f,%b,%s,%d,%d,%.2f,%.2f,%.1f,%s,%.1f,%s,%s,%b,%.2f,%.2f,%b,%.2f%n",
                     s, phase, spawnDistance, r.getMind(), r.getHealth(), r.isPowered(), r.isStunned(), name(r.getTarget()), r.getToolUses(),
                     r.getTotalEnergy(), visor[0], visor[1], visor[2], player.getUUID().equals(r.getOwnerId()), name(f.getTarget()), f.getToolUses(),
                     cows.stream().filter(LivingEntity::isAlive).count(), player.getY() - base.getY(), player.getDeltaMovement().y,
                     player.getHealth(), player.getVehicle() == null ? "-" : player.getVehicle() == r ? "rebooted" : "other",
                     em == null ? -1F : em.getHealth(), em == null ? "-" : name(em.getTarget()),
                     em == null || em.getBeamTarget() == null ? "-" : em.getBeamTarget().getType().toShortString(), emDropped,
-                    mc.player.getY() - base.getY(), mc.player.getDeltaMovement().y, mc.player.isNoGravity()));
+                    mc.player.getY() - base.getY(), mc.player.getDeltaMovement().y, mc.player.isNoGravity(),
+                    mc.player.getVehicle() == null ? -1 : Math.hypot(mc.player.getVehicle().getX() - mc.player.getVehicle().xo,
+                            mc.player.getVehicle().getZ() - mc.player.getVehicle().zo) * 20));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] rogue csv", e);
         }

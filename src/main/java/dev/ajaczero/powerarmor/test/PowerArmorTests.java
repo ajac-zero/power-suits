@@ -854,21 +854,56 @@ public final class PowerArmorTests {
         });
     }
 
+    /** Decided 2026-10-13: everything but spectators, creative players and statues can be caught (players where PvP is
+     *  on); suits and the em_heavy tag (bosses, iron golems, ravagers, wardens) are heavy: held in place, not lifted. */
     @GameTest(template = PAD)
-    public static void emOnlyGrabsItemsAndOrdinaryMobs(GameTestHelper helper) {
+    public static void emGrabRules(GameTestHelper helper) {
         var level = helper.getLevel();
         java.util.function.Predicate<net.minecraft.world.entity.Entity> grab = dev.ajaczero.powerarmor.item.EmProjectorItem::canGrab;
+        java.util.function.Predicate<net.minecraft.world.entity.Entity> heavy = dev.ajaczero.powerarmor.item.EmProjectorItem::isHeavy;
         helper.assertTrue(grab.test(helper.spawnItem(Items.DIAMOND, 2, 2, 2)), "dropped items: yes");
         helper.assertTrue(grab.test(helper.spawn(EntityType.PIG, new BlockPos(2, 2, 6))), "pigs: yes");
-        helper.assertTrue(grab.test(helper.spawn(EntityType.IRON_GOLEM, new BlockPos(6, 2, 6))), "iron golems: yes (heavy but fine)");
-        helper.assertTrue(!grab.test(helper.makeMockPlayer(GameType.SURVIVAL)), "players: never");
-        helper.assertTrue(!grab.test(EntityType.WITHER.create(level)), "bosses: never");
-        helper.assertTrue(!grab.test(EntityType.RAVAGER.create(level)), "too heavy: ravager");
-        helper.assertTrue(!grab.test(spawnSuit(helper)), "other suits: never");
+        var golem = helper.spawn(EntityType.IRON_GOLEM, new BlockPos(6, 2, 6));
+        helper.assertTrue(grab.test(golem) && heavy.test(golem), "iron golems: heavy");
+        var warden = EntityType.WARDEN.create(level);
+        helper.assertTrue(grab.test(warden) && heavy.test(warden), "wardens: heavy (thin, but no beam lifts a warden)");
+        helper.assertTrue(!heavy.test(EntityType.ZOMBIE.create(level)) && !heavy.test(EntityType.COW.create(level)), "ordinary mobs: light");
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        helper.assertTrue(grab.test(player) && !heavy.test(player), "players: yes");
+        helper.assertTrue(!grab.test(helper.makeMockPlayer(GameType.CREATIVE)), "creative players: no");
+        var wither = EntityType.WITHER.create(level);
+        var ravager = EntityType.RAVAGER.create(level);
+        PowerArmorEntity other = spawnSuit(helper);
+        helper.assertTrue(grab.test(wither) && heavy.test(wither), "bosses: heavy");
+        helper.assertTrue(grab.test(ravager) && heavy.test(ravager), "ravagers: heavy");
+        helper.assertTrue(grab.test(other) && heavy.test(other), "other suits: heavy");
         Pig statue = helper.spawn(EntityType.PIG, new BlockPos(6, 2, 2));
         statue.setNoAi(true);
         helper.assertTrue(!grab.test(statue), "no-AI mobs (map statues): never");
+        PowerArmorEntity em = emSuit(helper);
+        boolean pvp = level.getServer().isPvpAllowed();
+        helper.assertTrue(dev.ajaczero.powerarmor.item.EmProjectorItem.canHold(em, player) == pvp, "a pilot holds players only with PvP on");
+        dev.ajaczero.powerarmor.entity.RogueSpawner.makeRogue(em, false);
+        helper.assertTrue(dev.ajaczero.powerarmor.item.EmProjectorItem.canHold(em, player), "a rogue doesn't ask");
         helper.succeed();
+    }
+
+    /** A suit in the beam fights it: stays on the ground, slowed, dragged only a little. */
+    @GameTest(template = PAD, timeoutTicks = 60)
+    public static void heavyThingsFightTheField(GameTestHelper helper) {
+        PowerArmorEntity suit = emSuit(helper);
+        PowerArmorEntity heavy = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 2, 7)); // unpowered: parked
+        Vec3 start = heavy.position();
+        Player pilot = emPilotLookingAt(helper, suit, heavy.position().add(0, 1.5, 0));
+        suit.setTriggerHeld(pilot, true);
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(suit.getBeamTarget() == heavy, "caught in the beam");
+            helper.assertTrue(!heavy.isNoGravity() && Math.abs(heavy.getY() - start.y) < 0.01, "not lifted");
+            double moved = heavy.position().distanceTo(start);
+            helper.assertTrue(moved > 0.1 && moved < 1.5, "dragged a little (1.2 blocks/s at most, slowed), moved " + moved);
+            suit.setTriggerHeld(pilot, false);
+            helper.succeed();
+        });
     }
 
     // =========================================================================================

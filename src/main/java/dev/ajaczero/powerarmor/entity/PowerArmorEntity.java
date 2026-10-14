@@ -174,6 +174,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Iron nuggets in the hidden ammo store (synced: the menu and the pilot's HUD show it). */
     private static final EntityDataAccessor<Integer> NUGGETS =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
+    /** Held in another suit's EM field (synced: the pilot's client moves a piloted suit, so it must know). */
+    private static final EntityDataAccessor<Boolean> FIELD_HELD =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> STUNNED =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     /** Copies of the two slots, so clients can show the fuel left and (Phase 2) draw the socket tool. */
@@ -316,6 +319,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(STUNNED, false);
         builder.define(MIND, (byte) SuitMind.FRIENDLY.ordinal());
         builder.define(NUGGETS, 0);
+        builder.define(FIELD_HELD, false);
     }
 
     /** The machine mind's goals (see SuitGoals). Vanilla calls this once, from Mob's constructor. */
@@ -1346,6 +1350,24 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      * ledge (and aren't jumping), drop straight onto the ground below: stepping down instead of
      * falling keeps full speed and avoids a fall pose on every block of a slope.
      */
+    /** Server: tick the suit was last held by an EM field (EmProjectorItem refreshes it every tick it holds us). */
+    private int fieldHeldUntil;
+
+    /** Server: another suit's EM field holds us this tick. Too heavy to lift, the suit fights the field: it can only
+     *  crawl (a quarter of its speed) while held. */
+    public void holdInField() {
+        this.fieldHeldUntil = this.tickCount + 2;
+        this.entityData.set(FIELD_HELD, true);
+    }
+
+    /** Both sides: held in an EM field right now. */
+    public boolean isFieldHeld() {
+        return this.entityData.get(FIELD_HELD);
+    }
+
+    /** A suit held in an EM field crawls: a quarter of its speed. */
+    private static final float FIELD_HELD_SPEED = 0.25F;
+
     @Override
     public void travel(Vec3 travelVector) {
         if (!this.isVehicle() && !this.canOperate()) {
@@ -1356,6 +1378,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             // the mind's suit walk exactly like a piloted one: 1.0 = the pilot's jog, 2.0 = sprint (walk animation sync).
             Vec3 flat = new Vec3(travelVector.x, 0, travelVector.z).normalize();
             travelVector = new Vec3(flat.x, travelVector.y, flat.z);
+        }
+        if (this.isFieldHeld()) {
+            travelVector = travelVector.multiply(FIELD_HELD_SPEED, 1, FIELD_HELD_SPEED); // the pilot's or the mind's push
         }
         if ((this.isInWater() || this.isInLava()) && this.isControlledByLocalInstance()) {
             this.travelUnderwater(travelVector); // lava too: vanilla's lava swimming crawled at 0.4 blocks/s
@@ -1653,6 +1678,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.tickFuel();
             this.tickTool();
             this.tickRogueLifetime();
+            if (this.isFieldHeld() && this.tickCount > this.fieldHeldUntil) {
+                this.entityData.set(FIELD_HELD, false); // the field let go
+            }
             this.putOutFire();
             if (this.getControllingPassenger() instanceof Player pilot) {
                 dev.ajaczero.powerarmor.PilotHands.refreshBonuses(pilot);
