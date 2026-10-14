@@ -23,7 +23,8 @@ import net.minecraft.world.entity.player.Player;
  * nobody is inside (the pilot drives otherwise; unpowered it's a parked machine).
  *
  * The job comes from the socket tool (design sec. 8): none (and tools whose job isn't built yet) = stand guard at home;
- * chaingun = follow the owner and defend them (a target goal picks who, an attack goal aims, fires and moves).
+ * chaingun = follow the owner and defend them (a target goal picks who, an attack goal aims, fires and moves);
+ * EM projector = guard the area round home: grab a monster, lift it overhead and fling it up (creepers: away).
  * A mob has two goal lists: {@code targetSelector} decides who to fight (setTarget), {@code goalSelector} what to do.
  */
 public final class SuitGoals {
@@ -33,6 +34,7 @@ public final class SuitGoals {
     public static void register(PowerArmorEntity suit, GoalSelector goals, GoalSelector targets) {
         targets.addGoal(1, new DefendOwner(suit));
         goals.addGoal(2, new ChaingunAttack(suit));
+        goals.addGoal(2, new EmGuard(suit));
         goals.addGoal(4, new FollowOwner(suit));
         goals.addGoal(5, new ReturnHome(suit));
         goals.addGoal(8, new LookAtPlayerGoal(suit, Player.class, 8F) {
@@ -319,6 +321,122 @@ public final class SuitGoals {
         @Override
         public void stop() {
             this.suit.getNavigation().stop();
+        }
+    }
+
+    /**
+     * EM projector job: guard the area round home. Pick the monster nearest home (within the guard radius, in the
+     * projector's range and in sight), aim at it and hold the trigger until the beam has it; then aim straight up (a
+     * creeper: up and away from home) so the beam lifts it overhead, and let go: the projector throws along the aim,
+     * hard enough that the fall kills (EM_GUARD_LAUNCH). Only LOOK: the feet stay with ReturnHome, so it fights from home.
+     */
+    static class EmGuard extends Goal {
+        /** Ticks to hold the aim up before letting go: the beam pulls the monster overhead. */
+        private static final int LIFT_TICKS = 12;
+        /** Give up on a monster the beam hasn't caught after this long (out of sight, behind something). */
+        private static final int SEEK_TICKS = 60;
+        private final PowerArmorEntity suit;
+        @org.jetbrains.annotations.Nullable
+        private LivingEntity target;
+        private boolean lifting, thrown;
+        private int ticks;
+
+        EmGuard(PowerArmorEntity suit) {
+            this.suit = suit;
+            this.setFlags(EnumSet.of(Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (!this.suit.isAiDriven() || !this.suit.guardsHome() || this.suit.getHome() == null || !this.suit.isToolReady()
+                    || this.suit.getBeamTarget() != null) {
+                return false;
+            }
+            this.target = this.pick();
+            return this.target != null;
+        }
+
+        /** The monster nearest home that the beam could catch from here. */
+        @org.jetbrains.annotations.Nullable
+        private LivingEntity pick() {
+            BlockPos home = this.suit.getHome();
+            if (home == null) {
+                return null;
+            }
+            Vec3 centre = Vec3.atBottomCenterOf(home);
+            double radius = dev.ajaczero.powerarmor.PowerArmorConfig.EM_GUARD_RADIUS.get();
+            double reach = dev.ajaczero.powerarmor.PowerArmorConfig.EM_RANGE.get();
+            return this.suit.level().getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(centre, centre).inflate(radius, 8, radius),
+                            // standing (or swimming, or a flyer): one it threw is left alone until it lands (catching it
+                            // mid-fall reset its fall and the zombie survived the 30-block drop)
+                            e -> e instanceof net.minecraft.world.entity.monster.Enemy && e.distanceToSqr(centre) < radius * radius
+                                    && (e.onGround() || e.isInLiquid() || e instanceof net.minecraft.world.entity.FlyingMob)
+                                    && e.distanceTo(this.suit) < reach - 1 && dev.ajaczero.powerarmor.item.EmProjectorItem.canGrab(e)
+                                    && SuitTargets.canAttack(this.suit, e, false) && this.suit.getSensing().hasLineOfSight(e))
+                    .stream().min(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(centre))).orElse(null);
+        }
+
+        @Override
+        public void start() {
+            this.suit.setTarget(this.target);
+            this.lifting = false;
+            this.thrown = false;
+            this.ticks = 0;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            if (this.thrown || this.target == null || !this.target.isAlive() || !this.suit.isAiDriven() || !this.suit.guardsHome()) {
+                return false;
+            }
+            return this.lifting ? this.suit.getBeamTarget() == this.target : this.ticks < SEEK_TICKS;
+        }
+
+        @Override
+        public boolean requiresUpdateEveryTick() {
+            return true;
+        }
+
+        @Override
+        public void tick() {
+            if (this.target == null) {
+                return;
+            }
+            this.ticks++;
+            if (!this.lifting) {
+                this.suit.setAiAim(this.target.getBoundingBox().getCenter());
+                this.suit.setAiTrigger(true);
+                if (this.suit.getBeamTarget() == this.target) {
+                    this.lifting = true; // caught: now up with it
+                    this.ticks = 0;
+                }
+                return;
+            }
+            this.suit.setAiAim(this.liftAim());
+            if (this.ticks >= LIFT_TICKS) {
+                this.suit.setAiTrigger(false); // let go: the projector throws it along the aim (this tick, after the goals)
+                this.thrown = true;
+            }
+        }
+
+        /** Where to point while lifting: straight up, leaning a little away from home so the monster comes down outside
+         *  (not on the suit); a creeper is thrown up and away instead: it must not burst at home. */
+        private Vec3 liftAim() {
+            BlockPos home = this.suit.getHome();
+            Vec3 eye = this.suit.getEyePosition();
+            Vec3 out = this.target.position().subtract(home == null ? this.suit.position() : Vec3.atBottomCenterOf(home)).multiply(1, 0, 1);
+            out = out.lengthSqr() < 1.0E-4 ? this.suit.getLookAngle().multiply(1, 0, 1) : out;
+            out = out.lengthSqr() < 1.0E-4 ? new Vec3(0, 0, 1) : out.normalize();
+            return this.target instanceof net.minecraft.world.entity.monster.Creeper ? eye.add(out.scale(10)).add(0, 4.5, 0)
+                    : eye.add(out.scale(0.6)).add(0, 10, 0);
+        }
+
+        @Override
+        public void stop() {
+            this.suit.setAiTrigger(false);
+            this.suit.setAiAim(null);
+            this.suit.setTarget(null);
+            this.target = null;
         }
     }
 

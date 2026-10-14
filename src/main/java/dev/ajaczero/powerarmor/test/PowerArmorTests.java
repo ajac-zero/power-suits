@@ -1725,6 +1725,70 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
+    // =========================================================================================
+    // Phase 8 step 3: the EM guard job (grab monsters near home, lift them overhead, fling them up / creepers away)
+    // =========================================================================================
+
+    private static PowerArmorEntity emGuard(GameTestHelper helper, BlockPos at) {
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), at);
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.EM_PROJECTOR.get()));
+        suit.setHome(helper.absolutePos(at));
+        return suit;
+    }
+
+    /** The pad's invisible ceiling (10 up) stops the fling early; the fall from it still hurts. In the open the throw is
+     *  ~24 blocks up (autopilot scene ap_ai_em_*). */
+    @GameTest(template = PAD, timeoutTicks = 100)
+    public static void emMindLiftsAndFlingsAMonster(GameTestHelper helper) {
+        PowerArmorEntity suit = emGuard(helper, new BlockPos(4, 2, 2));
+        var husk = helper.spawn(EntityType.HUSK, new Vec3(4.5, 2, 6.5));
+        boolean[] caught = {false};
+        double[] highest = {0};
+        helper.onEachTick(() -> {
+            caught[0] |= suit.getBeamTarget() == husk;
+            highest[0] = Math.max(highest[0], husk.getY() - helper.absoluteVec(Vec3.ZERO).y);
+        });
+        helper.runAfterDelay(90, () -> {
+            helper.assertTrue(caught[0], "the beam should catch the husk");
+            helper.assertTrue(highest[0] > 5.5, "lifted overhead, highest " + highest[0]);
+            helper.assertTrue(suit.getToolUses() >= 1, "and thrown (a throw counts as a use)");
+            helper.assertTrue(husk.getHealth() < husk.getMaxHealth(), "the fall hurts, health " + husk.getHealth());
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 60)
+    public static void emMindLeavesAnimalsAndVillagersAlone(GameTestHelper helper) {
+        PowerArmorEntity suit = emGuard(helper, new BlockPos(4, 2, 2));
+        helper.spawn(EntityType.COW, new Vec3(2.5, 2, 6.5));
+        helper.spawn(EntityType.VILLAGER, new Vec3(6.5, 2, 6.5));
+        boolean[] grabbed = {false};
+        helper.onEachTick(() -> grabbed[0] |= suit.getBeamTarget() != null || suit.isAiTriggerHeld());
+        helper.runAfterDelay(50, () -> {
+            helper.assertTrue(!grabbed[0], "only monsters get grabbed");
+            helper.succeed();
+        });
+    }
+
+    /** A creeper must not come down at home: it's thrown up and away instead. */
+    @GameTest(template = PAD, timeoutTicks = 100)
+    public static void emMindThrowsCreepersAwayFromHome(GameTestHelper helper) {
+        PowerArmorEntity suit = emGuard(helper, new BlockPos(4, 2, 1));
+        var creeper = helper.spawn(EntityType.CREEPER, new Vec3(4.5, 2, 5.5));
+        double[] furthest = {0};
+        helper.onEachTick(() -> {
+            if (suit.getToolUses() > 0) {
+                furthest[0] = Math.max(furthest[0], creeper.getZ() - helper.absoluteVec(Vec3.ZERO).z);
+            }
+        });
+        helper.runAfterDelay(90, () -> {
+            helper.assertTrue(suit.getToolUses() >= 1, "the creeper should be thrown");
+            helper.assertTrue(furthest[0] > 7.0, "away from home (+z, to the far wall), got to z " + furthest[0]);
+            helper.succeed();
+        });
+    }
+
     private static ItemStack packedSuit(Player player) {
         return player.getInventory().items.stream().filter(s -> s.is(ModItems.POWER_ARMOR.get())).findFirst().orElse(ItemStack.EMPTY);
     }

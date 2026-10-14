@@ -145,6 +145,13 @@ public final class PowerArmorConfig {
     public static final ModConfigSpec.DoubleValue GUARD_RANGE = B
             .comment("A friendly suit with a chaingun shoots monsters within this many blocks of its owner (or of itself).").translation(key("guard_range"))
             .defineInRange("guard_range", 16.0, 0, 64);
+    public static final ModConfigSpec.DoubleValue EM_GUARD_RADIUS = B
+            .comment("A friendly suit with an EM projector guards this many blocks around its home: monsters inside get flung.").translation(key("em_guard_radius"))
+            .defineInRange("em_guard_radius", 12.0, 0, 32);
+    public static final ModConfigSpec.DoubleValue EM_GUARD_LAUNCH = B
+            .comment("How hard the guarding mind flings a monster, blocks per second (straight up: 44 = ~24 blocks high, enough",
+                    "for the fall to kill a zombie; a pilot's throws are 32). Creepers are thrown away from home instead.").translation(key("em_guard_launch"))
+            .defineInRange("em_guard_launch", 44.0, 0, 200);
 
     public static final ModConfigSpec SPEC = B.pop().build();
 

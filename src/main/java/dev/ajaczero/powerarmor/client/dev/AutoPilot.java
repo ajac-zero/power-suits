@@ -1187,13 +1187,35 @@ public final class AutoPilot {
                               p.serverLevel().addFreshEntity(zombie);
                               mindMobs.add(zombie); } }); }
             case 650, 658, 666, 674, 684, 696 -> shot(mc, "ai_fists_" + (m - 420));
-            case 710 -> { closeMindLog(); mc.stop(); }
+            // EM guard job (step 3): the suit goes home with an EM projector; zombies, a skeleton and a creeper wander in
+            // round home: each one is caught, lifted overhead and flung ~24 blocks up (the creeper: away from home)
+            case 700 -> { mindPhase = "em"; onServer(mc, p -> { if (mindSuit != null && mindBase != null) {
+                              mindMobs.forEach(e -> e.discard());
+                              mindMobs.clear();
+                              p.setGameMode(GameType.CREATIVE);  // monsters ignore a creative player: they just wander near home
+                              p.teleportTo(mindBase.getX() - 12.5, mindBase.getY(), mindBase.getZ() - 12.5);
+                              mindSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
+                                      new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.EM_PROJECTOR.get())); } }); }
+            case 702 -> mindGuardCamera(mc);
+            case 740 -> onServer(mc, p -> { if (mindBase != null) {
+                              var level = p.serverLevel();
+                              EntityType<?>[] types = {EntityType.ZOMBIE, EntityType.SKELETON, EntityType.ZOMBIE, EntityType.CREEPER};
+                              double[][] at = {{7, 2}, {-6, 5}, {3, -8}, {-5, -6}};
+                              for (int i = 0; i < types.length; i++) {
+                                  var mob = (net.minecraft.world.entity.Mob) types[i].create(level);
+                                  mob.moveTo(mindBase.getX() + 0.5 + at[i][0], mindBase.getY(), mindBase.getZ() + 0.5 + at[i][1], 0, 0);
+                                  mob.setPersistenceRequired();
+                                  level.addFreshEntity(mob);
+                                  mindMobs.add(mob);
+                              } } });
+            case 776, 780, 786, 792, 800, 808, 816, 828, 840, 852, 864, 880, 900, 920 -> shot(mc, "ai_em_" + (m - 420));
+            case 940 -> { closeMindLog(); mc.stop(); }
             default -> {}
         }
         if (m >= 10 && m < 420) {
             logMech(mc, m);
         }
-        if (m >= 425 && m < 710) {
+        if (m >= 425 && m < 940) {
             logMind(mc, m);
         }
     }
@@ -1201,7 +1223,8 @@ public final class AutoPilot {
     // ---- the machine mind scene -----------------------------------------------------------------------------------
 
     private static PowerArmorEntity mindSuit;
-    private static final java.util.List<net.minecraft.world.entity.Mob> mindMobs = new java.util.ArrayList<>();
+    // Filled on the server thread, read by the client thread (logMind): a copy-on-write list (an ArrayList threw mid-iteration).
+    private static final java.util.List<net.minecraft.world.entity.Mob> mindMobs = new java.util.concurrent.CopyOnWriteArrayList<>();
     private static volatile BlockPos mindBase;
     private static java.io.BufferedWriter mindCsv;
     private static String mindPhase = "-";
@@ -1263,6 +1286,18 @@ public final class AutoPilot {
         }
     }
 
+    /** The EM guard scene: 20 blocks south of home and 8 up, looking at a point 9 above home, so the flung mobs stay in
+     *  the frame. */
+    private static void mindGuardCamera(Minecraft mc) {
+        BlockPos b = mindBase;
+        if (b != null) {
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            mc.options.hideGui = true;
+            Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+            lookCamera(mc, Vec3.atBottomCenterOf(b).add(-3, 8, -24).subtract(drop), Vec3.atBottomCenterOf(b).add(0, 9, 0).subtract(drop));
+        }
+    }
+
     /** Close-up of the mind's suit from 3 blocks in front of its face (the client copy: where this client draws it). */
     private static void mindVisorCamera(Minecraft mc) {
         if (mindSuit != null && mc.level.getEntity(mindSuit.getId()) instanceof PowerArmorEntity suit) {
@@ -1277,7 +1312,7 @@ public final class AutoPilot {
     private static void openMindLog(Minecraft mc) {
         try {
             mindCsv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_mind.csv"));
-            mindCsv.write("tick,phase,dxHome,dzHome,speed,driven,anim,headYaw,bodyYaw,xRot,toolActive,clientRaise,faceLeft,drops,energy,visorR,visorG,visorB,navDone,goals,ownerDist,target,store,shots,mobsAlive,mobHealth\n");
+            mindCsv.write("tick,phase,dxHome,dzHome,speed,driven,anim,headYaw,bodyYaw,xRot,toolActive,clientRaise,faceLeft,drops,energy,visorR,visorG,visorB,navDone,goals,ownerDist,target,store,shots,mobsAlive,mobHealth,beam,mobTopY,mobs\n");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -1297,14 +1332,19 @@ public final class AutoPilot {
         int drops = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(b).inflate(8)).size();
         float[] visor = client.getVisorColor();
         try {
-            mindCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%s,%.1f,%.1f,%.1f,%b,%.2f,%d,%d,%d,%.2f,%.2f,%.2f,%b,%s,%.2f,%s,%d,%d,%d,%.1f%n",
+            mindCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%s,%.1f,%.1f,%.1f,%b,%.2f,%d,%d,%d,%.2f,%.2f,%.2f,%b,%s,%.2f,%s,%d,%d,%d,%.1f,%s,%.1f,%s%n",
                     m, mindPhase, server.getX() - (b.getX() + 0.5), server.getZ() - (b.getZ() + 0.5),
                     Math.hypot(server.getX() - server.xo, server.getZ() - server.zo) * 20, server.isAiDriven(), client.getMovementAnimationName(),
                     server.getYHeadRot(), server.yBodyRot, server.getXRot(), server.isToolActive(), client.getToolRaise(1F), faceLeft, drops,
                     server.getTotalEnergy(), visor[0], visor[1], visor[2], server.getNavigation().isDone(),
                     server.runningGoalNames(), server.getOwner() == null ? -1F : server.distanceTo(server.getOwner()),
                     server.getTarget() == null ? "-" : server.getTarget().getType().toShortString(), server.getStoredNuggets(), server.getToolUses(),
-                    mindMobs.stream().filter(e -> e.isAlive()).count(), mindMobs.stream().filter(e -> e.isAlive()).mapToDouble(e -> e.getHealth()).sum()));
+                    mindMobs.stream().filter(e -> e.isAlive()).count(), mindMobs.stream().filter(e -> e.isAlive()).mapToDouble(e -> e.getHealth()).sum(),
+                    server.getBeamTarget() == null ? "-" : server.getBeamTarget().getType().toShortString(),
+                    mindMobs.stream().filter(e -> e.isAlive()).mapToDouble(e -> e.getY() - b.getY()).max().orElse(0),
+                    mindMobs.stream().map(e -> e.getType().toShortString() + ":" + (e.isAlive() ? String.format(java.util.Locale.ROOT, "%.0f@%.1f",
+                                    e.getHealth(), Math.sqrt(e.distanceToSqr(Vec3.atBottomCenterOf(b)))) : "dead"))
+                            .reduce((x, y) -> x + "/" + y).orElse("")));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] mind csv", e);
         }

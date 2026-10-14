@@ -141,5 +141,9 @@
   "gui.powerarmor.ammo": "Ammo %s",
   "message.powerarmor.nuggets_loaded": "Loaded %s nuggets (%s in the suit)",
   "message.powerarmor.nuggets_full": "The suit's nugget store is full (%s)",
-  "item.powerarmor.power_armor.nuggets": "Ammo store: %s iron nuggets"
+  "item.powerarmor.power_armor.nuggets": "Ammo store: %s iron nuggets",
+  "powerarmor.configuration.em_guard_radius": "EM guard radius",
+  "powerarmor.configuration.em_guard_radius.tooltip": "A friendly suit with an EM projector guards this many blocks around its home: monsters inside get flung.",
+  "powerarmor.configuration.em_guard_launch": "EM guard launch speed",
+  "powerarmor.configuration.em_guard_launch.tooltip": "How hard the guarding mind flings a monster, blocks per second (straight up: 44 = ~24 blocks high, enough for the fall to kill a zombie; a pilot's throws are 32). Creepers are thrown away from home instead."
 }

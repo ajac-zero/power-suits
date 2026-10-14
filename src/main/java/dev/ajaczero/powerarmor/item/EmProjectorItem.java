@@ -146,7 +146,11 @@ public class EmProjectorItem extends Item implements PowerTool {
             if (!suit.isToolReady()) {
                 return;
             }
-            Entity found = SocketAim.entityInView(suit, operator, PowerArmorConfig.EM_RANGE.get(), EmProjectorItem::canGrab, 0.6F);
+            // A pilot grabs whatever they point at; the machine mind only the monster it picked (never an item, a cow or
+            // a villager that happens to be in the line).
+            java.util.function.Predicate<Entity> grabbable = operator instanceof Player ? EmProjectorItem::canGrab
+                    : e -> e == suit.getTarget() && canGrab(e);
+            Entity found = SocketAim.entityInView(suit, operator, PowerArmorConfig.EM_RANGE.get(), grabbable, 0.6F);
             if (found != null && suit.tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
                 grab(suit, beam, found);
             }
@@ -199,7 +203,9 @@ public class EmProjectorItem extends Item implements PowerTool {
         }
         // Launch along the view, a touch upward so things fly in a shallow arc.
         Vec3 view = operator.getViewVector(1F);
-        double speed = target instanceof ItemEntity ? ITEM_PUSH : MOB_PUSH;
+        // The guarding mind flings harder than a pilot throws: straight up, the fall has to kill (EM_GUARD_LAUNCH).
+        double speed = target instanceof ItemEntity ? ITEM_PUSH
+                : operator instanceof Player ? MOB_PUSH : PowerArmorConfig.EM_GUARD_LAUNCH.get() / 20.0;
         target.setNoGravity(beam.targetHadNoGravity);
         target.setDeltaMovement(view.scale(speed).add(0, 0.1, 0));
         target.hurtMarked = true;

@@ -425,6 +425,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return !this.isRogue() && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.ChaingunItem;
     }
 
+    /** Both sides: the EM guard job (design sec. 8): a friendly mind with an EM projector guards the area round home. */
+    public boolean guardsHome() {
+        return !this.isRogue() && this.getSocketStack().getItem() instanceof EmProjectorItem;
+    }
+
     /** Server: bullets for the mind's chaingun (its hidden store). */
     public boolean hasAmmo() {
         return this.getStoredNuggets() > 0;

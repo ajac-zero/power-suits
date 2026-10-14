@@ -130,7 +130,11 @@ Each step: GameTests for the logic, an autopilot scene with numbers in a CSV, th
    past 16, no teleport). Tests (81): loading, store survives save/pack/wreck, pilot pays pocket-first, the mind shoots
    a husk near its owner, holds fire with the owner in the way, follows, punches when empty, target rules. Autopilot
    (mech run): `ap_ai_menu_ammo`, `ap_ai_follow_*`, `ap_ai_defend_*`, `ap_ai_fists_*`.
-3. EM area guard (fling hostiles up, creepers away).
+3. (DONE 2026-10-13) EM guard job (`SuitGoals.EmGuard`, LOOK only): monster nearest home within `em_guard_radius`,
+   in reach and sight, standing; aim at it, hold until the beam has it (the mind's beam only grabs its own target),
+   aim up for 12 ticks (creepers: up and away), let go: `EmProjectorItem.release` throws at `em_guard_launch` for the
+   mind. Tests (84): lifts + flings a husk, leaves cows/villagers alone, throws creepers away from home. Autopilot
+   (mech run): `ap_ai_em_*` (2 zombies + a skeleton flung ~30 up and killed, the creeper thrown 25 blocks away).
 4. Chainsaw + drill workers (radius, open hall at home level, drop/lava/liquid checks); autopilot scene with an allay
    holding an ore and a note block + hopper at home, logging items delivered vs dropped and item-entity counts (lag).
 5. Rogue spawner (wandering-trader style, config chance), rogue targeting, unlimited fuel/ammo, leaves after ~1 day when unwatched, tool-only drop,
