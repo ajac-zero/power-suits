@@ -14,6 +14,8 @@ One-off scripts that added parts to `../power_armor.bbmodel` (kept as reference 
 | `chest_extension_art.py`, `backpack_extension_art.py` | Extend the chest and backpack down to y=27.625, preserving upper texture rows. The backpack plan also removes the lower pipe. |
 | `abdomen_joint_art.py` | Shorten the girdle from the top and texture the exposed abdomen like the knee joints. Plan records the new torso pivot `[0, 27.125, 0.5]`. |
 | `tassets_art.py`, `tassets_refit_art.py` | Cover the hip housing with blue tassets, then refit them into six separated front/rear/side panels with reduced flare and shorter sides. |
+| `hips_art.py` | Replace the girdle + tassets with real hips (`pelvis` bone under `body`, pivot on the hip axis): an 18x4x10 blue pelvis shell whose lower edge is the hip axis, a crotch piece between the thighs and dark bearing caps at the hip pivots; drops the hidden hip joints. |
+| `thighs_art.py` | Then slimmer thighs so the hips match the chest: thighs 6x8x7 centred on the hip pivots (armour ends 1 below the hip axis), knee-sized hip joints (knee texture) on the leg bones, a dark hip core in the crotch, pelvis shell 16x4x10 on the hip axis; side caps dropped. |
 
 ## T-pose visual pass (`model/t-pose`)
 
@@ -25,7 +27,7 @@ These are references for individual iterations, **not an automatic replay pipeli
 
 The saved model is deliberately in an editing T-pose. Front shin/thigh plates were removed;
 hip joints reuse the knee texture. The abdomen belongs to `body`, the torso turns above it at
-`[0, 27.125, 0.5]`, and the girdle/tassets remain attached to `body`.
+`[0, 27.125, 0.5]`, and the hips (`pelvis`, from `hips_art.py`) are attached to `body`.
 No game assets have been exported from this pass. Before integrating: restore the original base
 rotations, check animations and tasset/leg clearance, update game-side torso pivot/aim offsets,
 and export all derived assets. The T-pose starting commit retains the old model's geometry;

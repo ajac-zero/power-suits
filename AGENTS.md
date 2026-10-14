@@ -20,6 +20,9 @@ replace older advice. The how-to for this kind of work (setup, GeckoLib, riding,
   touches the art or animations** (user's rule since Phase 5) and commit it with them, so the model and the
   exported files never drift. If Blockbench still has it open from the old place, set
   `Project.save_path` to this file before saving.
+- Show every model change with the review sheet from `.agents/skills/blockbench-mcp/scripts/shots.js`: it
+  includes the in-game third-person view from behind, which the user considers the most important (the player
+  mostly sees the suit's back), and shoots the normal pose, not the editing T-pose.
 
 ## Layout
 - `src/` the mod; `tools/` export / art / test helpers; `docs/` design + plan; `run/` dev game (not in git).

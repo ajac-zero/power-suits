@@ -39,6 +39,12 @@ const model = JSON.parse((r.contents || r.content)[0].text);
   image(s.content.find(c => c.type === "image"));
   ```
 - Use `format: "jpeg"` and `max_size` ~250-900 to keep it cheap. Small images (250-350) are fine for sequences of animation frames.
+- **Model reviews: run `scripts/shots.js`** (codemode helper, usage in its header). It tiles the in-game third-person views
+  from behind (exact camera: eye 2.6 blocks, 6.5 back, FOV 70; level and looking down 25, full frame + zoomed) with
+  back 3/4, front and side into one labelled sheet, in the suit's normal (in-game rest) pose: model/t-pose keeps the
+  rest rotations at 0 for editing, so it poses the bones for the shots and restores them. The player mostly sees the
+  suit's back: show these with every model change (user's request). Load it with `bash cat`, not `tools.read` (which served a stale copy).
+- Use a new offscreen view id per shot: recreating a just-deleted id reused the old view's camera target.
 - Do not move the user's camera. Make an offscreen view, inspect, and delete it when done:
   ```js
   await tools.mcp__blockbench__create_offscreen_view({id: "insp", width: 800, height: 600, copy_view: "none"});
