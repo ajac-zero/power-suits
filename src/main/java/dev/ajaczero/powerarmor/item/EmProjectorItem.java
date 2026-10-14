@@ -80,11 +80,11 @@ public class EmProjectorItem extends Item implements PowerTool {
     private static final class Thrown {
         final LivingEntity entity;
         @Nullable
-        final Player thrower;
+        final LivingEntity thrower;
         int ticks;
         double lastSpeed;
 
-        Thrown(LivingEntity entity, @Nullable Player thrower) {
+        Thrown(LivingEntity entity, @Nullable LivingEntity thrower) {
             this.entity = entity;
             this.thrower = thrower;
         }
@@ -135,18 +135,18 @@ public class EmProjectorItem extends Item implements PowerTool {
     }
 
     @Override
-    public boolean use(PowerArmorEntity suit, Player pilot, ItemStack tool) {
+    public boolean use(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
         return false; // continuous: see holdTick / release
     }
 
     @Override
-    public void holdTick(PowerArmorEntity suit, Player pilot, ItemStack tool) {
+    public void holdTick(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
         Beam beam = suit.toolData(Beam.class, Beam::new);
         if (beam.target == null) {
             if (!suit.isToolReady()) {
                 return;
             }
-            Entity found = SocketAim.entityInView(suit, pilot, PowerArmorConfig.EM_RANGE.get(), EmProjectorItem::canGrab, 0.6F);
+            Entity found = SocketAim.entityInView(suit, operator, PowerArmorConfig.EM_RANGE.get(), EmProjectorItem::canGrab, 0.6F);
             if (found != null && suit.tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
                 grab(suit, beam, found);
             }
@@ -159,9 +159,9 @@ public class EmProjectorItem extends Item implements PowerTool {
             return;
         }
         beam.heldTicks++;
-        Vec3 hold = SocketAim.muzzlePosition(suit, pilot).add(pilot.getViewVector(1F).scale(HOLD_DISTANCE));
+        Vec3 hold = SocketAim.muzzlePosition(suit, operator).add(operator.getViewVector(1F).scale(HOLD_DISTANCE));
         Vec3 toHold = hold.subtract(target.position().add(0, target.getBbHeight() / 2, 0));
-        if (target instanceof ItemEntity item && toHold.length() < 1.2) {
+        if (target instanceof ItemEntity item && toHold.length() < 1.2 && operator instanceof Player pilot) {
             // Arrived: straight into the pilot's pockets (vanilla pickup, so events, stats and sounds all work).
             item.setNoGravity(beam.targetHadNoGravity);
             item.setNoPickUpDelay();
@@ -187,24 +187,24 @@ public class EmProjectorItem extends Item implements PowerTool {
     }
 
     @Override
-    public void release(PowerArmorEntity suit, @Nullable Player pilot, boolean interrupted) {
+    public void release(PowerArmorEntity suit, @Nullable LivingEntity operator, boolean interrupted) {
         Beam beam = suit.toolData(Beam.class, Beam::new);
         Entity target = beam.target;
         if (target == null) {
             return;
         }
-        if (interrupted || pilot == null || !suit.tryUseEnergy(PowerArmorConfig.EM_THROW_ENERGY.get())) {
+        if (interrupted || operator == null || !suit.tryUseEnergy(PowerArmorConfig.EM_THROW_ENERGY.get())) {
             drop(suit, beam);
             return;
         }
         // Launch along the view, a touch upward so things fly in a shallow arc.
-        Vec3 view = pilot.getViewVector(1F);
+        Vec3 view = operator.getViewVector(1F);
         double speed = target instanceof ItemEntity ? ITEM_PUSH : MOB_PUSH;
         target.setNoGravity(beam.targetHadNoGravity);
         target.setDeltaMovement(view.scale(speed).add(0, 0.1, 0));
         target.hurtMarked = true;
         if (target instanceof LivingEntity living) {
-            beam.thrown.add(new Thrown(living, pilot));
+            beam.thrown.add(new Thrown(living, operator));
         }
         beam.target = null;
         suit.setBeamTarget(null);

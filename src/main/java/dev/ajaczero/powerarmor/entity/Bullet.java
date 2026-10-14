@@ -91,9 +91,13 @@ public class Bullet extends Projectile {
         this.pathKnown = true;
         this.pathStart = this.position();
         this.pathDir = this.getDeltaMovement().normalize();
-        if (this.getOwner() instanceof Player pilot && pilot.getVehicle() instanceof PowerArmorEntity suit) {
-            this.gap = SocketAim.visualMuzzle.apply(suit, pilot).subtract(this.pathStart);
-            Vec3 target = SocketAim.aimPoint(suit, pilot, 96);
+        // Fired by a pilot (owner = the player in the suit) or by a suit's machine mind (owner = the suit itself).
+        LivingEntity operator = this.getOwner() instanceof LivingEntity owner ? owner : null;
+        PowerArmorEntity suit = operator instanceof PowerArmorEntity self ? self
+                : operator != null && operator.getVehicle() instanceof PowerArmorEntity ridden ? ridden : null;
+        if (suit != null) {
+            this.gap = SocketAim.visualMuzzle.apply(suit, operator).subtract(this.pathStart);
+            Vec3 target = SocketAim.aimPoint(suit, operator, 96);
             this.convergeDistance = (float) Math.max(2.0, target.distanceTo(this.pathStart));
         }
     }
@@ -154,10 +158,11 @@ public class Bullet extends Projectile {
         }
     }
 
-    /** Never hit the suit that fired us (the pilot is its passenger). */
+    /** Never hit the suit that fired us (the pilot is its passenger, or the suit itself is the owner). */
     @Override
     protected boolean canHitEntity(Entity target) {
-        return super.canHitEntity(target) && !(target instanceof PowerArmorEntity suit && suit.hasPassenger(e -> e == this.getOwner()));
+        return super.canHitEntity(target) && target != this.getOwner()
+                && !(target instanceof PowerArmorEntity suit && suit.hasPassenger(e -> e == this.getOwner()));
     }
 
     @Override

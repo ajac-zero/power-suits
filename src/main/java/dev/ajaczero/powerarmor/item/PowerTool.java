@@ -1,7 +1,7 @@
 package dev.ajaczero.powerarmor.item;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animation.RawAnimation;
@@ -10,7 +10,10 @@ import software.bernie.geckolib.animation.RawAnimation;
  * A power tool for the suit's left-arm socket (chaingun, EM projector, drill, chainsaw).
  * Only items implementing this fit the socket slot. They do nothing on foot.
  *
- * Two kinds, both run by the suit on the server while the pilot holds the use button (right click; see ToolInput):
+ * Two kinds, both run by the suit on the server while its operator holds the trigger: the pilot (right click; see
+ * ToolInput), or the suit itself while its machine mind drives it (PowerArmorEntity#toolOperator). The operator is
+ * whoever aims (eye + view direction), pays the ammo and gets the credit; block breaking goes through
+ * PowerArmorEntity#blockBreaker, a real or fake player.
  *  - repeating (none left; the chaingun times its own shots as a continuous tool): every time the tool is ready ({@link #cooldownTicks()} after the last use) and
  *    there's fuel for {@link #energyPerUse()}, the suit calls {@link #use};
  *  - continuous (EM projector, {@link #isContinuous()}): {@link #holdTick} every tick while held and
@@ -34,7 +37,7 @@ public interface PowerTool {
     }
 
     /** Server: one use (one shot, one block...). Return false if nothing happened (no fuel is charged). */
-    boolean use(PowerArmorEntity suit, Player pilot, ItemStack tool);
+    boolean use(PowerArmorEntity suit, LivingEntity operator, ItemStack tool);
 
     /** Continuous tools are driven by holdTick / release instead of use. */
     default boolean isContinuous() {
@@ -42,12 +45,13 @@ public interface PowerTool {
     }
 
     /** Server, continuous tools: every tick while the button is held and the suit can operate. */
-    default void holdTick(PowerArmorEntity suit, Player pilot, ItemStack tool) {
+    default void holdTick(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
     }
 
-    /** Server, continuous tools: button released ({@code interrupted} false), or the suit lost power, the
-     *  pilot left or the tool was taken out ({@code interrupted} true, {@code pilot} may be null). */
-    default void release(PowerArmorEntity suit, @Nullable Player pilot, boolean interrupted) {
+    /** Server, continuous tools: trigger released ({@code interrupted} false), or the suit lost power, the
+     *  operator changed (pilot left or climbed in) or the tool was taken out ({@code interrupted} true,
+     *  {@code operator} may be null). */
+    default void release(PowerArmorEntity suit, @Nullable LivingEntity operator, boolean interrupted) {
     }
 
     /** Server: every tick while installed, held or not (e.g. to follow things the tool has thrown). */

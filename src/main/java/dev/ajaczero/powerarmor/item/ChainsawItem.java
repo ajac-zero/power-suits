@@ -18,6 +18,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -147,18 +148,18 @@ public class ChainsawItem extends Item implements PowerTool {
     }
 
     @Override
-    public boolean use(PowerArmorEntity suit, Player pilot, ItemStack tool) {
+    public boolean use(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
         return false; // continuous: see holdTick
     }
 
     @Override
-    public void holdTick(PowerArmorEntity suit, Player pilot, ItemStack tool) {
+    public void holdTick(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
         if (!(suit.level() instanceof ServerLevel level)) {
             return;
         }
         State state = suit.toolData(State.class, () -> new State(suit));
         state.ticks++;
-        BlockHitResult hit = ToolMining.target(suit, pilot);
+        BlockHitResult hit = ToolMining.target(suit, operator);
         if (hit == null || !suit.isToolReady()) {
             state.clear(level);
             return;
@@ -187,20 +188,21 @@ public class ChainsawItem extends Item implements PowerTool {
         }
         // Look for the tree before the cut: afterwards the log that joins it all is gone.
         List<BlockPos> tree = block.is(BlockTags.LOGS) ? treeAbove(level, pos) : List.of();
-        if (ToolMining.breakBlock(level, pos, pilot, new ItemStack(Items.DIAMOND_AXE))) {
+        Player breaker = suit.blockBreaker(operator);
+        if (ToolMining.breakBlock(level, pos, breaker, new ItemStack(Items.DIAMOND_AXE))) {
             suit.tryUseEnergy(cost);
             suit.countToolUse();
             suit.setToolCooldown(BREAK_DELAY);
             if (!tree.isEmpty()) {
                 state.falling.addAll(tree);
-                state.feller = pilot;
+                state.feller = breaker;
                 suit.playSound(SoundEvents.WOOD_BREAK, 1.5F, 0.6F);
             }
         }
     }
 
     @Override
-    public void release(PowerArmorEntity suit, @Nullable Player pilot, boolean interrupted) {
+    public void release(PowerArmorEntity suit, @Nullable LivingEntity operator, boolean interrupted) {
         if (suit.level() instanceof ServerLevel level) {
             suit.toolData(State.class, () -> new State(suit)).clear(level);
         }

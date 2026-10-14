@@ -166,10 +166,10 @@ public final class CockpitHands {
      * there on their screen. The hand pass uses a fixed 70 degree FOV, so the view-space point is rescaled to the
      * world FOV to land on the same spot of the screen.
      */
-    static Vec3 visualMuzzle(PowerArmorEntity suit, Player pilot) {
+    static Vec3 visualMuzzle(PowerArmorEntity suit, net.minecraft.world.entity.LivingEntity operator) {
         Minecraft mc = Minecraft.getInstance();
-        if (pilot != mc.player || !PowerArmorRenderer.isCockpitView(suit)) {
-            return SocketAim.muzzlePosition(suit, pilot); // also when a scripted camera watches the suit from outside
+        if (operator != mc.player || !PowerArmorRenderer.isCockpitView(suit)) {
+            return SocketAim.muzzlePosition(suit, operator); // also when a scripted camera watches the suit from outside
         }
         float inset = suit.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.PowerTool tool ? tool.muzzleInsetPixels() : 0F;
         Vector3f p = toolMatrix(suit, suit.getToolRaise(1F)).transformPosition(new Vector3f(0, (MUZZLE_PX + inset) / 16F, 0));

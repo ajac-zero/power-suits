@@ -150,8 +150,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   the masks are generated from them, so never reuse those colours elsewhere (the script counts them and refuses).
   The glow is additive (`RenderType.eyes`): dark base + bright mask = dead when off, glowing when on, also by day.
 - **Night shots in the autopilot**: the client hears the new time of day only once a second, and place scene cameras
-  from the ground height (`Heightmap`), not from where the player happens to stand. Parked suits burn no fuel, so
-  run a suit dry while piloted.
+  from the ground height (`Heightmap`), not from where the player happens to stand.
 - **Projectile orientation**: `ProjectileUtil.rotateTowardsMovement` stores yaw as `atan2(z, x) + 90` and pitch with up
   negative, unlike vanilla arrows: after `YP(yRot - 90)`, `ZP(xRot)` the model's forward is -X (`BulletRenderer`; the
   rivet gun's first rivet rendered backwards, shank out of the wall).
@@ -192,12 +191,25 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   needs its own half-second cooldown (`SuitSeal.SEAL_COOLDOWN_TICKS`).
 - **Blocks broken by walking must be broken ahead of the suit** (`SuitSmash`): ridden movement is client-side, so the client
   hits a pane before the server could break it; the server clears a box reaching 0.6 / 1.1 blocks ahead along the input.
+- **A powered suit always runs (the machine mind, Phase 8)**: with fuel and nobody inside it burns the idle rate, looks at
+  players and walks back to its home; anything that leaves fuelled suits around (tests, autopilot scenes) gets that.
+  To park one, take the fuel out. Its state is only set on its first tick: tests wait 2 ticks before boarding/aiming.
+- **Vanilla mobs move at speed squared**: `MoveControl` passes the speed as the forward input (zza) and `moveRelative`
+  applies it again (a 0.119 suit crawled at 0.6 blocks/s). `PowerArmorEntity.travel` normalises the mind's input, so
+  a navigation speed of 1.0 = the pilot's jog. Measure position deltas, not `getDeltaMovement()` (it already holds the
+  next tick's drag: it read 2.9 for a 5.2 blocks/s walk).
+- **`Mob.serverAiStep` is final**: gate the mind with each goal's `canUse`/`canContinueToUse` + `updateControlFlags`.
+  `LookControl` zeroes the pitch and eases the head to the body every tick unless asked to look; `customServerAiStep`
+  runs after the goals and before the look control, so the mind's aim (`setAiAim`) is applied there.
+- **Paths of wide mobs end short**: vanilla's path for the 1.4-wide suit stopped 1.7 blocks from home (node offsets);
+  `ReturnHome` walks the last stretch with `MoveControl.setWantedPosition`. The pathfinder returns null for a mob in
+  the air (just spawned): wait for `onGround()`.
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
   `model/anim/` (walk/run carry a tool-arm `stabilize()` wrapper). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.
 
 ## Code map (see README for the full list)
 `entity/PowerArmorEntity.java` holds riding, movement, terrain/water, jump, turning, fuel/power, inventory, animation state;
-`menu/` the suit menu logic, `client/PowerArmorScreen` + `FuelGauge` its picture and the HUD;
+`entity/ai/` the machine mind's goals (`SuitMind` friendly/rogue); `menu/` the suit menu logic, `client/PowerArmorScreen` + `FuelGauge` its picture and the HUD;
 `client/` holds rendering + camera; `PilotProtection.java` redirects damage; `registry/` registers things.
 Comment the "why" for anything non-obvious; the user reads the code to learn.

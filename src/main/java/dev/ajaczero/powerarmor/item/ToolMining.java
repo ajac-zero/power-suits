@@ -11,6 +11,8 @@ import net.minecraft.network.protocol.game.ClientboundLevelEventPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
@@ -50,12 +52,15 @@ public final class ToolMining {
         return TOOL_BREAK.get();
     }
 
-    /** The block under the pilot's crosshair within their (suit-extended) reach, or null. */
+    /** The block under the operator's crosshair within reach, or null. A pilot reaches as far as their (suit-extended)
+     *  block reach; the machine mind as far as a pilot would (vanilla's 4.5 + the suit's bonus). */
     @Nullable
-    public static BlockHitResult target(PowerArmorEntity suit, Player pilot) {
-        Vec3 eye = pilot.getEyePosition();
-        Vec3 end = eye.add(pilot.getViewVector(1F).scale(pilot.blockInteractionRange()));
-        BlockHitResult hit = suit.level().clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, pilot));
+    public static BlockHitResult target(PowerArmorEntity suit, LivingEntity operator) {
+        double reach = operator instanceof Player player ? player.blockInteractionRange()
+                : Attributes.BLOCK_INTERACTION_RANGE.value().getDefaultValue() + dev.ajaczero.powerarmor.PilotHands.EXTRA_REACH;
+        Vec3 eye = operator.getEyePosition();
+        Vec3 end = eye.add(operator.getViewVector(1F).scale(reach));
+        BlockHitResult hit = suit.level().clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, operator));
         return hit.getType() == HitResult.Type.BLOCK ? hit : null;
     }
 

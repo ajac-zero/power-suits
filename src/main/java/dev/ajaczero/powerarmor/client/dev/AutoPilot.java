@@ -271,8 +271,8 @@ public final class AutoPilot {
                     net.neoforged.fml.ModList.get().getModContainerById(PowerArmor.MODID).orElseThrow(), null));
             case 1396 -> shot(mc, "config");
             case 1398 -> mc.setScreen(null);
-            // ---- lights at night (SuitGlowLayer): parked = green visor, piloted = amber, tool / hit = red, then the
-            //      fuel runs out: the visor stutters and goes dark, the firebox dies down to embers
+            // ---- lights at night (SuitGlowLayer): piloted = amber (also with the tool and when hit), empty = the machine
+            //      mind's green, then the fuel runs out: the visor stutters and goes dark, the firebox dies down to embers
             case 1400 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); lightsSetup(mc); }
             case 1430 -> { yaw = 0; pitch = 0; boardNearestSuit(mc); } // (the client learns the new time once a second)
             case 1440 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); lightsCamera(mc); }
@@ -284,10 +284,10 @@ public final class AutoPilot {
             case 1608 -> shot(mc, "lights_hot");                   // barrels still glowing as they coast down
             case 1620 -> onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) s.hurt(p.serverLevel().damageSources().generic(), 1F); });
             case 1624 -> shot(mc, "lights_hit");
-            case 1630 -> hold(o.keyShift, true);                  // climb out: parked with power -> green
+            case 1630 -> hold(o.keyShift, true);                  // climb out: the machine mind takes over -> green
             case 1632 -> hold(o.keyShift, false);
             case 1644 -> shot(mc, "lights_parked");
-            case 1646 -> boardNearestSuit(mc);                  // back in: a parked suit burns no fuel, so it could never run dry
+            case 1646 -> boardNearestSuit(mc);                  // back in, to watch it run dry from the cockpit
             case 1650 -> onServer(mc, p -> p.serverLevel().getEntitiesOfClass(PowerArmorEntity.class, p.getBoundingBox().inflate(8)).forEach(s -> {
                               s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, net.minecraft.world.item.ItemStack.EMPTY); s.setBurn(1, 1600); })); // out of fuel
             case 1656, 1660, 1666 -> shot(mc, "lights_shutdown_" + t);
@@ -1134,11 +1134,136 @@ public final class AutoPilot {
             case 400 -> { releaseAll(); onServer(mc, p -> p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 200))); }
             case 404 -> o.setCameraType(CameraType.FIRST_PERSON);
             case 410 -> shot(mc, "mech_lava_fp_burning");
-            case 420 -> { closeMechLog(); mc.stop(); }
+            // the machine mind (Phase 8): at night, a fuelled suit with a drill, nobody inside. Pushed 6 blocks from its
+            // home it walks back (green visor), then the mind aims at a rock wall and drills it (operator refactor)
+            case 420 -> { closeMechLog(); mindSetup(mc); }
+            case 425 -> openMindLog(mc);
+            case 445 -> { mindPhase = "home"; onServer(mc, p -> { if (mindSuit != null) {         // (the client hears the night once a second)
+                              mindSuit.teleportTo(mindBase.getX() + 6.5, mindBase.getY(), mindBase.getZ() + 0.5); } }); }
+            case 446 -> mindCamera(mc);
+            case 447, 452, 457, 462, 467, 475 -> shot(mc, "ai_home_" + (m - 420));
+            case 485 -> { mindPhase = "drill"; onServer(mc, p -> { if (mindSuit != null) {
+                              mindSuit.setAiAim(Vec3.atCenterOf(mindBase.offset(0, 1, 3)));
+                              mindSuit.setAiTrigger(true); } }); }
+            case 490, 496, 504, 512 -> shot(mc, "ai_drill_" + (m - 420));
+            case 520 -> { mindPhase = "after"; onServer(mc, p -> { if (mindSuit != null) { mindSuit.setAiTrigger(false); mindSuit.setAiAim(null); } }); }
+            case 522 -> mindVisorCamera(mc);
+            case 532 -> shot(mc, "ai_visor");
+            case 534 -> { closeMindLog(); mc.stop(); }
             default -> {}
         }
-        if (m >= 10) {
+        if (m >= 10 && m < 420) {
             logMech(mc, m);
+        }
+        if (m >= 425 && m < 534) {
+            logMind(mc, m);
+        }
+    }
+
+    // ---- the machine mind scene -----------------------------------------------------------------------------------
+
+    private static PowerArmorEntity mindSuit;
+    private static volatile BlockPos mindBase;
+    private static java.io.BufferedWriter mindCsv;
+    private static String mindPhase = "-";
+
+    /** Server: night; the player gets out (in the lava pool) and stands 5 blocks off to the side; a fuelled suit with a drill
+     *  stands at its home 40 blocks further east, a 3x3 stone wall 3 blocks ahead of it. */
+    private static void mindSetup(Minecraft mc) {
+        onServer(mc, player -> {
+            var level = player.serverLevel();
+            level.setDayTime(18000);
+            if (player.getVehicle() != null) {
+                player.stopRiding();
+            }
+            player.clearFire();
+            player.removeAllEffects();
+            int x = (mechBase != null ? mechBase.getX() : player.getBlockX()) + 40, z = mechBase != null ? mechBase.getZ() : player.getBlockZ();
+            int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+            BlockPos base = new BlockPos(x, y, z);
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = 0; dy <= 2; dy++) {
+                    level.setBlock(base.offset(dx, dy, 3), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+                }
+            }
+            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 16));
+            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.DRILL.get()));
+            suit.moveTo(x + 0.5, y, z + 0.5, 0, 0);
+            suit.setYBodyRot(0);
+            suit.setYHeadRot(0);
+            suit.setOwnerId(player.getUUID());
+            suit.setHome(base);
+            level.addFreshEntity(suit);
+            player.teleportTo(x - 5.5, y, z - 3.5);
+            mindSuit = suit;
+            mindBase = base;
+        });
+    }
+
+    /** Side view of the walk home: 7 blocks south-west of home, the start 6 blocks east of it in the frame. GUI hidden: with
+     *  a scripted camera entity in first person the hand pass would draw the player's hand. */
+    private static void mindCamera(Minecraft mc) {
+        BlockPos b = mindBase;
+        if (b != null) {
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            mc.options.hideGui = true;
+            Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0); // lookCamera places the stand's feet
+            lookCamera(mc, Vec3.atBottomCenterOf(b).add(3, 2.6, -6.5).subtract(drop), Vec3.atBottomCenterOf(b).add(3, 1.6, 1).subtract(drop));
+        }
+    }
+
+    /** Close-up of the mind's suit from 3 blocks in front of its face (the client copy: where this client draws it). */
+    private static void mindVisorCamera(Minecraft mc) {
+        if (mindSuit != null && mc.level.getEntity(mindSuit.getId()) instanceof PowerArmorEntity suit) {
+            float yaw = suit.getYHeadRot() * net.minecraft.util.Mth.DEG_TO_RAD;
+            Vec3 forward = new Vec3(-net.minecraft.util.Mth.sin(yaw), 0, net.minecraft.util.Mth.cos(yaw));
+            Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0); // lookCamera places the stand's feet
+            Vec3 face = suit.position().add(0, 2.5, 0);
+            lookCamera(mc, face.add(forward.scale(3.2)).add(forward.yRot(1.5708F).scale(0.8)).subtract(drop), face.subtract(drop));
+        }
+    }
+
+    private static void openMindLog(Minecraft mc) {
+        try {
+            mindCsv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_mind.csv"));
+            mindCsv.write("tick,phase,dxHome,dzHome,speed,driven,anim,headYaw,bodyYaw,xRot,toolActive,clientRaise,faceLeft,drops,energy,visorR,visorG,visorB,navDone,goals\n");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /** One row per tick: the server's suit (position, mind, tool, fuel) and the client's copy (animation, arm, visor). */
+    private static void logMind(Minecraft mc, int m) {
+        PowerArmorEntity server = mindSuit;
+        BlockPos b = mindBase;
+        if (mindCsv == null || server == null || b == null || !(mc.level.getEntity(server.getId()) instanceof PowerArmorEntity client)) {
+            return;
+        }
+        int faceLeft = 0;
+        for (BlockPos p : BlockPos.betweenClosed(b.offset(-1, 0, 3), b.offset(1, 2, 3))) {
+            faceLeft += mc.level.getBlockState(p).isAir() ? 0 : 1;
+        }
+        int drops = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(b).inflate(8)).size();
+        float[] visor = client.getVisorColor();
+        try {
+            mindCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%s,%.1f,%.1f,%.1f,%b,%.2f,%d,%d,%d,%.2f,%.2f,%.2f,%b,%s%n",
+                    m, mindPhase, server.getX() - (b.getX() + 0.5), server.getZ() - (b.getZ() + 0.5),
+                    Math.hypot(server.getX() - server.xo, server.getZ() - server.zo) * 20, server.isAiDriven(), client.getMovementAnimationName(),
+                    server.getYHeadRot(), server.yBodyRot, server.getXRot(), server.isToolActive(), client.getToolRaise(1F), faceLeft, drops,
+                    server.getTotalEnergy(), visor[0], visor[1], visor[2], server.getNavigation().isDone(),
+                    server.runningGoalNames()));
+        } catch (IOException e) {
+            PowerArmor.LOGGER.error("[autopilot] mind csv", e);
+        }
+    }
+
+    private static void closeMindLog() {
+        try {
+            if (mindCsv != null) {
+                mindCsv.close();
+            }
+        } catch (IOException ignored) {
         }
     }
 

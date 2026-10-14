@@ -13,6 +13,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -103,18 +104,18 @@ public class DrillItem extends Item implements PowerTool {
     }
 
     @Override
-    public boolean use(PowerArmorEntity suit, Player pilot, ItemStack tool) {
+    public boolean use(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
         return false; // continuous: see holdTick
     }
 
     @Override
-    public void holdTick(PowerArmorEntity suit, Player pilot, ItemStack tool) {
+    public void holdTick(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
         if (!(suit.level() instanceof ServerLevel level)) {
             return;
         }
         ToolMining.Progress state = suit.toolData(ToolMining.Progress.class, () -> new ToolMining.Progress(suit));
         state.ticks++;
-        BlockHitResult hit = ToolMining.target(suit, pilot);
+        BlockHitResult hit = ToolMining.target(suit, operator);
         if (hit == null || !suit.isToolReady()) {
             state.clear(level); // spinning in the air, or catching its breath after a 3x3
             return;
@@ -144,6 +145,7 @@ public class DrillItem extends Item implements PowerTool {
         ItemStack bit = new ItemStack(Items.DIAMOND_PICKAXE);
         ItemStack shovel = new ItemStack(Items.DIAMOND_SHOVEL);
         int broken = 0;
+        Player breaker = suit.blockBreaker(operator);
         for (BlockPos p : blocks) {
             if (!suit.hasEnergyFor(cost)) {
                 suit.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F);
@@ -151,7 +153,7 @@ public class DrillItem extends Item implements PowerTool {
             }
             // Loot tables check the tool: dig dirt "with a shovel" so e.g. snow layers drop snowballs.
             ItemStack as = level.getBlockState(p).is(BlockTags.MINEABLE_WITH_PICKAXE) ? bit : shovel;
-            if (ToolMining.breakBlock(level, p, pilot, as)) {
+            if (ToolMining.breakBlock(level, p, breaker, as)) {
                 suit.tryUseEnergy(cost);
                 broken++;
             }
@@ -164,7 +166,7 @@ public class DrillItem extends Item implements PowerTool {
     }
 
     @Override
-    public void release(PowerArmorEntity suit, @Nullable Player pilot, boolean interrupted) {
+    public void release(PowerArmorEntity suit, @Nullable LivingEntity operator, boolean interrupted) {
         if (suit.level() instanceof ServerLevel level) {
             suit.toolData(ToolMining.Progress.class, () -> new ToolMining.Progress(suit)).clear(level);
         }

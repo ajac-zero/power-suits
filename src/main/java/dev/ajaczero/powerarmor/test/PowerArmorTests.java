@@ -271,18 +271,23 @@ public final class PowerArmorTests {
         });
     }
 
+    /** Design sec. 8: a suit with fuel always runs (its machine mind drives it when nobody is inside), so it burns the
+     *  idle rate even without a pilot; to park one for good, take the fuel out. Refuelling powers it back on. */
     @GameTest(template = PAD, timeoutTicks = 80)
-    public static void parkedSuitDoesNotBurnAndRefuelRestarts(GameTestHelper helper) {
+    public static void pilotlessSuitRunsOnItsFuelAndRefuelRestarts(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         helper.runAfterDelay(2, () -> {
             helper.assertTrue(!suit.isPowered(), "a suit without fuel is off");
+            helper.assertTrue(!suit.isAiDriven() && suit.toolOperator() == null, "an unpowered suit has no mind at work");
             suit.setBurn(500, 1600);
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
         });
         helper.runAfterDelay(4, () -> helper.assertTrue(suit.isPowered(), "fuel should power it back on"));
         helper.runAfterDelay(44, () -> {
-            helper.assertTrue(suit.getBurnLeftExact() == 500, "a parked suit must not burn fuel, left " + suit.getBurnLeftExact());
-            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 2, "no coal used while parked");
+            double idle = PowerArmorConfig.DRAIN_IDLE.get();
+            float used = 500 - suit.getBurnLeftExact();
+            helper.assertTrue(used > idle * 30 && used < idle * 45, "the mind's suit burns the idle rate (~40 ticks), used " + used);
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 2, "no new coal needed yet");
             helper.succeed();
         });
     }
@@ -1355,6 +1360,189 @@ public final class PowerArmorTests {
             helper.assertTrue(player.getLastDamageSource() != null && player.getLastDamageSource().is(net.minecraft.world.damagesource.DamageTypes.WITHER),
                     "the wither tick reached the pilot");
             helper.assertTrue(suit.getBurnLeftExact() == fuel, "and costs no fuel");
+            helper.succeed();
+        });
+    }
+
+    // =========================================================================================
+    // The machine mind (Phase 8 step 1): owner, home, who drives, visor, tools without a pilot
+    // =========================================================================================
+
+    @GameTest(template = PAD)
+    public static void pilotOwnsTheSuitAndExitMarksHome(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        helper.runAfterDelay(2, () -> { // the engine lights on the suit's first tick
+            Player pilot = boardedPilot(helper, suit);
+            helper.assertTrue(pilot.getUUID().equals(suit.getOwnerId()), "climbing in claims the suit");
+            helper.assertTrue(!suit.isAiDriven() && suit.toolOperator() == pilot, "the pilot drives, not the mind");
+            pilot.stopRiding();
+            helper.assertTrue(pilot.getUUID().equals(suit.getOwnerId()), "the last pilot stays the owner");
+            helper.assertTrue(suit.blockPosition().equals(suit.getHome()), "home is where the pilot got out, got " + suit.getHome());
+            helper.assertTrue(suit.isAiDriven() && suit.toolOperator() == suit, "powered and empty: the mind drives");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void deployedSuitWorksForWhoeverPlacedIt(GameTestHelper helper) {
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        ItemStack stack = new ItemStack(ModItems.POWER_ARMOR.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        useOnFloor(helper, player, stack, new BlockPos(4, 1, 4));
+        PowerArmorEntity suit = suitsInTest(helper).get(0);
+        helper.assertTrue(player.getUUID().equals(suit.getOwnerId()), "the placer owns it");
+        helper.assertTrue(helper.absolutePos(new BlockPos(4, 2, 4)).equals(suit.getHome()), "home is where it was placed, got " + suit.getHome());
+        helper.succeed();
+    }
+
+    @GameTest(template = PAD)
+    public static void mindOwnerAndHomeSurviveSaving(GameTestHelper helper) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        java.util.UUID owner = java.util.UUID.randomUUID();
+        suit.setMind(dev.ajaczero.powerarmor.entity.SuitMind.ROGUE);
+        suit.setOwnerId(owner);
+        suit.setHome(new BlockPos(10, 64, -3));
+        CompoundTag saved = new CompoundTag();
+        suit.saveWithoutId(saved);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel());
+        loaded.load(saved);
+        helper.assertTrue(loaded.isRogue() && owner.equals(loaded.getOwnerId()) && new BlockPos(10, 64, -3).equals(loaded.getHome()),
+                "mind, owner and home should survive saving");
+        CompoundTag old = new CompoundTag(); // a suit saved before the AI existed: friendly, nobody's, no home
+        spawnSuit(helper).saveWithoutId(old);
+        old.remove("Mind");
+        PowerArmorEntity legacy = ModEntities.POWER_ARMOR.get().create(helper.getLevel());
+        legacy.load(old);
+        helper.assertTrue(!legacy.isRogue() && legacy.getOwnerId() == null && legacy.getHome() == null, "old saves load as friendly, unowned, homeless");
+        helper.succeed();
+    }
+
+    /** Pushed 6 blocks from home, the idle mind walks back at a pilot's jog (vanilla mobs move at speed squared; see
+     *  travel) and onto the block itself (vanilla's path for a 2-block-wide mob ended 1.7 blocks short). */
+    @GameTest(template = PAD, timeoutTicks = 100)
+    public static void idleSuitWalksBackHome(GameTestHelper helper) {
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(7, 2, 4));
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
+        BlockPos home = helper.absolutePos(new BlockPos(1, 2, 4));
+        suit.setHome(home);
+        double[] fastest = {0};
+        Vec3[] last = {suit.position()};
+        helper.onEachTick(() -> { // blocks moved per tick (the velocity field already has the next tick's drag in it)
+            fastest[0] = Math.max(fastest[0], suit.position().subtract(last[0]).horizontalDistance() * 20);
+            last[0] = suit.position();
+        });
+        helper.runAfterDelay(60, () -> {
+            helper.assertTrue(!suit.isAwayFromHome(0.5), "should be back home after 3 s, at " + suit.position().subtract(Vec3.atBottomCenterOf(home)));
+            helper.assertTrue(fastest[0] > 4.3 && fastest[0] < 6, "walks at a jog (~5 blocks/s), fastest " + fastest[0]);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void unpoweredSuitStaysPut(GameTestHelper helper) {
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(2, 2, 2));
+        suit.setHome(helper.absolutePos(new BlockPos(6, 2, 6)));
+        Vec3 start = suit.position();
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(suit.position().distanceTo(start) < 0.05, "no fuel, no mind: it must not walk home");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void boardingStopsTheMind(GameTestHelper helper) {
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(2, 2, 2));
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
+        suit.setHome(helper.absolutePos(new BlockPos(6, 2, 6)));
+        helper.runAfterDelay(8, () -> {
+            helper.assertTrue(!suit.getNavigation().isDone(), "on its way home");
+            Player pilot = helper.makeMockPlayer(GameType.SURVIVAL);
+            suit.interact(pilot, InteractionHand.MAIN_HAND);
+            helper.assertTrue(pilot.getVehicle() == suit, "boarded mid-walk");
+            helper.assertTrue(suit.getNavigation().isDone() && !suit.isAiDriven(), "the pilot takes over at once");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = PAD)
+    public static void rogueLetsNobodyIn(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 2));
+        suit.setMind(dev.ajaczero.powerarmor.entity.SuitMind.ROGUE);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        helper.assertTrue(!suit.interact(player, InteractionHand.MAIN_HAND).consumesAction() && player.getVehicle() == null,
+                "a rogue can't be boarded");
+        helper.succeed();
+    }
+
+    /** Amber whenever piloted (no more red for tool use or hits), green for the friendly mind, red only for a rogue. */
+    @GameTest(template = PAD)
+    public static void visorShowsWhoIsInControl(GameTestHelper helper) {
+        var friendly = dev.ajaczero.powerarmor.entity.SuitMind.FRIENDLY;
+        var rogue = dev.ajaczero.powerarmor.entity.SuitMind.ROGUE;
+        float[] piloted = PowerArmorEntity.visorColorFor(true, friendly);
+        float[] green = PowerArmorEntity.visorColorFor(false, friendly);
+        float[] red = PowerArmorEntity.visorColorFor(false, rogue);
+        helper.assertTrue(piloted[0] > 0.9F && piloted[1] > 0.5F && piloted[2] < 0.4F, "piloted = amber");
+        helper.assertTrue(PowerArmorEntity.visorColorFor(true, rogue) == piloted, "a pilot's visor is amber, whatever the mind");
+        helper.assertTrue(green[1] > green[0] && green[1] > green[2], "friendly mind = green");
+        helper.assertTrue(red[0] > 0.9F && red[1] < 0.3F, "rogue = red");
+        helper.succeed();
+    }
+
+    /** Breaks seen at this position (the BreakEvent's player), for checking who a tool breaks blocks as. */
+    @EventBusSubscriber(modid = PowerArmor.MODID)
+    public static final class BreakWatch {
+        static volatile BlockPos pos;
+        static volatile java.util.UUID breaker;
+
+        @SubscribeEvent
+        public static void seen(BlockEvent.BreakEvent event) {
+            if (event.getPos().equals(pos)) {
+                breaker = event.getPlayer().getUUID();
+            }
+        }
+    }
+
+    /** The tool operator refactor: with nobody inside, the mind aims the head and pulls the trigger; the drill digs the
+     *  3x3 face and every block is broken as the owner (a FakePlayer with their UUID, so claim mods see the owner). */
+    @GameTest(template = PAD, timeoutTicks = 60)
+    public static void mindDrillsAsItsOwner(GameTestHelper helper) {
+        wall(helper, Blocks.STONE);
+        BlockPos center = helper.absolutePos(new BlockPos(4, 3, 5));
+        BreakWatch.pos = center;
+        BreakWatch.breaker = null;
+        PowerArmorEntity suit = toolSuit(helper);
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.DRILL.get()));
+        java.util.UUID owner = java.util.UUID.randomUUID();
+        suit.setOwnerId(owner);
+        helper.runAfterDelay(2, () -> { // once the engine runs (an unpowered mind forgets its aim and trigger)
+            suit.setAiAim(Vec3.atCenterOf(center));
+            suit.setAiTrigger(true);
+        });
+        helper.runAfterDelay(5, () -> helper.assertTrue(suit.isToolActive(), "the mind's trigger runs the tool"));
+        helper.runAfterDelay(30, () -> {
+            suit.setAiTrigger(false);
+            BreakWatch.pos = null;
+            helper.assertTrue(wallLeft(helper) == 0, "the face should be gone, left " + wallLeft(helper));
+            helper.assertTrue(dropped(helper, Items.COBBLESTONE) == 9, "9 cobblestone should drop, got " + dropped(helper, Items.COBBLESTONE));
+            helper.assertTrue(owner.equals(BreakWatch.breaker), "broken as the owner, got " + BreakWatch.breaker);
+            helper.succeed();
+        });
+    }
+
+    /** The chaingun with the mind at the trigger: it spins up, but without nuggets it can't shoot. */
+    @GameTest(template = PAD, timeoutTicks = 40)
+    public static void mindChaingunNeedsAmmo(GameTestHelper helper) {
+        PowerArmorEntity suit = toolSuit(helper);
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
+        helper.runAfterDelay(2, () -> {
+            suit.setAiAim(helper.absoluteVec(new Vec3(4.5, 3, 7)));
+            suit.setAiTrigger(true);
+        });
+        helper.runAfterDelay(20, () -> {
+            helper.assertTrue(suit.isToolActive() && suit.getToolUses() == 0, "spins, but no nuggets: no shots");
             helper.succeed();
         });
     }

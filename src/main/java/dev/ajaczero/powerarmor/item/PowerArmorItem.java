@@ -61,6 +61,11 @@ public class PowerArmorItem extends Item {
             suit.setCustomName(stack.getHoverName()); // name tags / anvil names carry over
         }
         suit.applyLoadout(stack.getOrDefault(ModDataComponents.LOADOUT.get(), SuitLoadout.EMPTY)); // fuel + tool
+        // The machine mind works for whoever deployed it, from the spot it stands on, until a pilot takes over.
+        if (player != null) {
+            suit.setOwnerId(player.getUUID());
+        }
+        suit.setHome(pos);
         level.addFreshEntity(suit);
         level.playSound(null, suit.getX(), suit.getY(), suit.getZ(), SoundEvents.ANVIL_PLACE, SoundSource.NEUTRAL, 0.7F, 0.6F);
         stack.consume(1, player);

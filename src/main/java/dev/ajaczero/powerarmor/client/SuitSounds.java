@@ -58,7 +58,7 @@ public final class SuitSounds {
     }
 
     private static boolean engineOn(PowerArmorEntity suit) {
-        return suit.isAlive() && suit.isVehicle() && suit.isPowered();
+        return suit.isAlive() && suit.isPowered(); // a powered suit always runs: piloted or driven by its mind
     }
 
     // Load 0 (idle) .. ~1.3 (sprinting with a tool running): the engine gets louder and higher.

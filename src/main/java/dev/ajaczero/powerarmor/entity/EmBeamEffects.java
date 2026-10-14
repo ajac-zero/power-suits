@@ -6,7 +6,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
@@ -28,11 +28,12 @@ final class EmBeamEffects {
 
     static void tick(PowerArmorEntity suit) {
         Entity target = suit.getBeamTarget();
-        if (target == null || !(suit.getControllingPassenger() instanceof Player pilot)) {
+        LivingEntity operator = suit.toolOperator(); // the pilot, or the suit itself while its mind drives
+        if (target == null || operator == null) {
             return;
         }
         RandomSource random = suit.getRandom();
-        Vec3 from = SocketAim.visualMuzzle.apply(suit, pilot);
+        Vec3 from = SocketAim.visualMuzzle.apply(suit, operator);
         Vec3 to = target.position().add(0, target.getBbHeight() / 2, 0);
         Vec3 line = to.subtract(from);
         double length = line.length();
@@ -43,7 +44,7 @@ final class EmBeamEffects {
         Vec3 side = dir.cross(new Vec3(0, 1, 0));
         side = side.lengthSqr() < 1e-4 ? new Vec3(1, 0, 0) : side.normalize();
         Vec3 up = side.cross(dir);
-        Vec3 eye = pilot.getEyePosition();
+        Vec3 eye = operator.getEyePosition();
         int steps = (int) (length * 2.5);
         float spin = suit.tickCount * 0.6F;
         for (int i = 0; i <= steps; i++) {

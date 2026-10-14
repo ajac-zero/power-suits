@@ -22,13 +22,13 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
 
     /**
      * Runs every frame after the keyframe animations. The legs face yBodyRot; here the torso (and with
-     * it the arms, pads and socket tool) twists and leans to face where the pilot looks, and the head adds
+     * it the arms, pads and socket tool) twists and leans to face where the pilot (or the machine mind) looks, and the head adds
      * a little extra pitch. Values are added on top of the animation, which sets these bones every frame.
      */
     @Override
     public void setCustomAnimations(PowerArmorEntity suit, long instanceId, AnimationState<PowerArmorEntity> state) {
-        if (!suit.isVehicle() || suit.isDeadOrDying()) {
-            return;
+        if (!suit.isDriven() || suit.isDeadOrDying()) {
+            return; // parked: rest pose (and no unkeyed bones to add to)
         }
         EntityModelData data = state.getData(DataTickets.ENTITY_MODEL_DATA);
         if (data == null) {

@@ -18,6 +18,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -91,7 +92,7 @@ public class ChaingunItem extends Item implements PowerTool {
     }
 
     @Override
-    public boolean use(PowerArmorEntity suit, Player pilot, ItemStack tool) {
+    public boolean use(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
         return false; // continuous: holdTick does the work
     }
 
@@ -133,7 +134,7 @@ public class ChaingunItem extends Item implements PowerTool {
 
     /** Every tick the trigger is held (and the suit can operate): spin up, and fire whenever the next shot is due. */
     @Override
-    public void holdTick(PowerArmorEntity suit, Player pilot, ItemStack tool) {
+    public void holdTick(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
         State s = state(suit);
         s.held = true;
         if (s.overheated || !suit.tryUseEnergy(PowerArmorConfig.CHAINGUN_SPIN_ENERGY.get())) {
@@ -144,31 +145,34 @@ public class ChaingunItem extends Item implements PowerTool {
             return;
         }
         s.timer = Math.max(1, Math.round(interval(s.spin)));
-        Vec3 muzzle = SocketAim.muzzlePosition(suit, pilot);
-        if (!suit.hasEnergyFor(this.energyPerUse()) || !takeBullet(pilot)) {
+        Vec3 muzzle = SocketAim.muzzlePosition(suit, operator);
+        if (!suit.hasEnergyFor(this.energyPerUse()) || !takeBullet(operator)) {
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.6F);
             if (s.noAmmoMessage == 0 && suit.hasEnergyFor(this.energyPerUse())) {
-                pilot.displayClientMessage(Component.translatable("message.powerarmor.no_bullets"), true);
+                if (operator instanceof Player pilot) {
+                    pilot.displayClientMessage(Component.translatable("message.powerarmor.no_bullets"), true);
+                }
                 s.noAmmoMessage = 40;
             }
             return;
         }
         suit.tryUseEnergy(this.energyPerUse());
-        this.fire(level, suit, pilot, muzzle, s);
+        this.fire(level, suit, operator, muzzle, s);
     }
 
-    private void fire(ServerLevel level, PowerArmorEntity suit, Player pilot, Vec3 muzzle, State s) {
-        // The bullet flies along the pilot's line of sight: from the eye through the crosshair, so it hits what the pilot
-        // sees there. Clients draw it coming out of the gun (Bullet.visualShift); sound and muzzle burst are at the gun.
-        Vec3 eye = pilot.getEyePosition();
-        Vec3 direction = SocketAim.aimPoint(suit, pilot, AIM_RANGE).subtract(eye).normalize();
+    private void fire(ServerLevel level, PowerArmorEntity suit, LivingEntity operator, Vec3 muzzle, State s) {
+        // The bullet flies along the operator's line of sight: from the eye through the crosshair, so it hits what the
+        // pilot (or the mind) sees there. Clients draw it coming out of the gun (Bullet.visualShift); sound and muzzle
+        // burst are at the gun. The operator owns the bullet: kills are the pilot's, or the suit's own.
+        Vec3 eye = operator.getEyePosition();
+        Vec3 direction = SocketAim.aimPoint(suit, operator, AIM_RANGE).subtract(eye).normalize();
         if (direction.lengthSqr() < 0.5) {
-            direction = pilot.getViewVector(1F);
+            direction = operator.getViewVector(1F);
         }
         float spread = MAX_SPREAD * s.spin * Mth.DEG_TO_RAD;
         direction = direction.xRot((float) level.random.nextGaussian() * spread).yRot((float) level.random.nextGaussian() * spread);
         float spin = s.spin;
-        level.addFreshEntity(new Bullet(level, pilot, eye, direction.scale(Bullet.SPEED), damage(spin), 1F - spin));
+        level.addFreshEntity(new Bullet(level, operator, eye, direction.scale(Bullet.SPEED), damage(spin), 1F - spin));
         suit.countToolUse();
         suit.countShot(); // every client: recoil kick, muzzle burst (the pilot's own client draws it on screen)
         s.sinceShot = 0;
@@ -188,7 +192,7 @@ public class ChaingunItem extends Item implements PowerTool {
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.IRON_GOLEM_DAMAGE, SoundSource.PLAYERS, 0.4F, 1.5F);
         }
         for (ServerPlayer viewer : level.players()) {
-            if (viewer != pilot && viewer.distanceToSqr(muzzle) < 64 * 64) {
+            if (viewer != operator && viewer.distanceToSqr(muzzle) < 64 * 64) {
                 muzzleBurst((type, x, y, z, n, sp, v) -> level.sendParticles(viewer, type, false, x, y, z, n, sp, sp, sp, v), muzzle, spin, true);
             }
         }
@@ -210,6 +214,11 @@ public class ChaingunItem extends Item implements PowerTool {
     }
 
     /** Use up one iron nugget (off hand first, like a bow's arrows). False if there is none. Creative: free. */
+    /** One bullet for this operator: a pilot pays from their inventory. The machine mind has no pockets: no bullets. */
+    public static boolean takeBullet(LivingEntity operator) {
+        return operator instanceof Player player && takeBullet(player);
+    }
+
     public static boolean takeBullet(Player player) {
         if (player.hasInfiniteMaterials()) {
             return true;

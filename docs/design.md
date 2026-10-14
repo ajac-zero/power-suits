@@ -14,6 +14,8 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
   when off). Glow is drawn from glowmask textures (full-bright, tinted per frame).
 - Visor: **the whole visor glows and shows the suit's state** (the helmet's own steel is its frame): green = parked with power (free to climb in), amber =
   piloted, red = tool in use or just hit, dark = powered off, flickering while starting up, shutting down or low on fuel.
+  **Changes with the suit AI (sec. 8):** amber = piloted, always (no red for tool use or hits), green = friendly AI,
+  red = rogue AI only, dark = off; no flash or flicker on a hit.
 - Plasma cannon -> **rivet gun** (built, then replaced by the chaingun below): fires red-hot rivets using **iron nuggets from the pilot's inventory** (like a bow
   uses arrows; creative: free) plus fuel for steam pressure. Rivets **stick in blocks** (not mobs) for a while and
   drop back as nuggets. Item id `rivet_gun`, with `plasma_cannon` registered as an alias so existing items survive.
@@ -120,8 +122,9 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
 - **Fuels (energy per item; walking burns 1 per tick, so 1600 = 80 s):** coal / charcoal 1600 (1:20),
   lava bucket 3200 (2:40, the empty bucket stays in the slot), blaze rod 4800 (4:00). Nothing else
   (planks, coal blocks...) burns, so blaze rods stay the best fuel. Table: `SuitFuel`.
-- **Drain per tick (piloted only):** idle 0.25, moving 1.0, sprinting 2.0, +20 per jump, plus tool costs
-  per use (Phase 2+). A parked suit burns nothing and keeps its half-burnt item. Also in creative mode.
+- **Drain per tick:** idle 0.25, moving 1.0, sprinting 2.0, +20 per jump, plus tool costs
+  per use (Phase 2+). Also in creative mode. **Since the machine mind (sec. 8, 2026-10-13) a powered suit always
+  runs**, piloted or not (the mind's load is judged from how fast it moves); to park a suit, take the fuel out.
 - **Shutdown at 0** (nothing burning, slot empty): power-down sound, `shutdown` slump (hold), no movement /
   jump / tools, torso stops aiming, smoke stops, action-bar hint. The pilot can climb out. Fuel in the slot
   restarts it: power-up sound, black smoke cough, `startup` animation; movement unlocks after 1.4 s.
@@ -160,5 +163,49 @@ the usual trick (invisible light blocks following the suit) was judged not worth
 Default costs per coal (1600): 80 s walking, ~100 chaingun bullets, 80 s of EM holding or 20 throws, ~9 drill faces,
 ~20 felled oaks.
 
-## 8. Out of scope for now
+## 8. Suit AI (decided 2026-10-13; step 1 built: mind, owner, home, visor, tool operator, idle job)
+An empty suit is a mob, like a horse: a machine mind drives it whenever nobody else does.
+
+- **Who**: every *powered* suit without a pilot is AI-driven. To park a suit, take its fuel out (or run it dry):
+  unpowered = slumped, no AI. Player-owned suits never go rogue.
+- **Owner** (decided): the last pilot (a suit deployed but never piloted: whoever deployed it). A rebooted rogue has
+  no owner until someone climbs in: **whoever climbs in claims it**.
+- **Home**: the block where the pilot got out (deployed: where it was placed). Jobs are anchored there; radius in config.
+- **Visor**: green friendly, red rogue, amber piloted, dark off (sec. 0).
+- **Job = the socket tool**:
+  | Tool | Job |
+  |---|---|
+  | none | Idle at home: stands, looks around, walks back if pushed away. |
+  | Drill | Mines **horizontally** at the home level within the radius: clears an open hall row by row, out from home. Never digs down, never steps where it would fall (a drop under the next floor block) and skips any face next to lava or other liquids. Drops stay on the floor as vanilla items. |
+  | Chainsaw | Fells natural trees whose trunk stands within the radius, then goes back home. Drops stay where they fall. |
+  | Chaingun | Follows the owner like a tamed wolf and defends them: shoots what attacks the owner, what the owner attacks and hostile monsters nearby. Never fires with the owner, other players, villagers, pets or suits in the line of fire. Ammo: the suit's hidden nugget store (below); empty: punches (+4 melee bonus). |
+  | EM projector | Guards an area around home: grabs hostile monsters and flings them straight up so the fall kills them (~24 blocks for a zombie; creepers get thrown away). Never players, pets, villagers, suits. |
+- **Collecting the drops = allays** (vanilla 1.21.1, decided 2026-10-13; copper golems don't exist before 1.21.9 and
+  only sort chests anyway). An allay picks up dropped items matching the one it holds and brings them to its player or
+  to a note block it heard in the last 30 s. So the player decides what to keep: hand allays a diamond, coal, iron...,
+  play a note block next to a hopper at home; the stone and dirt nobody wants despawn after 5 minutes. Allays only see
+  items in **line of sight** within 32 blocks across / 16 up-down, which is why the drill clears an open hall around
+  home instead of branch tunnels (drops around corners would be invisible), and why the default radius stays
+  well under 32.
+- **Hidden nugget store** (decided 2026-10-13: no ammo slot for a single tool): right-clicking a suit with iron
+  nuggets in hand loads the whole stack into it instead of climbing in (like feeding a horse). The count is saved with
+  the suit, kept when packed up and dropped as nuggets when the suit is destroyed; the menu shows it as text only.
+  A pilot's chaingun also uses it, after the nuggets in their own inventory (decided 2026-10-13).
+- **Rogue suits** (extremely rare, natural only): spawned like the wandering trader (one roll per in-game day, tiny
+  chance, far from a random player in the overworld, one at a time; chance in config). **They leave after a while**
+  (decided 2026-10-13), like the trader: after about an in-game day (config) a rogue vanishes once no player is near
+  enough to watch it go. Red visor, a chaingun or an EM
+  projector, **unlimited fuel and ammo**, attacks any mob or player it sees. Defeated: **drops only its tool** (not
+  the suit). Struck by lightning (storm, Channeling trident, lightning rod): the existing lightning knock-out, then it
+  restarts as a friendly suit with no owner (the first pilot claims it).
+- **Engineering notes** (step 1, built): `PowerArmorEntity` extends `Mob`, so the mind is vanilla's goal system
+  (`SuitGoals`; every goal also checks `isAiDriven()`, and `updateControlFlags` hands the goals' controls to the mind
+  only while it drives). The tools take an *operator* (`PowerArmorEntity.toolOperator()`): the pilot, or the suit
+  itself while its mind drives; it aims (eye + view: for a mob, its head), pays the ammo and owns the bullets/kills.
+  Without a pilot, blocks are broken as a FakePlayer with the owner's UUID (`blockBreaker`), so claim mods veto as
+  for the owner. The mind aims with `setAiAim` (snaps the head onto a point, after the goals and before vanilla's look
+  control) and fires with `setAiTrigger`. Vanilla mobs move at speed squared (MoveControl passes the speed as the
+  forward input); `travel` normalises the mind's input so speed modifier 1.0 = the pilot's 5 blocks/s jog.
+
+## 9. Out of scope for now
 Wearable armor, multiple sockets, upgrade trees, multiplayer permissions beyond "never grab players".

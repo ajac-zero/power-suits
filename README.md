@@ -30,6 +30,7 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Strength | Every melee hit from inside (bare hand, sword, axe...) does +4 damage |
 | Stomp | Landing from 3.5+ blocks hurts everything around you (not you): 2 damage per block fallen, up to 30, half at the edge of the shock wave (2-3.5 blocks); things get thrown. A normal jump doesn't stomp |
 | Smashing through | Walking breaks leaves, glass panes, cobwebs, snow layers, berry bushes, bamboo...; sprinting also breaks glass and ice. Nothing drops. Block tags `powerarmor:suit_smashes_walking` / `_sprinting`; can be switched off in the config |
+| Machine mind | A powered suit with nobody inside is driven by its own mind (green visor): it works for its owner (whoever last piloted it, or deployed it) from its home (the block where the pilot got out, or where it was deployed). For now it stands guard at home, looks at people nearby and walks back if pushed away; jobs per tool come next (design sec. 8). It burns fuel like a piloted suit (idle 0.25/tick): **to park a suit, take the fuel out** |
 | Lightning | A strike knocks a fuelled suit out: it convulses, slumps (you're stuck, the seal is off, so the fire the bolt leaves at your feet usually catches it) and restarts by itself after 5 s; the flames die as it powers up |
 
 ### Balance and config
@@ -40,7 +41,7 @@ balance pass), with what one piece of coal (1600) buys:
 
 | Use | Cost | Per coal |
 |---|---|---|
-| Walking / standing / sprinting | 1 / 0.25 / 2 per tick | 80 s / 5:20 / 40 s |
+| Walking / standing / sprinting (piloted or the machine mind) | 1 / 0.25 / 2 per tick | 80 s / 5:20 / 40 s |
 | Jump | 20 | 80 jumps |
 | Chaingun | 15 per bullet + 1 iron nugget, 1 per tick while spinning (4 hearts heavy, 1.5 barrage) | ~100 bullets |
 | EM Projector | 1 per tick holding, 80 per throw | 80 s of holding, or 20 throws |
@@ -51,12 +52,12 @@ balance pass), with what one piece of coal (1600) buys:
 Coal and charcoal 1600, lava bucket 3200, blaze rod 4800. Hover over any of them for its walking time.
 
 ### Sounds
-The engine rumbles while someone pilots a powered suit, louder and higher as it works harder (walking,
+The engine rumbles while a suit is powered (piloted or driven by its mind), louder and higher as it works harder (walking,
 sprinting, a tool running); the drill whirs and the chainsaw buzzes while they run (subtitles included).
 They are vanilla sounds re-pitched in `assets/powerarmor/sounds.json`: swap in your own `.ogg` files there.
 
-Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It only burns
-while someone is inside: standing still uses a quarter of the walking rate, sprinting double, and each
+Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It burns whenever
+the suit is powered, piloted or not (the machine mind runs it): standing still uses a quarter of the walking rate, sprinting double, and each
 jump a little extra. The gauge right of the hotbar shows the flame of the burning item, what's left in
 the slot and how long that lasts at walking pace. Under 30 seconds left it flashes and beeps and the
 exhaust coughs dark smoke. At zero the suit powers down and slumps; climb out, refuel it in the menu
@@ -106,9 +107,10 @@ has nothing to do, right click goes to the socket tool instead, exactly like van
 shield in your off hand (your real off-hand item isn't used while piloting). A powered-down suit's hand can't do anything.
 
 **Lights**: the firebox in the chest glows through its grate while the engine runs (brighter under load,
-dimmer when fuel runs low, embers dying out after shutdown), and the visor shows the suit's state:
-**green** = parked with power (free to climb in), **amber** = piloted, **red** = a tool in use or just hit,
-**dark** = powered off; it stutters while starting up or shutting down and drops out now and then on low fuel.
+dimmer when fuel runs low, embers dying out after shutdown), and the visor shows who is in control:
+**amber** = a pilot (whatever they do), **green** = the friendly machine mind, **red** = a rogue mind (only rogues,
+so red always means danger), **dark** = powered off; it stutters while starting up or shutting down and drops out
+now and then on low fuel. Hits don't change it.
 The chaingun's barrels glow with heat and the EM projector's redstone with its field.
 
 While inside: the suit takes hits instead of you, it has no fall damage, steps up full blocks,
@@ -159,7 +161,10 @@ src/main/java/dev/ajaczero/powerarmor/
   entity/ExhaustSmoke.java   client-side smoke from the back pipes
   menu/PowerArmorMenu.java   menu logic: fuel + socket slots, shift-click, Pack up button
   item/SuitLoadout.java      fuel/tool/half-burnt item carried by a packed suit item
-  item/PowerTool.java        what a socket tool is: fuel per use, cooldown, model bone, use()
+  item/PowerTool.java        what a socket tool is: fuel per use, cooldown, model bone, use(); worked by an operator
+                             (the pilot, or the suit itself while its mind drives: aim, ammo, credit)
+  entity/SuitMind.java       friendly / rogue (synced: the visor colour)
+  entity/ai/SuitGoals.java   the machine mind's goals (vanilla goal system): walk home, look around
   item/ChaingunItem.java     the first tool: spin-up, nugget ammo, overheat (continuous tool; also a GeckoLib item)
   item/EmProjectorItem.java  the second tool: grab / hold / collect / throw, slam damage (per-suit state in Beam)
   item/SocketAim.java        muzzle position, crosshair aim point, entity under the crosshair

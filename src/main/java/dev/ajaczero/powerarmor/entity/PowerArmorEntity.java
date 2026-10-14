@@ -168,6 +168,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final EntityDataAccessor<Integer> TOOL_SHOTS =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     /** True while a lightning strike has knocked the suit out (it restarts by itself): the slump starts with sparks. */
+    /** Who the machine mind works for (SuitMind ordinal): the visor shows it. */
+    private static final EntityDataAccessor<Byte> MIND =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Boolean> STUNNED =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     /** Copies of the two slots, so clients can show the fuel left and (Phase 2) draw the socket tool. */
@@ -196,6 +199,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Server: the continuous tool currently held down (to release it when anything changes). */
     @Nullable
     private PowerTool activeContinuousTool;
+    /** Server: who started it (a pilot taking over from the mind mid-use interrupts it). */
+    @Nullable
+    private LivingEntity activeOperator;
     /** Server: a tool's per-suit state (items are shared by every stack, so state can't live on the item). */
     @Nullable
     private Object toolData;
@@ -216,7 +222,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Client: the EM projector's redstone, 0..1: the lens + vents (core) and the prong tips (arc). */
     private float emCoreGlow, emArcGlow;
     private final float[] visorColor = {1F, 0.68F, 0.22F};
-    private int redTicks;
+    /** Server: the machine mind's owner (the last pilot, or who deployed it) and home (where the pilot got out). Not
+     *  synced: only the server-side AI uses them. */
+    @Nullable
+    private java.util.UUID ownerId;
+    @Nullable
+    private BlockPos home;
+    /** Server: the machine mind holds the tool's trigger (its goals aim the suit first). */
+    private boolean aiTrigger;
+    @Nullable
+    private Vec3 aiAim;
     /** Server: ticks left of a lightning knock-out (0 = none). */
     private int stunTicks;
     /** Server: when the seal last paid for keeping fire/frost out (SuitSeal: once per half second, like hit immunity). */
@@ -296,6 +311,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(TOOL_SHOTS, 0);
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
         builder.define(STUNNED, false);
+        builder.define(MIND, (byte) SuitMind.FRIENDLY.ordinal());
+    }
+
+    /** The machine mind's goals (see SuitGoals). Vanilla calls this once, from Mob's constructor. */
+    @Override
+    protected void registerGoals() {
+        dev.ajaczero.powerarmor.entity.ai.SuitGoals.register(this, this.goalSelector);
     }
 
     /** Base stats. The single source of truth: also re-applied to suits loaded from old saves. */
@@ -331,6 +353,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         ContainerHelper.loadAllItems(tag.getCompound("Inventory"), this.inventory.getItems(), this.registryAccess());
         this.burnLeft = tag.getFloat("BurnLeft");
         this.burnTotal = tag.getInt("BurnTotal");
+        this.setMind(SuitMind.byName(tag.getString("Mind"))); // suits from before the AI: "" -> friendly
+        this.ownerId = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
+        this.home = net.minecraft.nbt.NbtUtils.readBlockPos(tag, "Home").orElse(null);
         this.syncSlots();
         this.syncBurn();
         this.entityData.set(POWERED, this.hasEnergy());
@@ -343,25 +368,192 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         tag.put("Inventory", ContainerHelper.saveAllItems(new CompoundTag(), this.inventory.getItems(), this.registryAccess()));
         tag.putFloat("BurnLeft", this.burnLeft);
         tag.putInt("BurnTotal", this.burnTotal);
+        tag.putString("Mind", this.getMind().name());
+        if (this.ownerId != null) {
+            tag.putUUID("Owner", this.ownerId);
+        }
+        if (this.home != null) {
+            tag.put("Home", net.minecraft.nbt.NbtUtils.writeBlockPos(this.home));
+        }
+    }
+
+    // =========================================================================================
+    // The machine mind (design sec. 8): drives the suit while it's powered and nobody is inside
+    // =========================================================================================
+
+    /** Both sides: the mind is in control right now: powered, booted, not knocked out, no pilot. */
+    public boolean isAiDriven() {
+        return this.isAlive() && this.canOperate() && !this.isStunned() && !this.isVehicle();
+    }
+
+    /** Both sides: someone drives the suit, the pilot or the mind. The model then aims the torso and raises the tool. */
+    public boolean isDriven() {
+        return this.isVehicle() || this.isAiDriven();
+    }
+
+    public SuitMind getMind() {
+        return SuitMind.byOrdinal(this.entityData.get(MIND));
+    }
+
+    public void setMind(SuitMind mind) {
+        this.entityData.set(MIND, (byte) mind.ordinal());
+    }
+
+    public boolean isRogue() {
+        return this.getMind() == SuitMind.ROGUE;
+    }
+
+    /** Server: the player the mind works for (null: nobody yet, e.g. a rebooted wild suit). */
+    @Nullable
+    public java.util.UUID getOwnerId() {
+        return this.ownerId;
+    }
+
+    public void setOwnerId(@Nullable java.util.UUID owner) {
+        this.ownerId = owner;
+    }
+
+    /** Server: the block the mind's jobs are anchored to (null: none, e.g. spawned by a command). */
+    @Nullable
+    public BlockPos getHome() {
+        return this.home;
+    }
+
+    public void setHome(@Nullable BlockPos home) {
+        this.home = home == null ? null : home.immutable();
+    }
+
+    /** Server: further than {@code slack} blocks (horizontally) from home. */
+    public boolean isAwayFromHome(double slack) {
+        if (this.home == null) {
+            return false;
+        }
+        double dx = this.getX() - (this.home.getX() + 0.5), dz = this.getZ() - (this.home.getZ() + 0.5);
+        return dx * dx + dz * dz > slack * slack || Math.abs(this.getY() - this.home.getY()) > 1.5;
+    }
+
+    /** Server: the mind pulls or releases the tool's trigger (it aims the suit's head first: setAiAim). */
+    public void setAiTrigger(boolean down) {
+        this.aiTrigger = down;
+    }
+
+    public boolean isAiTriggerHeld() {
+        return this.aiTrigger;
+    }
+
+    /** Server: the point the mind aims the head (and so the torso and the tool) at, or null to let the look goals
+     *  wander. A machine: it snaps onto the target instead of easing round like an animal. */
+    public void setAiAim(@Nullable Vec3 target) {
+        this.aiAim = target;
+    }
+
+    /** Vanilla's look control resets the pitch and eases the head back toward the body every tick unless something
+     *  asks it to look somewhere. This runs after the goals (which may have asked for something else) and before the
+     *  look control, so an aim set by the mind wins; the tool fires later in the same tick (tickTool). */
+    @Override
+    protected void customServerAiStep() {
+        super.customServerAiStep();
+        if (!this.isAiDriven()) {
+            this.aiAim = null;
+        } else if (this.aiAim != null) {
+            this.getLookControl().setLookAt(this.aiAim.x, this.aiAim.y, this.aiAim.z, 180F, 180F);
+        }
+    }
+
+    /** Server/dev: the mind's running goals, e.g. "ReturnHome/LookAtPlayerGoal" (autopilot logs). */
+    public String runningGoalNames() {
+        return this.goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning())
+                .map(g -> g.getGoal().getClass().getSimpleName().isEmpty() ? g.getGoal().getClass().getSuperclass().getSimpleName() : g.getGoal().getClass().getSimpleName())
+                .reduce((a, b) -> a + "/" + b).orElse("-");
+    }
+
+    /** The head (and so the torso, which follows it) may turn as far from the legs as the model's torso twists. */
+    @Override
+    public int getMaxHeadYRot() {
+        return (int) MAX_TWIST;
+    }
+
+    /**
+     * Both sides: who works the socket tool right now: the pilot, or the suit itself while its mind drives (its head
+     * aims, its own store feeds the gun, kills are credited to it). Null: nobody (parked, off).
+     */
+    @Nullable
+    public LivingEntity toolOperator() {
+        if (this.getControllingPassenger() instanceof Player pilot) {
+            return pilot;
+        }
+        return this.isAiDriven() ? this : null;
+    }
+
+    /**
+     * Server: the player a block is broken as. Breaking needs a player: claim mods veto by who breaks (BreakEvent), and
+     * loot tables and XP want one. With the mind driving, that's a FakePlayer (NeoForge's stand-in player that never
+     * joins the game) carrying the owner's UUID, so claims treat the suit like its owner.
+     */
+    public Player blockBreaker(LivingEntity operator) {
+        if (operator instanceof Player player) {
+            return player;
+        }
+        java.util.UUID id = this.ownerId != null ? this.ownerId : WILD_SUIT_ID;
+        Player fake = net.neoforged.neoforge.common.util.FakePlayerFactory.get((ServerLevel) this.level(),
+                new com.mojang.authlib.GameProfile(id, "[Power Armor]"));
+        fake.moveTo(this.getX(), this.getY(), this.getZ(), this.getYHeadRot(), this.getXRot()); // mods may check where it stands
+        return fake;
+    }
+
+    /** The FakePlayer UUID for suits nobody owns. */
+    private static final java.util.UUID WILD_SUIT_ID = java.util.UUID.fromString("6d1c1b8e-3f0a-4c55-9d7e-5a2f0b9c1e01");
+
+    /** The first pilot to climb in owns the suit (and every later pilot takes it over: the mind works for the last one). */
+    @Override
+    protected void addPassenger(Entity passenger) {
+        super.addPassenger(passenger);
+        if (!this.level().isClientSide() && passenger instanceof Player player) {
+            this.ownerId = player.getUUID();
+            this.aiTrigger = false;
+            this.getNavigation().stop();
+        }
+    }
+
+    /** The pilot got out: the mind takes over and makes this block its home. */
+    @Override
+    protected void removePassenger(Entity passenger) {
+        super.removePassenger(passenger);
+        if (!this.level().isClientSide() && passenger instanceof Player player && this.isAlive()) {
+            this.ownerId = player.getUUID();
+            this.home = this.blockPosition();
+        }
+    }
+
+    /** Vanilla switches the goals' controls on and off every few ticks (for mobs ridden by mobs); we hand them to the
+     *  mind only while it drives, so a pilot climbing in stops every goal at once. */
+    @Override
+    protected void updateControlFlags() {
+        boolean ai = this.isAiDriven();
+        this.goalSelector.setControlFlag(net.minecraft.world.entity.ai.goal.Goal.Flag.MOVE, ai);
+        this.goalSelector.setControlFlag(net.minecraft.world.entity.ai.goal.Goal.Flag.JUMP, ai);
+        this.goalSelector.setControlFlag(net.minecraft.world.entity.ai.goal.Goal.Flag.LOOK, ai);
+        this.targetSelector.setControlFlag(net.minecraft.world.entity.ai.goal.Goal.Flag.TARGET, ai);
     }
 
     // =========================================================================================
     // Fuel, power, inventory
     // =========================================================================================
 
-    /** Server: one tick of the engine. Only a piloted suit burns fuel; a parked one is switched off. */
+    /** Server: one tick of the engine. A suit with fuel runs, piloted or not (without a pilot its machine mind drives
+     *  it): to park a suit for good, take the fuel out. */
     private void tickFuel() {
         Player pilot = this.getControllingPassenger() instanceof Player p ? p : null;
         if (this.stunTicks > 0 && --this.stunTicks == 0) {
             this.entityData.set(STUNNED, false); // back on: setPowered below plays the startup
         }
-        if (pilot != null && this.stunTicks == 0) { // a knocked-out engine burns nothing
+        if (this.stunTicks == 0 && (pilot != null || this.hasEnergy())) { // a knocked-out engine burns nothing
             if (this.burnLeft <= 0) {
                 this.igniteNextItem();
             }
             if (this.burnLeft > 0) {
-                float drain = drainPerTick(pilot);
-                if (dev.ajaczero.powerarmor.SuitSeal.feedsAir(pilot)) {
+                float drain = pilot != null ? drainPerTick(pilot) : this.aiDrainPerTick();
+                if (pilot != null && dev.ajaczero.powerarmor.SuitSeal.feedsAir(pilot)) {
                     drain += PowerArmorConfig.AIR_ENERGY_PER_TICK.get().floatValue(); // the pilot breathes the suit's air
                 }
                 this.burnLeft = Math.max(0, this.burnLeft - drain);
@@ -387,6 +579,15 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             return PowerArmorConfig.DRAIN_IDLE.get().floatValue();
         }
         return (pilot.isSprinting() ? PowerArmorConfig.DRAIN_SPRINT : PowerArmorConfig.DRAIN_WALK).get().floatValue();
+    }
+
+    /** The same load for the machine mind, judged by how fast it really moves (blocks/tick: 0.25 = 5 blocks/s, a jog). */
+    private float aiDrainPerTick() {
+        double speed = this.getDeltaMovement().horizontalDistance();
+        if (speed < 0.02) {
+            return PowerArmorConfig.DRAIN_IDLE.get().floatValue();
+        }
+        return (speed > 0.35 ? PowerArmorConfig.DRAIN_SPRINT : PowerArmorConfig.DRAIN_WALK).get().floatValue();
     }
 
     /** Takes one item from the fuel slot and starts burning it. Lava leaves its bucket behind. */
@@ -499,11 +700,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.toolCooldown--;
         }
         PowerTool tool = this.getSocketTool();
-        Player pilot = this.getControllingPassenger() instanceof Player p ? p : null;
+        // The pilot works the tool with their trigger; with nobody inside, the machine mind with its own.
+        LivingEntity operator = this.toolOperator();
+        boolean trigger = operator instanceof Player ? this.triggerHeld : this.aiTrigger;
         if (tool != null) {
             tool.serverTick(this);
         }
-        boolean active = pilot != null && this.triggerHeld && tool != null && this.canOperate();
+        boolean active = operator != null && trigger && tool != null && this.canOperate();
         this.entityData.set(TOOL_RUNNING, tool != null && tool.isContinuous() && (active || tool.keepsRunning(this)));
         this.entityData.set(TOOL_ACTIVE, active);
         if (active && !this.toolWasActive) {
@@ -513,20 +716,25 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         this.toolWasActive = active;
         if (this.activeContinuousTool != null && (this.activeContinuousTool != tool || !active)) {
-            boolean interrupted = this.activeContinuousTool != tool || pilot == null || !this.canOperate();
-            this.activeContinuousTool.release(this, pilot, interrupted);
+            boolean interrupted = this.activeContinuousTool != tool || operator == null || operator != this.activeOperator
+                    || !this.canOperate();
+            this.activeContinuousTool.release(this, operator == this.activeOperator ? operator : null, interrupted);
             this.activeContinuousTool = null;
+            this.activeOperator = null;
         }
-        if (pilot == null) {
+        if (!(operator instanceof Player)) {
             this.triggerHeld = false; // the pilot left with the button down
-            return;
+        }
+        if (operator != this) {
+            this.aiTrigger = false; // the mind lost control (pilot, power) with its trigger down
         }
         if (!active) {
             return;
         }
         if (tool.isContinuous()) {
             this.activeContinuousTool = tool;
-            tool.holdTick(this, pilot, this.inventory.getItem(SOCKET_SLOT));
+            this.activeOperator = operator;
+            tool.holdTick(this, operator, this.inventory.getItem(SOCKET_SLOT));
             return;
         }
         if (this.toolCooldown > 0) {
@@ -538,7 +746,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.toolCooldown = tool.cooldownTicks();
             return;
         }
-        if (tool.use(this, pilot, this.inventory.getItem(SOCKET_SLOT))) {
+        if (tool.use(this, operator, this.inventory.getItem(SOCKET_SLOT))) {
             this.consumeEnergy(cost);
             this.toolUses++;
         }
@@ -593,6 +801,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (!this.level().isClientSide() && this.activeContinuousTool != null) {
             this.activeContinuousTool.release(this, null, true);
             this.activeContinuousTool = null;
+            this.activeOperator = null;
         }
         super.remove(reason);
     }
@@ -710,6 +919,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (this.isVehicle() || this.isDeadOrDying()) {
             return InteractionResult.PASS;
+        }
+        if (this.isRogue()) {
+            return InteractionResult.PASS; // a rogue mind won't open up: no boarding, no menu
         }
         if (!this.level().isClientSide()) {
             if (player.isSecondaryUseActive()) {
@@ -888,14 +1100,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final float[] VISOR_GREEN = {0.35F, 1F, 0.45F}, VISOR_AMBER = {1F, 0.68F, 0.22F}, VISOR_RED = {1F, 0.12F, 0.08F};
 
     /** Client, every tick: ease the lights toward what the suit is doing. The fire flares up quickly and dies down
-     *  slowly (embers); the visor shows the state in colour: green = parked with power (free to climb in),
-     *  amber = piloted, red = a tool in use or just hit, dark = powered off. */
+     *  slowly (embers); the visor shows who is in control: amber = a pilot (whatever they do), green = the friendly
+     *  machine mind, red = a rogue mind (only rogues: so a red visor always means danger), dark = powered off. */
     private void tickLights() {
         boolean powered = this.isPowered();
         float fireTarget = powered ? (0.6F + 0.4F * Math.min(1F, this.engineLoad())) * (this.isLowOnFuel() ? 0.7F : 1F) : 0F;
         this.fireGlow += (fireTarget - this.fireGlow) * (fireTarget > this.fireGlow ? 0.2F : 0.03F);
-        this.redTicks = this.hurtTime > 0 ? 40 : Math.max(0, this.redTicks - 1);
-        float[] target = !this.isVehicle() ? VISOR_GREEN : (this.isToolActive() || this.redTicks > 0) ? VISOR_RED : VISOR_AMBER;
+        float[] target = visorColorFor(this.isVehicle(), this.getMind());
         for (int i = 0; i < 3; i++) {
             this.visorColor[i] += (target[i] - this.visorColor[i]) * 0.25F;
         }
@@ -930,6 +1141,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Client: firebox glow, 0 (cold) .. 1 (roaring). */
     public float getFireGlow() {
         return this.fireGlow;
+    }
+
+    /** The visor colour each state eases toward: the pilot's amber beats the mind's colour. */
+    public static float[] visorColorFor(boolean piloted, SuitMind mind) {
+        return piloted ? VISOR_AMBER : mind == SuitMind.ROGUE ? VISOR_RED : VISOR_GREEN;
     }
 
     /** Client: the visor's colour (r, g, b, 0..1). */
@@ -998,6 +1214,15 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      */
     @Override
     public void travel(Vec3 travelVector) {
+        if (!this.isVehicle() && !this.canOperate()) {
+            travelVector = Vec3.ZERO; // off (or booting): the legs don't move, whatever the AI's controls still say
+        } else if (!this.isVehicle() && travelVector.horizontalDistanceSqr() > 1.0E-6) {
+            // Driven by the mind: vanilla's MoveControl passes its speed as the forward input (zza), and the speed is
+            // applied again in moveRelative, so mobs move at speed squared. Pushing the stick all the way instead makes
+            // the mind's suit walk exactly like a piloted one: 1.0 = the pilot's jog, 2.0 = sprint (walk animation sync).
+            Vec3 flat = new Vec3(travelVector.x, 0, travelVector.z).normalize();
+            travelVector = new Vec3(flat.x, travelVector.y, flat.z);
+        }
         if ((this.isInWater() || this.isInLava()) && this.isControlledByLocalInstance()) {
             this.travelUnderwater(travelVector); // lava too: vanilla's lava swimming crawled at 0.4 blocks/s
             return;
@@ -1245,11 +1470,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.tickPowerTransitions();
         if (this.level().isClientSide()) {
             this.putOutFire(); // the pilot's client moved us (and maybe into fire) during super.tick()
-            float aimTarget = this.isVehicle() && this.canOperate() ? 1F : 0F;
+            // The torso follows the view of whoever drives: the pilot's, or the head of the mind (what it looks at).
+            float aimTarget = this.isDriven() && this.canOperate() ? 1F : 0F;
             this.aimBlend += (aimTarget - this.aimBlend) * 0.2F;
             // Raise the tool arm in 3 ticks while the tool is used, lower it in 5 (heavier on the way down).
             this.toolRaiseO = this.toolRaise;
-            this.toolRaise = this.isToolActive() && this.isVehicle() ? Math.min(1F, this.toolRaise + 1F / 3F)
+            this.toolRaise = this.isToolActive() && this.isDriven() ? Math.min(1F, this.toolRaise + 1F / 3F)
                     : Math.max(0F, this.toolRaise - 1F / 5F);
             this.tickLights();
             this.tickSparks();
@@ -1337,7 +1563,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     private boolean isRunning() {
-        return this.getControllingPassenger() instanceof Player pilot && pilot.isSprinting();
+        if (this.getControllingPassenger() instanceof Player pilot) {
+            return pilot.isSprinting();
+        }
+        return this.visualSpeed > 7.5; // the mind has no sprint key: between the jog (5 blocks/s) and the sprint (10)
     }
 
     private boolean isWalking() {
@@ -1375,9 +1604,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             state.getController().transitionLength(2);
             return state.setAndContinue(STARTUP);
         }
-        if (!this.isVehicle()) {
-            return PlayState.STOP; // parked: engine idle, standing in its rest pose
-        }
+        // Powered means driven: by the pilot, or by the machine mind (same gaits, picked from how fast it moves).
         // Jump states blend fast (the charge crouch ends exactly where the jump starts).
         boolean jumpState = this.jumpAnimTicks > 0 || this.jumped || (this.clientJumpCharge > 0 && this.onGround());
         state.getController().transitionLength(jumpState ? 2 : 5);
@@ -1524,7 +1751,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Fixed rate per gait. GeckoLib scales the whole elapsed time by this, so changing it
      *  smoothly mid-loop would make the animation jump; constant values avoid that. */
     private double movementAnimationRate() {
-        if (this.isDeadOrDying() || !this.isVehicle() || !this.canOperate() || this.jumped || this.jumpAnimTicks > 0
+        if (this.isDeadOrDying() || !this.isDriven() || !this.canOperate() || this.jumped || this.jumpAnimTicks > 0
                 || this.airTicks >= FALL_POSE_AFTER_TICKS || this.landTicks > 0) {
             return 1.0;
         }

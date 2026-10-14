@@ -110,6 +110,25 @@ would replace them in `sounds.json` only.
    redstone dust, `PowerTool.muzzleInsetPixels` (beam starts at the shorter tool's tips), autopilot close-ups
    `ap_em_close_{idle,pig}`.
 
+## Phase 8: suit AI (decided 2026-10-13, see design sec. 8)
+Each step: GameTests for the logic, an autopilot scene with numbers in a CSV, then commit.
+1. (DONE 2026-10-13) Mind state (`SuitMind` friendly / rogue, synced for the visor), owner (last pilot / deployer)
+   and home (exit block / deploy spot), saved; the mind drives only when powered and pilotless (`isAiDriven`), and
+   a powered suit always burns fuel; visor amber when piloted, green friendly, red rogue, no hit flash; tool
+   *operator* refactor (`toolOperator`, `blockBreaker` FakePlayer with the owner's UUID, `setAiAim`/`setAiTrigger`);
+   idle job (`SuitGoals`: walk home at a jog, look at players/around); rogues can't be boarded. Old fuelled suits in
+   the user's world wake up idle with no home (until a pilot gets out). Tests (73): owner/home, saving + old saves,
+   walk home speed + arrival, unpowered stays, boarding stops the mind, rogue, visor, the mind drills as its owner,
+   the mind's chaingun needs ammo. Autopilot (mech run): `ap_ai_home_*`, `ap_ai_drill_*`, `ap_ai_visor`,
+   `run/autopilot_mind.csv`.
+2. Idle job + chaingun follow/defend (wolf-style targeting, line-of-fire check, hidden nugget store loaded by
+   right-clicking the suit with nuggets, shown as text in the menu; punch fallback).
+3. EM area guard (fling hostiles up, creepers away).
+4. Chainsaw + drill workers (radius, open hall at home level, drop/lava/liquid checks); autopilot scene with an allay
+   holding an ore and a note block + hopper at home, logging items delivered vs dropped and item-entity counts (lag).
+5. Rogue spawner (wandering-trader style, config chance), rogue targeting, unlimited fuel/ammo, leaves after ~1 day when unwatched, tool-only drop,
+   lightning reboot to friendly + claim on boarding.
+
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint
 before every change, save it with every mod commit that changes the art (user's rule), re-export with `node tools/export-model.mjs`.

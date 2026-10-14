@@ -5,6 +5,7 @@ import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
@@ -13,7 +14,10 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-/** Where socket tools fire from and what the pilot is aiming at. Works on both sides. */
+/**
+ * Where socket tools fire from and what their operator is aiming at. Works on both sides. The operator is the pilot,
+ * or the suit itself while its machine mind drives (then its head is the "camera": eye height 2.6, head yaw and pitch).
+ */
 public final class SocketAim {
     // Muzzle in the torso's frame, in blocks (measured in Blockbench from the chaingun's muzzle bone with the tool
     // arm raised to aim, which it always is while a tool works (PowerArmorModel.raiseTool; the rest pose is a hip carry);
@@ -26,11 +30,11 @@ public final class SocketAim {
 
     /** Where muzzle effects (EM beam particles) start on this client. The client points it at the cockpit viewmodel's
      *  muzzle for its own pilot in first person (CockpitHands); everywhere else it's the suit's muzzle. */
-    public static BiFunction<PowerArmorEntity, Player, Vec3> visualMuzzle = SocketAim::muzzlePosition;
+    public static BiFunction<PowerArmorEntity, LivingEntity, Vec3> visualMuzzle = SocketAim::muzzlePosition;
 
-    public static Vec3 muzzlePosition(PowerArmorEntity suit, Player pilot) {
-        float yaw = pilot.getYRot() * Mth.DEG_TO_RAD;
-        float lean = Mth.clamp(pilot.getXRot() * 0.55F, -25F, 25F) * Mth.DEG_TO_RAD; // + = looking down
+    public static Vec3 muzzlePosition(PowerArmorEntity suit, LivingEntity operator) {
+        float yaw = aimYaw(operator) * Mth.DEG_TO_RAD;
+        float lean = Mth.clamp(operator.getXRot() * 0.55F, -25F, 25F) * Mth.DEG_TO_RAD; // + = looking down
         double up = MUZZLE_UP - TORSO_PIVOT_UP;
         // Shorter tools end before the chaingun's muzzle; the raised tool points along the view, i.e. forward here.
         double reach = MUZZLE_FORWARD - (suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.muzzleInsetPixels() / 16.0 : 0);
@@ -41,30 +45,35 @@ public final class SocketAim {
         return suit.position().add(0, TORSO_PIVOT_UP + leanedUp, 0).add(forward.scale(leanedForward)).add(right.scale(-MUZZLE_LEFT));
     }
 
-    /** What's under the pilot's crosshair: the first entity or block along the view, or a far point. */
-    public static Vec3 aimPoint(PowerArmorEntity suit, Player pilot, double range) {
-        Vec3 eye = pilot.getEyePosition();
-        Vec3 blockEnd = blockHit(suit, pilot, range);
-        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(suit.level(), pilot, eye, blockEnd,
-                new AABB(eye, blockEnd).inflate(1), e -> e != suit && e != pilot && e.isPickable() && !e.isSpectator());
+    /** Which way the operator faces. A player's yaw is their view; a mob's view is its head (yRot is where it walks). */
+    public static float aimYaw(LivingEntity operator) {
+        return operator instanceof Player ? operator.getYRot() : operator.getYHeadRot();
+    }
+
+    /** What's under the operator's crosshair: the first entity or block along the view, or a far point. */
+    public static Vec3 aimPoint(PowerArmorEntity suit, LivingEntity operator, double range) {
+        Vec3 eye = operator.getEyePosition();
+        Vec3 blockEnd = blockHit(suit, operator, range);
+        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(suit.level(), operator, eye, blockEnd,
+                new AABB(eye, blockEnd).inflate(1), e -> e != suit && e != operator && e.isPickable() && !e.isSpectator());
         return entityHit != null ? entityHit.getLocation() : blockEnd;
     }
 
     /** The first entity along the view (not behind a wall) that passes the filter. Hit boxes are grown
      *  by {@code inflate} so small things like dropped items are easy to point at. */
     @Nullable
-    public static Entity entityInView(PowerArmorEntity suit, Player pilot, double range, Predicate<Entity> filter, float inflate) {
-        Vec3 eye = pilot.getEyePosition();
-        Vec3 blockEnd = blockHit(suit, pilot, range);
-        EntityHitResult hit = ProjectileUtil.getEntityHitResult(suit.level(), pilot, eye, blockEnd,
-                new AABB(eye, blockEnd).inflate(inflate + 1), e -> e != suit && e != pilot && filter.test(e), inflate);
+    public static Entity entityInView(PowerArmorEntity suit, LivingEntity operator, double range, Predicate<Entity> filter, float inflate) {
+        Vec3 eye = operator.getEyePosition();
+        Vec3 blockEnd = blockHit(suit, operator, range);
+        EntityHitResult hit = ProjectileUtil.getEntityHitResult(suit.level(), operator, eye, blockEnd,
+                new AABB(eye, blockEnd).inflate(inflate + 1), e -> e != suit && e != operator && filter.test(e), inflate);
         return hit == null ? null : hit.getEntity();
     }
 
-    private static Vec3 blockHit(PowerArmorEntity suit, Player pilot, double range) {
-        Vec3 eye = pilot.getEyePosition();
-        Vec3 end = eye.add(pilot.getViewVector(1F).scale(range));
-        return suit.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, pilot)).getLocation();
+    private static Vec3 blockHit(PowerArmorEntity suit, LivingEntity operator, double range) {
+        Vec3 eye = operator.getEyePosition();
+        Vec3 end = eye.add(operator.getViewVector(1F).scale(range));
+        return suit.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, operator)).getLocation();
     }
 
     private SocketAim() {}
