@@ -135,8 +135,14 @@ Each step: GameTests for the logic, an autopilot scene with numbers in a CSV, th
    aim up for 12 ticks (creepers: up and away), let go: `EmProjectorItem.release` throws at `em_guard_launch` for the
    mind. Tests (84): lifts + flings a husk, leaves cows/villagers alone, throws creepers away from home. Autopilot
    (mech run): `ap_ai_em_*` (2 zombies + a skeleton flung ~30 up and killed, the creeper thrown 25 blocks away).
-4. Chainsaw + drill workers (radius, open hall at home level, drop/lava/liquid checks); autopilot scene with an allay
-   holding an ore and a note block + hopper at home, logging items delivered vs dropped and item-entity counts (lag).
+4. (DONE 2026-10-13) Drill + chainsaw workers (`SuitGoals.Worker`: pick a block, walk until in reach and the tool would
+   hit something it may work on, aim + trigger until gone, skip what it can't reach for a minute; `DrillWorker`,
+   `SawWorker`; `SuitWork` rules; the drill/chainsaw refuse other blocks for the mind). Hitbox 3.0 -> 2.95 high (the
+   pathfinder wants floor(height + 1) free blocks: 4 at 3.0, so the 3-high hall was unwalkable). Tests (86): the hall
+   (floor, ceiling, lava walls, hole column kept), trees felled but not cabins. Autopilot: `WorkScene` (mech run, last):
+   `ap_work_drill_*`, `ap_work_saw_*`, `run/autopilot_work.csv`: 230 of 287 rock blocks in 27 s, lava walls and hole
+   column intact, two allays (coal, raw iron) delivered 17 + 13 to the player (they used the liked-player memory, not a
+   note block), ~210 items lying on the floor (despawn after 5 min), 3 oaks felled in 9 s.
 5. Rogue spawner (wandering-trader style, config chance), rogue targeting, unlimited fuel/ammo, leaves after ~1 day when unwatched, tool-only drop,
    lightning reboot to friendly + claim on boarding.
 

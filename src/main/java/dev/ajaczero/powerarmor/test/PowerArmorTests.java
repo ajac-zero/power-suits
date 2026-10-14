@@ -1516,6 +1516,7 @@ public final class PowerArmorTests {
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.DRILL.get()));
         java.util.UUID owner = java.util.UUID.randomUUID();
         suit.setOwnerId(owner);
+        suit.setHome(suit.blockPosition()); // the mind only drills its hall round home (the wall is in it)
         helper.runAfterDelay(2, () -> { // once the engine runs (an unpowered mind forgets its aim and trigger)
             suit.setAiAim(Vec3.atCenterOf(center));
             suit.setAiTrigger(true);
@@ -1786,6 +1787,76 @@ public final class PowerArmorTests {
             helper.assertTrue(suit.getToolUses() >= 1, "the creeper should be thrown");
             helper.assertTrue(furthest[0] > 7.0, "away from home (+z, to the far wall), got to z " + furthest[0]);
             helper.succeed();
+        });
+    }
+
+    // =========================================================================================
+    // Phase 8 step 4: the drill and chainsaw workers
+    // =========================================================================================
+
+    private static PowerArmorEntity worker(GameTestHelper helper, BlockPos at, ItemStack tool) {
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), at);
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 8));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, tool);
+        suit.setHome(helper.absolutePos(at));
+        return suit;
+    }
+
+    /**
+     * A stone mass (z 3..8, 4 high) in front of home: the mind clears the hall (home level, 3 high) and leaves the floor,
+     * the ceiling, the blocks touching a lava pocket, and a column over a hole in the floor.
+     */
+    @GameTest(template = PAD, timeoutTicks = 1500)
+    public static void mindDrillsAnOpenHallAtHomeLevel(GameTestHelper helper) {
+        for (BlockPos p : BlockPos.betweenClosed(new BlockPos(0, 2, 3), new BlockPos(8, 5, 8))) {
+            helper.setBlock(p, Blocks.STONE);
+        }
+        helper.setBlock(new BlockPos(8, 3, 8), Blocks.LAVA);
+        helper.setBlock(new BlockPos(2, 1, 6), Blocks.AIR); // a hole in the floor under the column x=2, z=6
+        PowerArmorEntity suit = worker(helper, new BlockPos(4, 2, 1), new ItemStack(ModItems.DRILL.get()));
+        List<BlockPos> kept = List.of(new BlockPos(7, 3, 8), new BlockPos(8, 3, 7), new BlockPos(8, 2, 8), new BlockPos(8, 4, 8),
+                new BlockPos(2, 2, 6), new BlockPos(2, 3, 6), new BlockPos(2, 4, 6));
+        helper.succeedWhen(() -> {
+            for (BlockPos p : kept) {
+                helper.assertBlockPresent(Blocks.STONE, p);
+            }
+            for (int x = 0; x <= 8; x++) {
+                for (int z = 3; z <= 8; z++) {
+                    helper.assertBlockPresent(Blocks.STONE, new BlockPos(x, 5, z)); // the ceiling stays
+                    if (!(x == 2 && z == 6)) {
+                        helper.assertTrue(!helper.getBlockState(new BlockPos(x, 1, z)).isAir(), "the floor stays at " + x + ",1," + z);
+                    }
+                }
+            }
+            int left = 0;
+            for (BlockPos p : BlockPos.betweenClosed(new BlockPos(0, 2, 3), new BlockPos(8, 4, 8))) {
+                left += helper.getBlockState(p).is(Blocks.STONE) && !kept.contains(p) ? 1 : 0;
+            }
+            helper.assertTrue(left == 0, "the hall should be clear, " + left + " stone left; suit at "
+                    + suit.position().subtract(helper.absoluteVec(Vec3.ZERO)) + " goals " + suit.runningGoalNames());
+        });
+    }
+
+    @GameTest(template = PAD, timeoutTicks = 300)
+    public static void mindFellsNaturalTreesButNotCabins(GameTestHelper helper) {
+        for (int y = 2; y <= 6; y++) {
+            helper.setBlock(new BlockPos(5, y, 6), Blocks.OAK_LOG);
+        }
+        for (BlockPos p : BlockPos.betweenClosed(new BlockPos(4, 5, 5), new BlockPos(6, 7, 7))) {
+            if (helper.getBlockState(p).isAir()) {
+                helper.setBlock(p, Blocks.OAK_LEAVES); // natural (not persistent)
+            }
+        }
+        helper.setBlock(new BlockPos(1, 2, 6), Blocks.OAK_LOG); // a cabin wall: logs with no leaves
+        helper.setBlock(new BlockPos(1, 3, 6), Blocks.OAK_LOG);
+        PowerArmorEntity suit = worker(helper, new BlockPos(3, 2, 1), new ItemStack(ModItems.CHAINSAW.get()));
+        helper.succeedWhen(() -> {
+            for (int y = 2; y <= 6; y++) {
+                helper.assertBlockNotPresent(Blocks.OAK_LOG, new BlockPos(5, y, 6));
+            }
+            helper.assertBlockPresent(Blocks.OAK_LOG, new BlockPos(1, 2, 6));
+            helper.assertBlockPresent(Blocks.OAK_LOG, new BlockPos(1, 3, 6));
+            helper.assertTrue(dropped(helper, Items.OAK_LOG) == 5, "the tree's 5 logs drop");
         });
     }
 

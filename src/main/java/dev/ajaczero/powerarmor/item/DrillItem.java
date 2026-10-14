@@ -122,14 +122,16 @@ public class DrillItem extends Item implements PowerTool {
         }
         BlockPos center = hit.getBlockPos();
         state.retarget(level, center, hit.getDirection());
-        if (!canDrill(level.getBlockState(center), level, center)) {
+        // The machine mind only digs its hall (home level, 3 high, no liquids next door, floor below): SuitWork.mayDig.
+        java.util.function.Predicate<BlockPos> allowed = operator instanceof Player ? p -> canDrill(level.getBlockState(p), level, p)
+                : p -> dev.ajaczero.powerarmor.entity.ai.SuitWork.mayDig(suit, p);
+        if (!allowed.test(center)) {
             if (state.ticks % 10 == 0) { // wood, bedrock...: the bit just skids
                 suit.playSound(SoundEvents.ANVIL_LAND, 0.25F, 1.8F);
             }
             return;
         }
-        List<BlockPos> blocks = area(center, hit.getDirection()).stream()
-                .filter(p -> canDrill(level.getBlockState(p), level, p)).toList();
+        List<BlockPos> blocks = area(center, hit.getDirection()).stream().filter(allowed).toList();
         float hardest = 0;
         for (BlockPos p : blocks) {
             hardest = Math.max(hardest, level.getBlockState(p).getDestroySpeed(level, p));

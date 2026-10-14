@@ -24,7 +24,8 @@ import net.minecraft.world.entity.player.Player;
  *
  * The job comes from the socket tool (design sec. 8): none (and tools whose job isn't built yet) = stand guard at home;
  * chaingun = follow the owner and defend them (a target goal picks who, an attack goal aims, fires and moves);
- * EM projector = guard the area round home: grab a monster, lift it overhead and fling it up (creepers: away).
+ * EM projector = guard the area round home: grab a monster, lift it overhead and fling it up (creepers: away);
+ * drill = clear an open hall round home; chainsaw = fell the natural trees round home (SuitWork says where).
  * A mob has two goal lists: {@code targetSelector} decides who to fight (setTarget), {@code goalSelector} what to do.
  */
 public final class SuitGoals {
@@ -35,6 +36,8 @@ public final class SuitGoals {
         targets.addGoal(1, new DefendOwner(suit));
         goals.addGoal(2, new ChaingunAttack(suit));
         goals.addGoal(2, new EmGuard(suit));
+        goals.addGoal(3, new DrillWorker(suit));
+        goals.addGoal(3, new SawWorker(suit));
         goals.addGoal(4, new FollowOwner(suit));
         goals.addGoal(5, new ReturnHome(suit));
         goals.addGoal(8, new LookAtPlayerGoal(suit, Player.class, 8F) {
@@ -437,6 +440,191 @@ public final class SuitGoals {
             this.suit.setAiAim(null);
             this.suit.setTarget(null);
             this.target = null;
+        }
+    }
+
+    /**
+     * Shared by the drill and chainsaw jobs: pick a block to work on (SuitWork), walk until it's in reach and the tool
+     * would hit it (or something else it may work on), aim and hold the trigger until it's gone, then the next one.
+     * Blocks it can't get at (no path, something in the way it mustn't touch) are skipped for a minute. With nothing left
+     * to do the goal ends and ReturnHome walks it back; it looks for new work every 2 seconds.
+     */
+    abstract static class Worker extends Goal {
+        /** From the eye to the target's centre: the tools reach 6 (4.5 + the suit's 1.5); keep a margin. */
+        private static final double REACH = 4.6;
+        /** Give up on a block after this long (walking + working), and skip it for a minute. */
+        private static final int GIVE_UP_TICKS = 200, SKIP_FOR = 1200;
+        protected final PowerArmorEntity suit;
+        private final java.util.Set<BlockPos> skip = new java.util.HashSet<>();
+        @org.jetbrains.annotations.Nullable
+        protected BlockPos target;
+        private int ticks, repath, nextScan, forgetSkipsAt;
+
+        Worker(PowerArmorEntity suit) {
+            this.suit = suit;
+            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        abstract boolean hasJob();
+
+        @org.jetbrains.annotations.Nullable
+        abstract BlockPos findTarget(java.util.Set<BlockPos> skip);
+
+        /** Still something to do at the target? */
+        abstract boolean stillWork(BlockPos target);
+
+        /** May the tool work on this block, if the aim hits it first? */
+        abstract boolean mayWorkOn(BlockPos pos);
+
+        /** Wait (trigger up) without picking the next target, e.g. while a felled tree comes down. */
+        boolean busy() {
+            return false;
+        }
+
+        @Override
+        public boolean canUse() {
+            if (!this.suit.isAiDriven() || !this.hasJob() || this.suit.getHome() == null || this.suit.tickCount < this.nextScan) {
+                return false;
+            }
+            if (this.suit.tickCount >= this.forgetSkipsAt) {
+                this.skip.clear();
+                this.forgetSkipsAt = this.suit.tickCount + SKIP_FOR;
+            }
+            this.target = this.findTarget(this.skip);
+            if (this.target == null) {
+                this.nextScan = this.suit.tickCount + 40;
+            }
+            return this.target != null;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return this.target != null && this.suit.isAiDriven() && this.hasJob();
+        }
+
+        @Override
+        public boolean requiresUpdateEveryTick() {
+            return true;
+        }
+
+        @Override
+        public void start() {
+            this.ticks = 0;
+            this.repath = 0;
+        }
+
+        @Override
+        public void tick() {
+            if (this.target == null) {
+                return;
+            }
+            if (this.busy()) {
+                this.suit.setAiTrigger(false);
+                return;
+            }
+            if (!this.stillWork(this.target)) {
+                this.next();
+                return;
+            }
+            if (++this.ticks > GIVE_UP_TICKS) {
+                this.skip.add(this.target); // can't get at it: try the others first
+                this.next();
+                return;
+            }
+            Vec3 aim = Vec3.atCenterOf(this.target);
+            BlockPos first = SuitWork.firstBlockToward(this.suit, aim);
+            boolean canHit = first != null && (first.equals(this.target) || this.mayWorkOn(first));
+            if (this.suit.getEyePosition().distanceTo(aim) <= REACH && canHit) {
+                this.suit.getNavigation().stop();
+                this.suit.setAiAim(aim);
+                this.suit.setAiTrigger(true);
+                return;
+            }
+            this.suit.setAiTrigger(false);
+            this.suit.setAiAim(null);
+            if (--this.repath <= 0) {
+                this.repath = 20;
+                // Toward the block itself: the path ends next to it (the block's own spot is solid).
+                this.suit.getNavigation().moveTo(this.target.getX() + 0.5, this.target.getY(), this.target.getZ() + 0.5, 1.0);
+            }
+        }
+
+        private void next() {
+            this.suit.setAiTrigger(false);
+            this.ticks = 0;
+            this.repath = 0;
+            this.target = this.findTarget(this.skip);
+            if (this.target == null) {
+                this.nextScan = this.suit.tickCount + 40;
+            }
+        }
+
+        @Override
+        public void stop() {
+            this.suit.setAiTrigger(false);
+            this.suit.setAiAim(null);
+            this.suit.getNavigation().stop();
+            this.target = null;
+        }
+    }
+
+    /** Drill job: clear an open hall at home level, ring by ring outward from home (SuitWork.mayDig decides). */
+    static class DrillWorker extends Worker {
+        DrillWorker(PowerArmorEntity suit) {
+            super(suit);
+        }
+
+        @Override
+        boolean hasJob() {
+            return this.suit.digsHall();
+        }
+
+        @Override
+        BlockPos findTarget(java.util.Set<BlockPos> skip) {
+            return SuitWork.nextDigTarget(this.suit, skip);
+        }
+
+        @Override
+        boolean stillWork(BlockPos target) {
+            return SuitWork.mayDig(this.suit, target);
+        }
+
+        @Override
+        boolean mayWorkOn(BlockPos pos) {
+            return SuitWork.mayDig(this.suit, pos);
+        }
+    }
+
+    /** Chainsaw job: fell the natural trees round home, nearest first: cut the trunk's lowest log, wait for the tree to
+     *  come down, next tree. */
+    static class SawWorker extends Worker {
+        SawWorker(PowerArmorEntity suit) {
+            super(suit);
+        }
+
+        @Override
+        boolean hasJob() {
+            return this.suit.fellsTrees();
+        }
+
+        @Override
+        BlockPos findTarget(java.util.Set<BlockPos> skip) {
+            return SuitWork.nextTrunk(this.suit, skip);
+        }
+
+        @Override
+        boolean stillWork(BlockPos target) {
+            return this.suit.level().getBlockState(target).is(net.minecraft.tags.BlockTags.LOGS);
+        }
+
+        @Override
+        boolean mayWorkOn(BlockPos pos) {
+            return SuitWork.mayCut(this.suit.level(), pos, this.suit.level().getBlockState(pos));
+        }
+
+        @Override
+        boolean busy() {
+            return this.suit.isToolRunning() && !this.suit.isAiTriggerHeld(); // the tree is still coming down
         }
     }
 

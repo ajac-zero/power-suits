@@ -145,5 +145,7 @@
   "powerarmor.configuration.em_guard_radius": "EM guard radius",
   "powerarmor.configuration.em_guard_radius.tooltip": "A friendly suit with an EM projector guards this many blocks around its home: monsters inside get flung.",
   "powerarmor.configuration.em_guard_launch": "EM guard launch speed",
-  "powerarmor.configuration.em_guard_launch.tooltip": "How hard the guarding mind flings a monster, blocks per second (straight up: 44 = ~24 blocks high, enough for the fall to kill a zombie; a pilot's throws are 32). Creepers are thrown away from home instead."
+  "powerarmor.configuration.em_guard_launch.tooltip": "How hard the guarding mind flings a monster, blocks per second (straight up: 44 = ~24 blocks high, enough for the fall to kill a zombie; a pilot's throws are 32). Creepers are thrown away from home instead.",
+  "powerarmor.configuration.work_radius": "Work radius",
+  "powerarmor.configuration.work_radius.tooltip": "How far from home a friendly suit's drill (an open hall at home level, 3 blocks high) and chainsaw (natural trees) work, in blocks. Keep it under 32: allays only see dropped items within 32 blocks."
 }

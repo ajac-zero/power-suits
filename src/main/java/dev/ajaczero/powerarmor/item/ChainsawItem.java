@@ -69,7 +69,7 @@ public class ChainsawItem extends Item implements PowerTool {
     }
 
     /** Leaves that grew (vanilla marks player-placed leaves "persistent" so they never decay). */
-    private static boolean isNaturalLeaves(BlockState state) {
+    public static boolean isNaturalLeaves(BlockState state) {
         return state.is(BlockTags.LEAVES) && !(state.hasProperty(LeavesBlock.PERSISTENT) && state.getValue(LeavesBlock.PERSISTENT));
     }
 
@@ -167,7 +167,8 @@ public class ChainsawItem extends Item implements PowerTool {
         BlockPos pos = hit.getBlockPos();
         BlockState block = level.getBlockState(pos);
         state.retarget(level, pos, hit.getDirection());
-        if (!canCut(block, level, pos)) {
+        // The machine mind only saws natural trees (never a log cabin wall the aim happens to cross); a pilot cuts anything.
+        if (!canCut(block, level, pos) || !(operator instanceof Player) && !dev.ajaczero.powerarmor.entity.ai.SuitWork.mayCut(level, pos, block)) {
             if (state.ticks % 10 == 0) { // stone, metal: the chain skids off
                 suit.playSound(SoundEvents.GRINDSTONE_USE, 0.4F, 1.6F);
             }

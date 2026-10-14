@@ -430,6 +430,23 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return !this.isRogue() && this.getSocketStack().getItem() instanceof EmProjectorItem;
     }
 
+    /** Both sides: the drill job: a friendly mind with the drill clears an open hall round home (SuitWork). */
+    public boolean digsHall() {
+        return !this.isRogue() && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.DrillItem;
+    }
+
+    /** Both sides: the chainsaw job: a friendly mind with the chainsaw fells the natural trees round home. */
+    public boolean fellsTrees() {
+        return !this.isRogue() && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.ChainsawItem;
+    }
+
+    /** Paths may drop this far. The drilling mind never steps down at all ("never where it would fall"): its hall is
+     *  flat, and a step down there is a hole in the floor. */
+    @Override
+    public int getMaxFallDistance() {
+        return this.digsHall() && this.getControllingPassenger() == null ? 0 : super.getMaxFallDistance();
+    }
+
     /** Server: bullets for the mind's chaingun (its hidden store). */
     public boolean hasAmmo() {
         return this.getStoredNuggets() > 0;

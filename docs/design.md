@@ -163,7 +163,7 @@ the usual trick (invisible light blocks following the suit) was judged not worth
 Default costs per coal (1600): 80 s walking, ~100 chaingun bullets, 80 s of EM holding or 20 throws, ~9 drill faces,
 ~20 felled oaks.
 
-## 8. Suit AI (decided 2026-10-13; built: step 1 mind, owner, home, visor, tool operator, idle job; step 2 nugget store + chaingun job; step 3 EM guard job)
+## 8. Suit AI (decided 2026-10-13; built: step 1 mind, owner, home, visor, tool operator, idle job; step 2 nugget store + chaingun job; step 3 EM guard job; step 4 drill + chainsaw workers)
 An empty suit is a mob, like a horse: a machine mind drives it whenever nobody else does.
 
 - **Who**: every *powered* suit without a pilot is AI-driven. To park a suit, take its fuel out (or run it dry):
@@ -176,8 +176,8 @@ An empty suit is a mob, like a horse: a machine mind drives it whenever nobody e
   | Tool | Job |
   |---|---|
   | none | Idle at home: stands, looks around, walks back if pushed away. |
-  | Drill | Mines **horizontally** at the home level within the radius: clears an open hall row by row, out from home. Never digs down, never steps where it would fall (a drop under the next floor block) and skips any face next to lava or other liquids. Drops stay on the floor as vanilla items. |
-  | Chainsaw | Fells natural trees whose trunk stands within the radius, then goes back home. Drops stay where they fall. |
+  | Drill (built) | Mines **horizontally** at the home level within the radius (`work_radius` 12): clears an open hall 3 blocks high (the suit's height), ring by ring out from home (`SuitWork.mayDig`: in the hall, drillable, not next to a liquid, floor under the column; the drill itself refuses anything else for the mind). Never digs down or raises the ceiling, never steps down (path max fall 0) and leaves a wall next to lava/water and columns over holes. Drops stay on the floor as vanilla items. |
+  | Chainsaw (built) | Fells natural trees whose trunk stands within the radius (logs with natural leaves; never cabins), nearest first: cuts the lowest log, waits for the tree to come down, next; then goes back home. Drops stay where they fall. |
   | Chaingun (built) | Follows the owner like a tamed wolf (walks when over 7 blocks away, sprints past 16, stops at 4; no teleport: a ton of steel) and defends them: shoots what attacks the owner (or the suit), what the owner attacks and monsters within 16 blocks of the owner (config `guard_range`). Players only if they started it and PvP is on; never villagers, golems, the owner's pets or friendly suits; rogue suits always. Never fires with the owner, other players, villagers, pets or suits in the line of fire. Ammo: the suit's hidden nugget store (below); empty: punches (+4 melee bonus). |
   | EM projector (built) | Guards an area around home (`em_guard_radius` 12): grabs the monster nearest home, lifts it overhead and flings it straight up (leaning a little outward, so it comes down beside the suit) at `em_guard_launch` 44 blocks/s (~30 blocks high in the open; a pilot's throws are 32), so the fall kills it; creepers are thrown up and away from home instead. Only monsters standing (or swimming, or flyers): one it threw is left alone until it lands (catching it mid-fall reset the fall). Fights from home: the feet stay with ReturnHome. Never players, pets, villagers, suits. |
 - **Collecting the drops = allays** (vanilla 1.21.1, decided 2026-10-13; copper golems don't exist before 1.21.9 and

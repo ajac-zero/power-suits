@@ -16,8 +16,10 @@ public final class ModEntities {
 
     public static final DeferredHolder<EntityType<?>, EntityType<PowerArmorEntity>> POWER_ARMOR =
             ENTITIES.register("power_armor", () -> EntityType.Builder.of(PowerArmorEntity::new, MobCategory.MISC)
-                    // Hitbox in blocks. The model is about 3 blocks tall (49 px / 16).
-                    .sized(1.4F, 3.0F)
+                    // Hitbox in blocks. The model is about 3 blocks tall (49 px / 16). 2.95, not 3: vanilla's pathfinder
+                    // wants floor(height + 1) free blocks, so at 3.0 the machine mind couldn't walk its own 3-high
+                    // drill hall (it asked for 4). Physically it already fitted through 3-high gaps.
+                    .sized(1.4F, 2.95F)
                     .eyeHeight(2.6F)
                     // Where the pilot is mounted. The player's own vehicle offset is 0.6, and their
                     // eyes sit 1.62 above their feet, so y=1.58 puts the camera at visor height (~2.6).

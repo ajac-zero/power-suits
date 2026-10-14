@@ -39,7 +39,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
 | `./gradlew build` | compile + jar |
 | `./gradlew runGameTestServer` | headless GameTests in `src/main/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
 | `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, chaingun range, right hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
-| `./gradlew runAutopilotMech` | only the autopilot's last scene (~25 s): smashing blocks, stomp, lightning, punch, lava + poison; `ap_mech_*.png`, `run/autopilot_mech.csv` |
+| `./gradlew runAutopilotMech` | only the autopilot's last scenes (~2 min): smashing blocks, stomp, lightning, punch, lava + poison (`ap_mech_*.png`, `run/autopilot_mech.csv`), then the machine mind: walk home, drill, chaingun follow/defend/fists, EM guard (`ap_ai_*`, `run/autopilot_mind.csv`) and the workers (`client/dev/WorkScene`: `ap_work_*`, `run/autopilot_work.csv`) |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
@@ -204,6 +204,8 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **Paths of wide mobs end short**: vanilla's path for the 1.4-wide suit stopped 1.7 blocks from home (node offsets);
   `ReturnHome` walks the last stretch with `MoveControl.setWantedPosition`. The pathfinder returns null for a mob in
   the air (just spawned): wait for `onGround()`.
+- **Vanilla's pathfinder wants floor(height + 1) free blocks above each step** (and floor(width + 1) across): the suit
+  at 3.0 high couldn't path through its own 3-high drill hall; its hitbox is 2.95 now.
 - **Autopilot worlds are peaceful** (`AutoPilot` creates them so): monsters spawned by a scene vanish the same tick. Set
   the difficulty in the scene (the mind scene sets NORMAL before its zombies).
 - **`AABB.clip` misses a segment that starts inside the box**: line-of-fire checks also test `box.contains(start)`.

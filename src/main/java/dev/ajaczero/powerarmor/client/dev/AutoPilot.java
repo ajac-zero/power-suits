@@ -608,7 +608,7 @@ public final class AutoPilot {
     }
 
     /** A client-only camera at {@code pos} looking at {@code at}. */
-    private static void lookCamera(Minecraft mc, Vec3 pos, Vec3 at) {
+    static void lookCamera(Minecraft mc, Vec3 pos, Vec3 at) {
         Vec3 look = at.subtract(pos);
         float camYaw = (float) (net.minecraft.util.Mth.atan2(-look.x, look.z) * net.minecraft.util.Mth.RAD_TO_DEG);
         float camPitch = (float) (-net.minecraft.util.Mth.atan2(look.y, look.horizontalDistance()) * net.minecraft.util.Mth.RAD_TO_DEG);
@@ -724,7 +724,7 @@ public final class AutoPilot {
         }
     }
 
-    private static void onServer(Minecraft mc, java.util.function.Consumer<ServerPlayer> action) {
+    static void onServer(Minecraft mc, java.util.function.Consumer<ServerPlayer> action) {
         IntegratedServer server = mc.getSingleplayerServer();
         var uuid = mc.player.getUUID();
         server.execute(() -> {
@@ -962,7 +962,7 @@ public final class AutoPilot {
         });
     }
 
-    private static void shot(Minecraft mc, String name) {
+    static void shot(Minecraft mc, String name) {
         Screenshot.grab(mc.gameDirectory, "ap_" + name + ".png", mc.getMainRenderTarget(), msg -> {});
     }
 
@@ -1209,8 +1209,12 @@ public final class AutoPilot {
                                   mindMobs.add(mob);
                               } } });
             case 776, 780, 786, 792, 800, 808, 816, 828, 840, 852, 864, 880, 900, 920 -> shot(mc, "ai_em_" + (m - 420));
-            case 940 -> { closeMindLog(); mc.stop(); }
+            case 940 -> closeMindLog();
             default -> {}
+        }
+        // the drill and chainsaw workers (step 4): their own scene class, then the run ends
+        if (m >= 945 && !WorkScene.step(mc, m - 945)) {
+            mc.stop();
         }
         if (m >= 10 && m < 420) {
             logMech(mc, m);

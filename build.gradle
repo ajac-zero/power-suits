@@ -69,7 +69,7 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'true'
         }
 
-        // Dev tool: only the last scene of the autopilot (smashing blocks, stomp, lightning, lava, punch), ~25 s.
+        // Dev tool: only the last scenes of the autopilot (smashing blocks, stomp, lightning, lava, punch; the machine mind), ~2 min.
         autopilotMech {
             client()
             systemProperty 'powerarmor.autopilot', 'mech'
