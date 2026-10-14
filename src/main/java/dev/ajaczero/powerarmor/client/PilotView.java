@@ -17,10 +17,20 @@ import net.neoforged.neoforge.client.event.RenderLivingEvent;
 /** Client-side tweaks while someone is inside a suit. */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class PilotView {
+    /** Set on the render state of anyone sitting in a suit (ClientSetup registers PilotView::markPilot). */
+    static final net.minecraft.util.context.ContextKey<Boolean> IN_SUIT =
+            new net.minecraft.util.context.ContextKey<>(net.minecraft.resources.Identifier.fromNamespaceAndPath(PowerArmor.MODID, "in_suit"));
+
+    /** Extract: note whether this mob/player sits in a suit. The render event below only sees the render state, not the
+     *  entity (Minecraft 1.21.2+ draws from snapshots), so the fact travels in the state. */
+    static void markPilot(net.minecraft.world.entity.LivingEntity entity, net.minecraft.client.renderer.entity.state.LivingEntityRenderState state) {
+        state.setRenderData(IN_SUIT, entity.getVehicle() instanceof PowerArmorEntity);
+    }
+
     /** Don't draw players who are inside a suit (they'd poke through the armor). */
     @SubscribeEvent
-    public static void hidePilot(RenderLivingEvent.Pre<?, ?> event) {
-        if (event.getEntity().getVehicle() instanceof PowerArmorEntity) {
+    public static void hidePilot(RenderLivingEvent.Pre<?, ?, ?> event) {
+        if (Boolean.TRUE.equals(event.getRenderState().getRenderData(IN_SUIT))) {
             event.setCanceled(true);
         }
     }
@@ -32,7 +42,7 @@ public final class PilotView {
      * knocked-out or empty suit shows the flames again: no power, no seal.
      */
     @SubscribeEvent
-    public static void cockpitOverlays(net.neoforged.neoforge.client.event.RenderBlockScreenEffectEvent event) {
+    public static void cockpitOverlays(net.neoforged.neoforge.client.event.ExtractBlockScreenEffectEvent event) {
         if (!(event.getPlayer().getVehicle() instanceof PowerArmorEntity suit)) {
             return;
         }

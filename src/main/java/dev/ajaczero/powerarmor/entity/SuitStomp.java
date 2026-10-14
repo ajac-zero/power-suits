@@ -7,7 +7,7 @@ import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -23,7 +23,7 @@ import net.minecraft.world.phys.Vec3;
 public final class SuitStomp {
     /** "powerarmor:stomp" (data/powerarmor/damage_type/stomp.json): "was flattened by". */
     public static final ResourceKey<DamageType> STOMP = ResourceKey.create(Registries.DAMAGE_TYPE,
-            ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "stomp"));
+            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "stomp"));
     /** The shock wave's reach (blocks from the suit's centre): grows with the drop, up to vanilla's mace ring (3.5). */
     private static final double MIN_RADIUS = 2.0, RADIUS_PER_BLOCK = 0.15, MAX_RADIUS = 3.5;
 
@@ -54,14 +54,14 @@ public final class SuitStomp {
                 continue;
             }
             float falloff = (float) (1.0 - 0.5 * distance / radius);
-            if (target.hurt(source, damage * falloff)) {
+            if (target.hurtServer(level, source, damage * falloff)) {
                 hit++;
             }
             // Hurt already shoves the target away from the suit a little; the shock wave also throws it up.
             Vec3 push = away.lengthSqr() < 1e-4 ? Vec3.ZERO : away.normalize().scale(0.4 * falloff);
             double resist = 1.0 - target.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE);
             target.push(push.x * resist, (0.25 + 0.02 * fallDistance) * falloff * resist, push.z * resist);
-            target.hurtMarked = true; // send the new velocity to players' clients
+            target.syncVelocity = true; // send the new velocity to players' clients
         }
         // Vanilla's mace ground smash: a dust ring 3.5 blocks out and a pillar of debris (level event 2013, every client).
         level.levelEvent(2013, suit.getOnPos(), (int) Math.min(750, 150 + 40 * fallDistance));

@@ -23,7 +23,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ArmorStand;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
@@ -67,7 +67,7 @@ public final class AutoPilot {
         }
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) {
-            if (!worldRequested && mc.screen instanceof TitleScreen) {
+            if (!worldRequested && mc.gui.screen() instanceof TitleScreen) {
                 worldRequested = true;
                 createWorld(mc);
             }
@@ -105,7 +105,7 @@ public final class AutoPilot {
         var o = mc.options;
         switch (t) {
             // GUI stays on in every scene: hiding it (F1) also skips the hand pass, i.e. the cockpit viewmodel.
-            case 0 -> { o.hideGui = false; o.setCameraType(CameraType.FIRST_PERSON); }
+            case 0 -> { DevUtil.hideGui(mc, false); o.setCameraType(CameraType.FIRST_PERSON); }
             case 10 -> shot(mc, "fp_idle");
             case 15 -> hold(o.keyUp, true);
             case 40, 41, 42, 43 -> { shot(mc, "fp_walk_" + t); logSpeed(mc, "walk"); }
@@ -140,13 +140,13 @@ public final class AutoPilot {
             case 350 -> { mc.setCameraEntity(mc.player); releaseAll(); yaw = 0; pitch = 15; o.setCameraType(CameraType.THIRD_PERSON_BACK); buildPool(mc); }
             case 360 -> { openWaterLog(mc); hold(o.keyUp, true); }
             case 385, 400, 415, 430 -> shot(mc, "water_tp_" + t);
-            case 440 -> { o.setCameraType(CameraType.FIRST_PERSON); o.hideGui = false; }
+            case 440 -> { o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); }
             case 450, 470 -> shot(mc, "water_fp_" + t);
             case 480 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
             case 500, 520, 540, 560, 590 -> shot(mc, "water_tp_" + t);
             case 640 -> { releaseAll(); closeWaterLog(); survival(mc, false); }
             // ---- fuel: nearly empty tank, walk until the engine dies, refuel through the menu
-            case 650 -> { o.hideGui = false; o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 0; pitch = 15; fuelScenarioSetup(mc); }
+            case 650 -> { DevUtil.hideGui(mc, false); o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 0; pitch = 15; fuelScenarioSetup(mc); }
             case 660 -> { openFuelLog(mc); hold(o.keyUp, true); }
             case 675 -> shot(mc, "fuel_tp_low");
             case 690 -> o.setCameraType(CameraType.FIRST_PERSON);
@@ -213,7 +213,7 @@ public final class AutoPilot {
             case 1095 -> { giveHeld(mc, net.minecraft.world.item.ItemStack.EMPTY); emRangeSetup(mc); yaw = 180; pitch = 15; o.setCameraType(CameraType.THIRD_PERSON_BACK); openEmLog(mc); }
             case 1104 -> emCloseCamera(mc, false);   // close-up of the mounted projector: faint idle glow
             case 1107 -> shot(mc, "em_close_idle");
-            case 1109 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); o.hideGui = false; }
+            case 1109 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, false); }
             case 1110 -> hold(o.keyUse, true);
             case 1113, 1118, 1124 -> shot(mc, "em_tp_items_" + t);
             case 1121 -> pitch = 10; // the next diamonds lie further out
@@ -226,7 +226,7 @@ public final class AutoPilot {
             case 1166 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
             case 1167 -> emCloseCamera(mc, true);    // close-up while the beam holds the pig: core + tips lit, sparks
             case 1169 -> shot(mc, "em_close_pig");
-            case 1170 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); o.hideGui = false; }
+            case 1170 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, false); }
             case 1172 -> shot(mc, "em_tp_pig");
             case 1174 -> sideCamera(mc);
             case 1180 -> shot(mc, "em_side_pig");
@@ -264,13 +264,13 @@ public final class AutoPilot {
             case 1365 -> shot(mc, "item_tp_front");
             case 1367 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
             case 1375 -> shot(mc, "item_tp_back");
-            case 1377 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)); }
+            case 1377 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)); }
             case 1385 -> shot(mc, "item_gui");
-            case 1387 -> mc.setScreen(null);
-            case 1390 -> mc.setScreen(new net.neoforged.neoforge.client.gui.ConfigurationScreen(
+            case 1387 -> mc.gui.setScreen(null);
+            case 1390 -> mc.gui.setScreen(new net.neoforged.neoforge.client.gui.ConfigurationScreen(
                     net.neoforged.fml.ModList.get().getModContainerById(PowerArmor.MODID).orElseThrow(), null));
             case 1396 -> shot(mc, "config");
-            case 1398 -> mc.setScreen(null);
+            case 1398 -> mc.gui.setScreen(null);
             // ---- lights at night (SuitGlowLayer): piloted = amber (also with the tool and when hit), empty = the machine
             //      mind's green, then the fuel runs out: the visor stutters and goes dark, the firebox dies down to embers
             case 1400 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); lightsSetup(mc); }
@@ -282,13 +282,13 @@ public final class AutoPilot {
             case 1500, 1560, 1596 -> shot(mc, "lights_barrage_" + t);
             case 1600 -> hold(o.keyUse, false);
             case 1608 -> shot(mc, "lights_hot");                   // barrels still glowing as they coast down
-            case 1620 -> onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) s.hurt(p.serverLevel().damageSources().generic(), 1F); });
+            case 1620 -> onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) s.hurt(p.level().damageSources().generic(), 1F); });
             case 1624 -> shot(mc, "lights_hit");
             case 1630 -> hold(o.keyShift, true);                  // climb out: the machine mind takes over -> green
             case 1632 -> hold(o.keyShift, false);
             case 1644 -> shot(mc, "lights_parked");
             case 1646 -> boardNearestSuit(mc);                  // back in, to watch it run dry from the cockpit
-            case 1650 -> onServer(mc, p -> p.serverLevel().getEntitiesOfClass(PowerArmorEntity.class, p.getBoundingBox().inflate(8)).forEach(s -> {
+            case 1650 -> onServer(mc, p -> p.level().getEntitiesOfClass(PowerArmorEntity.class, p.getBoundingBox().inflate(8)).forEach(s -> {
                               s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, net.minecraft.world.item.ItemStack.EMPTY); s.setBurn(1, 1600); })); // out of fuel
             case 1656, 1660, 1666 -> shot(mc, "lights_shutdown_" + t);
             case 1710 -> shot(mc, "lights_off");
@@ -372,8 +372,8 @@ public final class AutoPilot {
             }
             fuelSuit = suit;
             player.stopRiding();
-            suit.moveTo(suit.getX() + 40, suit.getY(), suit.getZ() - 30, 0, 0);
-            player.startRiding(suit, true);
+            suit.snapTo(suit.getX() + 40, suit.getY(), suit.getZ() - 30, 0, 0);
+            player.startRiding(suit, true, true);
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, net.minecraft.world.item.ItemStack.EMPTY);
             suit.setBurn(80, 1600);
         });
@@ -383,7 +383,7 @@ public final class AutoPilot {
         onServer(mc, player -> {
             if (fuelSuit != null) {
                 player.setShiftKeyDown(true);
-                fuelSuit.interact(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+                fuelSuit.interact(player, net.minecraft.world.InteractionHand.MAIN_HAND, fuelSuit.position());
                 player.setShiftKeyDown(false);
             }
         });
@@ -399,7 +399,7 @@ public final class AutoPilot {
 
     // ---- cannon scenario helpers -----------------------------------------------------------
 
-    private static final java.util.List<net.minecraft.world.entity.animal.Pig> pigs = new java.util.ArrayList<>();
+    private static final java.util.List<net.minecraft.world.entity.animal.pig.Pig> pigs = new java.util.ArrayList<>();
     private static java.io.BufferedWriter cannonCsv;
 
     /** Server: back into the suit (facing +Z), three pigs 12 blocks ahead, a stone wall at 18. */
@@ -408,9 +408,9 @@ public final class AutoPilot {
             if (fuelSuit == null) {
                 return;
             }
-            player.startRiding(fuelSuit, true);
+            player.startRiding(fuelSuit, true, true);
             fuelSuit.setYRot(0);
-            var level = player.serverLevel();
+            var level = player.level();
             BlockPos base = fuelSuit.blockPosition();
             for (int dx = -3; dx <= 3; dx++) {
                 for (int dy = 0; dy < 5; dy++) {
@@ -418,16 +418,16 @@ public final class AutoPilot {
                 }
             }
             for (int i = -1; i <= 1; i++) {
-                var pig = EntityType.PIG.create(level);
+                var pig = net.minecraft.world.entity.EntityTypes.PIG.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
                 pig.setNoAi(true);
-                pig.moveTo(fuelSuit.getX() + i * 2.5, fuelSuit.getY(), fuelSuit.getZ() + 12, 180, 0);
+                pig.snapTo(fuelSuit.getX() + i * 2.5, fuelSuit.getY(), fuelSuit.getZ() + 12, 180, 0);
                 level.addFreshEntity(pig);
                 pigs.add(pig);
             }
         });
     }
 
-    private static net.minecraft.world.entity.animal.Pig emPig;
+    private static net.minecraft.world.entity.animal.pig.Pig emPig;
     private static java.io.BufferedWriter emCsv;
 
     /** Server: EM projector in the socket, 3 diamonds on the ground straight behind (the suit turns round),
@@ -440,15 +440,15 @@ public final class AutoPilot {
             fuelSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
                     new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.EM_PROJECTOR.get()));
             player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
-            var level = player.serverLevel();
+            var level = player.level();
             for (int i = 0; i < 3; i++) {
                 var item = new net.minecraft.world.entity.item.ItemEntity(level, fuelSuit.getX() + 0.3 * i, fuelSuit.getY() + 0.2,
                         fuelSuit.getZ() - 9 - 2 * i, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND));
                 item.setDeltaMovement(0, 0, 0);
                 level.addFreshEntity(item);
             }
-            emPig = EntityType.PIG.create(level);
-            emPig.moveTo(fuelSuit.getX() + 4, fuelSuit.getY(), fuelSuit.getZ() - 8, 0, 0);
+            emPig = net.minecraft.world.entity.EntityTypes.PIG.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+            emPig.snapTo(fuelSuit.getX() + 4, fuelSuit.getY(), fuelSuit.getZ() - 8, 0, 0);
             level.addFreshEntity(emPig);
         });
     }
@@ -516,7 +516,7 @@ public final class AutoPilot {
             player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
             fuelSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
                     new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.DRILL.get()));
-            var level = player.serverLevel();
+            var level = player.level();
             BlockPos base = fuelSuit.blockPosition();
             mineBase = base;
             for (BlockPos p : BlockPos.betweenClosed(base.offset(-6, 0, -9), base.offset(8, 12, 9))) {
@@ -543,11 +543,11 @@ public final class AutoPilot {
             }
             fuelSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
                     new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINSAW.get()));
-            var level = player.serverLevel();
+            var level = player.level();
             level.setBlock(treeBase.below(), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 3);
-            level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE)
-                    .getHolder(net.minecraft.data.worldgen.features.TreeFeatures.OAK)
-                    .ifPresent(tree -> tree.value().place(level, level.getChunkSource().getGenerator(), level.random, treeBase));
+            level.registryAccess().lookupOrThrow(Registries.FEATURE)
+                    .get(net.minecraft.data.worldgen.features.TreeFeatures.OAK)
+                    .ifPresent(tree -> tree.value().place(level, level.getChunkSource().getGenerator(), level.getRandom(), treeBase));
         });
     }
 
@@ -564,14 +564,14 @@ public final class AutoPilot {
      *  stands behind it (out of the camera's view). */
     private static void lightsSetup(Minecraft mc) {
         onServer(mc, player -> {
-            var level = player.serverLevel();
-            level.setDayTime(18000);
+            var level = player.level();
+            DevUtil.setTime(level, 18000);
             int x = player.getBlockX() + 60, z = player.getBlockZ();
             Vec3 pos = new Vec3(x + 0.5, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z), z + 0.5);
-            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 8));
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get()));
-            suit.moveTo(pos.x, pos.y, pos.z, 0, 0);
+            suit.snapTo(pos.x, pos.y, pos.z, 0, 0);
             suit.setYBodyRot(0);
             level.addFreshEntity(suit);
             player.teleportTo(pos.x, pos.y, pos.z - 3);
@@ -595,7 +595,7 @@ public final class AutoPilot {
     /** Climb back into the nearest suit with an empty hand and the cannon back in its socket. */
     private static void boardNearestSuit(Minecraft mc) {
         onServer(mc, player -> {
-            PowerArmorEntity suit = player.serverLevel().getEntitiesOfClass(PowerArmorEntity.class, player.getBoundingBox().inflate(8)).stream()
+            PowerArmorEntity suit = player.level().getEntitiesOfClass(PowerArmorEntity.class, player.getBoundingBox().inflate(8)).stream()
                     .min(java.util.Comparator.comparingDouble(s -> s.distanceToSqr(player))).orElse(null);
             if (suit != null) {
                 player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
@@ -603,7 +603,7 @@ public final class AutoPilot {
                 player.getInventory().setItem(8, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_NUGGET, 64));
                 suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
                         new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get()));
-                suit.interact(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+                suit.interact(player, net.minecraft.world.InteractionHand.MAIN_HAND, suit.position());
             }
         });
     }
@@ -613,7 +613,7 @@ public final class AutoPilot {
         Vec3 look = at.subtract(pos);
         float camYaw = (float) (net.minecraft.util.Mth.atan2(-look.x, look.z) * net.minecraft.util.Mth.RAD_TO_DEG);
         float camPitch = (float) (-net.minecraft.util.Mth.atan2(look.y, look.horizontalDistance()) * net.minecraft.util.Mth.RAD_TO_DEG);
-        sideCamera = new ArmorStand(EntityType.ARMOR_STAND, mc.level);
+        sideCamera = new ArmorStand(net.minecraft.world.entity.EntityTypes.ARMOR_STAND, mc.level);
         sideCamera.setPos(pos);
         sideCamera.xo = pos.x; sideCamera.yo = pos.y; sideCamera.zo = pos.z;
         sideCamera.setYRot(camYaw); sideCamera.yRotO = camYaw;
@@ -650,8 +650,8 @@ public final class AutoPilot {
             String toolAnim = "-"; // what the client's GeckoLib "tool" controller plays (drill spin / chain)
             if (mc.player.getVehicle() instanceof PowerArmorEntity clientSuit) {
                 var controller = clientSuit.getAnimatableInstanceCache().getManagerForId(clientSuit.getId()).getAnimationControllers().get("tool");
-                if (controller != null && controller.getCurrentAnimation() != null) {
-                    toolAnim = controller.getAnimationState() + ":" + controller.getCurrentAnimation().animation().name();
+                if (controller != null && controller.getCurrentAnimationPoint() != null) {
+                    toolAnim = controller.getPlayState() + ":" + controller.getCurrentAnimationPoint().animation().name();
                 }
             }
             mineCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s%n", t,
@@ -678,12 +678,12 @@ public final class AutoPilot {
 
     private static void giveCannon(Minecraft mc) {
         // Take the rivet gun out of the suit (the shot shows the bare socket coupling) and into the player's hand.
-        mc.player.getInventory().selected = 0;
+        mc.player.getInventory().setSelectedSlot(0);
         onServer(mc, player -> {
             if (fuelSuit != null) {
                 fuelSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, net.minecraft.world.item.ItemStack.EMPTY);
             }
-            player.getInventory().selected = 0; // the hand holds slot 0 (the EM scenes left slot 1 selected)
+            player.getInventory().setSelectedSlot(0); // the hand holds slot 0 (the EM scenes left slot 1 selected)
             player.getInventory().setItem(0, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get()));
             player.getInventory().setItem(1, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.EM_PROJECTOR.get()));
             player.getInventory().setItem(2, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.DRILL.get()));
@@ -791,7 +791,7 @@ public final class AutoPilot {
                 return;
             }
             player.setGameMode(GameType.SURVIVAL);
-            var level = player.serverLevel();
+            var level = player.level();
             BlockPos base = suit.blockPosition(); // g = base.y (the suit stands on top of base.y - 1)
             int g = base.getY();
             var stone = net.minecraft.world.level.block.Blocks.STONE.defaultBlockState();
@@ -879,7 +879,7 @@ public final class AutoPilot {
         int s = viewStep++;
         switch (s) {
             // GUI on: hiding it (F1) also skips the hand pass, so the viewmodel wouldn't be drawn.
-            case 0 -> { o.hideGui = false; o.setCameraType(CameraType.FIRST_PERSON); releaseAll(); yaw = 0; pitch = 10;
+            case 0 -> { DevUtil.hideGui(mc, false); o.setCameraType(CameraType.FIRST_PERSON); releaseAll(); yaw = 0; pitch = 10;
                         if (java.nio.file.Files.exists(dir.resolve("tuning.json"))) dev.ajaczero.powerarmor.client.CockpitHands.loadTuning(dir.resolve("tuning.json"));
                         socket(mc, dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get());
                         giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); }
@@ -948,7 +948,7 @@ public final class AutoPilot {
                 player.stopRiding();
                 player.teleportTo(suit.getX(), suit.getY(), suit.getZ() + 3);
             } else if (!out && parkedSuit != null) {
-                player.startRiding(parkedSuit, true);
+                player.startRiding(parkedSuit, true, true);
             }
         });
     }
@@ -964,7 +964,7 @@ public final class AutoPilot {
     }
 
     static void shot(Minecraft mc, String name) {
-        Screenshot.grab(mc.gameDirectory, "ap_" + name + ".png", mc.getMainRenderTarget(), msg -> {});
+        Screenshot.grab(mc.gameDirectory, "ap_" + name + ".png", mc.gameRenderer.mainRenderTarget(), 1, msg -> {});
     }
 
     /** A client-only camera in front of the suit and to its right, the working hand's side (its torso faces the pilot's
@@ -978,7 +978,7 @@ public final class AutoPilot {
         Vec3 look = suit.position().add(0, 1.7, 0).subtract(pos);
         float camYaw = (float) (net.minecraft.util.Mth.atan2(-look.x, look.z) * net.minecraft.util.Mth.RAD_TO_DEG);
         float camPitch = (float) (-net.minecraft.util.Mth.atan2(look.y, look.horizontalDistance()) * net.minecraft.util.Mth.RAD_TO_DEG);
-        sideCamera = new ArmorStand(EntityType.ARMOR_STAND, mc.level);
+        sideCamera = new ArmorStand(net.minecraft.world.entity.EntityTypes.ARMOR_STAND, mc.level);
         sideCamera.setPos(pos);
         sideCamera.xo = pos.x; sideCamera.yo = pos.y; sideCamera.zo = pos.z;
         sideCamera.setYRot(camYaw); sideCamera.yRotO = camYaw;
@@ -1003,9 +1003,9 @@ public final class AutoPilot {
         // entity (an armour stand) sees from its eye height, so stand it (and the aim point, to keep the direction)
         // that much lower. GUI hidden: the hand pass would draw the pilot's cockpit viewmodel over the close-up.
         mc.options.setCameraType(CameraType.FIRST_PERSON);
-        mc.options.hideGui = true;
+        DevUtil.hideGui(mc, true);
         Vec3 eye = at.add(left.scale(1.1)).add(forward.scale(1.1)).add(0, 0.35, 0);
-        Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         lookCamera(mc, eye.subtract(drop), at.subtract(drop));
     }
 
@@ -1013,7 +1013,7 @@ public final class AutoPilot {
         var target = mc.player.getVehicle() != null ? mc.player.getVehicle()
                 : mc.level.getEntitiesOfClass(PowerArmorEntity.class, mc.player.getBoundingBox().inflate(8)).stream().findFirst().orElseThrow();
         Vec3 suit = target.position();
-        sideCamera = new ArmorStand(EntityType.ARMOR_STAND, mc.level);
+        sideCamera = new ArmorStand(net.minecraft.world.entity.EntityTypes.ARMOR_STAND, mc.level);
         Vec3 pos = suit.add(7, -0.4, 0);
         sideCamera.setPos(pos);
         sideCamera.xo = pos.x; sideCamera.yo = pos.y; sideCamera.zo = pos.z;
@@ -1034,15 +1034,15 @@ public final class AutoPilot {
             if (player == null) {
                 return;
             }
-            var level = player.serverLevel();
-            level.setDayTime(6000);
-            level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false, server);
-            level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
-            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+            var level = player.level();
+            DevUtil.setTime(level, 6000);
+            level.getGameRules().set(GameRules.ADVANCE_TIME, false, server);
+            level.getGameRules().set(GameRules.SPAWN_MOBS, false, server);
+            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             // A full stack of blaze rods (~4 hours of walking): enough for any scripted drive.
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64));
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get()));
-            suit.moveTo(player.getX() + 0.5, player.getY(), player.getZ() + 0.5, 0, 0);
+            suit.snapTo(player.getX() + 0.5, player.getY(), player.getZ() + 0.5, 0, 0);
             level.addFreshEntity(suit);
             player.startRiding(suit);
         });
@@ -1055,11 +1055,11 @@ public final class AutoPilot {
         } catch (IOException ignored) {
         }
         String name = WORLD_PREFIX + System.currentTimeMillis();
-        LevelSettings settings = new LevelSettings(name, GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
-                new GameRules(), WorldDataConfiguration.DEFAULT);
+        LevelSettings settings = new LevelSettings(name, GameType.CREATIVE,
+                new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true, WorldDataConfiguration.DEFAULT);
         mc.createWorldOpenFlows().createFreshLevel(name, settings, new WorldOptions(1234L, false, false),
-                registries -> registries.registryOrThrow(Registries.WORLD_PRESET).getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions(),
-                mc.screen);
+                registries -> registries.lookupOrThrow(Registries.WORLD_PRESET).getOrThrow(WorldPresets.FLAT).value().createWorldDimensions(),
+                mc.gui.screen());
     }
 
     private static void deleteTree(Path root) {
@@ -1081,7 +1081,7 @@ public final class AutoPilot {
     /** Scene cameras look from an armour stand, but vanilla still paints the player's own fire / in-wall overlays over
      *  them (it only checks "first person"): hide those while a scene camera is active. */
     @SubscribeEvent
-    public static void sceneCameraOverlays(net.neoforged.neoforge.client.event.RenderBlockScreenEffectEvent event) {
+    public static void sceneCameraOverlays(net.neoforged.neoforge.client.event.ExtractBlockScreenEffectEvent event) {
         if (ENABLED && Minecraft.getInstance().getCameraEntity() != Minecraft.getInstance().player) {
             event.setCanceled(true);
         }
@@ -1091,7 +1091,7 @@ public final class AutoPilot {
         var o = mc.options;
         switch (m) {
             // smash: snow layers, a wall of panes, a leaf hedge, then glass + ice that only a sprint gets through
-            case 0 -> { releaseAll(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); o.hideGui = false;
+            case 0 -> { releaseAll(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, false);
                         yaw = 0; pitch = 15; mechSetup(mc); }
             case 10 -> { openMechLog(mc); mechPhase = "smash"; hold(o.keyUp, true); }
             case 22, 30, 38 -> shot(mc, "mech_smash_" + m);
@@ -1110,19 +1110,19 @@ public final class AutoPilot {
             case 114, 118, 122, 124, 126, 128, 130, 132, 136, 142, 150 -> shot(mc, "mech_stomp_" + m);
             // lightning: a real bolt on the suit; it convulses, slumps and restarts
             case 160 -> { mechPhase = "lightning"; onServer(mc, p -> { if (mechSuit != null) {
-                              if (CLEAN_ZAP) p.serverLevel().getGameRules().getRule(GameRules.RULE_DOFIRETICK).set(false, p.server);
-                              var bolt = EntityType.LIGHTNING_BOLT.create(p.serverLevel());
-                              bolt.moveTo(mechSuit.position());
-                              p.serverLevel().addFreshEntity(bolt); } }); }
+                              if (CLEAN_ZAP) p.level().getGameRules().set(GameRules.FIRE_SPREAD_RADIUS_AROUND_PLAYER, 0, p.level().getServer());
+                              var bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(p.level(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                              bolt.snapTo(mechSuit.position());
+                              p.level().addFreshEntity(bolt); } }); }
             case 161, 163, 165, 167 -> { if (CLEAN_ZAP) onServer(mc, p -> { if (mechSuit != null) { mechSuit.clearFire(); p.clearFire(); } }); }
             case 162, 166, 170, 174, 178, 182, 186, 190, 196, 202, 210, 220, 240, 255, 262, 266, 270, 276, 282, 292, 299 -> shot(mc, "mech_zap_" + m);
-            case 230 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); o.hideGui = false; }
+            case 230 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); }
             case 232 -> shot(mc, "mech_zap_fp_out");
             case 236 -> stompCamera(mc);
             // a punch with the bare hand: 1 + the melee bonus (a cow has 10 health)
-            case 300 -> { mechPhase = "punch"; mc.setCameraEntity(mc.player); o.hideGui = false; o.setCameraType(CameraType.FIRST_PERSON); punchSetup(mc); }
+            case 300 -> { mechPhase = "punch"; mc.setCameraEntity(mc.player); DevUtil.hideGui(mc, false); o.setCameraType(CameraType.FIRST_PERSON); punchSetup(mc); }
             case 310 -> { var cow = nearestCow(mc); if (cow != null) { aimAt(mc, cow); } }
-            case 320 -> { var cow = nearestCow(mc); if (cow != null) { mc.gameMode.attack(mc.player, cow); mc.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND); } }
+            case 320 -> { var cow = nearestCow(mc); if (cow != null) { mc.gameMode.attack(mc.player, cow); mc.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, mc.player.getMainHandItem().getAttackAnimation(), false); } }
             case 321 -> shot(mc, "mech_punch");
             case 322 -> { giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 4));
                           onServer(mc, p -> p.getFoodData().setFoodLevel(10)); }   // hungry, bread in hand, no tool: refused
@@ -1152,17 +1152,17 @@ public final class AutoPilot {
             case 532 -> shot(mc, "ai_visor");
             // chaingun job (step 2): load the hidden store by right-clicking with nuggets, then the suit follows its owner,
             // shoots the zombies that come for them, and punches the last one once the store is empty
-            case 534 -> { mindPhase = "load"; mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); o.hideGui = false;
+            case 534 -> { mindPhase = "load"; mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false);
                           onServer(mc, p -> { if (mindSuit != null) {
                               mindSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get()));
                               p.setGameMode(GameType.SURVIVAL);
-                              p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE, 1200, 4));
+                              p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, 1200, 4));
                               for (int i = 0; i < 2; i++) {   // two right-clicks with a stack each: 128 in the store
                                   p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_NUGGET, 64));
-                                  mindSuit.interact(p, net.minecraft.world.InteractionHand.MAIN_HAND);
+                                  mindSuit.interact(p, net.minecraft.world.InteractionHand.MAIN_HAND, mindSuit.position());
                               }
                               p.setShiftKeyDown(true);          // sneak + right-click: the menu with its new Ammo line
-                              mindSuit.interact(p, net.minecraft.world.InteractionHand.MAIN_HAND);
+                              mindSuit.interact(p, net.minecraft.world.InteractionHand.MAIN_HAND, mindSuit.position());
                               p.setShiftKeyDown(false); } }); }
             case 542 -> shot(mc, "ai_menu_ammo");
             case 544 -> { mc.player.closeContainer(); mindPhase = "follow";
@@ -1171,21 +1171,21 @@ public final class AutoPilot {
             case 546 -> mindWideCamera(mc);
             case 552, 562, 572, 584 -> shot(mc, "ai_follow_" + (m - 420));
             case 590 -> { mindPhase = "defend"; onServer(mc, p -> {
-                              p.server.setDifficulty(net.minecraft.world.Difficulty.NORMAL, true); // peaceful removes monsters at once
+                              p.level().getServer().setDifficulty(net.minecraft.world.Difficulty.NORMAL, true); // peaceful removes monsters at once
                               for (int i = 0; i < 3; i++) {
-                                  var zombie = EntityType.ZOMBIE.create(p.serverLevel());
-                                  zombie.moveTo(p.getX() + 3 + 2 * i, p.getY(), p.getZ() + 9 - i, 180, 0);
+                                  var zombie = net.minecraft.world.entity.EntityTypes.ZOMBIE.create(p.level(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                                  zombie.snapTo(p.getX() + 3 + 2 * i, p.getY(), p.getZ() + 9 - i, 180, 0);
                                   zombie.setTarget(p);
-                                  p.serverLevel().addFreshEntity(zombie);
+                                  p.level().addFreshEntity(zombie);
                                   mindMobs.add(zombie);
                               } }); }
             case 593, 597, 601, 606, 612, 620, 630 -> shot(mc, "ai_defend_" + (m - 420));
             case 640 -> { mindPhase = "fists"; onServer(mc, p -> { if (mindSuit != null) {
                               mindSuit.setStoredNuggets(0);
-                              var zombie = EntityType.ZOMBIE.create(p.serverLevel());
-                              zombie.moveTo(p.getX() + 4, p.getY(), p.getZ() + 6, 180, 0);
+                              var zombie = net.minecraft.world.entity.EntityTypes.ZOMBIE.create(p.level(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                              zombie.snapTo(p.getX() + 4, p.getY(), p.getZ() + 6, 180, 0);
                               zombie.setTarget(p);
-                              p.serverLevel().addFreshEntity(zombie);
+                              p.level().addFreshEntity(zombie);
                               mindMobs.add(zombie); } }); }
             case 650, 658, 666, 674, 684, 696 -> shot(mc, "ai_fists_" + (m - 420));
             // EM guard job (step 3): the suit goes home with an EM projector; zombies, a skeleton and a creeper wander in
@@ -1199,12 +1199,12 @@ public final class AutoPilot {
                                       new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.EM_PROJECTOR.get())); } }); }
             case 702 -> mindGuardCamera(mc);
             case 740 -> onServer(mc, p -> { if (mindBase != null) {
-                              var level = p.serverLevel();
-                              EntityType<?>[] types = {EntityType.ZOMBIE, EntityType.SKELETON, EntityType.ZOMBIE, EntityType.CREEPER};
+                              var level = p.level();
+                              EntityType<?>[] types = {net.minecraft.world.entity.EntityTypes.ZOMBIE, net.minecraft.world.entity.EntityTypes.SKELETON, net.minecraft.world.entity.EntityTypes.ZOMBIE, net.minecraft.world.entity.EntityTypes.CREEPER};
                               double[][] at = {{7, 2}, {-6, 5}, {3, -8}, {-5, -6}};
                               for (int i = 0; i < types.length; i++) {
-                                  var mob = (net.minecraft.world.entity.Mob) types[i].create(level);
-                                  mob.moveTo(mindBase.getX() + 0.5 + at[i][0], mindBase.getY(), mindBase.getZ() + 0.5 + at[i][1], 0, 0);
+                                  var mob = (net.minecraft.world.entity.Mob) types[i].create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                                  mob.snapTo(mindBase.getX() + 0.5 + at[i][0], mindBase.getY(), mindBase.getZ() + 0.5 + at[i][1], 0, 0);
                                   mob.setPersistenceRequired();
                                   level.addFreshEntity(mob);
                                   mindMobs.add(mob);
@@ -1244,8 +1244,8 @@ public final class AutoPilot {
      *  stands at its home 40 blocks further east, a 3x3 stone wall 3 blocks ahead of it. */
     private static void mindSetup(Minecraft mc) {
         onServer(mc, player -> {
-            var level = player.serverLevel();
-            level.setDayTime(18000);
+            var level = player.level();
+            DevUtil.setTime(level, 18000);
             if (player.getVehicle() != null) {
                 player.stopRiding();
             }
@@ -1259,10 +1259,10 @@ public final class AutoPilot {
                     level.setBlock(base.offset(dx, dy, 3), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
                 }
             }
-            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 16));
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.DRILL.get()));
-            suit.moveTo(x + 0.5, y, z + 0.5, 0, 0);
+            suit.snapTo(x + 0.5, y, z + 0.5, 0, 0);
             suit.setYBodyRot(0);
             suit.setYHeadRot(0);
             suit.setOwnerId(player.getUUID());
@@ -1280,8 +1280,8 @@ public final class AutoPilot {
         BlockPos b = mindBase;
         if (b != null) {
             mc.options.setCameraType(CameraType.FIRST_PERSON);
-            mc.options.hideGui = true;
-            Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0); // lookCamera places the stand's feet
+            DevUtil.hideGui(mc, true);
+            Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0); // lookCamera places the stand's feet
             lookCamera(mc, Vec3.atBottomCenterOf(b).add(3, 2.6, -6.5).subtract(drop), Vec3.atBottomCenterOf(b).add(3, 1.6, 1).subtract(drop));
         }
     }
@@ -1291,8 +1291,8 @@ public final class AutoPilot {
         BlockPos b = mindBase;
         if (b != null) {
             mc.options.setCameraType(CameraType.FIRST_PERSON);
-            mc.options.hideGui = true;
-            Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+            DevUtil.hideGui(mc, true);
+            Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
             lookCamera(mc, Vec3.atBottomCenterOf(b).add(9, 4.5, -14).subtract(drop), Vec3.atBottomCenterOf(b).add(11, 1.2, 1).subtract(drop));
         }
     }
@@ -1303,8 +1303,8 @@ public final class AutoPilot {
         BlockPos b = mindBase;
         if (b != null) {
             mc.options.setCameraType(CameraType.FIRST_PERSON);
-            mc.options.hideGui = true;
-            Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+            DevUtil.hideGui(mc, true);
+            Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
             lookCamera(mc, Vec3.atBottomCenterOf(b).add(-3, 8, -24).subtract(drop), Vec3.atBottomCenterOf(b).add(0, 9, 0).subtract(drop));
         }
     }
@@ -1314,7 +1314,7 @@ public final class AutoPilot {
         if (mindSuit != null && mc.level.getEntity(mindSuit.getId()) instanceof PowerArmorEntity suit) {
             float yaw = suit.getYHeadRot() * net.minecraft.util.Mth.DEG_TO_RAD;
             Vec3 forward = new Vec3(-net.minecraft.util.Mth.sin(yaw), 0, net.minecraft.util.Mth.cos(yaw));
-            Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0); // lookCamera places the stand's feet
+            Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0); // lookCamera places the stand's feet
             Vec3 face = suit.position().add(0, 2.5, 0);
             lookCamera(mc, face.add(forward.scale(3.2)).add(forward.yRot(1.5708F).scale(0.8)).subtract(drop), face.subtract(drop));
         }
@@ -1378,21 +1378,21 @@ public final class AutoPilot {
             return;
         }
         mc.options.setCameraType(CameraType.FIRST_PERSON);
-        mc.options.hideGui = true;
-        Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        DevUtil.hideGui(mc, true);
+        Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         lookCamera(mc, Vec3.atBottomCenterOf(b).add(8, 2.2, 30).subtract(drop), Vec3.atBottomCenterOf(b).add(0, 1.4, 30).subtract(drop));
     }
 
-    private static net.minecraft.world.entity.animal.Cow nearestCow(Minecraft mc) {
-        return mc.level.getEntitiesOfClass(net.minecraft.world.entity.animal.Cow.class, mc.player.getBoundingBox().inflate(8)).stream()
+    private static net.minecraft.world.entity.animal.cow.Cow nearestCow(Minecraft mc) {
+        return mc.level.getEntitiesOfClass(net.minecraft.world.entity.animal.cow.Cow.class, mc.player.getBoundingBox().inflate(8)).stream()
                 .min(Comparator.comparingDouble(c -> c.distanceToSqr(mc.player))).orElse(null);
     }
 
     /** Server: a fresh suit 120 blocks east of the start on flat ground, by day; the scene's blocks ahead (+Z). */
     private static void mechSetup(Minecraft mc) {
         onServer(mc, player -> {
-            var level = player.serverLevel();
-            level.setDayTime(6000);
+            var level = player.level();
+            DevUtil.setTime(level, 6000);
             player.setGameMode(GameType.SURVIVAL);
             if (player.getVehicle() != null) {
                 player.stopRiding();
@@ -1401,15 +1401,15 @@ public final class AutoPilot {
             int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
             BlockPos base = new BlockPos(x, y, z);
             mechBase = base;
-            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 32));
-            suit.moveTo(x + 0.5, y, z + 0.5, 0, 0);
+            suit.snapTo(x + 0.5, y, z + 0.5, 0, 0);
             suit.setYBodyRot(0);
             level.addFreshEntity(suit);
             mechSuit = suit;
             player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
             player.teleportTo(x + 0.5, y, z - 1.5);
-            player.startRiding(suit, true);
+            player.startRiding(suit, true, true);
             for (int dx = -2; dx <= 2; dx++) {
                 for (int dz = 2; dz <= 4; dz++) {
                     level.setBlock(base.offset(dx, 0, dz), net.minecraft.world.level.block.Blocks.SNOW.defaultBlockState(), 3);
@@ -1440,22 +1440,22 @@ public final class AutoPilot {
             if (mechSuit == null || mechBase == null) {
                 return;
             }
-            var level = player.serverLevel();
+            var level = player.level();
             BlockPos spot = mechBase.offset(0, 0, 30);
             Vec3 c = Vec3.atBottomCenterOf(spot);
             mechMobs.clear();
-            Object[][] mobs = {{EntityType.PIG, 2.0, 0.0}, {EntityType.PIG, -1.5, 1.5}, {EntityType.VILLAGER, 0.0, -2.8}, {EntityType.COW, -6.0, 0.0}};
+            Object[][] mobs = {{net.minecraft.world.entity.EntityTypes.PIG, 2.0, 0.0}, {net.minecraft.world.entity.EntityTypes.PIG, -1.5, 1.5}, {net.minecraft.world.entity.EntityTypes.VILLAGER, 0.0, -2.8}, {net.minecraft.world.entity.EntityTypes.COW, -6.0, 0.0}};
             for (Object[] mob : mobs) {
-                var e = ((EntityType<?>) mob[0]).create(level);
-                e.moveTo(c.x + (double) mob[1], spot.getY(), c.z + (double) mob[2], 0, 0);
+                var e = ((EntityType<?>) mob[0]).create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                e.snapTo(c.x + (double) mob[1], spot.getY(), c.z + (double) mob[2], 0, 0);
                 level.addFreshEntity(e);
                 mechMobs.add((net.minecraft.world.entity.LivingEntity) e);
             }
             player.stopRiding();
-            mechSuit.moveTo(c.x, spot.getY() + 9, c.z, 0, 0);
+            mechSuit.snapTo(c.x, spot.getY() + 9, c.z, 0, 0);
             mechSuit.setDeltaMovement(Vec3.ZERO);
             player.teleportTo(c.x, spot.getY() + 9, c.z);
-            player.startRiding(mechSuit, true);
+            player.startRiding(mechSuit, true, true);
         });
     }
 
@@ -1465,7 +1465,7 @@ public final class AutoPilot {
             if (mechSuit == null) {
                 return;
             }
-            var level = player.serverLevel();
+            var level = player.level();
             BlockPos at = mechSuit.blockPosition();
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = 2; dz <= 5; dz++) {
@@ -1481,9 +1481,9 @@ public final class AutoPilot {
             if (mechSuit == null) {
                 return;
             }
-            var level = player.serverLevel();
-            var cow = EntityType.COW.create(level);
-            cow.moveTo(mechSuit.getX() + 3, mechSuit.getY(), mechSuit.getZ() + 1, 90, 0); // off to the left, clear of the lava to come
+            var level = player.level();
+            var cow = net.minecraft.world.entity.EntityTypes.COW.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+            cow.snapTo(mechSuit.getX() + 3, mechSuit.getY(), mechSuit.getZ() + 1, 90, 0); // off to the left, clear of the lava to come
             cow.setNoAi(true);
             level.addFreshEntity(cow);
             mechMobs.add(cow);
@@ -1541,11 +1541,11 @@ public final class AutoPilot {
     private static String actionAnim(PowerArmorEntity suit) {
         var manager = suit.getAnimatableInstanceCache().getManagerForId(suit.getId());
         var controller = manager == null ? null : manager.getAnimationControllers().get("action");
-        if (controller == null || controller.getCurrentAnimation() == null
-                || controller.getAnimationState() == software.bernie.geckolib.animation.AnimationController.State.STOPPED) {
+        if (controller == null || controller.getCurrentAnimationPoint() == null
+                || controller.getPlayState() == com.geckolib.animation.object.PlayState.STOP) {
             return "-";
         }
-        return controller.getCurrentAnimation().animation().name().replace("animation.power_armor.", "");
+        return controller.getCurrentAnimationPoint().animation().name().replace("animation.power_armor.", "");
     }
 
     private static void closeMechLog() {

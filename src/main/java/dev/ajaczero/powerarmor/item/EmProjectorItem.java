@@ -10,11 +10,11 @@ import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -56,7 +56,7 @@ public class EmProjectorItem extends Item implements PowerTool {
      *  rule: hitbox size was a poor guess at weight (a warden is thinner than an iron golem), and a tag lets datapacks
      *  and other mods add their own heavyweights. */
     public static final TagKey<EntityType<?>> HEAVY = TagKey.create(Registries.ENTITY_TYPE,
-            ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "em_heavy"));
+            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "em_heavy"));
     /** Wall impacts faster than this (blocks per tick) hurt: damage = (speed - this) * config slam damage. */
     private static final double SLAM_SPEED = 0.5;
     private static final int COOLDOWN_TICKS = 8;
@@ -64,7 +64,7 @@ public class EmProjectorItem extends Item implements PowerTool {
     private static final double HEAVY_SHOVE = 0.25;
     /** "powerarmor:em_slam" (data/powerarmor/damage_type/em_slam.json): "slammed into a wall". */
     public static final ResourceKey<DamageType> EM_SLAM = ResourceKey.create(Registries.DAMAGE_TYPE,
-            ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "em_slam"));
+            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "em_slam"));
 
 
     public EmProjectorItem(Properties properties) {
@@ -117,7 +117,7 @@ public class EmProjectorItem extends Item implements PowerTool {
 
     /** Too heavy to lift: other power armor suits (always) and anything in the em_heavy tag. They fight the field. */
     public static boolean isHeavy(Entity e) {
-        return e instanceof PowerArmorEntity || e.getType().is(HEAVY);
+        return e instanceof PowerArmorEntity || e.is(HEAVY);
     }
 
     /** What this suit's projector may hold: anything it can catch, but players (or a mount or suit carrying one) only
@@ -127,7 +127,7 @@ public class EmProjectorItem extends Item implements PowerTool {
             return false;
         }
         boolean player = e instanceof Player || e.hasPassenger(p -> p instanceof Player);
-        return !player || suit.isRogue() || suit.level().getServer() != null && suit.level().getServer().isPvpAllowed();
+        return !player || suit.isRogue() || dev.ajaczero.powerarmor.entity.ai.SuitTargets.pvpAllowed(suit);
     }
 
     // ---- PowerTool -------------------------------------------------------------------------------
@@ -208,7 +208,7 @@ public class EmProjectorItem extends Item implements PowerTool {
             Vec3 drag = toHold.multiply(1, 0, 1);
             drag = drag.length() > 0.06 ? drag.normalize().scale(0.06) : drag;
             target.setDeltaMovement(v.x * 0.2 + drag.x, v.y, v.z * 0.2 + drag.z);
-            target.hurtMarked = true;
+            target.syncVelocity = true;
             if (target instanceof PowerArmorEntity held) {
                 held.holdInField(); // a piloted suit is moved by its pilot's client: tell it to crawl
             }
@@ -223,7 +223,7 @@ public class EmProjectorItem extends Item implements PowerTool {
             pull = pull.normalize();
         }
         target.setDeltaMovement(target.getDeltaMovement().scale(0.3).add(pull.scale(0.7)));
-        target.hurtMarked = true; // send the new velocity to clients
+        target.syncVelocity = true; // send the new velocity to clients
         target.fallDistance = 0;
         if (beam.heldTicks % 20 == 0) {
             suit.playSound(SoundEvents.BEACON_AMBIENT, 0.6F, 1.8F);
@@ -251,7 +251,7 @@ public class EmProjectorItem extends Item implements PowerTool {
         }
         target.setNoGravity(beam.targetHadNoGravity);
         target.setDeltaMovement(view.scale(speed).add(0, 0.1, 0));
-        target.hurtMarked = true;
+        target.syncVelocity = true;
         if (target instanceof LivingEntity living) {
             beam.thrown.add(new Thrown(living, operator));
         }
@@ -311,18 +311,19 @@ public class EmProjectorItem extends Item implements PowerTool {
     // ---- item --------------------------------------------------------------------------------------
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
-            player.displayClientMessage(Component.translatable("message.powerarmor.tool_on_foot"), true);
+            player.sendOverlayMessage(Component.translatable("message.powerarmor.tool_on_foot"));
         }
-        return InteractionResultHolder.pass(player.getItemInHand(hand));
+        return InteractionResult.PASS;
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.powerarmor.em_projector.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("item.powerarmor.em_projector.stats", PowerArmorConfig.EM_HOLD_ENERGY.get() * 20, PowerArmorConfig.EM_THROW_ENERGY.get())
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+            java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
+        tooltip.accept(Component.translatable("item.powerarmor.em_projector.tooltip").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("item.powerarmor.em_projector.stats", PowerArmorConfig.EM_HOLD_ENERGY.get() * 20, PowerArmorConfig.EM_THROW_ENERGY.get())
                 .withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.add(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

@@ -7,18 +7,10 @@
     "III"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "P": {
-      "item": "minecraft:piston"
-    },
-    "B": {
-      "item": "minecraft:iron_block"
-    },
-    "D": {
-      "item": "minecraft:dispenser"
-    }
+    "I": "minecraft:iron_ingot",
+    "P": "minecraft:piston",
+    "B": "minecraft:iron_block",
+    "D": "minecraft:dispenser"
   },
   "result": {
     "id": "powerarmor:chaingun",

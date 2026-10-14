@@ -8,7 +8,6 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Vector3f;
 
 /**
  * Client: the EM beam, a twisting ribbon of redstone dust from the projector's prongs to what it holds, red sparks
@@ -17,11 +16,11 @@ import org.joml.Vector3f;
  * hotter orange-red so the twist reads. (A dark red strand was tried first: thick dark-red dust round a pig read as blood.)
  */
 final class EmBeamEffects {
-    private static final DustParticleOptions STRAND_RED = new DustParticleOptions(new Vector3f(1.0F, 0.1F, 0.05F), 0.6F);
-    private static final DustParticleOptions STRAND_HOT = new DustParticleOptions(new Vector3f(1.0F, 0.42F, 0.22F), 0.5F);
+    private static final DustParticleOptions STRAND_RED = new DustParticleOptions(0xFF1A0D, 0.6F);
+    private static final DustParticleOptions STRAND_HOT = new DustParticleOptions(0xFF6B38, 0.5F);
     /** Small and hot (orange-red): short-lived, because dust lives in proportion to its size. */
-    private static final DustParticleOptions SPARK = new DustParticleOptions(new Vector3f(1.0F, 0.45F, 0.25F), 0.35F);
-    private static final DustParticleOptions SWIRL = new DustParticleOptions(new Vector3f(1.0F, 0.2F, 0.1F), 0.4F);
+    private static final DustParticleOptions SPARK = new DustParticleOptions(0xFF7340, 0.35F);
+    private static final DustParticleOptions SWIRL = new DustParticleOptions(0xFF331A, 0.4F);
     /** Dust particles linger ~1-2 s; any that end up next to the pilot's eye (view swinging) look like huge blobs
      *  on the cockpit glass, so none are spawned that close. The sparks are tiny and short-lived: they may come closer. */
     private static final double KEEP_CLEAR = 1.3, KEEP_CLEAR_SPARKS = 0.9;

@@ -34,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
  * ({@code SuitSmash}, without drops). Server side only.
  *
  * Breaking a block "properly" is more than {@code level.removeBlock}: other mods (land claims, spawn
- * protection) listen for {@link BlockEvent.BreakEvent} and may cancel it, the block gets a chance to react
+ * protection) listen for {@link net.neoforged.neoforge.event.level.block.BreakBlockEvent} and may cancel it, the block gets a chance to react
  * (doors take their other half, chests spill their contents) and the drops come from the block's loot table
  * for the tool that broke it. {@link #breakBlock} does what vanilla's {@code ServerPlayerGameMode.destroyBlock}
  * does, except that the "tool" is a virtual diamond pickaxe / axe instead of the item in the pilot's hand.
@@ -84,7 +84,7 @@ public final class ToolMining {
                 || state.getBlock() instanceof GameMasterBlock && !pilot.canUseGameMasterBlocks()) {
             return false;
         }
-        BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(level, pos, state, pilot);
+        var event = new net.neoforged.neoforge.event.level.block.BreakBlockEvent(level, pos, state, pilot);
         TOOL_BREAK.set(true);
         try {
             NeoForge.EVENT_BUS.post(event);
@@ -98,7 +98,7 @@ public final class ToolMining {
         // Lets the block react (other door half, piglins guarding gold...) and plays the break effect for
         // everyone *except* the pilot (vanilla's pilot already saw it client-side); we send it to them below.
         BlockState broken = state.getBlock().playerWillDestroy(level, pos, state, pilot);
-        if (!broken.onDestroyedByPlayer(level, pos, pilot, true, level.getFluidState(pos))) {
+        if (!broken.onDestroyedByPlayer(level, pos, pilot, tool, true, level.getFluidState(pos))) {
             return false;
         }
         broken.getBlock().destroy(level, pos, broken);

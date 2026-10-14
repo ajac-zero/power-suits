@@ -4,7 +4,7 @@ import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.animation.RawAnimation;
+import com.geckolib.animation.RawAnimation;
 
 /**
  * A power tool for the suit's left-arm socket (chaingun, EM projector, drill, chainsaw).

@@ -7,10 +7,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.OwnableEntity;
-import net.minecraft.world.entity.animal.IronGolem;
-import net.minecraft.world.entity.animal.SnowGolem;
+import net.minecraft.world.entity.animal.golem.IronGolem;
+import net.minecraft.world.entity.animal.golem.SnowGolem;
 import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.npc.AbstractVillager;
+import net.minecraft.world.entity.npc.villager.AbstractVillager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -43,10 +43,10 @@ public final class SuitTargets {
             return false; // a pilot: it's the suit that gets shot (above), never the person inside directly
         }
         if (living instanceof Player player) {
-            return provoked && !player.isCreative() && suit.level().getServer() != null && suit.level().getServer().isPvpAllowed();
+            return provoked && !player.isCreative() && pvpAllowed(suit);
         }
-        if (living instanceof OwnableEntity pet && pet.getOwnerUUID() != null
-                && (pet.getOwnerUUID().equals(suit.getOwnerId()) || !provoked)) {
+        if (living instanceof OwnableEntity pet && pet.getOwnerReference() != null
+                && (pet.getOwnerReference().getUUID().equals(suit.getOwnerId()) || !provoked)) {
             return false; // the owner's wolves and cats, and nobody else's unless they started it
         }
         if (living instanceof AbstractVillager || living instanceof IronGolem || living instanceof SnowGolem) {
@@ -150,4 +150,16 @@ public final class SuitTargets {
     }
 
     private SuitTargets() {}
+
+    /** Server: the world's pvp game rule (players may hurt each other). */
+    public static boolean pvpAllowed(PowerArmorEntity suit) {
+        return suit.level() instanceof net.minecraft.server.level.ServerLevel level
+                && level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.PVP);
+    }
+
+    /** Mobs that fly instead of walking (ghasts, phantoms): they're never "on the ground", so the EM guard may grab
+     *  them in the air. (1.21.1 had a FlyingMob class for these; 1.21.6 removed it.) */
+    public static boolean isFlyer(LivingEntity e) {
+        return e instanceof net.minecraft.world.entity.monster.Ghast || e instanceof net.minecraft.world.entity.monster.Phantom;
+    }
 }

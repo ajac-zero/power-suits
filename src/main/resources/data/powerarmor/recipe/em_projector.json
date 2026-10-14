@@ -7,10 +7,13 @@
     "ICI"
   ],
   "key": {
-    "I": { "item": "minecraft:iron_ingot" },
-    "C": { "item": "minecraft:copper_ingot" },
-    "R": { "item": "minecraft:redstone" },
-    "L": { "item": "minecraft:lodestone" }
+    "I": "minecraft:iron_ingot",
+    "C": "minecraft:copper_ingot",
+    "R": "minecraft:redstone",
+    "L": "minecraft:lodestone"
   },
-  "result": { "id": "powerarmor:em_projector", "count": 1 }
+  "result": {
+    "id": "powerarmor:em_projector",
+    "count": 1
+  }
 }

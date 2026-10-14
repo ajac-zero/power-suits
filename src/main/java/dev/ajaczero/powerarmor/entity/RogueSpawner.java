@@ -15,10 +15,11 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
@@ -39,27 +40,28 @@ public final class RogueSpawner {
     static final class Countdown extends SavedData {
         int ticksLeft = DAY;
 
-        static Countdown load(CompoundTag tag, HolderLookup.Provider registries) {
-            Countdown c = new Countdown();
-            c.ticksLeft = tag.contains("TicksLeft") ? tag.getInt("TicksLeft") : DAY;
-            return c;
+        Countdown() {}
+
+        Countdown(int ticksLeft) {
+            this.ticksLeft = ticksLeft;
         }
 
-        @Override
-        public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
-            tag.putInt("TicksLeft", this.ticksLeft);
-            return tag;
-        }
+        /** How it's saved: since 1.21.5 saved data is described by a codec instead of hand-written load/save. */
+        static final com.mojang.serialization.Codec<Countdown> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(
+                com.mojang.serialization.Codec.INT.optionalFieldOf("TicksLeft", DAY).forGetter(c -> c.ticksLeft)
+        ).apply(i, Countdown::new));
     }
 
-    private static final SavedData.Factory<Countdown> FACTORY = new SavedData.Factory<>(Countdown::new, Countdown::load);
+    /** Saved in the world as data/powerarmor/rogues.dat. */
+    private static final SavedDataType<Countdown> TYPE = new SavedDataType<>(
+            net.minecraft.resources.Identifier.fromNamespaceAndPath(PowerArmor.MODID, "rogues"), Countdown::new, Countdown.CODEC);
 
     @SubscribeEvent
     public static void onLevelTick(LevelTickEvent.Post event) {
         if (!(event.getLevel() instanceof ServerLevel level) || level.dimension() != Level.OVERWORLD) {
             return;
         }
-        Countdown countdown = level.getDataStorage().computeIfAbsent(FACTORY, "powerarmor_rogues");
+        Countdown countdown = level.getDataStorage().computeIfAbsent(TYPE);
         if (--countdown.ticksLeft > 0) {
             if (countdown.ticksLeft % 1200 == 0) {
                 countdown.setDirty(); // save the countdown now and then, not every tick
@@ -68,13 +70,13 @@ public final class RogueSpawner {
         }
         countdown.ticksLeft = DAY;
         countdown.setDirty();
-        if (level.getDifficulty() == Difficulty.PEACEFUL || !level.getGameRules().getBoolean(GameRules.RULE_DOMOBSPAWNING)
-                || level.random.nextDouble() >= PowerArmorConfig.ROGUE_SPAWN_CHANCE.get() || anyRogue(level)) {
+        if (level.getDifficulty() == Difficulty.PEACEFUL || !level.getGameRules().get(GameRules.SPAWN_MOBS)
+                || level.getRandom().nextDouble() >= PowerArmorConfig.ROGUE_SPAWN_CHANCE.get() || anyRogue(level)) {
             return;
         }
         List<ServerPlayer> players = level.getPlayers(p -> !p.isSpectator() && p.isAlive());
         if (!players.isEmpty()) {
-            ServerPlayer player = players.get(level.random.nextInt(players.size()));
+            ServerPlayer player = players.get(level.getRandom().nextInt(players.size()));
             PowerArmorEntity rogue = spawnNear(level, player.blockPosition(), MIN_DISTANCE, MAX_DISTANCE);
             if (rogue != null) {
                 PowerArmor.LOGGER.info("A rogue power armor turned up at {} ({} blocks from {})", rogue.blockPosition(),
@@ -99,7 +101,7 @@ public final class RogueSpawner {
      */
     @Nullable
     public static PowerArmorEntity spawnNear(ServerLevel level, BlockPos centre, int min, int max) {
-        RandomSource random = level.random;
+        RandomSource random = level.getRandom();
         for (int i = 0; i < 10; i++) {
             float angle = random.nextFloat() * Mth.TWO_PI;
             double d = min + random.nextDouble() * (max - min);
@@ -113,12 +115,12 @@ public final class RogueSpawner {
                     || !level.getFluidState(ground).isEmpty()) {
                 continue;
             }
-            PowerArmorEntity rogue = ModEntities.POWER_ARMOR.get().create(level);
+            PowerArmorEntity rogue = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.NATURAL);
             if (rogue == null) {
                 return null;
             }
             float yaw = random.nextFloat() * 360F;
-            rogue.moveTo(x + 0.5, pos.getY(), z + 0.5, yaw, 0);
+            rogue.snapTo(x + 0.5, pos.getY(), z + 0.5, yaw, 0);
             rogue.setYBodyRot(yaw);
             rogue.setYHeadRot(yaw);
             if (!level.noCollision(rogue, rogue.getBoundingBox())) {

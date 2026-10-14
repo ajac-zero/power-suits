@@ -7,15 +7,9 @@
     "IPI"
   ],
   "key": {
-    "D": {
-      "item": "minecraft:diamond"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "P": {
-      "item": "minecraft:piston"
-    }
+    "D": "minecraft:diamond",
+    "I": "minecraft:iron_ingot",
+    "P": "minecraft:piston"
   },
   "result": {
     "id": "powerarmor:drill",

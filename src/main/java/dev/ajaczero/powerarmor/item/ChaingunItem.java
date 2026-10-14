@@ -16,7 +16,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -155,7 +155,7 @@ public class ChaingunItem extends Item implements PowerTool {
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.6F);
             if (s.noAmmoMessage == 0 && suit.hasEnergyFor(this.energyPerUse())) {
                 if (operator instanceof Player pilot) {
-                    pilot.displayClientMessage(Component.translatable("message.powerarmor.no_bullets"), true);
+                    pilot.sendOverlayMessage(Component.translatable("message.powerarmor.no_bullets"));
                 }
                 s.noAmmoMessage = 40;
             }
@@ -175,7 +175,7 @@ public class ChaingunItem extends Item implements PowerTool {
             direction = operator.getViewVector(1F);
         }
         float spread = MAX_SPREAD * s.spin * Mth.DEG_TO_RAD;
-        direction = direction.xRot((float) level.random.nextGaussian() * spread).yRot((float) level.random.nextGaussian() * spread);
+        direction = direction.xRot((float) level.getRandom().nextGaussian() * spread).yRot((float) level.getRandom().nextGaussian() * spread);
         float spin = s.spin;
         level.addFreshEntity(new Bullet(level, operator, eye, direction.scale(Bullet.SPEED), damage(spin), 1F - spin));
         suit.countToolUse();
@@ -192,13 +192,13 @@ public class ChaingunItem extends Item implements PowerTool {
         }
         // Heavy single shots: a deep thump and the piston-like clank; the barrage: lighter, higher cracks.
         level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS,
-                0.9F - 0.3F * spin, 0.65F + 0.55F * spin + level.random.nextFloat() * 0.1F);
+                0.9F - 0.3F * spin, 0.65F + 0.55F * spin + level.getRandom().nextFloat() * 0.1F);
         if (spin < 0.4F) {
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.IRON_GOLEM_DAMAGE, SoundSource.PLAYERS, 0.4F, 1.5F);
         }
         for (ServerPlayer viewer : level.players()) {
             if (viewer != operator && viewer.distanceToSqr(muzzle) < 64 * 64) {
-                muzzleBurst((type, x, y, z, n, sp, v) -> level.sendParticles(viewer, type, false, x, y, z, n, sp, sp, sp, v), muzzle, spin, true);
+                muzzleBurst((type, x, y, z, n, sp, v) -> level.sendParticles(viewer, type, false, false, x, y, z, n, sp, sp, sp, v), muzzle, spin, true);
             }
         }
     }
@@ -276,19 +276,20 @@ public class ChaingunItem extends Item implements PowerTool {
 
     /** On foot it's just a heavy piece of kit: say where it goes. */
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
-            player.displayClientMessage(Component.translatable("message.powerarmor.tool_on_foot"), true);
+            player.sendOverlayMessage(Component.translatable("message.powerarmor.tool_on_foot"));
         }
-        return InteractionResultHolder.pass(player.getItemInHand(hand));
+        return InteractionResult.PASS;
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.powerarmor.chaingun.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("item.powerarmor.chaingun.stats",
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+            java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
+        tooltip.accept(Component.translatable("item.powerarmor.chaingun.tooltip").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("item.powerarmor.chaingun.stats",
                 String.format("%.1f", damage(0F) / 2), String.format("%.1f", damage(1F) / 2),
                 String.format("%.0f", 20F / PowerArmorConfig.CHAINGUN_FAST_INTERVAL.get()), this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.add(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

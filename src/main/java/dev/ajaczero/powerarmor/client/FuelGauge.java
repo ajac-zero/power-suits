@@ -6,10 +6,11 @@ import dev.ajaczero.powerarmor.item.PowerArmorItem;
 import dev.ajaczero.powerarmor.item.ChaingunItem;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
@@ -26,13 +27,13 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class FuelGauge {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "fuel_gauge");
-    private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/gui/power_armor.png");
-    private static final ResourceLocation LIT_PROGRESS = ResourceLocation.withDefaultNamespace("container/furnace/lit_progress");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "fuel_gauge");
+    private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/gui/power_armor.png");
+    private static final Identifier LIT_PROGRESS = Identifier.withDefaultNamespace("container/furnace/lit_progress");
 
-    public static void render(GuiGraphics graphics, DeltaTracker delta) {
+    public static void render(GuiGraphicsExtractor graphics, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.options.hideGui || mc.player == null || !(mc.player.getVehicle() instanceof PowerArmorEntity suit)) {
+        if (mc.gui.hud.isHidden() || mc.player == null || !(mc.player.getVehicle() instanceof PowerArmorEntity suit)) {
             return;
         }
         int x = graphics.guiWidth() / 2 + 91 + 8;  // just right of the hotbar
@@ -41,27 +42,30 @@ public final class FuelGauge {
         boolean blink = low && (suit.tickCount / 5) % 2 == 0;
 
         // Grey (unlit) flame from our menu texture, then the lit part on top.
-        graphics.blit(BACKGROUND, x, y, 73, 35, 14, 14);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND, x, y, 73F, 35F, 14, 14, 256, 256);
         if (suit.getBurnLeft() > 0 && suit.getBurnTotal() > 0 && !blink) {
             int h = Mth.ceil(Mth.clamp(suit.getBurnLeft() / (float) suit.getBurnTotal(), 0F, 1F) * 13F) + 1;
-            graphics.blitSprite(LIT_PROGRESS, 14, 14, 0, 14 - h, x, y + 14 - h, 14, h);
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, LIT_PROGRESS, 14, 14, 0, 14 - h, x, y + 14 - h, 14, h);
         }
         ItemStack fuel = suit.getFuelStack();
         if (!fuel.isEmpty()) {
-            graphics.renderItem(fuel, x + 16, y - 1);
-            graphics.renderItemDecorations(mc.font, fuel, x + 16, y - 1);
+            graphics.item(fuel, x + 16, y - 1);
+            graphics.itemDecorations(mc.font, fuel, x + 16, y - 1);
         }
         int energy = suit.getTotalEnergy();
         Component text = energy > 0 ? Component.literal(PowerArmorItem.formatWalkTime(energy))
                 : Component.translatable("gui.powerarmor.no_fuel");
         int colour = energy == 0 ? 0xFFFF5555 : low ? (blink ? 0xFFFF5555 : 0xFFFFB13B) : 0xFFFFFFFF;
-        graphics.drawString(mc.font, text, x + 36, y + 3, colour, true);
+        graphics.text(mc.font, text, x + 36, y + 3, colour, true);
         if (suit.getSocketStack().getItem() instanceof ChaingunItem) {
             // Bullets left (iron nuggets carried), just above the fuel: red when there are none.
             int bullets = mc.player.hasInfiniteMaterials() ? -1 : ChaingunItem.countBullets(mc.player);
-            graphics.renderItem(BULLET_ICON, x + 16, y - 18);
+            if (bulletIcon == null) {
+                bulletIcon = new ItemStack(net.minecraft.world.item.Items.IRON_NUGGET);
+            }
+            graphics.item(bulletIcon, x + 16, y - 18);
             Component count = Component.literal(bullets < 0 ? "\u221e" : Integer.toString(bullets));
-            graphics.drawString(mc.font, count, x + 36, y - 14, bullets == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
+            graphics.text(mc.font, count, x + 36, y - 14, bullets == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
             // Barrel heat (with overheat on): a thin bar under the count, orange to red, blinking when overheated.
             float heat = suit.getToolHeat();
             if (heat > 0.01F && !(heat >= 0.99F && (suit.tickCount / 4) % 2 == 0)) {
@@ -72,7 +76,8 @@ public final class FuelGauge {
         }
     }
 
-    private static final ItemStack BULLET_ICON = new ItemStack(net.minecraft.world.item.Items.IRON_NUGGET);
+    /** Made on first use: since 1.21.x an ItemStack can't be created before the game has loaded its item data. */
+    private static ItemStack bulletIcon;
 
     /** Warning beep every 2 seconds while running on the last few seconds of fuel. */
     @SubscribeEvent

@@ -6,10 +6,11 @@ import dev.ajaczero.powerarmor.registry.ModEntities;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
@@ -48,7 +49,7 @@ public class Bullet extends Projectile {
     /** "powerarmor:bullet", defined in data/powerarmor/damage_type/bullet.json (death message, projectile and
      *  no_knockback tags). */
     public static final ResourceKey<DamageType> BULLET = ResourceKey.create(Registries.DAMAGE_TYPE,
-            ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "bullet"));
+            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "bullet"));
 
     private float damage = 3F;
     private float knockback;
@@ -172,12 +173,13 @@ public class Bullet extends Projectile {
             return;
         }
         Entity target = result.getEntity();
-        target.invulnerableTime = 0; // every bullet counts (see the class comment)
+        // Every bullet counts (see the class comment): the bullet damage type is in minecraft:bypasses_cooldown, so
+        // vanilla's half-second hit immunity doesn't swallow the rest of a burst.
         // Careful: despite the parameter names, vanilla passes (projectile, shooter), e.g. source(FIREBALL, fireball, thrower).
         DamageSource source = this.damageSources().source(BULLET, this, this.getOwner());
-        if (target.hurt(source, this.damage) && target instanceof LivingEntity living && this.knockback > 0.05F) {
+        if (target.hurtServer(level, source, this.damage) && target instanceof LivingEntity living && this.knockback > 0.05F) {
             Vec3 push = this.getDeltaMovement().multiply(1, 0, 1).normalize();
-            living.knockback(0.45 * this.knockback, -push.x, -push.z);
+            living.knockback(0.45 * this.knockback, -push.x, -push.z, source, this.damage);
         }
         Vec3 at = result.getLocation();
         level.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 4, 0.1, 0.1, 0.1, 0.2);
@@ -200,17 +202,17 @@ public class Bullet extends Projectile {
     }
 
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
+    protected void addAdditionalSaveData(ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         tag.putFloat("Damage", this.damage);
         tag.putFloat("Knockback", this.knockback);
     }
 
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
+    protected void readAdditionalSaveData(ValueInput tag) {
         super.readAdditionalSaveData(tag);
-        this.damage = tag.getFloat("Damage");
-        this.knockback = tag.getFloat("Knockback");
+        this.damage = tag.getFloatOr("Damage", 0F);
+        this.knockback = tag.getFloatOr("Knockback", 0F);
     }
 
     @Override
@@ -219,7 +221,7 @@ public class Bullet extends Projectile {
     }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
+    public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
         return false;
     }
 

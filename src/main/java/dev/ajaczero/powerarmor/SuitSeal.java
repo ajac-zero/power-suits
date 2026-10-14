@@ -2,7 +2,7 @@ package dev.ajaczero.powerarmor;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
 @EventBusSubscriber(modid = PowerArmor.MODID)
 public final class SuitSeal {
     public static final TagKey<DamageType> SEALED_OUT = TagKey.create(Registries.DAMAGE_TYPE,
-            ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "sealed_out"));
+            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "sealed_out"));
 
     /** Minecraft gives a hit entity half a second (10 ticks) of immunity to weaker hits. Absorbed hits never reach that
      *  code, so the suit keeps its own clock: a fire block "hits" every tick, but is paid for once per 10 ticks. */

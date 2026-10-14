@@ -1,16 +1,15 @@
 package dev.ajaczero.powerarmor.client;
 
+import com.geckolib.animatable.GeoAnimatable;
+import com.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.geckolib.animatable.manager.AnimatableManager;
+import com.geckolib.animation.AnimationController;
+import com.geckolib.animation.object.PlayState;
+import com.geckolib.animation.state.AnimationTest;
+import com.geckolib.util.GeckoLibUtil;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.PowerTool;
-import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.animatable.GeoAnimatable;
-import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
-import software.bernie.geckolib.animation.PlayState;
-import software.bernie.geckolib.util.GeckoLibUtil;
-import software.bernie.geckolib.util.RenderUtil;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The pilot's first-person "viewmodel": the socket tool on the left and the suit's gauntlet on the right, drawn in
@@ -26,15 +25,17 @@ final class CockpitView implements GeoAnimatable {
     /** The suit being piloted, set before each render. */
     @Nullable
     PowerArmorEntity suit;
+    /** Which half the next render pass draws (copied into its render state: the model is drawn later). */
+    CockpitViewRenderer.Part part = CockpitViewRenderer.Part.TOOL;
 
     private CockpitView() {}
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "tool", 3, this::toolAnimation));
+        controllers.add(new AnimationController<>("tool", 3, this::toolAnimation));
     }
 
-    private PlayState toolAnimation(AnimationState<CockpitView> state) {
+    private PlayState toolAnimation(AnimationTest<CockpitView> state) {
         if (this.suit != null && this.suit.isToolRunning() && this.suit.getSocketStack().getItem() instanceof PowerTool tool
                 && tool.runAnimation() != null) {
             return state.setAndContinue(tool.runAnimation());
@@ -45,10 +46,5 @@ final class CockpitView implements GeoAnimatable {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.cache;
-    }
-
-    @Override
-    public double getTick(Object object) {
-        return RenderUtil.getCurrentTick();
     }
 }

@@ -35,7 +35,7 @@ public class PowerArmorItem extends Item {
         if (!(context.getLevel() instanceof ServerLevel level)) {
             return InteractionResult.SUCCESS; // client: just play the arm swing
         }
-        PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+        PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.SPAWN_ITEM_USE);
         if (suit == null) {
             return InteractionResult.FAIL;
         }
@@ -44,13 +44,13 @@ public class PowerArmorItem extends Item {
         BlockPos pos = context.getClickedPos().relative(context.getClickedFace());
         Player player = context.getPlayer();
         float yaw = player != null ? player.getYRot() + 180.0F : 0.0F;
-        suit.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, yaw, 0.0F);
+        suit.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, yaw, 0.0F);
         suit.setYBodyRot(yaw);
         suit.setYHeadRot(yaw);
 
         if (!level.noCollision(suit, suit.getBoundingBox())) {
             if (player != null) {
-                player.displayClientMessage(Component.translatable("message.powerarmor.no_room"), true);
+                player.sendOverlayMessage(Component.translatable("message.powerarmor.no_room"));
             }
             return InteractionResult.FAIL;
         }
@@ -87,28 +87,24 @@ public class PowerArmorItem extends Item {
     }
 
     @Override
-    public boolean isValidRepairItem(ItemStack stack, ItemStack repairCandidate) {
-        return repairCandidate.is(Items.IRON_INGOT);
-    }
-
-    @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.powerarmor.power_armor.tooltip").withStyle(ChatFormatting.GRAY));
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+            java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
+        tooltip.accept(Component.translatable("item.powerarmor.power_armor.tooltip").withStyle(ChatFormatting.GRAY));
         SuitLoadout loadout = stack.get(ModDataComponents.LOADOUT.get());
         if (loadout != null) {
             int energy = loadout.burnLeft() + loadout.fuel().getCount() * SuitFuel.energyOf(loadout.fuel());
             if (!loadout.fuel().isEmpty()) {
-                tooltip.add(Component.translatable("item.powerarmor.power_armor.fuel", loadout.fuel().getCount(), loadout.fuel().getHoverName())
+                tooltip.accept(Component.translatable("item.powerarmor.power_armor.fuel", loadout.fuel().getCount(), loadout.fuel().getHoverName())
                         .withStyle(ChatFormatting.GOLD));
             }
             if (energy > 0) {
-                tooltip.add(Component.translatable("item.powerarmor.power_armor.range", formatWalkTime(energy)).withStyle(ChatFormatting.GOLD));
+                tooltip.accept(Component.translatable("item.powerarmor.power_armor.range", formatWalkTime(energy)).withStyle(ChatFormatting.GOLD));
             }
             if (loadout.nuggets() > 0) {
-                tooltip.add(Component.translatable("item.powerarmor.power_armor.nuggets", loadout.nuggets()).withStyle(ChatFormatting.GRAY));
+                tooltip.accept(Component.translatable("item.powerarmor.power_armor.nuggets", loadout.nuggets()).withStyle(ChatFormatting.GRAY));
             }
             if (!loadout.socket().isEmpty()) {
-                tooltip.add(Component.translatable("item.powerarmor.power_armor.socket", loadout.socket().getHoverName()).withStyle(ChatFormatting.AQUA));
+                tooltip.accept(Component.translatable("item.powerarmor.power_armor.socket", loadout.socket().getHoverName()).withStyle(ChatFormatting.AQUA));
             }
         }
     }

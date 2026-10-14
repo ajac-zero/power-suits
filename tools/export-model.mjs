@@ -60,7 +60,7 @@ const write = (rel, data) => {
   fs.writeFileSync(file, data);
   process.stdout.write(`wrote ${path.relative(ROOT, file)} (${data.length} bytes)\n`);
 };
-write(`geo/entity/${NAME}.geo.json`, JSON.stringify(geo, null, 1));
-write(`animations/entity/${NAME}.animation.json`, JSON.stringify(anims));
+write(`geckolib/models/entity/${NAME}.geo.json`, JSON.stringify(geo, null, 1));
+write(`geckolib/animations/entity/${NAME}.animation.json`, JSON.stringify(anims));
 write(`textures/entity/${NAME}.png`, Buffer.from(png, 'base64'));
 process.stdout.write(`animations: ${Object.keys(anims.animations).join(', ')}\n`);

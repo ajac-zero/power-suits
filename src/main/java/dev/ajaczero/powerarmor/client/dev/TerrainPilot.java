@@ -18,7 +18,7 @@ import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -55,7 +55,7 @@ public final class TerrainPilot {
         }
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) {
-            if (!worldRequested && mc.screen instanceof TitleScreen) {
+            if (!worldRequested && mc.gui.screen() instanceof TitleScreen) {
                 worldRequested = true;
                 openCopy(mc, MODE.substring("terrain:".length()));
             }
@@ -92,7 +92,7 @@ public final class TerrainPilot {
         mc.player.setYRot(yaw); mc.player.yRotO = yaw;
         mc.player.setXRot(10); mc.player.xRotO = 10;
         mc.options.setCameraType(CameraType.FIRST_PERSON);
-        mc.options.hideGui = false; // F1 would also skip the hand pass (cockpit viewmodel)
+        DevUtil.hideGui(mc, false); // F1 would also skip the hand pass (cockpit viewmodel)
         set(mc.options.keyUp, true);
         set(mc.options.keySprint, sprint);
         if (!sprint && mc.player.isSprinting()) {
@@ -102,7 +102,7 @@ public final class TerrainPilot {
             log(t, (sprint ? "sprint" : "jog") + leg, suit);
         }
         if (t % 25 == 0) {
-            Screenshot.grab(mc.gameDirectory, "ap_terrain_" + t + ".png", mc.getMainRenderTarget(), msg -> {});
+            Screenshot.grab(mc.gameDirectory, "ap_terrain_" + t + ".png", mc.gameRenderer.mainRenderTarget(), 1, msg -> {});
         }
     }
 
@@ -160,7 +160,7 @@ public final class TerrainPilot {
         }
         set(mc.options.keyUp, false);
         set(mc.options.keySprint, false);
-        mc.options.hideGui = false;
+        DevUtil.hideGui(mc, false);
         PowerArmor.LOGGER.info("[terrain] done, {} ticks", tick);
         mc.stop();
     }
@@ -173,12 +173,12 @@ public final class TerrainPilot {
             if (player == null) {
                 return;
             }
-            var level = player.serverLevel();
-            level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
-            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level);
+            var level = player.level();
+            level.getGameRules().set(GameRules.SPAWN_MOBS, false, server);
+            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             // A full stack of blaze rods (~4 hours of walking): enough for any scripted drive.
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64));
-            suit.moveTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 0);
+            suit.snapTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 0);
             level.addFreshEntity(suit);
             player.startRiding(suit);
         });

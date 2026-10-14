@@ -1,23 +1,17 @@
 package dev.ajaczero.powerarmor.client;
 
-import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import com.geckolib.renderer.base.BoneSnapshots;
 import net.minecraft.util.Mth;
-import software.bernie.geckolib.animation.AnimationProcessor;
-import software.bernie.geckolib.cache.object.GeoBone;
 
 /**
  * The chaingun's barrel cluster turns with the suit's synced spin (PowerArmorEntity.getBarrelAngle), not with an
- * animation: GeckoLib scales an animation's whole elapsed time by its speed, so speeding a spin animation up mid-loop
- * makes it jump (we hit that with the walk). Shared by the suit (PowerArmorModel) and the cockpit viewmodel
- * (CockpitViewRenderer). No animation keys this bone, so the value is SET every frame from its rest pose (adding
- * would pile up, see AGENTS.md).
+ * animation: a spinning part whose speed changes is easier to drive from an angle each client accumulates. Shared by
+ * the suit (PowerArmorRenderer) and the cockpit viewmodel (CockpitViewRenderer). No animation keys this bone, and
+ * GeckoLib 5 starts every bone from its rest pose each frame, so the angle is simply set.
  */
 final class ChaingunParts {
-    static void pose(AnimationProcessor<?> bones, PowerArmorEntity suit, float partial) {
-        GeoBone barrels = bones.getBone("chaingun_barrels");
-        if (barrels != null) {
-            barrels.setRotY(barrels.getInitialSnapshot().getRotY() + suit.getBarrelAngle(partial) * Mth.DEG_TO_RAD);
-        }
+    static void pose(BoneSnapshots bones, float barrelAngle) {
+        bones.ifPresent("chaingun_barrels", barrels -> barrels.setRotY(barrelAngle * Mth.DEG_TO_RAD));
     }
 
     private ChaingunParts() {}

@@ -15,7 +15,7 @@ import dev.ajaczero.powerarmor.registry.ModItems;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.resources.Identifier;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -23,7 +23,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -37,19 +37,14 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Automated in-game tests. Run them headless with:  ./gradlew runGameTestServer
  * Each test builds the "test_pad" structure (9x10x9, stone floor), runs, and must call succeed(). GameTest places the
  * structure one block above the test origin, so the floor is at relative y=1 and you stand at y=2.
- * They only register in development / when game tests are enabled, so players never see them.
+ * They only register in development / when game tests are enabled, so players never see them (SuitTests).
  */
-@GameTestHolder(PowerArmor.MODID)
-@PrefixGameTestTemplate(false)
 public final class PowerArmorTests {
-    private static final String PAD = "test_pad";
     private static final BlockPos SUIT_POS = new BlockPos(4, 2, 4);
 
     private static PowerArmorEntity spawnSuit(GameTestHelper helper) {
@@ -58,12 +53,12 @@ public final class PowerArmorTests {
 
     private static Player boardedPilot(GameTestHelper helper, PowerArmorEntity suit) {
         Player pilot = helper.makeMockPlayer(GameType.SURVIVAL);
-        pilot.moveTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
-        suit.interact(pilot, InteractionHand.MAIN_HAND);
+        pilot.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        suit.interact(pilot, InteractionHand.MAIN_HAND, suit.position());
         return pilot;
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void pilotClimbsInAndOut(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         Player pilot = boardedPilot(helper, suit);
@@ -82,7 +77,7 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void suitAbsorbsDamageForPilot(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         Player pilot = boardedPilot(helper, suit);
@@ -92,7 +87,7 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void packingKeepsDamage(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         suit.hurt(helper.getLevel().damageSources().generic(), 30.0F);
@@ -108,7 +103,7 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void deployingRestoresHealth(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         ItemStack stack = new ItemStack(ModItems.POWER_ARMOR.get());
@@ -124,7 +119,7 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void deployingNeedsRoom(GameTestHelper helper) {
         helper.setBlock(new BlockPos(4, 4, 4), Blocks.STONE); // ceiling 2 blocks up; the suit is 3 tall
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
@@ -138,7 +133,7 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    @GameTest(template = PAD, timeoutTicks = 120)
+    @SuitTest(timeoutTicks = 120)
     public static void destroyedSuitEjectsPilotAndDropsScrap(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 3));
@@ -155,23 +150,22 @@ public final class PowerArmorTests {
     }
 
     /** Regression: suits saved by older versions kept their old (slow) movement speed. */
-    @GameTest(template = PAD)
+    @SuitTest
     public static void loadedSuitGetsCurrentStats(GameTestHelper helper) {
         PowerArmorEntity old = spawnSuit(helper);
         double current = old.getAttributeBaseValue(Attributes.MOVEMENT_SPEED);
         old.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.036); // the v1 speed
-        CompoundTag saved = new CompoundTag();
-        old.saveWithoutId(saved);
+        CompoundTag saved = saveTag(helper, old);
 
-        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel());
-        loaded.load(saved);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        loadTag(helper, loaded, saved);
         double speed = loaded.getAttributeBaseValue(Attributes.MOVEMENT_SPEED);
         helper.assertTrue(Math.abs(speed - current) < 1e-9, "loaded suit should get the current speed " + current + ", got " + speed);
         helper.succeed();
     }
 
     /** Fallout-style water: an empty suit sinks to the bottom of a pool and doesn't drown. */
-    @GameTest(template = PAD, timeoutTicks = 200)
+    @SuitTest(timeoutTicks = 200)
     public static void suitSinksAndDoesNotDrown(GameTestHelper helper) {
         // Stone-walled pool on the pad: water from y=2 to y=6 inside x/z 2..6 (5 deep).
         for (int x = 1; x <= 7; x++) {
@@ -202,7 +196,7 @@ public final class PowerArmorTests {
         return suit;
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void fuelTiersCoalShortestBlazeRodLongest(GameTestHelper helper) {
         int coal = SuitFuel.energyOf(new ItemStack(Items.COAL));
         int lava = SuitFuel.energyOf(new ItemStack(Items.LAVA_BUCKET));
@@ -219,7 +213,7 @@ public final class PowerArmorTests {
     }
 
     /** Furnace-style: one item at a time is burnt; idle, walking and sprinting drain 0.25 / 1 / 2 per tick. */
-    @GameTest(template = PAD, timeoutTicks = 120)
+    @SuitTest(timeoutTicks = 120)
     public static void pilotedSuitBurnsOneItemAtATime(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 3));
         Player pilot = boardedPilot(helper, suit);
@@ -244,7 +238,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void lavaLeavesItsBucket(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.LAVA_BUCKET));
         boardedPilot(helper, suit);
@@ -255,7 +249,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 60)
+    @SuitTest(timeoutTicks = 60)
     public static void emptyTankShutsDown(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         suit.setBurn(10, 1600); // half a second of walking left, nothing in the slot
@@ -273,7 +267,7 @@ public final class PowerArmorTests {
 
     /** Design sec. 8: a suit with fuel always runs (its machine mind drives it when nobody is inside), so it burns the
      *  idle rate even without a pilot; to park one for good, take the fuel out. Refuelling powers it back on. */
-    @GameTest(template = PAD, timeoutTicks = 80)
+    @SuitTest(timeoutTicks = 80)
     public static void pilotlessSuitRunsOnItsFuelAndRefuelRestarts(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         helper.runAfterDelay(2, () -> {
@@ -292,16 +286,15 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void saveAndLoadKeepFuelAndSocket(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.CHARCOAL, 5));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(Items.STICK)); // stand-in tool
         suit.setBurn(123.5F, 1600);
-        CompoundTag saved = new CompoundTag();
-        suit.saveWithoutId(saved);
+        CompoundTag saved = saveTag(helper, suit);
 
-        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel());
-        loaded.load(saved);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        loadTag(helper, loaded, saved);
         helper.assertTrue(loaded.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 5, "fuel slot should survive saving");
         helper.assertTrue(loaded.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(Items.STICK), "socket should survive saving");
         helper.assertTrue(loaded.getBurnLeftExact() == 123.5F && loaded.getBurnTotal() == 1600, "burning item should survive saving");
@@ -309,7 +302,7 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void packAndDeployKeepLoadout(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 7));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(Items.STICK));
@@ -332,13 +325,13 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void sneakRightClickDoesNotClimbIn(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.moveTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
+        player.snapTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
         player.setShiftKeyDown(true);
-        InteractionResult result = suit.interact(player, InteractionHand.MAIN_HAND);
+        InteractionResult result = suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
         // (A mock player can't receive the open-screen packet; the autopilot run checks the real screen.)
         helper.assertTrue(result.consumesAction(), "sneak + right-click should be handled by the suit");
         helper.assertTrue(player.getVehicle() == null, "sneak + right-click must not climb in");
@@ -346,11 +339,11 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void menuSlotsAndPackButton(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.moveTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
+        player.snapTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
         PowerArmorMenu menu = new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit);
         helper.assertTrue(menu.stillValid(player), "menu should be usable next to a parked suit");
         helper.assertTrue(menu.getSlot(1).mayPlace(new ItemStack(Items.BLAZE_ROD)), "fuel slot takes blaze rods");
@@ -399,13 +392,13 @@ public final class PowerArmorTests {
     private static Player creativePilot(GameTestHelper helper, PowerArmorEntity suit) {
         Player pilot = helper.makeMockPlayer(GameType.CREATIVE);
         pilot.getAbilities().instabuild = true;
-        pilot.moveTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
-        suit.interact(pilot, InteractionHand.MAIN_HAND);
+        pilot.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        suit.interact(pilot, InteractionHand.MAIN_HAND, suit.position());
         return pilot;
     }
 
     /** A tap fires one heavy shot at once: one nugget, one bullet's fuel plus a tick of spin. */
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void chaingunTapFiresOneHeavyShot(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2)); // 9600 energy
         Player pilot = armedPilot(helper, suit);
@@ -422,7 +415,7 @@ public final class PowerArmorTests {
     }
 
     /** Held, the barrels spin up and fire faster and faster; let go, they coast down to rest. */
-    @GameTest(template = PAD, timeoutTicks = 140)
+    @SuitTest(timeoutTicks = 140)
     public static void chaingunSpinsUpWhenHeld(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
         Player pilot = creativePilot(helper, suit);
@@ -443,7 +436,7 @@ public final class PowerArmorTests {
     }
 
     /** Each bullet uses one iron nugget; without nuggets the gun only clicks and burns no fuel for bullets. */
-    @GameTest(template = PAD, timeoutTicks = 80)
+    @SuitTest(timeoutTicks = 80)
     public static void chaingunUsesOneNuggetPerBullet(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
         Player pilot = boardedPilot(helper, suit);
@@ -460,7 +453,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 30)
+    @SuitTest(timeoutTicks = 30)
     public static void creativePilotNeedsNoBullets(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
         Player pilot = creativePilot(helper, suit);
@@ -474,7 +467,7 @@ public final class PowerArmorTests {
 
     /** Barrels overheat after the configured number of bullets in a row, and fire again once cooled. (Skipped when
      *  overheat is off in the config.) */
-    @GameTest(template = PAD, timeoutTicks = 600)
+    @SuitTest(timeoutTicks = 600)
     public static void chaingunOverheatsAndCools(GameTestHelper helper) {
         if (!PowerArmorConfig.CHAINGUN_OVERHEAT.get()) {
             helper.succeed();
@@ -504,7 +497,7 @@ public final class PowerArmorTests {
     }
 
     /** Using a tool raises the tool arm on every client (synced TOOL_ACTIVE); an empty socket doesn't. */
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void usingAToolRaisesTheArm(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
         Player pilot = armedPilot(helper, suit);
@@ -525,7 +518,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void shotLightsTheNextFuelItem(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.COAL, 1));
         int start = PowerArmorConfig.CHAINGUN_ENERGY.get() / 2;
@@ -540,7 +533,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void emptySocketDoesNothing(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
@@ -552,7 +545,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void unpoweredChaingunDoesNotFire(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, ItemStack.EMPTY);
         Player pilot = armedPilot(helper, suit);
@@ -563,7 +556,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void onlyThePilotCanPullTheTrigger(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.COAL, 4));
         armedPilot(helper, suit);
@@ -576,12 +569,12 @@ public final class PowerArmorTests {
     }
 
     /** The bullet flies from the muzzle to what the pilot looks at and hurts it with bullet damage. */
-    @GameTest(template = PAD, timeoutTicks = 60)
+    @SuitTest(timeoutTicks = 60)
     public static void bulletHitsWhatThePilotAimsAt(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, new BlockPos(4, 2, 1), new ItemStack(Items.COAL, 4));
         suit.setYRot(0); // facing +Z (south), toward the pig
         suit.setYBodyRot(0);
-        Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 7));
+        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 7));
         pig.setNoAi(true);
         Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
@@ -602,9 +595,9 @@ public final class PowerArmorTests {
     }
 
     /** Bullets ignore the half-second hit immunity: two bullets a tick apart both hurt. */
-    @GameTest(template = PAD, timeoutTicks = 30)
+    @SuitTest(timeoutTicks = 30)
     public static void bulletsIgnoreHitImmunity(GameTestHelper helper) {
-        Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 6));
+        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 6));
         pig.setNoAi(true);
         Vec3 from = helper.absoluteVec(new Vec3(4.5, 2.5, 1.5));
         float start = pig.getHealth();
@@ -616,14 +609,14 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void chaingunDoesNothingOnFoot(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.moveTo(helper.absoluteVec(new Vec3(4.5, 2, 4.5)));
+        player.snapTo(helper.absoluteVec(new Vec3(4.5, 2, 4.5)));
         ItemStack gun = new ItemStack(ModItems.CHAINGUN.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, gun);
         var result = gun.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
-        helper.assertTrue(!result.getResult().consumesAction(), "using it on foot should do nothing");
+        helper.assertTrue(!result.consumesAction(), "using it on foot should do nothing");
         helper.assertTrue(helper.getLevel().getEntitiesOfClass(Bullet.class, new AABB(helper.absolutePos(SUIT_POS)).inflate(5)).isEmpty(),
                 "no bullet on foot");
         helper.succeed();
@@ -634,12 +627,12 @@ public final class PowerArmorTests {
     // =========================================================================================
 
     /** Decided 2026-10-13: the hand works as normal, so the pilot fights with what they hold. */
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void pilotFightsWithTheHand(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
         pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
-        Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 6));
+        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 6));
         helper.runAfterDelay(5, () -> {
             helper.assertTrue(suit.canOperate(), "suit should be running");
             pilot.attack(pig);
@@ -649,7 +642,7 @@ public final class PowerArmorTests {
     }
 
     /** Mining from inside: allowed, and not slowed down 5x for "not standing on the ground" while the suit stands. */
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void pilotMinesAtNormalSpeed(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
@@ -660,19 +653,19 @@ public final class PowerArmorTests {
                     net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK);
             helper.assertTrue(!event.isCanceled(), "mining from inside a running suit is allowed");
             var state = helper.getLevel().getBlockState(block);
-            float bare = pilot.getInventory().getDestroySpeed(state); // what the empty hand digs at, before penalties
-            float speed = pilot.getDigSpeed(state, block);
+            float bare = pilot.getInventory().getSelectedItem().getDestroySpeed(state); // what the empty hand digs at, before penalties
+            float speed = pilot.getDestroySpeed(state, block);
             helper.assertTrue(Math.abs(speed - bare) < 1e-4, "hand mining speed " + speed + ", expected the on-ground " + bare);
             helper.succeed();
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 20)
+    @SuitTest(timeoutTicks = 20)
     public static void unpoweredHandCannotFightOrMine(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY); // no fuel: powered down
         Player pilot = boardedPilot(helper, suit);
         pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
-        Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 6));
+        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 6));
         BlockPos block = helper.absolutePos(new BlockPos(4, 1, 6));
         helper.runAfterDelay(2, () -> {
             pilot.attack(pig);
@@ -685,7 +678,7 @@ public final class PowerArmorTests {
     }
 
     /** The socket tool is the suit's off hand: the player's real off-hand item isn't used from inside. */
-    @GameTest(template = PAD, timeoutTicks = 20)
+    @SuitTest(timeoutTicks = 20)
     public static void offHandBelongsToTheTool(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
@@ -700,7 +693,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void handNeedsPower(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY); // no fuel: powered down
         Player pilot = boardedPilot(helper, suit);
@@ -719,13 +712,13 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void suitArmReachesFurther(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         double blocks = player.blockInteractionRange(), entities = player.entityInteractionRange();
-        player.moveTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
-        suit.interact(player, InteractionHand.MAIN_HAND);
+        player.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
         helper.assertTrue(player.getVehicle() == suit, "should be inside");
         helper.assertTrue(Math.abs(player.blockInteractionRange() - blocks - dev.ajaczero.powerarmor.PilotHands.EXTRA_REACH) < 1e-6,
                 "block reach should grow by 1.5, got " + player.blockInteractionRange());
@@ -761,10 +754,10 @@ public final class PowerArmorTests {
 
     /** A normal pig (with AI: Minecraft only moves mobs by velocity while their AI runs). */
     private static Pig floatingPigTarget(GameTestHelper helper) {
-        return helper.spawn(EntityType.PIG, new BlockPos(4, 2, 7));
+        return helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 7));
     }
 
-    @GameTest(template = PAD, timeoutTicks = 100)
+    @SuitTest(timeoutTicks = 100)
     public static void emPullsItemsIntoThePilotsInventory(GameTestHelper helper) {
         PowerArmorEntity suit = emSuit(helper);
         var item = helper.spawnItem(Items.DIAMOND, 4.5F, 2.2F, 7.5F);
@@ -782,7 +775,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 80)
+    @SuitTest(timeoutTicks = 80)
     public static void emHoldsAMobThenThrowsIt(GameTestHelper helper) {
         PowerArmorEntity suit = emSuit(helper);
         Pig pig = floatingPigTarget(helper);
@@ -804,7 +797,7 @@ public final class PowerArmorTests {
     }
 
     /** Thrown into the test pad's wall: the slam hurts. */
-    @GameTest(template = PAD, timeoutTicks = 80)
+    @SuitTest(timeoutTicks = 80)
     public static void emThrownMobSlamsIntoTheWall(GameTestHelper helper) {
         PowerArmorEntity suit = emSuit(helper);
         Pig pig = floatingPigTarget(helper);
@@ -822,10 +815,10 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void emTapShovesAMobAway(GameTestHelper helper) {
         PowerArmorEntity suit = emSuit(helper);
-        Pig pig = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 4)); // room to fly before the pad's wall
+        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 4)); // room to fly before the pad's wall
         double startZ = pig.getZ();
         Player pilot = emPilotLookingAt(helper, suit, pig.position().add(0, 0.45, 0));
         suit.setTriggerHeld(pilot, true);
@@ -837,7 +830,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void emLetsGoWhenThePilotLeaves(GameTestHelper helper) {
         PowerArmorEntity suit = emSuit(helper);
         Pig pig = floatingPigTarget(helper);
@@ -856,32 +849,32 @@ public final class PowerArmorTests {
 
     /** Decided 2026-10-13: everything but spectators, creative players and statues can be caught (players where PvP is
      *  on); suits and the em_heavy tag (bosses, iron golems, ravagers, wardens) are heavy: held in place, not lifted. */
-    @GameTest(template = PAD)
+    @SuitTest
     public static void emGrabRules(GameTestHelper helper) {
         var level = helper.getLevel();
         java.util.function.Predicate<net.minecraft.world.entity.Entity> grab = dev.ajaczero.powerarmor.item.EmProjectorItem::canGrab;
         java.util.function.Predicate<net.minecraft.world.entity.Entity> heavy = dev.ajaczero.powerarmor.item.EmProjectorItem::isHeavy;
         helper.assertTrue(grab.test(helper.spawnItem(Items.DIAMOND, 2, 2, 2)), "dropped items: yes");
-        helper.assertTrue(grab.test(helper.spawn(EntityType.PIG, new BlockPos(2, 2, 6))), "pigs: yes");
-        var golem = helper.spawn(EntityType.IRON_GOLEM, new BlockPos(6, 2, 6));
+        helper.assertTrue(grab.test(helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(2, 2, 6))), "pigs: yes");
+        var golem = helper.spawn(net.minecraft.world.entity.EntityTypes.IRON_GOLEM, new BlockPos(6, 2, 6));
         helper.assertTrue(grab.test(golem) && heavy.test(golem), "iron golems: heavy");
-        var warden = EntityType.WARDEN.create(level);
+        var warden = net.minecraft.world.entity.EntityTypes.WARDEN.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD);
         helper.assertTrue(grab.test(warden) && heavy.test(warden), "wardens: heavy (thin, but no beam lifts a warden)");
-        helper.assertTrue(!heavy.test(EntityType.ZOMBIE.create(level)) && !heavy.test(EntityType.COW.create(level)), "ordinary mobs: light");
+        helper.assertTrue(!heavy.test(net.minecraft.world.entity.EntityTypes.ZOMBIE.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD)) && !heavy.test(net.minecraft.world.entity.EntityTypes.COW.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD)), "ordinary mobs: light");
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         helper.assertTrue(grab.test(player) && !heavy.test(player), "players: yes");
         helper.assertTrue(!grab.test(helper.makeMockPlayer(GameType.CREATIVE)), "creative players: no");
-        var wither = EntityType.WITHER.create(level);
-        var ravager = EntityType.RAVAGER.create(level);
+        var wither = net.minecraft.world.entity.EntityTypes.WITHER.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        var ravager = net.minecraft.world.entity.EntityTypes.RAVAGER.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD);
         PowerArmorEntity other = spawnSuit(helper);
         helper.assertTrue(grab.test(wither) && heavy.test(wither), "bosses: heavy");
         helper.assertTrue(grab.test(ravager) && heavy.test(ravager), "ravagers: heavy");
         helper.assertTrue(grab.test(other) && heavy.test(other), "other suits: heavy");
-        Pig statue = helper.spawn(EntityType.PIG, new BlockPos(6, 2, 2));
+        Pig statue = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(6, 2, 2));
         statue.setNoAi(true);
         helper.assertTrue(!grab.test(statue), "no-AI mobs (map statues): never");
         PowerArmorEntity em = emSuit(helper);
-        boolean pvp = level.getServer().isPvpAllowed();
+        boolean pvp = level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.PVP);
         helper.assertTrue(dev.ajaczero.powerarmor.item.EmProjectorItem.canHold(em, player) == pvp, "a pilot holds players only with PvP on");
         dev.ajaczero.powerarmor.entity.RogueSpawner.makeRogue(em, false);
         helper.assertTrue(dev.ajaczero.powerarmor.item.EmProjectorItem.canHold(em, player), "a rogue doesn't ask");
@@ -889,7 +882,7 @@ public final class PowerArmorTests {
     }
 
     /** A suit in the beam fights it: stays on the ground, slowed, dragged only a little. */
-    @GameTest(template = PAD, timeoutTicks = 60)
+    @SuitTest(timeoutTicks = 60)
     public static void heavyThingsFightTheField(GameTestHelper helper) {
         PowerArmorEntity suit = emSuit(helper);
         PowerArmorEntity heavy = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 2, 7)); // unpowered: parked
@@ -916,7 +909,7 @@ public final class PowerArmorTests {
         static volatile BlockPos pos;
 
         @SubscribeEvent
-        public static void veto(BlockEvent.BreakEvent event) {
+        public static void veto(net.neoforged.neoforge.event.level.block.BreakBlockEvent event) {
             if (event.getPos().equals(pos)) {
                 event.setCanceled(true);
             }
@@ -959,7 +952,7 @@ public final class PowerArmorTests {
         return helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 2, 1));
     }
 
-    @GameTest(template = PAD, timeoutTicks = 60)
+    @SuitTest(timeoutTicks = 60)
     public static void drillDigsA3x3Face(GameTestHelper helper) {
         wall(helper, Blocks.STONE);
         helper.setBlock(new BlockPos(4, 3, 6), Blocks.OBSIDIAN); // behind: slow, so it's still there when we check
@@ -980,7 +973,7 @@ public final class PowerArmorTests {
     }
 
     /** Diamond tier: obsidian yes (slowly: the face waits for its hardest block), bedrock never, wood is the chainsaw's. */
-    @GameTest(template = PAD, timeoutTicks = 300)
+    @SuitTest(timeoutTicks = 300)
     public static void drillDigsObsidianButNotBedrockOrWood(GameTestHelper helper) {
         wall(helper, Blocks.STONE);
         helper.setBlock(new BlockPos(4, 3, 5), Blocks.OBSIDIAN);
@@ -1001,7 +994,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 60)
+    @SuitTest(timeoutTicks = 60)
     public static void drillSkidsOnWood(GameTestHelper helper) {
         wall(helper, Blocks.OAK_PLANKS);
         PowerArmorEntity suit = toolSuit(helper);
@@ -1014,14 +1007,14 @@ public final class PowerArmorTests {
     }
 
     /** Every block posts a BreakEvent for the pilot, so protection mods can say no. The hand still can't break anything. */
-    @GameTest(template = PAD, timeoutTicks = 60)
+    @SuitTest(timeoutTicks = 60)
     public static void drillRespectsProtection(GameTestHelper helper) {
         wall(helper, Blocks.STONE);
         BlockPos center = helper.absolutePos(new BlockPos(4, 3, 5));
         ProtectedBlock.pos = center;
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
-        var handBreak = new BlockEvent.BreakEvent(helper.getLevel(), helper.absolutePos(new BlockPos(3, 2, 5)), Blocks.STONE.defaultBlockState(), pilot);
+        var handBreak = new net.neoforged.neoforge.event.level.block.BreakBlockEvent(helper.getLevel(), helper.absolutePos(new BlockPos(3, 2, 5)), Blocks.STONE.defaultBlockState(), pilot);
         NeoForge.EVENT_BUS.post(handBreak);
         helper.assertTrue(handBreak.isCanceled(), "a pilot's own (hand) break must still be cancelled");
         suit.setTriggerHeld(pilot, true);
@@ -1034,7 +1027,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 80)
+    @SuitTest(timeoutTicks = 80)
     public static void chainsawFellsANaturalTree(GameTestHelper helper) {
         for (int y = 2; y <= 6; y++) {
             helper.setBlock(new BlockPos(4, y, 5), Blocks.OAK_LOG);
@@ -1064,7 +1057,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 60)
+    @SuitTest(timeoutTicks = 60)
     public static void chainsawSparesLogCabins(GameTestHelper helper) {
         for (int y = 2; y <= 4; y++) {
             helper.setBlock(new BlockPos(4, y, 5), Blocks.OAK_LOG); // a log wall: no leaves
@@ -1082,7 +1075,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 60)
+    @SuitTest(timeoutTicks = 60)
     public static void chainsawSkidsOnStone(GameTestHelper helper) {
         wall(helper, Blocks.STONE);
         PowerArmorEntity suit = toolSuit(helper);
@@ -1095,7 +1088,7 @@ public final class PowerArmorTests {
     }
 
     /** TOOL_RUNNING (synced) drives the tool's loop animation and sound on every client. */
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void runningToolIsSyncedForAnimationAndSound(GameTestHelper helper) {
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
@@ -1113,12 +1106,12 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void miningToolsDoNothingOnFoot(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         for (ItemStack tool : List.of(new ItemStack(ModItems.DRILL.get()), new ItemStack(ModItems.CHAINSAW.get()))) {
             player.setItemInHand(InteractionHand.MAIN_HAND, tool);
-            helper.assertTrue(!tool.use(helper.getLevel(), player, InteractionHand.MAIN_HAND).getResult().consumesAction(), "no use on foot");
+            helper.assertTrue(!tool.use(helper.getLevel(), player, InteractionHand.MAIN_HAND).consumesAction(), "no use on foot");
             helper.assertTrue(tool.getDestroySpeed(Blocks.STONE.defaultBlockState()) == 1F
                     && tool.getDestroySpeed(Blocks.OAK_LOG.defaultBlockState()) == 1F, "in your hand it mines like a fist");
         }
@@ -1134,7 +1127,7 @@ public final class PowerArmorTests {
      * anything else looks like the arm flickering up and down). The old version dropped the model a block at
      * the start of every step tick.
      */
-    @GameTest(template = PAD)
+    @SuitTest
     public static void stepsDoNotJerkTheModelAgainstTheCamera(GameTestHelper helper) {
         final double eye = 2.6;
         double[] heights = {0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
@@ -1166,7 +1159,7 @@ public final class PowerArmorTests {
     // The suit's own mechanics: sealing, stomp, lightning, melee bonus, smashing through blocks
     // =========================================================================================
 
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void sealKeepsFireOutForFuel(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
@@ -1193,7 +1186,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 20)
+    @SuitTest(timeoutTicks = 20)
     public static void unpoweredSuitBurns(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY);
         helper.runAfterDelay(2, () -> suit.igniteForSeconds(5));
@@ -1203,7 +1196,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 20)
+    @SuitTest(timeoutTicks = 20)
     public static void unpoweredSuitIsNotSealed(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY);
         Player pilot = boardedPilot(helper, suit);
@@ -1219,7 +1212,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 20)
+    @SuitTest(timeoutTicks = 20)
     public static void sealBlocksHarmfulEffectsAndFeedsAir(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
@@ -1237,15 +1230,15 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 220)
+    @SuitTest(timeoutTicks = 220)
     public static void lightningKnocksTheSuitOutThenItRestarts(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
         int stun = PowerArmorConfig.LIGHTNING_STUN_TICKS.get();
         helper.runAfterDelay(5, () -> {
             helper.assertTrue(suit.canOperate(), "suit should be running");
-            var bolt = EntityType.LIGHTNING_BOLT.create(helper.getLevel());
-            bolt.moveTo(suit.position());
+            var bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
+            bolt.snapTo(suit.position());
             suit.thunderHit(helper.getLevel(), bolt);
             helper.assertTrue(suit.isStunned() && !suit.isPowered() && !suit.canOperate(), "a strike knocks the suit out");
             helper.assertTrue(suit.getRemainingFireTicks() <= 0, "but doesn't set the running suit alight by itself");
@@ -1262,23 +1255,23 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 20)
+    @SuitTest(timeoutTicks = 20)
     public static void lightningOnAnEmptyTankDoesNotStun(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY);
         helper.runAfterDelay(2, () -> {
-            var bolt = EntityType.LIGHTNING_BOLT.create(helper.getLevel());
+            var bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
             suit.thunderHit(helper.getLevel(), bolt);
             helper.assertTrue(!suit.isStunned(), "nothing to knock out without fuel");
             helper.succeed();
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 30)
+    @SuitTest(timeoutTicks = 30)
     public static void stompHurtsEverythingAroundButThePilot(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
-        Pig near = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 6));   // 2 blocks from the suit's centre
-        Pig far = helper.spawn(EntityType.PIG, new BlockPos(4, 2, 8));    // 4 blocks: outside the shock wave
+        Pig near = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 6));   // 2 blocks from the suit's centre
+        Pig far = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 8));    // 4 blocks: outside the shock wave
         helper.runAfterDelay(3, () -> {
             var fall = helper.getLevel().damageSources().fall();
             suit.causeFallDamage(2.3F, 1F, fall); // a jump on flat ground: just a thud
@@ -1295,13 +1288,13 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void pilotHitsHarder(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         double base = player.getAttributeValue(Attributes.ATTACK_DAMAGE);
-        player.moveTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
-        suit.interact(player, InteractionHand.MAIN_HAND);
+        player.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
         double bonus = PowerArmorConfig.MELEE_BONUS.get();
         helper.assertTrue(Math.abs(player.getAttributeValue(Attributes.ATTACK_DAMAGE) - base - bonus) < 1e-6,
                 "melee damage should grow by " + bonus + ", got " + player.getAttributeValue(Attributes.ATTACK_DAMAGE));
@@ -1311,7 +1304,7 @@ public final class PowerArmorTests {
     }
 
     /** A suit at (4,2,2) facing +Z: its hitbox spans x 3.8..5.2, z 1.8..3.2; walking reaches 0.6 further (z 3.8), sprinting 1.1 (z 4.3). */
-    @GameTest(template = PAD, timeoutTicks = 20)
+    @SuitTest(timeoutTicks = 20)
     public static void walkingSmashesPanesAndLeavesSprintingAlsoGlass(GameTestHelper helper) {
         PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 2, 2));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 4));
@@ -1341,7 +1334,7 @@ public final class PowerArmorTests {
     }
 
     /** Sealed in: no eating or drinking. The refused click passes on (FAIL) so the socket tool can take it. */
-    @GameTest(template = PAD, timeoutTicks = 20)
+    @SuitTest(timeoutTicks = 20)
     public static void pilotCannotEatOrDrink(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
@@ -1362,7 +1355,7 @@ public final class PowerArmorTests {
             helper.setBlock(new BlockPos(4, 2, 6), Blocks.CAKE);
             var hit = new BlockHitResult(Vec3.atCenterOf(cake), Direction.UP, cake, false);
             var event = net.neoforged.neoforge.common.CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, cake, hit);
-            helper.assertTrue(event.getUseBlock() == net.neoforged.neoforge.common.util.TriState.FALSE, "no cake from inside either");
+            helper.assertTrue(event.getUseBlock() == net.minecraft.util.TriState.FALSE, "no cake from inside either");
             pilot.stopRiding();
             pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BREAD));
             pilot.startUsingItem(InteractionHand.MAIN_HAND);
@@ -1372,22 +1365,22 @@ public final class PowerArmorTests {
     }
 
     /** Effects already inside the pilot (food poisoning from before climbing in) hurt the pilot, not the suit. */
-    @GameTest(template = PAD, timeoutTicks = 20)
+    @SuitTest(timeoutTicks = 20)
     public static void poisonAlreadyInsideHurtsThePilot(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 200)); // ate a spider eye
-        player.moveTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
-        suit.interact(player, InteractionHand.MAIN_HAND);
+        player.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
         helper.runAfterDelay(2, () -> {
             helper.assertTrue(player.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "the poison came in with the pilot");
             // A poison tick (NeoForge's own damage type, neoforge:poison), then a wither tick.
             float fuel = suit.getBurnLeftExact();
-            var types = helper.getLevel().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE);
-            player.invulnerableTime = 0;
-            player.hurt(new net.minecraft.world.damagesource.DamageSource(types.getHolderOrThrow(net.neoforged.neoforge.common.NeoForgeMod.POISON_DAMAGE)), 1F);
+            var types = helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE);
+            player.damageCooldownTime = 0;
+            player.hurt(new net.minecraft.world.damagesource.DamageSource(types.getOrThrow(net.neoforged.neoforge.common.NeoForgeMod.POISON_DAMAGE)), 1F);
             helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "poison must not reach the suit");
-            player.invulnerableTime = 0;
+            player.damageCooldownTime = 0;
             player.hurt(helper.getLevel().damageSources().wither(), 1F);
             helper.assertTrue(player.getHealth() < player.getMaxHealth(), "poison hurts the pilot, health " + player.getHealth());
             helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "not the suit, health " + suit.getHealth() + " from "
@@ -1403,7 +1396,7 @@ public final class PowerArmorTests {
     // The machine mind (Phase 8 step 1): owner, home, who drives, visor, tools without a pilot
     // =========================================================================================
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void pilotOwnsTheSuitAndExitMarksHome(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         helper.runAfterDelay(2, () -> { // the engine lights on the suit's first tick
@@ -1418,7 +1411,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void deployedSuitWorksForWhoeverPlacedIt(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         ItemStack stack = new ItemStack(ModItems.POWER_ARMOR.get());
@@ -1430,31 +1423,29 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void mindOwnerAndHomeSurviveSaving(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         java.util.UUID owner = java.util.UUID.randomUUID();
         suit.setMind(dev.ajaczero.powerarmor.entity.SuitMind.ROGUE);
         suit.setOwnerId(owner);
         suit.setHome(new BlockPos(10, 64, -3));
-        CompoundTag saved = new CompoundTag();
-        suit.saveWithoutId(saved);
-        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel());
-        loaded.load(saved);
+        CompoundTag saved = saveTag(helper, suit);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        loadTag(helper, loaded, saved);
         helper.assertTrue(loaded.isRogue() && owner.equals(loaded.getOwnerId()) && new BlockPos(10, 64, -3).equals(loaded.getHome()),
                 "mind, owner and home should survive saving");
-        CompoundTag old = new CompoundTag(); // a suit saved before the AI existed: friendly, nobody's, no home
-        spawnSuit(helper).saveWithoutId(old);
+        CompoundTag old = saveTag(helper, spawnSuit(helper)); // a suit saved before the AI existed: friendly, nobody's, no home
         old.remove("Mind");
-        PowerArmorEntity legacy = ModEntities.POWER_ARMOR.get().create(helper.getLevel());
-        legacy.load(old);
+        PowerArmorEntity legacy = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        loadTag(helper, legacy, old);
         helper.assertTrue(!legacy.isRogue() && legacy.getOwnerId() == null && legacy.getHome() == null, "old saves load as friendly, unowned, homeless");
         helper.succeed();
     }
 
     /** Pushed 6 blocks from home, the idle mind walks back at a pilot's jog (vanilla mobs move at speed squared; see
      *  travel) and onto the block itself (vanilla's path for a 2-block-wide mob ended 1.7 blocks short). */
-    @GameTest(template = PAD, timeoutTicks = 100)
+    @SuitTest(timeoutTicks = 100)
     public static void idleSuitWalksBackHome(GameTestHelper helper) {
         PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(7, 2, 4));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
@@ -1473,7 +1464,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void unpoweredSuitStaysPut(GameTestHelper helper) {
         PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(2, 2, 2));
         suit.setHome(helper.absolutePos(new BlockPos(6, 2, 6)));
@@ -1484,7 +1475,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void boardingStopsTheMind(GameTestHelper helper) {
         PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(2, 2, 2));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
@@ -1492,25 +1483,25 @@ public final class PowerArmorTests {
         helper.runAfterDelay(8, () -> {
             helper.assertTrue(!suit.getNavigation().isDone(), "on its way home");
             Player pilot = helper.makeMockPlayer(GameType.SURVIVAL);
-            suit.interact(pilot, InteractionHand.MAIN_HAND);
+            suit.interact(pilot, InteractionHand.MAIN_HAND, suit.position());
             helper.assertTrue(pilot.getVehicle() == suit, "boarded mid-walk");
             helper.assertTrue(suit.getNavigation().isDone() && !suit.isAiDriven(), "the pilot takes over at once");
             helper.succeed();
         });
     }
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void rogueLetsNobodyIn(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 2));
         suit.setMind(dev.ajaczero.powerarmor.entity.SuitMind.ROGUE);
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        helper.assertTrue(!suit.interact(player, InteractionHand.MAIN_HAND).consumesAction() && player.getVehicle() == null,
+        helper.assertTrue(!suit.interact(player, InteractionHand.MAIN_HAND, suit.position()).consumesAction() && player.getVehicle() == null,
                 "a rogue can't be boarded");
         helper.succeed();
     }
 
     /** Amber whenever piloted (no more red for tool use or hits), green for the friendly mind, red only for a rogue. */
-    @GameTest(template = PAD)
+    @SuitTest
     public static void visorShowsWhoIsInControl(GameTestHelper helper) {
         var friendly = dev.ajaczero.powerarmor.entity.SuitMind.FRIENDLY;
         var rogue = dev.ajaczero.powerarmor.entity.SuitMind.ROGUE;
@@ -1531,7 +1522,7 @@ public final class PowerArmorTests {
         static volatile java.util.UUID breaker;
 
         @SubscribeEvent
-        public static void seen(BlockEvent.BreakEvent event) {
+        public static void seen(net.neoforged.neoforge.event.level.block.BreakBlockEvent event) {
             if (event.getPos().equals(pos)) {
                 breaker = event.getPlayer().getUUID();
             }
@@ -1540,7 +1531,7 @@ public final class PowerArmorTests {
 
     /** The tool operator refactor: with nobody inside, the mind aims the head and pulls the trigger; the drill digs the
      *  3x3 face and every block is broken as the owner (a FakePlayer with their UUID, so claim mods see the owner). */
-    @GameTest(template = PAD, timeoutTicks = 60)
+    @SuitTest(timeoutTicks = 60)
     public static void mindDrillsAsItsOwner(GameTestHelper helper) {
         wall(helper, Blocks.STONE);
         BlockPos center = helper.absolutePos(new BlockPos(4, 3, 5));
@@ -1568,7 +1559,7 @@ public final class PowerArmorTests {
     }
 
     /** The chaingun with the mind at the trigger: it spins up, but without nuggets it can't shoot. */
-    @GameTest(template = PAD, timeoutTicks = 40)
+    @SuitTest(timeoutTicks = 40)
     public static void mindChaingunNeedsAmmo(GameTestHelper helper) {
         PowerArmorEntity suit = toolSuit(helper);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
@@ -1587,30 +1578,29 @@ public final class PowerArmorTests {
     // Phase 8 step 2: the hidden nugget store, the chaingun job (follow + defend the owner, fists without ammo)
     // =========================================================================================
 
-    @GameTest(template = PAD)
+    @SuitTest
     public static void nuggetsLoadIntoTheHiddenStore(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_NUGGET, 64));
-        helper.assertTrue(suit.interact(player, InteractionHand.MAIN_HAND).consumesAction(), "right-click with nuggets loads them");
+        helper.assertTrue(suit.interact(player, InteractionHand.MAIN_HAND, suit.position()).consumesAction(), "right-click with nuggets loads them");
         helper.assertTrue(suit.getStoredNuggets() == 64 && player.getMainHandItem().isEmpty(), "the whole stack goes in, got " + suit.getStoredNuggets());
         helper.assertTrue(player.getVehicle() == null, "loading ammo doesn't climb in");
         int max = PowerArmorConfig.NUGGET_STORE_MAX.get();
         suit.setStoredNuggets(max - 10);
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_NUGGET, 64));
-        suit.interact(player, InteractionHand.MAIN_HAND);
+        suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
         helper.assertTrue(suit.getStoredNuggets() == max && player.getMainHandItem().getCount() == 54, "fills up to the store size, keeps the rest");
         helper.succeed();
     }
 
-    @GameTest(template = PAD, timeoutTicks = 120)
+    @SuitTest(timeoutTicks = 120)
     public static void nuggetStoreSurvivesSavingPackingAndTheWreck(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         suit.setStoredNuggets(100);
-        CompoundTag saved = new CompoundTag();
-        suit.saveWithoutId(saved);
-        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel());
-        loaded.load(saved);
+        CompoundTag saved = saveTag(helper, suit);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        loadTag(helper, loaded, saved);
         helper.assertTrue(loaded.getStoredNuggets() == 100, "saved with the suit");
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         suit.packUp(player);
@@ -1628,7 +1618,7 @@ public final class PowerArmorTests {
     }
 
     /** Decided 2026-10-13: a pilot's chaingun takes their own nuggets first, then the suit's store. */
-    @GameTest(template = PAD)
+    @SuitTest
     public static void pilotChaingunUsesOwnNuggetsBeforeTheStore(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         suit.setStoredNuggets(5);
@@ -1645,9 +1635,9 @@ public final class PowerArmorTests {
     /** An owner who is really in the level (the mind looks its owner up by UUID): a creative mock server player. */
     @SuppressWarnings("removal")
     private static net.minecraft.server.level.ServerPlayer ownerAt(GameTestHelper helper, PowerArmorEntity suit, Vec3 at) {
-        net.minecraft.server.level.ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        net.minecraft.server.level.ServerPlayer owner = mockServerPlayer(helper);
         Vec3 abs = helper.absoluteVec(at);
-        owner.teleportTo(helper.getLevel(), abs.x, abs.y, abs.z, 0F, 0F);
+        owner.teleportTo(helper.getLevel(), abs.x, abs.y, abs.z, java.util.Set.of(), 0F, 0F, true);
         suit.setOwnerId(owner.getUUID());
         return owner;
     }
@@ -1657,8 +1647,8 @@ public final class PowerArmorTests {
     }
 
     /** A husk that stands still (no AI) and doesn't burn by day: a monster target that stays where it was put. */
-    private static net.minecraft.world.entity.monster.Husk statueHusk(GameTestHelper helper, Vec3 at) {
-        var husk = helper.spawn(EntityType.HUSK, at);
+    private static net.minecraft.world.entity.monster.zombie.Husk statueHusk(GameTestHelper helper, Vec3 at) {
+        var husk = helper.spawn(net.minecraft.world.entity.EntityTypes.HUSK, at);
         husk.setNoAi(true);
         return husk;
     }
@@ -1671,7 +1661,7 @@ public final class PowerArmorTests {
         return suit;
     }
 
-    @GameTest(template = PAD, timeoutTicks = 100)
+    @SuitTest(timeoutTicks = 100)
     public static void chaingunMindShootsMonstersNearItsOwner(GameTestHelper helper) {
         PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 64);
         var owner = ownerAt(helper, suit, new Vec3(1.5, 2, 1.5));
@@ -1688,7 +1678,7 @@ public final class PowerArmorTests {
 
     /** Never through the owner: the line of fire is checked before every burst. (With the owner in the way the suit also
      *  walks for a clear shot, e.g. over their head, so the hold is checked over the first ticks, before it has moved.) */
-    @GameTest(template = PAD, timeoutTicks = 60)
+    @SuitTest(timeoutTicks = 60)
     public static void chaingunMindHoldsFireWithTheOwnerInTheWay(GameTestHelper helper) {
         PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 64);
         var owner = ownerAt(helper, suit, new Vec3(4.5, 2, 3.5));
@@ -1701,7 +1691,7 @@ public final class PowerArmorTests {
             helper.assertTrue(suit.getTarget() == husk, "it has picked the husk");
             helper.assertTrue(!blockedShot[0] && husk.getHealth() == husk.getMaxHealth(), "but must not fire through its owner");
             Vec3 aside = helper.absoluteVec(new Vec3(1.5, 2, 3.5));
-            owner.teleportTo(helper.getLevel(), aside.x, aside.y, aside.z, 0F, 0F);
+            owner.teleportTo(helper.getLevel(), aside.x, aside.y, aside.z, java.util.Set.of(), 0F, 0F, true);
         });
         helper.runAfterDelay(50, () -> {
             dismiss(helper, owner);
@@ -1710,7 +1700,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 90)
+    @SuitTest(timeoutTicks = 90)
     public static void chaingunMindFollowsItsOwner(GameTestHelper helper) {
         PowerArmorEntity suit = chaingunMind(helper, new BlockPos(1, 2, 1), 64);
         var owner = ownerAt(helper, suit, new Vec3(7.5, 2, 7.5));
@@ -1722,7 +1712,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 100)
+    @SuitTest(timeoutTicks = 100)
     public static void chaingunMindPunchesWhenOutOfNuggets(GameTestHelper helper) {
         PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 0);
         var owner = ownerAt(helper, suit, new Vec3(1.5, 2, 1.5));
@@ -1737,7 +1727,7 @@ public final class PowerArmorTests {
     }
 
     /** Who the mind may shoot: monsters, and anything that started it; never the owner, their pets, villagers or friendly suits. */
-    @GameTest(template = PAD)
+    @SuitTest
     public static void mindTargetRules(GameTestHelper helper) {
         PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 0);
         Player ownerPlayer = helper.makeMockPlayer(GameType.SURVIVAL);
@@ -1745,9 +1735,9 @@ public final class PowerArmorTests {
         var rules = (java.util.function.BiPredicate<net.minecraft.world.entity.Entity, Boolean>) (e, provoked) ->
                 dev.ajaczero.powerarmor.entity.ai.SuitTargets.canAttack(suit, e, provoked);
         var husk = statueHusk(helper, new Vec3(2.5, 2, 6.5));
-        var villager = helper.spawn(EntityType.VILLAGER, new Vec3(6.5, 2, 6.5));
-        var cow = helper.spawn(EntityType.COW, new Vec3(1.5, 2, 4.5));
-        var wolf = helper.spawn(EntityType.WOLF, new Vec3(7.5, 2, 4.5));
+        var villager = helper.spawn(net.minecraft.world.entity.EntityTypes.VILLAGER, new Vec3(6.5, 2, 6.5));
+        var cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, new Vec3(1.5, 2, 4.5));
+        var wolf = helper.spawn(net.minecraft.world.entity.EntityTypes.WOLF, new Vec3(7.5, 2, 4.5));
         wolf.tame(ownerPlayer);
         PowerArmorEntity friend = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(7, 2, 1));
         PowerArmorEntity rogue = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(1, 2, 7));
@@ -1775,10 +1765,10 @@ public final class PowerArmorTests {
 
     /** The pad's invisible ceiling (10 up) stops the fling early; the fall from it still hurts. In the open the throw is
      *  ~24 blocks up (autopilot scene ap_ai_em_*). */
-    @GameTest(template = PAD, timeoutTicks = 100)
+    @SuitTest(timeoutTicks = 100)
     public static void emMindLiftsAndFlingsAMonster(GameTestHelper helper) {
         PowerArmorEntity suit = emGuard(helper, new BlockPos(4, 2, 2));
-        var husk = helper.spawn(EntityType.HUSK, new Vec3(4.5, 2, 6.5));
+        var husk = helper.spawn(net.minecraft.world.entity.EntityTypes.HUSK, new Vec3(4.5, 2, 6.5));
         boolean[] caught = {false};
         double[] highest = {0};
         helper.onEachTick(() -> {
@@ -1794,11 +1784,11 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 60)
+    @SuitTest(timeoutTicks = 60)
     public static void emMindLeavesAnimalsAndVillagersAlone(GameTestHelper helper) {
         PowerArmorEntity suit = emGuard(helper, new BlockPos(4, 2, 2));
-        helper.spawn(EntityType.COW, new Vec3(2.5, 2, 6.5));
-        helper.spawn(EntityType.VILLAGER, new Vec3(6.5, 2, 6.5));
+        helper.spawn(net.minecraft.world.entity.EntityTypes.COW, new Vec3(2.5, 2, 6.5));
+        helper.spawn(net.minecraft.world.entity.EntityTypes.VILLAGER, new Vec3(6.5, 2, 6.5));
         boolean[] grabbed = {false};
         helper.onEachTick(() -> grabbed[0] |= suit.getBeamTarget() != null || suit.isAiTriggerHeld());
         helper.runAfterDelay(50, () -> {
@@ -1808,10 +1798,10 @@ public final class PowerArmorTests {
     }
 
     /** A creeper must not come down at home: it's thrown up and away instead. */
-    @GameTest(template = PAD, timeoutTicks = 100)
+    @SuitTest(timeoutTicks = 100)
     public static void emMindThrowsCreepersAwayFromHome(GameTestHelper helper) {
         PowerArmorEntity suit = emGuard(helper, new BlockPos(4, 2, 1));
-        var creeper = helper.spawn(EntityType.CREEPER, new Vec3(4.5, 2, 5.5));
+        var creeper = helper.spawn(net.minecraft.world.entity.EntityTypes.CREEPER, new Vec3(4.5, 2, 5.5));
         double[] furthest = {0};
         helper.onEachTick(() -> {
             if (suit.getToolUses() > 0) {
@@ -1841,7 +1831,7 @@ public final class PowerArmorTests {
      * A stone mass (z 3..8, 4 high) in front of home: the mind clears the hall (home level, 3 high) and leaves the floor,
      * the ceiling, the blocks touching a lava pocket, and a column over a hole in the floor.
      */
-    @GameTest(template = PAD, timeoutTicks = 1500)
+    @SuitTest(timeoutTicks = 1500)
     public static void mindDrillsAnOpenHallAtHomeLevel(GameTestHelper helper) {
         for (BlockPos p : BlockPos.betweenClosed(new BlockPos(0, 2, 3), new BlockPos(8, 5, 8))) {
             helper.setBlock(p, Blocks.STONE);
@@ -1872,7 +1862,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 300)
+    @SuitTest(timeoutTicks = 300)
     public static void mindFellsNaturalTreesButNotCabins(GameTestHelper helper) {
         for (int y = 2; y <= 6; y++) {
             helper.setBlock(new BlockPos(5, y, 6), Blocks.OAK_LOG);
@@ -1906,10 +1896,10 @@ public final class PowerArmorTests {
     }
 
     /** No fuel, no nuggets: a rogue runs anyway, and shoots any mob it sees (a cow here). */
-    @GameTest(template = PAD, timeoutTicks = 120)
+    @SuitTest(timeoutTicks = 120)
     public static void rogueRunsOnNothingAndShootsAnyMob(GameTestHelper helper) {
         PowerArmorEntity suit = rogue(helper, new BlockPos(4, 2, 1), true);
-        var cow = helper.spawn(EntityType.COW, new Vec3(4.5, 2, 6.5));
+        var cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, new Vec3(4.5, 2, 6.5));
         helper.runAfterDelay(3, () -> helper.assertTrue(suit.isPowered() && suit.isAiDriven(), "a rogue needs no fuel"));
         helper.succeedWhen(() -> {
             helper.assertTrue(!cow.isAlive(), "the cow should be shot");
@@ -1918,7 +1908,7 @@ public final class PowerArmorTests {
         });
     }
 
-    @GameTest(template = PAD, timeoutTicks = 120)
+    @SuitTest(timeoutTicks = 120)
     public static void defeatedRogueDropsOnlyItsTool(GameTestHelper helper) {
         PowerArmorEntity suit = rogue(helper, SUIT_POS, false);
         suit.hurt(helper.getLevel().damageSources().genericKill(), 1000F);
@@ -1931,13 +1921,13 @@ public final class PowerArmorTests {
     }
 
     /** Lightning reboots the mind friendly: nobody's, no home, one coal's worth of fuel; the first pilot claims it. */
-    @GameTest(template = PAD, timeoutTicks = 200)
+    @SuitTest(timeoutTicks = 200)
     public static void lightningRebootsARogueFriendly(GameTestHelper helper) {
         PowerArmorEntity suit = rogue(helper, SUIT_POS, true);
         helper.runAfterDelay(3, () -> {
             helper.assertTrue(suit.isRogue() && suit.isPowered(), "a running rogue");
-            var bolt = EntityType.LIGHTNING_BOLT.create(helper.getLevel());
-            bolt.moveTo(suit.position());
+            var bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
+            bolt.snapTo(suit.position());
             suit.thunderHit(helper.getLevel(), bolt);
             helper.assertTrue(!suit.isRogue() && suit.getOwnerId() == null && suit.getHome() == null, "rebooted friendly, nobody's");
             helper.assertTrue(suit.isStunned() && !suit.isPowered(), "knocked out first");
@@ -1953,13 +1943,13 @@ public final class PowerArmorTests {
 
     /** It leaves after its lifetime, but only unwatched. Own batch: other tests' mock players must not be around. */
     @SuppressWarnings("removal")
-    @GameTest(template = PAD, timeoutTicks = 100, batch = "rogue_lifetime")
+    @SuitTest(timeoutTicks = 100, batch = "rogue_lifetime")
     public static void rogueLeavesAfterItsTimeWhenUnwatched(GameTestHelper helper) {
         PowerArmorEntity suit = rogue(helper, SUIT_POS, true);
         suit.setRogueAge(PowerArmorConfig.ROGUE_LIFETIME.get());
-        var watcher = helper.makeMockServerPlayerInLevel();
+        var watcher = mockServerPlayer(helper);
         Vec3 near = helper.absoluteVec(new Vec3(1.5, 2, 1.5));
-        watcher.teleportTo(helper.getLevel(), near.x, near.y, near.z, 0F, 0F);
+        watcher.teleportTo(helper.getLevel(), near.x, near.y, near.z, java.util.Set.of(), 0F, 0F, true);
         helper.runAfterDelay(40, () -> {
             helper.assertTrue(!suit.isRemoved(), "not while a player watches");
             dismiss(helper, watcher);
@@ -1971,7 +1961,7 @@ public final class PowerArmorTests {
     }
 
     /** A friendly chaingun mind defends against rogues like against monsters. */
-    @GameTest(template = PAD, timeoutTicks = 80)
+    @SuitTest(timeoutTicks = 80)
     public static void friendlyChaingunShootsRogues(GameTestHelper helper) {
         PowerArmorEntity friend = chaingunMind(helper, new BlockPos(4, 2, 1), 64);
         var owner = ownerAt(helper, friend, new Vec3(1.5, 2, 1.5));
@@ -1985,18 +1975,48 @@ public final class PowerArmorTests {
     }
 
     /** The /summon line in the README makes a chaingun rogue. */
-    @GameTest(template = PAD)
+    @SuitTest
     public static void readmeSummonMakesARogue(GameTestHelper helper) throws Exception {
-        CompoundTag tag = net.minecraft.nbt.TagParser.parseTag(
+        CompoundTag tag = net.minecraft.nbt.TagParser.parseCompoundFully(
                 "{id:\"powerarmor:power_armor\",Mind:\"ROGUE\",Inventory:{Items:[{Slot:1b,id:\"powerarmor:chaingun\",count:1}]}}");
-        var entity = EntityType.loadEntityRecursive(tag, helper.getLevel(), e -> e);
+        var entity = EntityType.loadEntityRecursive(tag, helper.getLevel(), new net.minecraft.world.entity.EntitySpawnRequest(net.minecraft.world.entity.EntitySpawnReason.COMMAND, false), e -> e);
         helper.assertTrue(entity instanceof PowerArmorEntity suit && suit.isRogue()
                 && suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(ModItems.CHAINGUN.get()), "a chaingun rogue");
         helper.succeed();
     }
 
+    /**
+     * A mock player who is "in the level" (other code sees it as a connected player). Its fake connection never did
+     * the network handshake, and since 1.21.x NeoForge refuses to send mod packets on a connection that didn't agree to
+     * them: GeckoLib's animation triggers (the EM projector's recoil, a flinch) crashed the test server. Tell the
+     * connection it speaks GeckoLib's entity packets, as a real client with GeckoLib would.
+     */
+    private static net.minecraft.server.level.ServerPlayer mockServerPlayer(GameTestHelper helper) {
+        var player = helper.makeMockServerPlayerInLevel();
+        var channels = net.neoforged.neoforge.network.registration.ChannelAttributes.getOrCreateCommonChannels(
+                player.connection.getConnection(), net.minecraft.network.ConnectionProtocol.PLAY);
+        for (String id : new String[] {"entity_anim_trigger", "stop_triggered_entity_anim", "stateless_entity_play_anim", "stateless_entity_stop_anim"}) {
+            channels.add(Identifier.fromNamespaceAndPath("geckolib", id));
+        }
+        return player;
+    }
+
+    /** An entity's save data, as the world would write it (since 1.21.6 entities save through ValueOutput). */
+    private static CompoundTag saveTag(GameTestHelper helper, net.minecraft.world.entity.Entity entity) {
+        var out = net.minecraft.world.level.storage.TagValueOutput.createWithContext(net.minecraft.util.ProblemReporter.DISCARDING,
+                helper.getLevel().registryAccess());
+        entity.saveWithoutId(out);
+        return out.buildResult();
+    }
+
+    /** Loads save data into an entity, as the world would. */
+    private static void loadTag(GameTestHelper helper, net.minecraft.world.entity.Entity entity, CompoundTag tag) {
+        entity.load(net.minecraft.world.level.storage.TagValueInput.create(net.minecraft.util.ProblemReporter.DISCARDING,
+                helper.getLevel().registryAccess(), tag));
+    }
+
     private static ItemStack packedSuit(Player player) {
-        return player.getInventory().items.stream().filter(s -> s.is(ModItems.POWER_ARMOR.get())).findFirst().orElse(ItemStack.EMPTY);
+        return player.getInventory().getNonEquipmentItems().stream().filter(s -> s.is(ModItems.POWER_ARMOR.get())).findFirst().orElse(ItemStack.EMPTY);
     }
 
     private static InteractionResult useOnFloor(GameTestHelper helper, Player player, ItemStack stack, BlockPos floor) {

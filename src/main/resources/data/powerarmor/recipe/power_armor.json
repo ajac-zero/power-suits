@@ -7,11 +7,14 @@
     "B B"
   ],
   "key": {
-    "I": { "item": "minecraft:iron_block" },
-    "H": { "item": "minecraft:iron_helmet" },
-    "C": { "item": "minecraft:iron_chestplate" },
-    "P": { "item": "minecraft:piston" },
-    "B": { "item": "minecraft:iron_boots" }
+    "I": "minecraft:iron_block",
+    "H": "minecraft:iron_helmet",
+    "C": "minecraft:iron_chestplate",
+    "P": "minecraft:piston",
+    "B": "minecraft:iron_boots"
   },
-  "result": { "id": "powerarmor:power_armor", "count": 1 }
+  "result": {
+    "id": "powerarmor:power_armor",
+    "count": 1
+  }
 }

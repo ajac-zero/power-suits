@@ -23,8 +23,9 @@ public class PowerArmor {
     public static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
     public PowerArmor(IEventBus modBus, ModContainer container) {
-        // Balance knobs: config/powerarmor-common.toml (see PowerArmorConfig).
-        container.registerConfig(ModConfig.Type.COMMON, PowerArmorConfig.SPEC);
+        // Balance knobs: config/powerarmor-common.toml (see PowerArmorConfig). LOCAL = read on both sides from the
+        // game's config folder, not synced (what 1.21.1 called COMMON; the file keeps its old name so edits survive).
+        container.registerConfig(ModConfig.Type.LOCAL, PowerArmorConfig.SPEC, PowerArmor.MODID + "-common.toml");
         // Registries: tell Minecraft our entity type and item exist.
         ModEntities.ENTITIES.register(modBus);
         ModItems.ITEMS.register(modBus);
@@ -38,6 +39,8 @@ public class PowerArmor {
         modBus.addListener(PowerArmor::addToCreativeTab);
         // Network messages (client -> server: socket tool button (right click) pressed/released).
         modBus.addListener(dev.ajaczero.powerarmor.network.ToolTriggerPayload::register);
+        // GameTests (dev runs only): see test/SuitTests.
+        dev.ajaczero.powerarmor.test.SuitTests.register(modBus);
     }
 
     private static void registerAttributes(EntityAttributeCreationEvent event) {

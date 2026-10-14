@@ -75,14 +75,14 @@ final class WorkScene {
      *  its owner and the allays' friend (creative: the allays bring the drops to them), two allays with their item. */
     private static void setup(Minecraft mc) {
         AutoPilot.onServer(mc, player -> {
-            ServerLevel level = player.serverLevel();
-            level.setDayTime(6000);
+            ServerLevel level = player.level();
+            DevUtil.setTime(level, 6000);
             player.setGameMode(GameType.CREATIVE);
             player.getInventory().clearContent();
             int x = player.getBlockX() + 60, z = player.getBlockZ();
             int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
             BlockPos home = new BlockPos(x, y, z);
-            var random = level.random;
+            var random = level.getRandom();
             for (BlockPos p : BlockPos.betweenClosed(home.offset(X0, 0, Z0), home.offset(X1, 2, Z1))) {
                 float r = random.nextFloat();
                 level.setBlock(p, (r < 0.08F ? Blocks.COAL_ORE : r < 0.12F ? Blocks.IRON_ORE : r < 0.3F ? Blocks.DIRT : Blocks.STONE)
@@ -91,18 +91,18 @@ final class WorkScene {
             level.setBlock(home.offset(LAVA), Blocks.LAVA.defaultBlockState(), 3);
             level.setBlock(home.offset(HOLE), Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(home.offset(HOLE).below(), Blocks.AIR.defaultBlockState(), 3);
-            PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level);
+            PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16));
             s.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.DRILL.get()));
-            s.moveTo(x + 0.5, y, z + 0.5, 0, 0);
+            s.snapTo(x + 0.5, y, z + 0.5, 0, 0);
             s.setOwnerId(player.getUUID());
             s.setHome(home);
             level.addFreshEntity(s);
             player.teleportTo(x - 6.5, y, z - 3.5);
             allays.clear();
             for (Item item : new Item[] {Items.COAL, Items.RAW_IRON}) {
-                Allay allay = EntityType.ALLAY.create(level);
-                allay.moveTo(x - 4.5, y + 2, z - 2.5);
+                Allay allay = net.minecraft.world.entity.EntityTypes.ALLAY.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                allay.snapTo(x - 4.5, y + 2, z - 2.5);
                 allay.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(item));
                 allay.getBrain().setMemory(MemoryModuleType.LIKED_PLAYER, player.getUUID()); // what giving it the item does
                 allay.setPersistenceRequired();
@@ -120,16 +120,16 @@ final class WorkScene {
             if (suit == null || drillHome == null) {
                 return;
             }
-            ServerLevel level = player.serverLevel();
+            ServerLevel level = player.level();
             BlockPos home = drillHome.offset(0, 0, -30);
             int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, home.getX(), home.getZ());
             home = new BlockPos(home.getX(), y, home.getZ());
-            var oak = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).getHolder(TreeFeatures.OAK);
+            var oak = level.registryAccess().lookupOrThrow(Registries.FEATURE).get(TreeFeatures.OAK);
             for (int[] t : new int[][] {{-4, 6}, {3, 5}, {0, 10}}) {
                 BlockPos base = home.offset(t[0], 0, t[1]);
                 level.setBlock(base.below(), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
                 BlockPos at = base;
-                oak.ifPresent(tree -> tree.value().place(level, level.getChunkSource().getGenerator(), level.random, at));
+                oak.ifPresent(tree -> tree.value().place(level, level.getChunkSource().getGenerator(), level.getRandom(), at));
             }
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINSAW.get()));
             suit.teleportTo(home.getX() + 0.5, home.getY(), home.getZ() + 0.5);
@@ -144,8 +144,8 @@ final class WorkScene {
             return;
         }
         mc.options.setCameraType(CameraType.FIRST_PERSON);
-        mc.options.hideGui = true;
-        Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0); // lookCamera places the stand's feet
+        DevUtil.hideGui(mc, true);
+        Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0); // lookCamera places the stand's feet
         AutoPilot.lookCamera(mc, Vec3.atBottomCenterOf(base).add(from).subtract(drop), Vec3.atBottomCenterOf(base).add(at).subtract(drop));
     }
 
@@ -167,7 +167,7 @@ final class WorkScene {
         if (csv == null || server == null || home == null || player == null) {
             return;
         }
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = player.level();
         int rock = 0, ores = 0, ceiling = 0;
         for (BlockPos p : BlockPos.betweenClosed(home.offset(X0, 0, Z0), home.offset(X1, 2, Z1))) {
             var state = level.getBlockState(p);

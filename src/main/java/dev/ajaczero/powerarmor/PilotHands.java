@@ -3,7 +3,7 @@ package dev.ajaczero.powerarmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.ToolMining;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -35,8 +35,8 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 @EventBusSubscriber(modid = PowerArmor.MODID)
 public final class PilotHands {
     public static final double EXTRA_REACH = 1.5;
-    private static final ResourceLocation REACH_ID = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "suit_reach");
-    private static final ResourceLocation DAMAGE_ID = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "suit_strength");
+    private static final Identifier REACH_ID = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "suit_reach");
+    private static final Identifier DAMAGE_ID = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "suit_strength");
 
     private static PowerArmorEntity suitOf(Player player) {
         return player.getVehicle() instanceof PowerArmorEntity suit ? suit : null;
@@ -67,7 +67,7 @@ public final class PilotHands {
     /** Server-side backstop for the above. Breaks by the suit's own mining tools (drill, chainsaw) post this event
      *  too, so protection mods can veto them; those only run while powered anyway. */
     @SubscribeEvent
-    public static void breakBlock(BlockEvent.BreakEvent event) {
+    public static void breakBlock(net.neoforged.neoforge.event.level.block.BreakBlockEvent event) {
         PowerArmorEntity suit = suitOf(event.getPlayer());
         if (suit != null && !suit.canOperate() && !ToolMining.isToolBreak()) {
             event.setCanceled(true);
@@ -93,7 +93,7 @@ public final class PilotHands {
         if (suit != null && (block instanceof net.minecraft.world.level.block.CakeBlock || block instanceof net.minecraft.world.level.block.CandleCakeBlock)) {
             // Cake is eaten by right-clicking the block itself. Deny only the block's reaction: the item in hand
             // (a block to place, say) still gets its turn.
-            event.setUseBlock(net.neoforged.neoforge.common.util.TriState.FALSE);
+            event.setUseBlock(net.minecraft.util.TriState.FALSE);
         }
         checkUse(event, event);
     }
@@ -107,7 +107,7 @@ public final class PilotHands {
             event.setCanceled(true);
             event.setCancellationResult(net.minecraft.world.InteractionResult.FAIL);
             if (event.getLevel().isClientSide() && suit.getSocketStack().isEmpty()) {
-                event.getEntity().displayClientMessage(Component.translatable("message.powerarmor.sealed_in"), true);
+                event.getEntity().sendOverlayMessage(Component.translatable("message.powerarmor.sealed_in"));
             }
             return;
         }
@@ -117,7 +117,7 @@ public final class PilotHands {
     /** Food (eating) and drinks (potions, milk, honey bottles...): what vanilla plays the eat / drink animation for. */
     public static boolean isEatOrDrink(net.minecraft.world.item.ItemStack stack) {
         var anim = stack.getUseAnimation();
-        return anim == net.minecraft.world.item.UseAnim.EAT || anim == net.minecraft.world.item.UseAnim.DRINK;
+        return anim == net.minecraft.world.item.ItemUseAnimation.EAT || anim == net.minecraft.world.item.ItemUseAnimation.DRINK;
     }
 
     /** Backstop for anything that starts eating or drinking without a right click (other mods): refuse it. */
@@ -128,13 +128,10 @@ public final class PilotHands {
         }
     }
 
+    /** Right click on an entity (also covers clicks on a spot of an entity, an armor stand's slot: 1.21.1 had a
+     *  separate EntityInteractSpecific event for those). */
     @SubscribeEvent
     public static void useOnEntity(PlayerInteractEvent.EntityInteract event) {
-        checkUse(event, event);
-    }
-
-    @SubscribeEvent
-    public static void useOnEntityAt(PlayerInteractEvent.EntityInteractSpecific event) {
         checkUse(event, event);
     }
 
@@ -155,7 +152,7 @@ public final class PilotHands {
 
     private static void tellUnpowered(Player player) {
         if (player.level().isClientSide()) {
-            player.displayClientMessage(Component.translatable("message.powerarmor.hand_unpowered"), true);
+            player.sendOverlayMessage(Component.translatable("message.powerarmor.hand_unpowered"));
         }
     }
 

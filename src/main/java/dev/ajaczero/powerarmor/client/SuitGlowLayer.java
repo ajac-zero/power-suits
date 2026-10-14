@@ -1,19 +1,21 @@
 package dev.ajaczero.powerarmor.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.geckolib.constant.DataTickets;
+import com.geckolib.renderer.base.GeoRenderState;
+import com.geckolib.renderer.base.GeoRenderer;
+import com.geckolib.renderer.base.RenderPassInfo;
+import com.geckolib.renderer.layer.GeoRenderLayer;
+import com.geckolib.util.ClientUtil;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
-import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.renderer.GeoRenderer;
-import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
-import software.bernie.geckolib.util.RenderUtil;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The suit's lights: the firebox fire, the visor, the chaingun's hot barrels and the EM projector's redstone, drawn on top of the model at full brightness so they glow
@@ -22,36 +24,70 @@ import software.bernie.geckolib.util.RenderUtil;
  * spider and enderman eyes use): it ignores light and adds its colour on top. Unlike AutoGlowingGeoLayer, each mask
  * is tinted every frame, so the fire flickers and fades and the visor changes colour (PowerArmorEntity.tickLights).
  */
-public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity> {
-    private static final ResourceLocation FIRE = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_fire.png");
-    private static final ResourceLocation VISOR = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_visor.png");
-    static final ResourceLocation HEAT = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_heat.png");
-    static final ResourceLocation HEAT_BARREL = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_heat_barrel.png");
+public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, LivingEntityRenderState> {
+    private static final Identifier FIRE = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_fire.png");
+    private static final Identifier VISOR = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_visor.png");
+    static final Identifier HEAT = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_heat.png");
+    static final Identifier HEAT_BARREL = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_heat_barrel.png");
     /** The EM projector's redstone: lens + vents, and the prong tips. */
-    static final ResourceLocation EM_CORE = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_em_core.png");
-    static final ResourceLocation EM_ARC = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_em_arc.png");
+    static final Identifier EM_CORE = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_em_core.png");
+    static final Identifier EM_ARC = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_em_arc.png");
+    /** The masks, in the order of the tints in SuitRenderData.GLOW. */
+    private static final Identifier[] MASKS = {FIRE, VISOR, HEAT, HEAT_BARREL, EM_CORE, EM_ARC};
 
-    public SuitGlowLayer(GeoRenderer<PowerArmorEntity> renderer) {
+    public SuitGlowLayer(GeoRenderer<PowerArmorEntity, Void, LivingEntityRenderState> renderer) {
         super(renderer);
     }
 
+    /** Extract: work out this frame's tint of every light while we still have the suit. */
     @Override
-    public void render(PoseStack poseStack, PowerArmorEntity suit, BakedGeoModel model, RenderType renderType,
-                       MultiBufferSource buffers, VertexConsumer buffer, float partialTick, int packedLight, int packedOverlay) {
-        if (PowerArmorRenderer.isCockpitView(suit)) {
-            return; // the upper body isn't drawn from inside
-        }
-        float time = (float) RenderUtil.getCurrentTick() + partialTick;
+    public void addRenderData(PowerArmorEntity suit, @Nullable Void ignored, LivingEntityRenderState state, float partialTick) {
+        float time = (float) ClientUtil.getCurrentTick(partialTick);
         // Coals: a slow uneven flicker (two sines that never line up), deeper when the engine works hard.
         float fire = suit.getFireGlow() * (0.86F + 0.08F * Mth.sin(time * 0.37F + suit.getId()) + 0.06F * Mth.sin(time * 1.31F));
-        draw(poseStack, suit, model, buffers, partialTick, FIRE, fire, 1F, 1F, 1F);
         float[] visor = suit.getVisorColor();
         float on = suit.getVisorFlicker(time);
-        draw(poseStack, suit, model, buffers, partialTick, VISOR, on, visor[0], visor[1], visor[2]);
-        draw(poseStack, suit, model, buffers, partialTick, HEAT, heatGlow(suit.getToolHeat()), 1F, 1F, 1F);
-        draw(poseStack, suit, model, buffers, partialTick, HEAT_BARREL, barrelGlow(suit.getToolHeat()), 1F, 1F, 1F);
-        draw(poseStack, suit, model, buffers, partialTick, EM_CORE, suit.getEmCoreGlow(time), 1F, 1F, 1F);
-        draw(poseStack, suit, model, buffers, partialTick, EM_ARC, suit.getEmArcGlow(time), 1F, 1F, 1F);
+        float heat = suit.getToolHeat();
+        state.addGeckolibData(SuitRenderData.GLOW, new int[] {
+                tint(fire, 1F, 1F, 1F),
+                tint(on, visor[0], visor[1], visor[2]),
+                tint(heatGlow(heat), 1F, 1F, 1F),
+                tint(barrelGlow(heat), 1F, 1F, 1F),
+                tint(suit.getEmCoreGlow(time), 1F, 1F, 1F),
+                tint(suit.getEmArcGlow(time), 1F, 1F, 1F)});
+    }
+
+    /** Render: draw the model once per lit mask, after (on top of) the suit itself. */
+    @Override
+    public void submitRenderTask(RenderPassInfo<LivingEntityRenderState> info, SubmitNodeCollector renderTasks) {
+        if (!info.willRender() || info.getOrDefaultGeckolibData(SuitRenderData.COCKPIT, false)) {
+            return; // the upper body isn't drawn from inside
+        }
+        int[] tints = info.getGeckolibData(SuitRenderData.GLOW);
+        if (tints != null) {
+            drawMasks(this.renderer, info, renderTasks, MASKS, tints);
+        }
+    }
+
+    /** Draws the model again in the additive "eyes" render type for each mask whose tint isn't black. The tint, light
+     *  and overlay are read from the render state when a pass is submitted, so they're swapped in for each pass and put
+     *  back afterwards. */
+    static <R extends GeoRenderState> void drawMasks(GeoRenderer<?, ?, R> renderer, RenderPassInfo<R> info, SubmitNodeCollector renderTasks,
+                                                     Identifier[] masks, int[] tints) {
+        R state = info.renderState();
+        int colour = info.renderColor(), light = info.packedLight(), overlay = info.packedOverlay();
+        for (int i = 0; i < masks.length; i++) {
+            if ((tints[i] & 0xFFFFFF) == 0) {
+                continue;
+            }
+            state.addGeckolibData(DataTickets.RENDER_COLOR, tints[i]); // additive: scaling the colour down dims the glow
+            state.addGeckolibData(DataTickets.PACKED_LIGHT, LightCoordsUtil.FULL_BRIGHT);
+            state.addGeckolibData(DataTickets.PACKED_OVERLAY, OverlayTexture.NO_OVERLAY);
+            renderer.submitRenderTasks(info, renderTasks.order(1), RenderTypes.eyes(masks[i]));
+        }
+        state.addGeckolibData(DataTickets.RENDER_COLOR, colour);
+        state.addGeckolibData(DataTickets.PACKED_LIGHT, light);
+        state.addGeckolibData(DataTickets.PACKED_OVERLAY, overlay);
     }
 
     /** Chaingun barrel tips: nothing while cool, a dull red glow from a third of the way, white-hot when overheated. */
@@ -66,16 +102,12 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity> {
         return h * h * (3 - 2 * h);
     }
 
-    private void draw(PoseStack poseStack, PowerArmorEntity suit, BakedGeoModel model, MultiBufferSource buffers, float partialTick,
-                      ResourceLocation mask, float brightness, float r, float g, float b) {
+    /** Opaque ARGB of (r, g, b) x brightness; black (= nothing to draw) below 1%. */
+    static int tint(float brightness, float r, float g, float b) {
         if (brightness <= 0.01F) {
-            return;
+            return 0xFF000000;
         }
-        // Additive: scaling the colour down dims the glow (black adds nothing).
-        int colour = 0xFF000000 | channel(r * brightness) << 16 | channel(g * brightness) << 8 | channel(b * brightness);
-        RenderType type = RenderType.eyes(mask);
-        getRenderer().reRender(model, poseStack, buffers, suit, type, buffers.getBuffer(type), partialTick,
-                LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, colour);
+        return 0xFF000000 | channel(r * brightness) << 16 | channel(g * brightness) << 8 | channel(b * brightness);
     }
 
     private static int channel(float v) {

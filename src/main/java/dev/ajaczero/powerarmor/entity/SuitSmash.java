@@ -5,7 +5,7 @@ import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.item.ToolMining;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
@@ -26,8 +26,8 @@ import net.minecraft.world.phys.Vec3;
  * box it checks reaches further in the direction the pilot is steering.
  */
 public final class SuitSmash {
-    public static final TagKey<Block> WALKING = TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "suit_smashes_walking"));
-    public static final TagKey<Block> SPRINTING = TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "suit_smashes_sprinting"));
+    public static final TagKey<Block> WALKING = TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(PowerArmor.MODID, "suit_smashes_walking"));
+    public static final TagKey<Block> SPRINTING = TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(PowerArmor.MODID, "suit_smashes_sprinting"));
 
     /** How far ahead of the hitbox to clear (blocks): about two ticks of travel at a jog (0.25 b/t) / sprint (0.5 b/t). */
     private static final double LOOK_AHEAD_WALK = 0.6, LOOK_AHEAD_SPRINT = 1.1;

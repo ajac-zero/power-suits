@@ -1,121 +1,116 @@
 package dev.ajaczero.powerarmor.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.geckolib.constant.dataticket.DataTicket;
+import com.geckolib.model.GeoModel;
+import com.geckolib.renderer.GeoObjectRenderer;
+import com.geckolib.renderer.base.BoneSnapshots;
+import com.geckolib.renderer.base.GeoRenderState;
+import com.geckolib.renderer.base.RenderPassInfo;
+import com.geckolib.renderer.layer.GeoRenderLayer;
+import com.geckolib.util.ClientUtil;
 import dev.ajaczero.powerarmor.PowerArmor;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
-import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.model.GeoModel;
-import software.bernie.geckolib.renderer.GeoObjectRenderer;
+import dev.ajaczero.powerarmor.item.PowerTool;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.Nullable;
 
 /** Draws one half of the cockpit viewmodel (CockpitView): the socket tool or the empty gauntlet. */
-final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView> {
+final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, GeoRenderState> {
     enum Part { TOOL, GAUNTLET }
 
     static final String[] TOOL_BONES = {"chaingun", "em_projector", "drill", "chainsaw"};
 
-    Part part = Part.TOOL;
-    /** Installed tool's bone (PowerTool.suitBone), or null for the bare socket. */
-    @Nullable
-    String installed;
+    // Copied from CockpitView / its suit when the frame is extracted (the model is posed and drawn later).
+    private static final DataTicket<Part> PART = DataTicket.create("powerarmor_view_part", Part.class);
+    private static final DataTicket<String> TOOL_BONE = DataTicket.create("powerarmor_view_tool_bone", String.class);
+    private static final DataTicket<Float> BARREL_ANGLE = DataTicket.create("powerarmor_view_barrel_angle", Float.class);
+    private static final DataTicket<int[]> GLOW = DataTicket.create("powerarmor_view_glow", int[].class);
+    /** The tool's lights, like on the suit (SuitGlowLayer): the chaingun's hot barrels, the EM projector's redstone. */
+    private static final Identifier[] MASKS = {SuitGlowLayer.HEAT, SuitGlowLayer.HEAT_BARREL, SuitGlowLayer.EM_CORE, SuitGlowLayer.EM_ARC};
 
     CockpitViewRenderer() {
         super(new Model());
-        this.addRenderLayer(new ToolGlow(this));
+        this.withRenderLayer(new ToolGlow(this));
     }
 
     @Override
-    public void preRender(PoseStack poseStack, CockpitView view, BakedGeoModel model, @Nullable MultiBufferSource bufferSource,
-                          @Nullable VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, int colour) {
-        boolean tool = this.part == Part.TOOL;
-        model.getBone("view_tool").ifPresent(b -> { b.setHidden(!tool); b.setChildrenHidden(!tool); });
-        model.getBone("view_gauntlet").ifPresent(b -> { b.setHidden(tool); b.setChildrenHidden(tool); });
-        for (String name : TOOL_BONES) {
-            boolean show = name.equals(this.installed);
-            model.getBone(name).ifPresent(b -> { b.setHidden(!show); b.setChildrenHidden(!show); });
+    public void addRenderData(CockpitView view, @Nullable Void ignored, GeoRenderState state, float partialTick) {
+        state.addGeckolibData(PART, view.part);
+        var suit = view.suit;
+        state.addGeckolibData(TOOL_BONE, suit != null && suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.suitBone() : "");
+        state.addGeckolibData(BARREL_ANGLE, suit == null ? 0F : suit.getBarrelAngle(partialTick));
+        if (suit != null && view.part == Part.TOOL) {
+            float heat = suit.getToolHeat();
+            float time = (float) ClientUtil.getCurrentTick(partialTick);
+            state.addGeckolibData(GLOW, new int[] {
+                    SuitGlowLayer.tint(SuitGlowLayer.heatGlow(heat), 1F, 1F, 1F),
+                    SuitGlowLayer.tint(SuitGlowLayer.barrelGlow(heat), 1F, 1F, 1F),
+                    SuitGlowLayer.tint(suit.getEmCoreGlow(time), 1F, 1F, 1F),
+                    SuitGlowLayer.tint(suit.getEmArcGlow(time), 1F, 1F, 1F)});
         }
-        boolean bare = this.installed == null;
-        model.getBone("socket").ifPresent(b -> { b.setHidden(!bare); b.setChildrenHidden(!bare); });
-        if (isReRender) {
-            // GeoObjectRenderer.preRender centres the model in its block (translate 0.5, 0.51, 0.5) every time it runs, and
-            // reRender (the heat glow layer) runs it again inside the first pass: the glow drew half a block off the gun.
-            return;
-        }
-        super.preRender(poseStack, view, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, colour);
     }
 
+    /** No centring in a block (GeoObjectRenderer's default translates by 0.5): CockpitHands places the model itself. */
+    @Override
+    public void adjustRenderPose(RenderPassInfo<GeoRenderState> info) {
+    }
+
+    @Override
+    public void adjustModelBonesForRender(RenderPassInfo<GeoRenderState> info, BoneSnapshots bones) {
+        boolean tool = info.getOrDefaultGeckolibData(PART, Part.TOOL) == Part.TOOL;
+        bones.ifPresent("view_tool", b -> b.skipRender(!tool).skipChildrenRender(!tool));
+        bones.ifPresent("view_gauntlet", b -> b.skipRender(tool).skipChildrenRender(tool));
+        String installed = info.getOrDefaultGeckolibData(TOOL_BONE, "");
+        for (String name : TOOL_BONES) {
+            boolean show = name.equals(installed);
+            bones.ifPresent(name, b -> b.skipRender(!show).skipChildrenRender(!show));
+        }
+        boolean bare = installed.isEmpty();
+        bones.ifPresent("socket", b -> b.skipRender(!bare).skipChildrenRender(!bare));
+        ChaingunParts.pose(bones, info.getOrDefaultGeckolibData(BARREL_ANGLE, 0F)); // turns with the suit's spin
+    }
+
+    /** Both faces, like GeckoLib's default: in this render path the cubes wind the other way, so culling hid them all. */
+    @Override
+    public @Nullable RenderType getRenderType(GeoRenderState state, Identifier texture) {
+        return RenderTypes.entityCutout(texture);
+    }
 
     private static final class Model extends GeoModel<CockpitView> {
-        private static final ResourceLocation GEO = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "geo/view/power_armor_view.geo.json");
-        private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor.png");
-        private static final ResourceLocation ANIMATIONS = ResourceLocation.fromNamespaceAndPath(PowerArmor.MODID, "animations/entity/power_armor.animation.json");
-
-        /** The chaingun's barrels turn with the suit's spin, like on the suit. */
-        @Override
-        public void setCustomAnimations(CockpitView view, long instanceId, software.bernie.geckolib.animation.AnimationState<CockpitView> state) {
-            if (view.suit != null) {
-                ChaingunParts.pose(getAnimationProcessor(), view.suit, state.getPartialTick());
-            }
-        }
+        // GeckoLib 5 ids: assets/powerarmor/geckolib/models/<id>.geo.json and geckolib/animations/<id>.animation.json.
+        private static final Identifier GEO = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "view/power_armor_view");
+        private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor.png");
+        private static final Identifier ANIMATIONS = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "entity/power_armor");
 
         @Override
-        public ResourceLocation getModelResource(CockpitView view) {
+        public Identifier getModelResource(GeoRenderState state) {
             return GEO;
         }
 
         @Override
-        public ResourceLocation getTextureResource(CockpitView view) {
+        public Identifier getTextureResource(GeoRenderState state) {
             return TEXTURE;
         }
 
         @Override
-        public ResourceLocation getAnimationResource(CockpitView view) {
+        public Identifier getAnimationResource(CockpitView view) {
             return ANIMATIONS;
-        }
-
-        /** Both faces, like GeckoLib's default: in this render path the cubes wind the other way, so culling hid them all. */
-        @Override
-        public RenderType getRenderType(CockpitView view, ResourceLocation texture) {
-            return RenderType.entityCutoutNoCull(texture);
         }
     }
 
-    /** The tool's lights, like on the suit (SuitGlowLayer): the chaingun's hot barrels, the EM projector's redstone. */
-    private static final class ToolGlow extends software.bernie.geckolib.renderer.layer.GeoRenderLayer<CockpitView> {
-        private final CockpitViewRenderer renderer;
-
+    private static final class ToolGlow extends GeoRenderLayer<CockpitView, Void, GeoRenderState> {
         ToolGlow(CockpitViewRenderer renderer) {
             super(renderer);
-            this.renderer = renderer;
         }
 
         @Override
-        public void render(PoseStack poseStack, CockpitView view, BakedGeoModel model, RenderType renderType, MultiBufferSource buffers,
-                           com.mojang.blaze3d.vertex.VertexConsumer buffer, float partialTick, int packedLight, int packedOverlay) {
-            if (view.suit == null || this.renderer.part != Part.TOOL) {
-                return;
+        public void submitRenderTask(RenderPassInfo<GeoRenderState> info, SubmitNodeCollector renderTasks) {
+            int[] tints = info.getGeckolibData(GLOW);
+            if (info.willRender() && tints != null && info.getOrDefaultGeckolibData(PART, Part.TOOL) == Part.TOOL) {
+                SuitGlowLayer.drawMasks(this.renderer, info, renderTasks, MASKS, tints);
             }
-            float heat = view.suit.getToolHeat();
-            draw(poseStack, view, model, buffers, partialTick, SuitGlowLayer.HEAT, SuitGlowLayer.heatGlow(heat));
-            draw(poseStack, view, model, buffers, partialTick, SuitGlowLayer.HEAT_BARREL, SuitGlowLayer.barrelGlow(heat));
-            float time = (float) software.bernie.geckolib.util.RenderUtil.getCurrentTick() + partialTick;
-            draw(poseStack, view, model, buffers, partialTick, SuitGlowLayer.EM_CORE, view.suit.getEmCoreGlow(time));
-            draw(poseStack, view, model, buffers, partialTick, SuitGlowLayer.EM_ARC, view.suit.getEmArcGlow(time));
-        }
-
-        private void draw(PoseStack poseStack, CockpitView view, BakedGeoModel model, MultiBufferSource buffers, float partialTick,
-                          ResourceLocation mask, float glow) {
-            if (glow <= 0.01F) {
-                return;
-            }
-            int c = net.minecraft.util.Mth.clamp((int) (glow * 255F), 0, 255);
-            RenderType type = RenderType.eyes(mask);
-            getRenderer().reRender(model, poseStack, buffers, view, type, buffers.getBuffer(type), partialTick,
-                    net.minecraft.client.renderer.LightTexture.FULL_BRIGHT, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,
-                    0xFF000000 | c << 16 | c << 8 | c);
         }
     }
 }

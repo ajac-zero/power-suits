@@ -1,4 +1,4 @@
-"""Cuts each socket tool out of the suit model (geo/item/<tool>.geo.json), the source of the tool items' icons
+"""Cuts each socket tool out of the suit model (geckolib/models/item/<tool>.geo.json), the source of the tool items' icons
 (tools/make-item-icons.py), so the icons look like the tools on the suit's arm and stay in sync with Blockbench.
 
     python3 tools/extract-tool-geo.py        (after node tools/export-model.mjs)
@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / 'src/main/resources/assets/powerarmor'
-SUIT = ASSETS / 'geo/entity/power_armor.geo.json'
+SUIT = ASSETS / 'geckolib/models/entity/power_armor.geo.json'
 
 TOOLS = {
     # tool name: (bone subtree, extra bone whose cubes of these sizes are included, bones to drop)
@@ -84,7 +84,7 @@ def main():
         desc = dict(geo['description'], identifier=f'geometry.{tool}', visible_bounds_width=2,
                     visible_bounds_height=2, visible_bounds_offset=[0, 0.5, 0])
         out = {'format_version': suit['format_version'], 'minecraft:geometry': [{'description': desc, 'bones': out_bones}]}
-        path = ASSETS / f'geo/item/{tool}.geo.json'
+        path = ASSETS / f'geckolib/models/item/{tool}.geo.json'
         path.write_text(json.dumps(out, indent=1))
         print(f'wrote {path.relative_to(ROOT)}: {len(cubes)} cubes, size {[hi[i] - lo[i] for i in range(3)]}')
 

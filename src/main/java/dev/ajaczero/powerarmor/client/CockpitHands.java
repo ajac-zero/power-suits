@@ -13,9 +13,8 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
-import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.util.RenderUtil;
+import com.geckolib.animation.AnimationController;
+import com.geckolib.util.ClientUtil;
 
 /**
  * What the pilot sees of the suit's arms, drawn in the hand pass like vanilla's first-person hands. The suit's own
@@ -60,7 +59,6 @@ public final class CockpitHands {
         CockpitView view = CockpitView.INSTANCE;
         view.suit = suit;
         pollShot(suit, view);
-        RENDERER.installed = suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.suitBone() : null;
         pose.pushPose();
         toolTransform(pose, suit, event.getPartialTick(), suit.getToolRaise(event.getPartialTick()));
         drawPart(pose, event, CockpitViewRenderer.Part.TOOL);
@@ -78,9 +76,11 @@ public final class CockpitHands {
     }
 
     private static void drawPart(PoseStack pose, RenderHandEvent event, CockpitViewRenderer.Part part) {
-        RENDERER.part = part;
-        pose.translate(-0.5F, -0.51F, -0.5F); // GeoObjectRenderer centres objects in a block; undo that
-        RENDERER.render(pose, CockpitView.INSTANCE, event.getMultiBufferSource(), null, null, event.getPackedLight(), event.getPartialTick());
+        CockpitView.INSTANCE.part = part;
+        // Like everything since 1.21.9, this only queues the drawing ("submits" it); Minecraft draws the queue later.
+        RENDERER.performRenderPass(CockpitView.INSTANCE, null, pose, event.getSubmitNodeCollector(),
+                Minecraft.getInstance().gameRenderer.gameRenderState().levelRenderState.cameraRenderState,
+                event.getPackedLight(), event.getPartialTick());
     }
 
     /** Tool: low on the left, raised toward the middle while used, bobbing with the gait, kicking back and up when
@@ -89,9 +89,9 @@ public final class CockpitHands {
         float kick = Math.max(recoil(partial), suit.getRecoil(partial)); // EM push / chaingun shots
         Vector3f p = new Vector3f(toolPos).lerp(toolRaisedPos, raise);
         pose.translate(p.x, p.y + bob(suit), p.z + kick * 0.10F);
-        pose.mulPose(Axis.YP.rotationDegrees(Mth.lerp(raise, toolYaw, toolRaisedYaw)));
-        pose.mulPose(Axis.XP.rotationDegrees(Mth.lerp(raise, toolPitch, toolRaisedPitch) + kick * 8F));
-        pose.mulPose(Axis.YP.rotationDegrees(toolRoll));
+        pose.rotateDegrees(Axis.YP, Mth.lerp(raise, toolYaw, toolRaisedYaw));
+        pose.rotateDegrees(Axis.XP, Mth.lerp(raise, toolPitch, toolRaisedPitch) + kick * 8F);
+        pose.rotateDegrees(Axis.YP, toolRoll);
         pose.scale(toolScale, toolScale, toolScale);
     }
 
@@ -108,7 +108,7 @@ public final class CockpitHands {
 
     /** Gait bob (the suit's hip drop, model pixels) plus a slow breathing drift. */
     private static float bob(PowerArmorEntity suit) {
-        return suit.getHipBob() * 0.008F + Mth.sin((float) RenderUtil.getCurrentTick() * 0.07F) * 0.004F;
+        return suit.getHipBob() * 0.008F + Mth.sin((float) ClientUtil.getCurrentTick() * 0.07F) * 0.004F;
     }
 
     /** Vanilla's right-arm transform (ItemInHandRenderer.renderPlayerArm + PlayerModel's right arm), then the gauntlet
@@ -117,24 +117,24 @@ public final class CockpitHands {
         float sq = Mth.sqrt(swing);
         pose.translate(-0.3F * Mth.sin(sq * Mth.PI) + 0.64F, 0.4F * Mth.sin(sq * Mth.TWO_PI) - 0.6F - equip * 0.6F,
                 -0.4F * Mth.sin(swing * Mth.PI) - 0.72F);
-        pose.mulPose(Axis.YP.rotationDegrees(45.0F));
-        pose.mulPose(Axis.YP.rotationDegrees(Mth.sin(sq * Mth.PI) * 70.0F));
-        pose.mulPose(Axis.ZP.rotationDegrees(Mth.sin(swing * swing * Mth.PI) * -20.0F));
+        pose.rotateDegrees(Axis.YP, 45.0F);
+        pose.rotateDegrees(Axis.YP, Mth.sin(sq * Mth.PI) * 70.0F);
+        pose.rotateDegrees(Axis.ZP, Mth.sin(swing * swing * Mth.PI) * -20.0F);
         pose.translate(-1.0F, 3.6F, 3.5F);
-        pose.mulPose(Axis.ZP.rotationDegrees(120.0F));
-        pose.mulPose(Axis.XP.rotationDegrees(200.0F));
-        pose.mulPose(Axis.YP.rotationDegrees(-135.0F));
+        pose.rotateDegrees(Axis.ZP, 120.0F);
+        pose.rotateDegrees(Axis.XP, 200.0F);
+        pose.rotateDegrees(Axis.YP, -135.0F);
         pose.translate(5.6F, 0.0F, 0.0F);
         // PlayerModel's right arm (wide): pivot (-5, 2, 0) px, idle sway zRot 0.1 rad (AnimationUtils.bobModelPart, age 0).
         // Its box runs x -3..1, y -2..10 (model Y runs down the arm, toward the fist at y 10).
         pose.translate(-5F / 16F, 2F / 16F, 0F);
-        pose.mulPose(Axis.ZP.rotation(0.1F));
+        pose.rotate(Axis.ZP, 0.1F);
         // Into the gauntlet's space: entity models are turned 180 degrees about Z into the world (Y up), GeckoLib models
         // aren't, so the gauntlet (hanging -Y, fingertips at y -17, centred on x 0.5) turns 180 about Z; then its
         // fingertips go where the player's fist ends (-1, 10, 0).
         float k = gauntletScale;
         pose.translate((-1F + 0.5F * k) / 16F, (10F - 17F * k) / 16F, 0F);
-        pose.mulPose(Axis.ZP.rotationDegrees(180.0F));
+        pose.rotateDegrees(Axis.ZP, 180.0F);
         pose.scale(k, k, k);
     }
 
@@ -142,18 +142,18 @@ public final class CockpitHands {
      *  the suit's synced shot counter, PowerArmorEntity.getRecoil.) */
     private static void pollShot(PowerArmorEntity suit, CockpitView view) {
         AnimationController<?> action = suit.getAnimatableInstanceCache().getManagerForId(suit.getId()).getAnimationControllers().get("action");
-        RawAnimation triggered = action == null ? null : action.getTriggeredAnimation();
+        var triggered = action == null ? null : action.getCurrentRawAnimation();
         boolean shooting = action != null && action.isPlayingTriggeredAnimation() && triggered != null
                 && triggered.getAnimationStages().get(0).animationName().endsWith("tool_recoil");
         if (shooting && !wasShooting) {
-            shotAt = RenderUtil.getCurrentTick();
+            shotAt = ClientUtil.getCurrentTick();
         }
         wasShooting = shooting;
     }
 
     /** 1 right after a shot, easing back to 0. */
     private static float recoil(float partial) {
-        double age = RenderUtil.getCurrentTick() - shotAt;
+        double age = ClientUtil.getCurrentTick() - shotAt;
         if (age < 0 || age > RECOIL_TICKS) {
             return 0F;
         }
@@ -174,13 +174,13 @@ public final class CockpitHands {
         float inset = suit.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.PowerTool tool ? tool.muzzleInsetPixels() : 0F;
         Vector3f p = toolMatrix(suit, suit.getToolRaise(1F)).transformPosition(new Vector3f(0, (MUZZLE_PX + inset) / 16F, 0));
         double k = Math.tan(Math.toRadians(mc.options.fov().get()) / 2) / Math.tan(Math.toRadians(70) / 2);
-        Camera camera = mc.gameRenderer.getMainCamera();
-        Vector3f look = camera.getLookVector(), up = camera.getUpVector(), left = camera.getLeftVector();
+        Camera camera = mc.gameRenderer.mainCamera();
+        org.joml.Vector3fc look = camera.forwardVector(), up = camera.upVector(), left = camera.leftVector();
         double x = p.x * k, y = p.y * k, z = p.z;
-        return camera.getPosition()
-                .add(-left.x * x, -left.y * x, -left.z * x)
-                .add(up.x * y, up.y * y, up.z * y)
-                .add(-look.x * z, -look.y * z, -look.z * z);
+        return camera.position()
+                .add(-left.x() * x, -left.y() * x, -left.z() * x)
+                .add(up.x() * y, up.y() * y, up.z() * y)
+                .add(-look.x() * z, -look.y() * z, -look.z() * z);
     }
 
     /** Dev: reload the placement from a JSON file (keys as the fields above; positions as [x, y, z]). */

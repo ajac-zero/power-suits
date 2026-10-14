@@ -55,7 +55,7 @@ public final class SocketAim {
         Vec3 eye = operator.getEyePosition();
         Vec3 blockEnd = blockHit(suit, operator, range);
         EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(suit.level(), operator, eye, blockEnd,
-                new AABB(eye, blockEnd).inflate(1), e -> e != suit && e != operator && e.isPickable() && !e.isSpectator());
+                new AABB(eye, blockEnd).inflate(1), e -> e != suit && e != operator && e.isPickable() && !e.isSpectator(), 0.3F);
         return entityHit != null ? entityHit.getLocation() : blockEnd;
     }
 

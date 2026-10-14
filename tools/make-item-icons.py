@@ -6,7 +6,7 @@ Why: the tool items are flat like vanilla tools (models/item/<tool>.json = item/
 picture, in hand the picture extruded 1 px thick); only the suit wears them in 3D. The icon is drawn from the
 3D model so both look like the same tool.
 
-How: a tiny software renderer. It reads geo/item/<tool>.geo.json + the suit texture, lays out each
+How: a tiny software renderer. It reads geckolib/models/item/<tool>.geo.json + the suit texture, lays out each
 cube's box UV like Blockbench does, turns the tool so its working end points to the top right (like a
 vanilla pickaxe), shades faces by their direction, renders 8x too big and shrinks to 32x32 (same size
 as the suit's icon), then adds a dark 1 px outline so the icon reads on any slot colour.
@@ -85,7 +85,7 @@ def face_corners(lo, hi):
 
 def quads(tool):
     """Every textured face of the tool in Blockbench space (the geo file is Bedrock: X mirrored)."""
-    geo = json.loads((ASSETS / f'geo/item/{tool}.geo.json').read_text())['minecraft:geometry'][0]
+    geo = json.loads((ASSETS / f'geckolib/models/item/{tool}.geo.json').read_text())['minecraft:geometry'][0]
     out = []
     for bone in geo['bones']:  # the item bones carry no rotations, only cubes do
         for c in bone.get('cubes', []):

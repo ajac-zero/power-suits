@@ -7,15 +7,9 @@
     " I "
   ],
   "key": {
-    "S": {
-      "item": "minecraft:shears"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "P": {
-      "item": "minecraft:piston"
-    }
+    "S": "minecraft:shears",
+    "I": "minecraft:iron_ingot",
+    "P": "minecraft:piston"
   },
   "result": {
     "id": "powerarmor:chainsaw",

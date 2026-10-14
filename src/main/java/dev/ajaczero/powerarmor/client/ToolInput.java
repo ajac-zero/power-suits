@@ -10,7 +10,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 /**
  * While piloting, the socket tool works like a shield in the off hand: the use button (right click) goes to the
@@ -51,12 +51,12 @@ public final class ToolInput {
     public static void trigger(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         boolean piloting = mc.player != null && mc.player.getVehicle() instanceof PowerArmorEntity;
-        if (!piloting || mc.screen != null || !mc.options.keyUse.isDown()) {
+        if (!piloting || mc.gui.screen() != null || !mc.options.keyUse.isDown()) {
             toolHeld = false;
         }
         if (toolHeld != sentDown && mc.getConnection() != null) {
             sentDown = toolHeld;
-            PacketDistributor.sendToServer(new ToolTriggerPayload(toolHeld));
+            ClientPacketDistributor.sendToServer(new ToolTriggerPayload(toolHeld));
         }
     }
 

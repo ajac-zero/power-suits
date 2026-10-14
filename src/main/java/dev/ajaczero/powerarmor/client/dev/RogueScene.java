@@ -52,9 +52,9 @@ final class RogueScene {
             case 20, 35, 50, 65, 80, 100, 120, 140 -> AutoPilot.shot(mc, "rogue_gun_" + s);
             case 150 -> { phase = "zap"; AutoPilot.onServer(mc, p -> {
                               if (rogue != null && rogue.isAlive()) {
-                                  var bolt = EntityType.LIGHTNING_BOLT.create(p.serverLevel());
-                                  bolt.moveTo(rogue.position());
-                                  p.serverLevel().addFreshEntity(bolt);
+                                  var bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(p.level(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                                  bolt.snapTo(rogue.position());
+                                  p.level().addFreshEntity(bolt);
                               } }); }
             case 152 -> closeUp(mc);
             case 154, 160, 170, 190, 220, 250, 275, 290 -> AutoPilot.shot(mc, "rogue_zap_" + s);
@@ -63,19 +63,19 @@ final class RogueScene {
                                   rogue.clearFire();
                                   p.teleportTo(rogue.getX() - 2, rogue.getY(), rogue.getZ());
                                   p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-                                  rogue.interact(p, net.minecraft.world.InteractionHand.MAIN_HAND);
+                                  rogue.interact(p, net.minecraft.world.InteractionHand.MAIN_HAND, rogue.position());
                               } }); }
-            case 304 -> { mc.setCameraEntity(mc.player); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); mc.options.hideGui = false; }
+            case 304 -> { mc.setCameraEntity(mc.player); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, false); }
             case 312 -> AutoPilot.shot(mc, "rogue_claimed");
             case 316 -> { phase = "em"; AutoPilot.onServer(mc, p -> {
                               p.stopRiding();
                               if (base != null) {
                                   p.teleportTo(base.getX() - 3.5, base.getY(), base.getZ() + 2.5); // within the rogue's sight
                               }
-                              emSetup(p.serverLevel()); }); }
+                              emSetup(p.level()); }); }
             // The player's own third-person camera this time: with a scripted camera entity the client stops sending the
             // player's position (LocalPlayer only does for the camera entity), so the server never saw them lifted.
-            case 318 -> { mc.setCameraEntity(mc.player); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); mc.options.hideGui = false; }
+            case 318 -> { mc.setCameraEntity(mc.player); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, false); }
             case 330, 340, 350, 360, 370, 380, 392, 404, 416, 430, 450, 480 -> AutoPilot.shot(mc, "rogue_em_" + s);
             // a heavy target (decided 2026-10-13): the player pilots the rebooted suit (its gun taken out) and walks at a new
             // EM rogue; the beam can't lift a suit, it holds it: the walk slows to a crawl, the field drags it a little
@@ -89,11 +89,11 @@ final class RogueScene {
                                   rogue.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 8));
                                   rogue.teleportTo(base.getX() + 0.5, base.getY(), base.getZ() - 6.5);
                                   p.teleportTo(base.getX() - 1.5, base.getY(), base.getZ() - 6.5);
-                                  rogue.interact(p, net.minecraft.world.InteractionHand.MAIN_HAND);
-                                  PowerArmorEntity r = ModEntities.POWER_ARMOR.get().create(p.serverLevel());
+                                  rogue.interact(p, net.minecraft.world.InteractionHand.MAIN_HAND, rogue.position());
+                                  PowerArmorEntity r = ModEntities.POWER_ARMOR.get().create(p.level(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
                                   RogueSpawner.makeRogue(r, false);
-                                  r.moveTo(base.getX() + 0.5, base.getY(), base.getZ() + 9.5, 180, 0);
-                                  p.serverLevel().addFreshEntity(r);
+                                  r.snapTo(base.getX() + 0.5, base.getY(), base.getZ() + 9.5, 180, 0);
+                                  p.level().addFreshEntity(r);
                                   emRogue = r;
                               } }); }
             case 530 -> AutoPilot.hold(mc.options.keyUp, true); // walk at it
@@ -118,27 +118,27 @@ final class RogueScene {
      *  their chaingun suit, four cows; a rogue from the real spawner, then brought into view. */
     private static void setup(Minecraft mc) {
         AutoPilot.onServer(mc, player -> {
-            ServerLevel level = player.serverLevel();
-            level.setDayTime(6000);
+            ServerLevel level = player.level();
+            DevUtil.setTime(level, 6000);
             level.getServer().setDifficulty(net.minecraft.world.Difficulty.NORMAL, true);
             int x = player.getBlockX() + 100, z = player.getBlockZ();
             int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
             BlockPos at = new BlockPos(x, y, z);
             player.teleportTo(x + 0.5, y, z + 0.5);
             player.setGameMode(GameType.SURVIVAL);
-            player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 12000, 4));
+            player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 12000, 4));
             player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 12000, 2));
-            PowerArmorEntity f = ModEntities.POWER_ARMOR.get().create(level);
+            PowerArmorEntity f = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             f.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16));
             f.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
             f.setStoredNuggets(256);
             f.setOwnerId(player.getUUID());
-            f.moveTo(x + 3.5, y, z - 1.5, 0, 0);
+            f.snapTo(x + 3.5, y, z - 1.5, 0, 0);
             level.addFreshEntity(f);
             cows.clear();
             for (int i = 0; i < 4; i++) {
-                var cow = EntityType.COW.create(level);
-                cow.moveTo(x + 12.5 + i * 2, y, z + 6.5 + (i % 2) * 3, 0, 0);
+                var cow = net.minecraft.world.entity.EntityTypes.COW.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                cow.snapTo(x + 12.5 + i * 2, y, z + 6.5 + (i % 2) * 3, 0, 0);
                 level.addFreshEntity(cow);
                 cows.add(cow);
             }
@@ -160,12 +160,12 @@ final class RogueScene {
         if (at == null) {
             return;
         }
-        PowerArmorEntity r = ModEntities.POWER_ARMOR.get().create(level);
+        PowerArmorEntity r = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
         RogueSpawner.makeRogue(r, false);
-        r.moveTo(at.getX() - 13.5, at.getY(), at.getZ() + 8.5, 180, 0);
+        r.snapTo(at.getX() - 13.5, at.getY(), at.getZ() + 8.5, 180, 0);
         level.addFreshEntity(r);
-        var cow = EntityType.COW.create(level); // one cow to hurl first, then the player
-        cow.moveTo(at.getX() - 11.5, at.getY(), at.getZ() + 4.5, 0, 0);
+        var cow = net.minecraft.world.entity.EntityTypes.COW.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND); // one cow to hurl first, then the player
+        cow.snapTo(at.getX() - 11.5, at.getY(), at.getZ() + 4.5, 0, 0);
         level.addFreshEntity(cow);
         cows.add(cow);
         emRogue = r;
@@ -177,8 +177,8 @@ final class RogueScene {
             return;
         }
         mc.options.setCameraType(CameraType.FIRST_PERSON);
-        mc.options.hideGui = true;
-        Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        DevUtil.hideGui(mc, true);
+        Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         AutoPilot.lookCamera(mc, Vec3.atBottomCenterOf(b).add(from).subtract(drop), Vec3.atBottomCenterOf(b).add(at).subtract(drop));
     }
 
@@ -189,9 +189,9 @@ final class RogueScene {
             float yaw = client.getYHeadRot() * net.minecraft.util.Mth.DEG_TO_RAD;
             Vec3 forward = new Vec3(-net.minecraft.util.Mth.sin(yaw), 0, net.minecraft.util.Mth.cos(yaw));
             Vec3 face = client.position().add(0, 2.4, 0);
-            Vec3 drop = new Vec3(0, EntityType.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+            Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
             mc.options.setCameraType(CameraType.FIRST_PERSON);
-            mc.options.hideGui = true;
+            DevUtil.hideGui(mc, true);
             AutoPilot.lookCamera(mc, face.add(forward.scale(4.5)).add(forward.yRot(1.2F).scale(1.5)).subtract(drop), face.subtract(drop));
         }
     }
@@ -214,7 +214,7 @@ final class RogueScene {
             return;
         }
         float[] visor = mc.level.getEntity(r.getId()) instanceof PowerArmorEntity client ? client.getVisorColor() : new float[3];
-        boolean emDropped = !player.serverLevel().getEntitiesOfClass(ItemEntity.class, new AABB(base).inflate(40),
+        boolean emDropped = !player.level().getEntitiesOfClass(ItemEntity.class, new AABB(base).inflate(40),
                 e -> e.getItem().is(ModItems.EM_PROJECTOR.get())).isEmpty();
         try {
             csv.write(String.format(Locale.ROOT, "%d,%s,%.1f,%s,%.1f,%b,%b,%s,%d,%d,%.2f,%.2f,%.2f,%b,%s,%d,%d,%.2f,%.2f,%.1f,%s,%.1f,%s,%s,%b,%.2f,%.2f,%b,%.2f%n",

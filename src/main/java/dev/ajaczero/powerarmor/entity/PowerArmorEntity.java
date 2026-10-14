@@ -12,7 +12,8 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import java.util.Map;
@@ -46,14 +47,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.animatable.GeoEntity;
-import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
-import software.bernie.geckolib.animation.PlayState;
-import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.util.GeckoLibUtil;
+import com.geckolib.animatable.GeoEntity;
+import com.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.geckolib.animatable.manager.AnimatableManager;
+import com.geckolib.animation.AnimationController;
+import com.geckolib.animation.RawAnimation;
+import com.geckolib.animation.object.PlayState;
+import com.geckolib.animation.state.AnimationTest;
+import com.geckolib.util.GeckoLibUtil;
 
 /**
  * The power armor suit. It is a living entity (it has health and armor and can die) that a player
@@ -186,7 +187,14 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
 
     /** The suit's own two slots: fuel and the left-arm socket. Real contents only exist on the server. */
-    private final SimpleContainer inventory = new SimpleContainer(2);
+    private final SimpleContainer inventory = new SimpleContainer(2) {
+        @Override
+        public void setChanged() {
+            super.setChanged();
+            // Whenever the slots change on the server, copy them into the synced data for clients.
+            PowerArmorEntity.this.syncSlots();
+        }
+    };
     /** Server: energy left in the burning item (fractional, idle drains 0.25 per tick). */
     private float burnLeft;
     private int burnTotal;
@@ -266,7 +274,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     // Struck by lightning: convulse (the electrified loop, played once) and then slump like an empty tank. thenPlay would
     // use the JSON's loop setting ("loop": true for electrified) and convulse forever; PLAY_ONCE moves on to the slump.
     private static final RawAnimation ZAPPED = RawAnimation.begin()
-            .then("animation.power_armor.electrified", software.bernie.geckolib.animation.Animation.LoopType.PLAY_ONCE)
+            .then("animation.power_armor.electrified", com.geckolib.animation.object.LoopType.PLAY_ONCE)
             .thenPlayAndHold("animation.power_armor.shutdown");
     private static final RawAnimation TOOL_RECOIL = RawAnimation.begin().thenPlay("animation.power_armor.tool_recoil");
     // Right hand (a_hand.js): carry pose while the pilot holds something, quick reach on every use.
@@ -297,8 +305,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     public PowerArmorEntity(EntityType<? extends PowerArmorEntity> type, Level level) {
         super(type, level);
-        // Whenever the slots change on the server, copy them into the synced data for clients.
-        this.inventory.addListener(container -> this.syncSlots());
     }
 
     @Override
@@ -350,7 +356,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      * base values to the current tuning (modifiers from effects etc. are kept).
      */
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(ValueInput tag) {
         super.readAdditionalSaveData(tag);
         BASE_STATS.forEach((attribute, value) -> {
             AttributeInstance instance = this.getAttribute(attribute);
@@ -359,35 +365,33 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             }
         });
         this.inventory.clearContent();
-        ContainerHelper.loadAllItems(tag.getCompound("Inventory"), this.inventory.getItems(), this.registryAccess());
-        this.burnLeft = tag.getFloat("BurnLeft");
-        this.burnTotal = tag.getInt("BurnTotal");
-        this.setMind(SuitMind.byName(tag.getString("Mind"))); // suits from before the AI: "" -> friendly
-        this.ownerId = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
-        this.home = net.minecraft.nbt.NbtUtils.readBlockPos(tag, "Home").orElse(null);
-        this.setStoredNuggets(tag.getInt("Nuggets"));
-        this.rogueAge = tag.getInt("RogueAge");
+        // Since 1.21.6 entities save through ValueInput/ValueOutput (a view on the NBT) instead of raw CompoundTags.
+        // Same layout as before, so suits saved by the 1.21.1 version still load.
+        ContainerHelper.loadAllItems(tag.childOrEmpty("Inventory"), this.inventory.getItems());
+        this.burnLeft = tag.getFloatOr("BurnLeft", 0F);
+        this.burnTotal = tag.getIntOr("BurnTotal", 0);
+        this.setMind(SuitMind.byName(tag.getStringOr("Mind", ""))); // suits from before the AI: "" -> friendly
+        this.ownerId = tag.read("Owner", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
+        this.home = tag.read("Home", BlockPos.CODEC).orElse(null);
+        this.setStoredNuggets(tag.getIntOr("Nuggets", 0));
+        this.rogueAge = tag.getIntOr("RogueAge", 0);
         this.syncSlots();
         this.syncBurn();
         this.entityData.set(POWERED, this.hasEnergy());
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         // Slot numbers are saved with each item, so an empty fuel slot doesn't shift the socket tool into it.
-        tag.put("Inventory", ContainerHelper.saveAllItems(new CompoundTag(), this.inventory.getItems(), this.registryAccess()));
+        ContainerHelper.saveAllItems(tag.child("Inventory"), this.inventory.getItems());
         tag.putFloat("BurnLeft", this.burnLeft);
         tag.putInt("BurnTotal", this.burnTotal);
         tag.putString("Mind", this.getMind().name());
         tag.putInt("Nuggets", this.getStoredNuggets());
         tag.putInt("RogueAge", this.rogueAge);
-        if (this.ownerId != null) {
-            tag.putUUID("Owner", this.ownerId);
-        }
-        if (this.home != null) {
-            tag.put("Home", net.minecraft.nbt.NbtUtils.writeBlockPos(this.home));
-        }
+        tag.storeNullable("Owner", net.minecraft.core.UUIDUtil.CODEC, this.ownerId); // int array, as before
+        tag.storeNullable("Home", BlockPos.CODEC, this.home);
     }
 
     // =========================================================================================
@@ -472,10 +476,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public void punch(LivingEntity target) {
         float damage = 1F + PowerArmorConfig.MELEE_BONUS.get().floatValue();
         this.triggerAnim("right_hand", "use_item"); // the right arm reaches out (the hand's use animation)
-        this.swing(InteractionHand.MAIN_HAND);
-        if (target.hurt(this.damageSources().mobAttack(this), damage)) {
+        this.swingForAttack(InteractionHand.MAIN_HAND);
+        DamageSource blow = this.damageSources().mobAttack(this);
+        if (target.level() instanceof ServerLevel level && target.hurtServer(level, blow, damage)) {
             Vec3 push = target.position().subtract(this.position()).multiply(1, 0, 1).normalize();
-            target.knockback(0.6, -push.x, -push.z);
+            target.knockback(0.6, -push.x, -push.z, blow, damage);
             this.setLastHurtMob(target);
         }
         this.playSound(SoundEvents.IRON_GOLEM_ATTACK, 1.0F, 0.8F);
@@ -529,8 +534,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      *  asks it to look somewhere. This runs after the goals (which may have asked for something else) and before the
      *  look control, so an aim set by the mind wins; the tool fires later in the same tick (tickTool). */
     @Override
-    protected void customServerAiStep() {
-        super.customServerAiStep();
+    protected void customServerAiStep(ServerLevel level) {
+        super.customServerAiStep(level);
         if (!this.isAiDriven()) {
             this.aiAim = null;
         } else if (this.aiAim != null) {
@@ -575,7 +580,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         java.util.UUID id = this.ownerId != null ? this.ownerId : WILD_SUIT_ID;
         Player fake = net.neoforged.neoforge.common.util.FakePlayerFactory.get((ServerLevel) this.level(),
                 new com.mojang.authlib.GameProfile(id, "[Power Armor]"));
-        fake.moveTo(this.getX(), this.getY(), this.getZ(), this.getYHeadRot(), this.getXRot()); // mods may check where it stands
+        fake.snapTo(this.getX(), this.getY(), this.getZ(), this.getYHeadRot(), this.getXRot()); // mods may check where it stands
         return fake;
     }
 
@@ -675,14 +680,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (energy <= 0) {
             return;
         }
-        ItemStack remainder = stack.getCraftingRemainingItem();
+        // What's left of a burnt item (the bucket of a lava bucket), like a furnace.
+        var template = stack.getCraftingRemainder();
+        ItemStack remainder = template == null ? ItemStack.EMPTY : template.create();
         stack.shrink(1);
         if (stack.isEmpty()) {
             this.inventory.setItem(FUEL_SLOT, remainder);
         } else {
             this.inventory.setChanged();
-            if (!remainder.isEmpty()) {
-                this.spawnAtLocation(remainder);
+            if (!remainder.isEmpty() && this.level() instanceof ServerLevel level) {
+                this.spawnAtLocation(level, remainder);
             }
         }
         this.burnLeft += energy;
@@ -707,8 +714,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.playSound(SoundEvents.BEACON_DEACTIVATE, 1.0F, 0.6F);
             this.playSound(SoundEvents.IRON_GOLEM_DAMAGE, 0.6F, 0.5F);
             if (this.getControllingPassenger() instanceof Player pilot) {
-                pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                        this.stunTicks > 0 ? "message.powerarmor.lightning" : "message.powerarmor.out_of_fuel"), true);
+                pilot.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+                        this.stunTicks > 0 ? "message.powerarmor.lightning" : "message.powerarmor.out_of_fuel"));
             }
         }
     }
@@ -955,8 +962,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public void packUp(Player player) {
         ItemStack stack = PowerArmorItem.fromSuit(this);
         this.inventory.clearContent(); // they're inside the item now; don't drop them too
-        if (!player.addItem(stack)) {
-            this.spawnAtLocation(stack);
+        if (!player.addItem(stack) && this.level() instanceof ServerLevel level) {
+            this.spawnAtLocation(level, stack);
         }
         this.playSound(SoundEvents.ARMOR_EQUIP_IRON.value(), 1.0F, 0.8F);
         this.discard();
@@ -1022,7 +1029,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 this.playSound(SoundEvents.IRON_DOOR_CLOSE, 1.0F, 0.7F);
             }
         }
-        return InteractionResult.sidedSuccess(this.level().isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     // ---- The hidden ammo store (no slot: one tool uses it) ------------------------------------------------
@@ -1032,10 +1039,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         int room = PowerArmorConfig.NUGGET_STORE_MAX.get() - this.getStoredNuggets();
         if (room <= 0) {
             if (!this.level().isClientSide()) {
-                player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.nuggets_full",
-                        this.getStoredNuggets()), true);
+                player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.nuggets_full",
+                        this.getStoredNuggets()));
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide());
+            return InteractionResult.SUCCESS;
         }
         if (!this.level().isClientSide()) {
             int n = Math.min(room, held.getCount());
@@ -1045,10 +1052,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             }
             this.playSound(SoundEvents.ARMOR_EQUIP_CHAIN.value(), 1.0F, 0.8F);
             this.playSound(SoundEvents.CHAIN_PLACE, 0.8F, 0.7F);
-            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.nuggets_loaded",
-                    n, this.getStoredNuggets()), true);
+            player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.nuggets_loaded",
+                    n, this.getStoredNuggets()));
         }
-        return InteractionResult.sidedSuccess(this.level().isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     /** Both sides: nuggets in the hidden store. */
@@ -1148,7 +1155,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.setRot(player.getYRot(), player.getXRot());
         this.yHeadRot = this.getYRot();
 
-        if (this.isControlledByLocalInstance() && this.pendingJump > 0) {
+        if (this.isLocalInstanceAuthoritative() && this.pendingJump > 0) {
             if (this.launchDelay > 0) {
                 this.launchDelay--;
             } else {
@@ -1156,7 +1163,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                     Vec3 motion = this.getDeltaMovement();
                     double launch = (0.42 + 0.3 * this.pendingJump) * (this.isInWater() ? UNDERWATER_JUMP_SCALE : 1.0);
                     this.setDeltaMovement(motion.x, launch, motion.z); // up to ~2.3 blocks on land
-                    this.hasImpulse = true;
+                    this.needsSync = true; // (was hasImpulse) send the new motion right away
                     this.playSound(SoundEvents.PISTON_EXTEND, 0.8F, 0.6F);
                 }
                 this.pendingJump = 0;
@@ -1171,10 +1178,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      * the torso by (look - legs), so the upper body always faces where the pilot looks.
      */
     @Override
-    protected float tickHeadTurn(float movementYaw, float animStep) {
+    protected void tickHeadTurn(float movementYaw) {
         if (!this.isVehicle()) {
             this.realigning = false;
-            return super.tickHeadTurn(movementYaw, animStep);
+            super.tickHeadTurn(movementYaw);
+            return;
         }
         float look = this.getYHeadRot();
         double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
@@ -1206,7 +1214,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (Math.abs(twist) > MAX_TWIST) {
             this.yBodyRot = look - Math.signum(twist) * MAX_TWIST;
         }
-        return animStep;
     }
 
     /** Client/dev: ticks spent airborne (animation bookkeeping). */
@@ -1218,7 +1225,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public String getMovementAnimationName() {
         var manager = this.animationCache.getManagerForId(this.getId());
         var controller = manager == null ? null : manager.getAnimationControllers().get("movement");
-        var current = controller == null ? null : controller.getCurrentAnimation();
+        var current = controller == null ? null : controller.getCurrentAnimationPoint();
         return current == null ? "-" : current.animation().name().replace("animation.power_armor.", "");
     }
 
@@ -1382,13 +1389,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (this.isFieldHeld()) {
             travelVector = travelVector.multiply(FIELD_HELD_SPEED, 1, FIELD_HELD_SPEED); // the pilot's or the mind's push
         }
-        if ((this.isInWater() || this.isInLava()) && this.isControlledByLocalInstance()) {
+        if ((this.isInWater() || this.isInLava()) && this.isLocalInstanceAuthoritative()) {
             this.travelUnderwater(travelVector); // lava too: vanilla's lava swimming crawled at 0.4 blocks/s
             return;
         }
         boolean wasOnGround = this.onGround();
         super.travel(travelVector);
-        if (this.isVehicle() && this.isControlledByLocalInstance() && wasOnGround && !this.onGround()
+        if (this.isVehicle() && this.isLocalInstanceAuthoritative() && wasOnGround && !this.onGround()
                 && this.getDeltaMovement().y <= 0 && this.pendingJump == 0) {
             AABB below = this.getBoundingBox().expandTowards(0, -STEP_DOWN, 0);
             if (!this.level().noCollision(this, below)) {
@@ -1486,12 +1493,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
-        if (!this.level().isClientSide() && dev.ajaczero.powerarmor.SuitSeal.absorbs(this, source, amount)) {
+    public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+        if (dev.ajaczero.powerarmor.SuitSeal.absorbs(this, source, amount)) {
             return false; // fire, frost & co. kept out by the seal, paid in fuel
         }
-        boolean damaged = super.hurt(source, amount);
-        if (damaged && !this.level().isClientSide() && this.isAlive() && this.reactsToHits()) {
+        boolean damaged = super.hurtServer(level, source, amount);
+        if (damaged && this.isAlive() && this.reactsToHits()) {
             this.triggerAnim("action", "hit"); // play the flinch on every client
         }
         return damaged;
@@ -1508,12 +1515,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     @Override
-    public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
+    public boolean causeFallDamage(double fallDistance, float multiplier, DamageSource source) {
         if (fallDistance > 3) {
             this.playSound(SoundEvents.ANVIL_LAND, 0.6F, 0.5F); // heavy landing, no damage
         }
         if (this.level() instanceof ServerLevel level && fallDistance >= PowerArmorConfig.STOMP_MIN_FALL.get()) {
-            this.lastStompVictims = SuitStomp.stomp(this, level, fallDistance);
+            this.lastStompVictims = SuitStomp.stomp(this, level, (float) fallDistance);
         }
         return false;
     }
@@ -1535,7 +1542,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.setTarget(null);
             this.setBurn(1600, 1600);
             for (Player near : level.getEntitiesOfClass(Player.class, this.getBoundingBox().inflate(32))) {
-                near.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.rogue_rebooted"), true);
+                near.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.rogue_rebooted"));
             }
         }
         // Knock it out first, so the strike's damage below finds it already off: no flinch over the convulsion.
@@ -1622,16 +1629,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (this.isRogue()) {
             // Design sec. 8: a defeated rogue gives up its tool only, not a suit's worth of scrap (that's the lightning
             // reboot's reward: the whole suit).
-            this.spawnAtLocation(this.inventory.getItem(SOCKET_SLOT).copy());
+            this.spawnAtLocation(level, this.inventory.getItem(SOCKET_SLOT).copy());
             this.inventory.clearContent();
             return;
         }
-        this.spawnAtLocation(new ItemStack(Items.IRON_INGOT, 4 + this.random.nextInt(5)));
+        this.spawnAtLocation(level, new ItemStack(Items.IRON_INGOT, 4 + this.random.nextInt(5)));
         for (ItemStack stack : this.inventory.removeAllItems()) {
-            this.spawnAtLocation(stack); // the fuel and the socket tool survive the wreck
+            this.spawnAtLocation(level, stack); // the fuel and the socket tool survive the wreck
         }
         for (int left = this.getStoredNuggets(); left > 0; left -= 64) {
-            this.spawnAtLocation(new ItemStack(Items.IRON_NUGGET, Math.min(64, left))); // and so does the ammo
+            this.spawnAtLocation(level, new ItemStack(Items.IRON_NUGGET, Math.min(64, left))); // and so does the ammo
         }
         this.setStoredNuggets(0);
     }
@@ -1760,7 +1767,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         if (counter != this.lastJumpCounter) {
             this.lastJumpCounter = counter;
-            if (!this.isControlledByLocalInstance()) {
+            if (!this.isLocalInstanceAuthoritative()) {
                 this.jumpAnimTicks = JUMP_ANIM_HOLD_TICKS;
             }
         }
@@ -1798,38 +1805,39 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         // Controller 1: full-body locomotion. 5 ticks of blending between animations.
-        controllers.add(new AnimationController<>(this, "movement", 5, this::movementAnimation)
-                .setAnimationSpeedHandler(suit -> suit.movementAnimationRate()));
+        controllers.add(new AnimationController<>("movement", 5, this::movementAnimation));
         // Controller 2: one-shot upper-body reactions, started from the server with triggerAnim().
         // It is added after "movement", so for the bones it animates it wins; legs keep walking.
-        controllers.add(new AnimationController<>(this, "action", 2, state -> PlayState.STOP)
+        controllers.add(new AnimationController<PowerArmorEntity>("action", 2, state -> PlayState.STOP)
                 .triggerableAnim("hit", HIT)
                 .triggerableAnim("tool_recoil", TOOL_RECOIL)); // the EM projector's push
         // Controller 3: the socket tool's own loop (drill spin, chainsaw chain) while it runs. It keys only
         // the tool's bones, so the arm keeps following walk/run and the aim.
-        controllers.add(new AnimationController<>(this, "tool", 3, this::toolAnimation));
+        controllers.add(new AnimationController<>("tool", 3, this::toolAnimation));
         // Controller 4: the right hand. Added last, so while it plays it owns the right arm (the gait's arm
         // swing pauses, like a person carrying a torch). Stops when there's nothing to hold or no power.
-        controllers.add(new AnimationController<>(this, "right_hand", 4, this::handAnimation)
+        controllers.add(new AnimationController<>("right_hand", 4, this::handAnimation)
                 .triggerableAnim("use_item", USE_ITEM));
     }
 
-    private PlayState movementAnimation(AnimationState<PowerArmorEntity> state) {
+    private PlayState movementAnimation(AnimationTest<PowerArmorEntity> state) {
+        // GeckoLib 5 advances the animation by (time passed x speed) every frame, so the speed may change any time.
+        state.controller().setAnimationSpeed(this.movementAnimationRate());
         if (this.isDeadOrDying()) {
             return state.setAndContinue(DEATH);
         }
         if (!this.isPowered()) {
-            state.getController().transitionLength(this.isStunned() ? 1 : 4); // a strike jolts, it doesn't ease in
+            state.controller().setTransitionTicks(this.isStunned() ? 1 : 4); // a strike jolts, it doesn't ease in
             return state.setAndContinue(this.wasOffWhenLoaded ? POWERED_OFF : this.isStunned() ? ZAPPED : SHUTDOWN);
         }
         if (this.startupTicks > 0) {
-            state.getController().transitionLength(2);
+            state.controller().setTransitionTicks(2);
             return state.setAndContinue(STARTUP);
         }
         // Powered means driven: by the pilot, or by the machine mind (same gaits, picked from how fast it moves).
         // Jump states blend fast (the charge crouch ends exactly where the jump starts).
         boolean jumpState = this.jumpAnimTicks > 0 || this.jumped || (this.clientJumpCharge > 0 && this.onGround());
-        state.getController().transitionLength(jumpState ? 2 : 5);
+        state.controller().setTransitionTicks(jumpState ? 2 : 5);
         if (this.jumpAnimTicks > 0 || this.jumped) {
             return state.setAndContinue(JUMP);
         }
@@ -1849,14 +1857,14 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return state.setAndContinue(IDLE);
     }
 
-    private PlayState toolAnimation(AnimationState<PowerArmorEntity> state) {
+    private PlayState toolAnimation(AnimationTest<PowerArmorEntity> state) {
         if (this.isToolRunning() && this.getSocketStack().getItem() instanceof PowerTool tool && tool.runAnimation() != null) {
             return state.setAndContinue(tool.runAnimation());
         }
         return PlayState.STOP;
     }
 
-    private PlayState handAnimation(AnimationState<PowerArmorEntity> state) {
+    private PlayState handAnimation(AnimationTest<PowerArmorEntity> state) {
         if (this.isDeadOrDying() || !this.canOperate() || !(this.getControllingPassenger() instanceof Player pilot)
                 || pilot.getMainHandItem().isEmpty()) {
             return PlayState.STOP;
@@ -1962,16 +1970,15 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Client: the pilot swung their hand (placed a block, used an item on something): reach with the suit's hand.
      *  Swings of other players arrive as packets, so everyone sees it. */
     private void tickHandSwing() {
-        boolean swinging = this.getControllingPassenger() instanceof Player pilot && pilot.swinging
-                && pilot.swingingArm == InteractionHand.MAIN_HAND;
+        boolean swinging = this.getControllingPassenger() instanceof Player pilot && pilot.isSwinging()
+                && pilot.getCurrentSwing() != null && pilot.getCurrentSwing().hand() == InteractionHand.MAIN_HAND;
         if (swinging && !this.pilotWasSwinging && this.canOperate()) {
             this.triggerAnim("right_hand", "use_item");
         }
         this.pilotWasSwinging = swinging;
     }
 
-    /** Fixed rate per gait. GeckoLib scales the whole elapsed time by this, so changing it
-     *  smoothly mid-loop would make the animation jump; constant values avoid that. */
+    /** Fixed rate per gait (steps in time with the ground speed: WALK_ANIM_AUTHORED / RUN_ANIM_AUTHORED). */
     private double movementAnimationRate() {
         if (this.isDeadOrDying() || !this.isDriven() || !this.canOperate() || this.jumped || this.jumpAnimTicks > 0
                 || this.airTicks >= FALL_POSE_AFTER_TICKS || this.landTicks > 0) {

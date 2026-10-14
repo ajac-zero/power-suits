@@ -399,7 +399,7 @@ public final class SuitGoals {
             this.lift = 0;
             if (dev.ajaczero.powerarmor.item.EmProjectorItem.canHold(this.suit, target)) {
                 // Only from the ground (or water): re-catching a thrown one mid-flight would juggle it and spare it the landing.
-                boolean landed = target.onGround() || target.isInLiquid() || target instanceof net.minecraft.world.entity.FlyingMob;
+                boolean landed = target.onGround() || target.isInLiquid() || SuitTargets.isFlyer(target);
                 boolean inReach = sees && landed && this.suit.distanceTo(target) < REACH;
                 this.suit.setAiAim(target.getBoundingBox().getCenter());
                 this.suit.setAiTrigger(inReach && this.suit.isToolReady());
@@ -568,7 +568,7 @@ public final class SuitGoals {
                             // standing (or swimming, or a flyer): one it threw is left alone until it lands (catching it
                             // mid-fall reset its fall and the zombie survived the 30-block drop)
                             e -> e instanceof net.minecraft.world.entity.monster.Enemy && e.distanceToSqr(centre) < radius * radius
-                                    && (e.onGround() || e.isInLiquid() || e instanceof net.minecraft.world.entity.FlyingMob)
+                                    && (e.onGround() || e.isInLiquid() || SuitTargets.isFlyer(e))
                                     && e.distanceTo(this.suit) < reach - 1 && dev.ajaczero.powerarmor.item.EmProjectorItem.canGrab(e)
                                     && !dev.ajaczero.powerarmor.item.EmProjectorItem.isHeavy(e) // can't be lifted: no fling
                                     && SuitTargets.canAttack(this.suit, e, false) && this.suit.getSensing().hasLineOfSight(e))

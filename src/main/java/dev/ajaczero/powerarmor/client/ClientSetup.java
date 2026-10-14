@@ -22,6 +22,14 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.BULLET.get(), BulletRenderer::new);
     }
 
+    /** Lets PilotView hide pilots: copies "sits in a suit" into every living thing's render state. */
+    @SubscribeEvent
+    public static void renderStateModifiers(net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent event) {
+        event.registerEntityModifier(new com.google.common.reflect.TypeToken<net.minecraft.client.renderer.entity.LivingEntityRenderer<
+                net.minecraft.world.entity.LivingEntity, net.minecraft.client.renderer.entity.state.LivingEntityRenderState, ?>>() {},
+                PilotView::markPilot);
+    }
+
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.POWER_ARMOR.get(), PowerArmorScreen::new);

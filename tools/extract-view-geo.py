@@ -18,8 +18,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / 'src/main/resources/assets/powerarmor'
-SUIT = ASSETS / 'geo/entity/power_armor.geo.json'
-OUT = ASSETS / 'geo/view/power_armor_view.geo.json'
+SUIT = ASSETS / 'geckolib/models/entity/power_armor.geo.json'
+OUT = ASSETS / 'geckolib/models/view/power_armor_view.geo.json'
 
 # root name: (bone whose cubes it takes, size filter, keep (True) or drop (False) those sizes, bone the cubes go to,
 #             top-level bones re-parented under the root, joint to centre on)
