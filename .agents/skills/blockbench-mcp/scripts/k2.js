@@ -19,7 +19,14 @@ const WARM={};
 function plantRaw(pose,s,pivot,Rw){const S=SIDE[s];
   pose[S.foot]=pose[S.foot]||{};pose[S.foot].r=[0,0,0];
   if(WARM[s]){if(!(pose[S.leg]&&pose[S.leg].r))setTo(pose,S.leg,'r',WARM[s][0]);if(!(pose[S.shin]&&pose[S.shin].r))setTo(pose,S.shin,'r',WARM[s][1]);}
-  const err=ik(pose,[[S.leg,0],[S.leg,2],[S.shin,0]],S.foot,rig.bones[S.foot].origin,pivot,{iters:40});
+  let err=ik(pose,[[S.leg,0],[S.leg,2],[S.shin,0]],S.foot,rig.bones[S.foot].origin,pivot,{iters:40});
+  // two knee solutions reach the same pivot, mirrored about flex = -offset (pivot line straight). The solver follows
+  // its warm start; when that would bend the knee backward (flex < KNEE_FLOOR) it takes the mirrored one. With the
+  // pivot in front of the shin's axis (offset < 0) the straight-legged stance is the lower solution, the swing needs
+  // the upper one (it slid into hyperextension otherwise); a pivot behind the axis only ever has the upper one valid.
+  const kOff=kneeOff(s)*180/PI,flex=()=>-(pose[S.shin].r[0]+rig.bones[S.shin].rest[0]);
+  if(flex()<OPT.kneeFloor){const k=Math.max(-2*kOff-flex(),OPT.kneeFloor+5);setTo(pose,S.shin,'r',[-k-rig.bones[S.shin].rest[0],0,0]);
+    err=ik(pose,[[S.leg,0],[S.leg,2],[S.shin,0]],S.foot,rig.bones[S.foot].origin,pivot,{iters:60});}
   WARM[s]=[pose[S.leg].r.slice(),pose[S.shin].r.slice()];
   orient(pose,S.foot,Rw);
   // squared foot: no twist against the shin, a little roll (+-4: the slot's play) to keep the sole flat
@@ -32,7 +39,7 @@ function plantRaw(pose,s,pivot,Rw){const S=SIDE[s];
 // Ankle bend limits (degrees, foot X rotation incl. its rest, + = toes up toward the shin; null = free). A rig whose
 // ankle is hidden inside a boot (Power Armor's stompers: -25..+30) can't bend the foot far against the shin: plant() then rolls the foot instead,
 // about its lowest edge while it touches the ground (the contact point doesn't slip), lifting it if it would dig in.
-const OPT={ankle:null,square:false};   // ankle: [min, max] degrees or null (free); square: the ankle only bends (pitch)
+const OPT={ankle:null,square:false,kneeFloor:2};   // ankle: [min, max] degrees or null (free); square: the ankle only bends (pitch)
 function setAnkleLimit(d){OPT.ankle=Array.isArray(d)?d:[-d,d];}
 // A foot that sits in a slot of the shin (Power Armor's boots) can't twist or roll against it: plant() then keeps the
 // foot's Y/Z at zero total (square to the shin) and only bends it; the sole follows the shin's small yaw/roll.
@@ -99,11 +106,14 @@ function bodyLow(pose){const W=fk(rig,pose);let m=1e9;
 // bone's flex (-(shin x rotation incl. rest)), not the angle between the pivot lines: an ankle pivot behind the knee
 // (Power Armor's boot hinges at its heel, 4 px back) makes the pivot line lean back ~19 deg at a straight bone, and
 // treating the two as equal let reachHip hyperextend the knee by that much.
+// An ankle pivot IN FRONT of the shin's axis (a boot hinged at the shin's front edge) gives a negative offset: the
+// pivot line is straightest with the knee bent by -offset, and a straighter knee bends the pivot line the other way
+// (the length only depends on |flex + offset|; plantRaw picks which knee).
+function kneeOff(s){const S=SIDE[s],h=rig.bones[S.leg].origin,k=rig.bones[S.shin].origin,a=rig.bones[S.foot].origin;
+  const u=sub(k,h),v=sub(a,k);return -Math.atan2(u[1]*v[2]-u[2]*v[1],u[1]*v[1]+u[2]*v[2]);}   // radians; legs hang down
 function legLen(s,kneeDeg){const S=SIDE[s],h=rig.bones[S.leg].origin,k=rig.bones[S.shin].origin,a=rig.bones[S.foot].origin;
-  const u=sub(k,h),v=sub(a,k),A=len(u),B=len(v);
-  // signed angle (YZ plane, + = shin vector leaning back, the flex direction) between the thigh and shin pivot lines
-  const off=-Math.atan2(u[1]*v[2]-u[2]*v[1],u[1]*v[1]+u[2]*v[2]);   // legs hang down (u[1] < 0)
-  const g=kneeDeg*PI/180+off;return Math.sqrt(A*A+B*B+2*A*B*Math.cos(g));}
+  const A=len(sub(k,h)),B=len(sub(a,k));
+  const g=kneeDeg*PI/180+kneeOff(s);return Math.sqrt(A*A+B*B+2*A*B*Math.cos(g));}
 // Hip height (root 'p' y offset) a gait can afford: as high as the planted feet allow with the knees bent at least
 // kmin degrees. The raw limit has sharp dips (double support), so it is eroded (min over +-2w of the cycle) and then
 // box-blurred twice (+-w each): every blurred value only averages limits taken within reach of its own time, so the

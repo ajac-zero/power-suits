@@ -46,6 +46,8 @@ and the legs looked comically large under the upper body. v2, between the old le
   Cube sizes may be fractional now: the texture nets are painted at Blockbench's floored box-UV sizes. Overlapping
   cubes of one bone are inflated by different amounts (0 / -0.05 / -0.1) so their side faces never share a plane
   (thigh_low and shin_ramp flickered against their neighbours).
+  v10 (user, 2026-10-15): the shin's sloped bottom is gone: the shin comes straight down to 0.625 (where the heel step
+  ended), over the boot's sole strip, with the toe in front; the slot no longer opens when the ankle bends.
 Bone pivots keep their heights (hip 22.625, knee 13.625, ankle 3.625), so leg lengths and the animations' IK hold.
 Re-running rebuilds every leg cube (old and v1 names) from a fresh snapshot of the live project.
 
@@ -195,6 +197,14 @@ def shin(f, w, h):
     if f in ('up', 'down'):
         return iron(w, h)                                  # inside (ramp above, heel below)
     return plate(w, h, top_edge=False, bottom_edge=False)
+
+
+def shin_low(f, w, h):
+    if f == 'up':
+        return iron(w, h)                                  # inside (the ramp above)
+    if f == 'down':
+        return solid(EDGE, w, h)                           # the shin's underside over the boot
+    return plate(w, h, top_edge=False, bottom_edge=True)   # dark edge row along the bottom, like the old heel step
 
 
 def cap(f, w, h):
@@ -387,6 +397,7 @@ def tline(z):                                         # the thigh's bottom line 
 _T_LOW = 8 * math.sin(math.radians(TT)) + 0.25         # thick enough to reach the main block's flat bottom at the back
 _ZBB = 3.95 - _T_LOW * math.sin(math.radians(TT))      # its back end leans; the thigh_back strip closes behind it
 _L_LOW = (_ZBB + 3.95) / math.cos(math.radians(TT))
+SHIN_LOW = 0.625                                      # the shin's flat bottom, 0.85 px above the sole's underside
 _RAMP_T = 2.1                                         # ramp: its front end leans 0.96 px, hidden in the 1 px front block
 
 PARTS = [  # name, bone, from, to (right side), inflate, painter, rotation, rotation origin
@@ -406,15 +417,16 @@ PARTS = [  # name, bone, from, to (right side), inflate, painter, rotation, rota
     ('knee_joint', 'shin', [X - 3.5, slope(4) - 0.5, -3.3], [X + 3.5, slope(-3.9) + BAND + 0.6, 2.9], 0, joint, None, None),
     ('shin_front', 'shin', [X - 4.5, 5.0, -5], [X + 4.5, slope(-4), -4], -0.05, cap, None, None),
     ('shin_ramp', 'shin', [X - 4.5, slope(-4) - _RAMP_T, -4], [X + 4.5, slope(-4), 5], -0.1, ramp, [TS, 0, 0], [X, slope(-4), -4]),
-    ('shin_main_f', 'shin', [X - 4.5, 4.625, -5], [X + 4.5, slope(0) - 0.15, 0], 0, shin, None, None),
-    ('shin_main_b', 'shin', [X - 4.5, 4.625, 0], [X + 4.5, slope(4) - 0.1, 4], 0, shin, None, None),
-    ('shin_heel', 'shin', [X - 4.5, 1.623, -5.37], [X + 4.5, 5.623, 2.63], -0.1, heel, [20, 0, 0], [X, 1.623, 2.63]),
-    ('shin_back', 'shin', [X - 4.5, 0.625, 2], [X + 4.5, 4.625, 4], 0, back, None, None),
+    # v10 (user, 2026-10-15): no sloped bottom any more, the shin comes straight down to SHIN_LOW (where the old heel
+    # step ended): the boot shows only as its sole strip under it and the toe in front, so a bending ankle never opens
+    # the slot (toes down) and the toe tucks under the shin's front (toes up) instead of the diagonal crossing the boot
+    ('shin_main_f', 'shin', [X - 4.5, SHIN_LOW, -5], [X + 4.5, slope(0) - 0.15, 0], 0, shin_low, None, None),
+    ('shin_main_b', 'shin', [X - 4.5, SHIN_LOW, 0], [X + 4.5, slope(4) - 0.1, 4], 0, shin_low, None, None),
     # -0.15, not -0.1: the shin's heel piece (-0.1) runs down into it and their sides flickered
     ('boot_foot', 'foot', [X - 4.5, -0.375, -5], [X + 4.5, 4.625, 4], -0.15, foot_box, None, None),
     ('boot_tip', 'foot', [X - 4.5, -0.375, -9], [X + 4.5, 2.625, -4], -0.2, tip, None, None),
     # the slope: turned down 30 deg about the foot's front top edge, ending on the tip's top 3.5 px ahead
-    ('boot_toe', 'foot', [X - 4.5, 2.625, -9], [X + 4.5, 4.625, -5], 0, toe, [-30, 0, 0], [X, 4.625, -5]),
+    ('boot_toe', 'foot', [X - 4.5, 2.625, -9], [X + 4.5, 4.625, -5], -0.05, toe, [-30, 0, 0], [X, 4.625, -5]),   # -0.05: its back corner sits inside the shin (v10: side planes flickered)
 ]
 nets = {}
 def net_area(p):
@@ -459,7 +471,7 @@ for sx, nm in ((1, 'r'), (-1, 'l')):
     SINGLES.append(c)
 
 
-PIVOTS = {'leg': (22.625, 0), 'shin': (KNEE, 0), 'foot': (1.125, 4)}   # bone pivots (y, z); the ankle hinges at the slot's back
+PIVOTS = {'leg': (22.625, 0), 'shin': (KNEE, 0), 'foot': (SHIN_LOW, -5)}   # bone pivots (y, z); v10: the ankle hinges at the shin's front bottom edge (the shin rocks on it; its back lifts off the boot's heel)
 cubes = []
 for side, sx in (('r', 1), ('l', -1)):
     prefix = 'right_' if side == 'r' else 'left_'
