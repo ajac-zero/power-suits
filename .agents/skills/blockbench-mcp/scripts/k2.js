@@ -13,12 +13,35 @@ const REST=(()=>{const W=fk(rig,{});const o={};for(const s of ['r','l']){const f
 const flatPivot=(s,x,z,yaw)=>[x,-minY(s,footR(yaw)),z];
 // plant: put foot pivot at world point with world rotation Rw (IK on thigh x,z + shin x)
 const WARM={};
-function plant(pose,s,pivot,Rw){const S=SIDE[s];
+function plantRaw(pose,s,pivot,Rw){const S=SIDE[s];
   pose[S.foot]=pose[S.foot]||{};pose[S.foot].r=[0,0,0];
   if(WARM[s]){if(!(pose[S.leg]&&pose[S.leg].r))setTo(pose,S.leg,'r',WARM[s][0]);if(!(pose[S.shin]&&pose[S.shin].r))setTo(pose,S.shin,'r',WARM[s][1]);}
   const err=ik(pose,[[S.leg,0],[S.leg,2],[S.shin,0]],S.foot,rig.bones[S.foot].origin,pivot,{iters:40});
   WARM[s]=[pose[S.leg].r.slice(),pose[S.shin].r.slice()];
   orient(pose,S.foot,Rw);return err;}
+// Ankle bend limits (degrees, foot X rotation incl. its rest, + = toes up toward the shin; null = free). A rig whose
+// ankle is hidden inside a boot (Power Armor's stompers: -25..+30) can't bend the foot far against the shin: plant() then rolls the foot instead,
+// about its lowest edge while it touches the ground (the contact point doesn't slip), lifting it if it would dig in.
+const OPT={ankle:null};   // [min, max] degrees or null (free)
+function setAnkleLimit(d){OPT.ankle=Array.isArray(d)?d:[-d,d];}
+function plant(pose,s,pivot,Rw){const S=SIDE[s];
+  if(!OPT.ankle)return plantRaw(pose,s,pivot,Rw);
+  const warm=WARM[s]&&WARM[s].map(a=>a.slice()),[lo0,hi0]=OPT.ankle;
+  const contact=pivot[1]+minY(s,Rw)<0.05;
+  // the foot turned by d degrees (+ = toe up) about the edge that ends up lowest, which stays put while in contact
+  const at=d=>{const R=mm(Rw,rx(d));let pv=pivot;
+    if(d){let best=null,by=1e9;for(const p of FOOT[s].pts){const y=mv(R,p)[1];if(y<by){by=y;best=p;}}
+      if(contact)pv=sub(add(pivot,mv(Rw,best)),mv(R,best));else if(pivot[1]+by<0)pv=[pivot[0],-by,pivot[2]];}
+    if(warm){const y=pose[S.leg]&&pose[S.leg].r?pose[S.leg].r[1]:warm[0][1];setTo(pose,S.leg,'r',[warm[0][0],y,warm[0][2]]);setTo(pose,S.shin,'r',warm[1]);}   // keep a thigh twist the spec set
+    const err=plantRaw(pose,s,pv,R);return {err,x:pose[S.foot].r[0]+rig.bones[S.foot].rest[0]};};
+  const ok=r=>r.x>=lo0-0.05&&r.x<=hi0+0.05;
+  let r=at(0);if(ok(r))return r.err;
+  // the smallest roll that brings the ankle back within its limit (scan, then bisect)
+  const dir=r.x>hi0?-1:1;let lo=0,hi=null;
+  for(let d=2;d<=80;d+=2){if(ok(at(dir*d))){hi=d;break;}lo=d;}
+  if(hi===null){r=at(0);pose[S.foot].r[0]=clamp(r.x,lo0,hi0)-rig.bones[S.foot].rest[0];return r.err;}
+  for(let i=0;i<8;i++){const mid=(lo+hi)/2;if(ok(at(dir*mid)))hi=mid;else lo=mid;}
+  return at(dir*hi).err;}
 // foot rolled about heel (pitch>0, toe up) or toe (pitch<0) around a flat reference pivot
 function rolled(s,flatPv,yaw,pitch,roll=0){
   const R0=footR(yaw),R=footR(yaw,pitch,roll);
@@ -59,3 +82,28 @@ function footLow(pose,s){const W=fk(rig,pose);const f=SIDE[s].foot;let m=1e9;
 // whole-body lowest point (for death/ground contact)
 function bodyLow(pose){const W=fk(rig,pose);let m=1e9;
   for(const n of rig.order){if(n==='muzzle_flash'||n==='grenade')continue;for(const c of rig.bones[n].cubes)for(const p of cubeCorners(c)){const y=xf(W[n],p)[1];if(y<m)m=y;}}return m;}
+// leg length hip pivot -> ankle pivot with the knee bent kneeDeg (thigh/shin lengths from the rig)
+function legLen(s,kneeDeg){const S=SIDE[s],h=rig.bones[S.leg].origin,k=rig.bones[S.shin].origin,a=rig.bones[S.foot].origin;
+  const A=len(sub(k,h)),B=len(sub(a,k));return Math.sqrt(A*A+B*B+2*A*B*Math.cos(kneeDeg*PI/180));}
+// Hip height (root 'p' y offset) a gait can afford: as high as the planted feet allow with the knees bent at least
+// kmin degrees. The raw limit has sharp dips (double support), so it is eroded (min over +-2w of the cycle) and then
+// box-blurred twice (+-w each): every blurred value only averages limits taken within reach of its own time, so the
+// curve never asks more of a leg than kmin, yet stays smooth and close under the limit (a Fourier low-pass had to be
+// shifted down by its worst overshoot, which sank the whole curve). feet: [t => ({s, pivot, contact})] (contact = the
+// foot carries weight); sway/dz(t) = root x/z offset. Samples without contact (flight) are bridged. cap = highest
+// allowed offset. Returns t => y offset (periodic, linear between N samples).
+function reachHip(T,feet,{kmin=10,N=240,w=0.05,cap=1e9,sway=()=>0,dz=()=>0}={}){
+  const raw=[];
+  for(let i=0;i<N;i++){const t=T*i/N;let best=NaN;
+    for(const f of feet){const r=f(t);if(!r.contact)continue;const hp=rig.bones[SIDE[r.s].leg].origin;
+      const dx=r.pivot[0]-(hp[0]+sway(t)),dzz=r.pivot[2]-(hp[2]+dz(t)),L=legLen(r.s,kmin);
+      const y=r.pivot[1]+Math.sqrt(Math.max(0,L*L-dx*dx-dzz*dzz))-hp[1];if(!(best<=y))best=y;}
+    raw.push(Math.min(best,cap));}
+  const idx=raw.map((v,i)=>isNaN(v)?-1:i).filter(i=>i>=0);if(!idx.length)throw new Error('reachHip: no contact');
+  const fill=raw.map((v,i)=>{if(!isNaN(v))return v;let a=i,b=i;while(isNaN(raw[((a%N)+N)%N]))a--;while(isNaN(raw[b%N]))b++;
+    const va=raw[((a%N)+N)%N],vb=raw[b%N];return va+(vb-va)*(i-a)/(b-a);});
+  const R=Math.max(1,Math.round(w*N)),at=(a,i)=>a[((i%N)+N)%N];
+  const ero=fill.map((_,i)=>{let m=1e9;for(let k=-2*R;k<=2*R;k++)m=Math.min(m,at(fill,i+k));return m;});
+  const blur=a=>a.map((_,i)=>{let s=0;for(let k=-R;k<=R;k++)s+=at(a,i+k);return s/(2*R+1);});
+  const y=blur(blur(ero));
+  return t=>{const u=((t/T)%1+1)%1*N,i=Math.floor(u),f=u-i;return at(y,i)*(1-f)+at(y,i+1)*f;};}

@@ -71,19 +71,25 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     // ./gradlew runAutopilot: 42.14 on 1.21.1; on 26.3 the same speed attribute went 2.4% further (0.11865 gave
     // 5.12 blocks/s instead of 5.00), so x43.15.
     private static final double BLOCKS_PER_SECOND_PER_SPEED = 43.15;
-    private static final double WALK_SPEED = 0.11587;     // ~5.0 blocks/s jog (a player walks at 4.3)
-    private static final float SPRINT_MULTIPLIER = 2.0F;  // ~10 blocks/s (a player sprints at 5.6)
+    // A heavy walk and a heavy sprint (2026-10-14 animation overhaul). The suit used to jog at 5 blocks/s and sprint at
+    // 10, but legs this long can't cover 5 blocks/s walking: the walk was really a run (both feet off the ground each
+    // step) with the hips dropped 3.6 px and the knees bent to 128 degrees. A real walk with upright hips is ~2.6
+    // (the boots limit the ankle, which wants short steps).
+    private static final double WALK_SPEED = 0.06035;     // ~2.6 blocks/s walk (a player walks at 4.3)
+    public static final float SPRINT_MULTIPLIER = 2.4F;   // ~6.25 blocks/s sprint (a player sprints at 5.6)
+    /** Ground speed (blocks/s) between the walk and the sprint: the mind, which has no sprint key, runs above it. */
+    private static final double RUN_THRESHOLD = 4.5;
 
     // The ground speed each Blockbench animation was authored for (blocks/s, measured from the
     // planted foot). Playing them at movementSpeed / authoredSpeed keeps the feet from sliding.
-    private static final double WALK_ANIM_AUTHORED = 5.0;
-    private static final double RUN_ANIM_AUTHORED = 9.99;
+    private static final double WALK_ANIM_AUTHORED = 2.604;
+    private static final double RUN_ANIM_AUTHORED = 6.249;
     private static final double WALK_ANIM_RATE = WALK_SPEED * BLOCKS_PER_SECOND_PER_SPEED / WALK_ANIM_AUTHORED;
     private static final double RUN_ANIM_RATE = WALK_SPEED * SPRINT_MULTIPLIER * BLOCKS_PER_SECOND_PER_SPEED / RUN_ANIM_AUTHORED;
 
-    /** Average hip height (model px) of the jog / run cycles: yHip mean in a_walk.js / a_run.js. */
-    private static final float WALK_HIP_MEAN = -3.6F;
-    private static final float RUN_HIP_MEAN = -4.0F;
+    /** Average hip height (model px) of the walk / run cycles: yHip mean in a_walk.js / a_run.js. */
+    private static final float WALK_HIP_MEAN = -0.14F;
+    private static final float RUN_HIP_MEAN = -0.3F;
 
     // ---- Terrain ----------------------------------------------------------------------------
     /** Walking off a ledge up to this high keeps the suit planted (steps down instead of falling).
@@ -682,13 +688,15 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return (pilot.isSprinting() ? PowerArmorConfig.DRAIN_SPRINT : PowerArmorConfig.DRAIN_WALK).get().floatValue();
     }
 
-    /** The same load for the machine mind, judged by how fast it really moves (blocks/tick: 0.25 = 5 blocks/s, a jog). */
+    /** The same load for the machine mind, judged by how fast it really moves. */
     private float aiDrainPerTick() {
-        double speed = this.getDeltaMovement().horizontalDistance();
-        if (speed < 0.02) {
+        // getDeltaMovement() already holds the ground drag for the next tick (block friction 0.6 x 0.91 on normal
+        // ground): it reads ~0.55 of the distance really moved, so undo that to compare with blocks/s.
+        double blocksPerSecond = this.getDeltaMovement().horizontalDistance() * 20 / 0.546;
+        if (blocksPerSecond < 0.7) {
             return PowerArmorConfig.DRAIN_IDLE.get().floatValue();
         }
-        return (speed > 0.35 ? PowerArmorConfig.DRAIN_SPRINT : PowerArmorConfig.DRAIN_WALK).get().floatValue();
+        return (blocksPerSecond > RUN_THRESHOLD ? PowerArmorConfig.DRAIN_SPRINT : PowerArmorConfig.DRAIN_WALK).get().floatValue();
     }
 
     /** Takes one item from the fuel slot and starts burning it. Lava leaves its bucket behind. */
@@ -1813,7 +1821,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (this.getControllingPassenger() instanceof Player pilot) {
             return pilot.isSprinting();
         }
-        return this.visualSpeed > 7.5; // the mind has no sprint key: between the jog (5 blocks/s) and the sprint (10)
+        return this.visualSpeed > RUN_THRESHOLD; // the mind has no sprint key: between the walk and the sprint
     }
 
     private boolean isWalking() {

@@ -5,7 +5,7 @@ const STANCE={};for(const s of ['r','l'])STANCE[s]={pv:flatPivot(s,REST[s].pivot
 const AIR={marine:[0,0.5,0],body:[-4,0,0],torso:[-3,0,0],head:[5,0,0],
   right_arm:[12,0,-6],right_forearm:[10,0,0],left_arm:[8,0,-32],left_forearm:[12,0,0]};
 // right foot tucked forward-up, left trailing; toes hanging down
-const AIRF={r:{d:[0,6.5,-4],pitch:-18},l:{d:[0,5,3.5],pitch:-30}};
+const AIRF={r:{d:[0,4.2,-4],pitch:-12},l:{d:[0,3.4,3.5],pitch:-18}};
 const airFoot=(s,dz=0,dy=0)=>{const b=STANCE[s].pv,a=AIRF[s];return {pv:[b[0],b[1]+a.d[1]+dy,b[2]+a.d[2]+dz],pitch:a.pitch};};
 const setFoot=(P,s,pv,pitch)=>plant(P,s,pv,footR(STANCE[s].yaw,pitch));
 const lerp3=(a,b,w)=>a.map((x,i)=>x+(b[i]-x)*w);

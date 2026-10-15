@@ -38,7 +38,7 @@ export async function evalJSON(code){const r=await call('risky_eval',{code});ret
 export async function model(){const info=await call('get_project_info',{});
   const link=info.content.find(c=>c.type==='resource_link');const r=await readRes(link.uri);return JSON.parse(r.contents[0].text);}
 export const src=f=>fs.readFileSync(DIR+f,'utf8');
-export const KIT_EXPORTS='PI,TAU,clamp,lerp,smooth,smoother,easeOut,easeIn,backOut,wrapDeg,track,pnoise,vnoise,spring,addTo,setTo,ik,orient,SIDE,FOOT,minY,footR,REST,flatPivot,plant,rolled,gaitFoot,footLow,bodyLow,bake,catEval,reduce,L,rig';
+export const KIT_EXPORTS='PI,TAU,clamp,lerp,smooth,smoother,easeOut,easeIn,backOut,wrapDeg,track,pnoise,vnoise,spring,addTo,setTo,ik,orient,SIDE,FOOT,minY,footR,REST,flatPivot,plant,rolled,gaitFoot,footLow,bodyLow,legLen,reachHip,setAnkleLimit,bake,catEval,reduce,L,rig';
 export function kit(m,extra={}){
   const L=new Function(src('lib.js'))();const rig=L.makeRig(m);
   const K=new Function('L','rig',src('k1.js')+'\n'+src('k2.js')+'\n'+src('k3.js')+`\nreturn {${KIT_EXPORTS}};`)(L,rig);
@@ -67,7 +67,7 @@ export const specModel=(m,file)=>specConfig(file).mirror?mirrorModel(m):m;
 // bake a spec file (path relative to cwd) and upload it, replacing any animation with the same name
 export async function build(file,m,opts={}){
   const mirror=!!specConfig(file).mirror;
-  const K=kit(mirror?mirrorModel(m):m,opts.K);const spec=new Function('K',fs.readFileSync(path.resolve(file),'utf8'))(K);const b=K.bake(spec);
+  const K=kit(mirror?mirrorModel(m):m,opts.K);if(specConfig(file).ankle)K.setAnkleLimit(specConfig(file).ankle);const spec=new Function('K',fs.readFileSync(path.resolve(file),'utf8'))(K);const b=K.bake(spec);
   const live=ch=>mirror?mirrorChannels(ch):ch;   // channels for the live rig
   const out={name:spec.name,total:b.total,channels:b.channels.length,mirrored:mirror};
   if(!opts.dry){const up=new Function(src('up.js'))();

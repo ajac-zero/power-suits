@@ -19,7 +19,7 @@ const heftS=spring(heft,{f:2.4,z:0.35,T,loop:true});
 return {name:'animation.marine.idle',length:T,loop:'loop',fps:20,sample(t){
   const P={};
   const W=w(t),B=b(t),BL=bl(t),WL=wl(t);
-  addTo(P,'marine','p',[0.9*W,-0.55+0.12*Math.cos(2*TAU*t/T)+0.08*B,0.15*Math.sin(TAU*t/T+1)]);
+  addTo(P,'marine','p',[0.9*W,0.2+0.12*Math.cos(2*TAU*t/T)+0.08*B,0.15*Math.sin(TAU*t/T+1)]);
   addTo(P,'body','r',[0.4*B,0.6*n1(t),1.4*W]);
   const ty=torsoYaw(t);
   addTo(P,'torso','r',[1.1*B+0.3*n2(t),ty+0.5*n3(t),-2.1*WL]);

@@ -1,1 +1,9 @@
-{"mirror": true, "why": "The specs were written with the socket tools on the right arm. Power Armor swapped the arms (2026-10-13) by mirroring the whole model, so bb.mjs mirrors the model back for the specs and mirrors their output onto the live rig."}
+{
+ "mirror": true,
+ "why": "The specs were written with the socket tools on the right arm. Power Armor swapped the arms (2026-10-13) by mirroring the whole model, so bb.mjs mirrors the model back for the specs and mirrors their output onto the live rig.",
+ "ankle": [
+  -30,
+  40
+ ],
+ "ankle_why": "The boot's ankle cuff (model/art/legs_stomper_art.py) has room for the shin from 30 deg toes-down to 40 deg toes-up; past that plant() rolls the boot (k2.js)."
+}

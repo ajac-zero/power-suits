@@ -512,7 +512,7 @@ public final class SuitGoals {
             net.minecraft.world.entity.player.Player owner = this.suit.getOwner();
             if (owner != null && --this.repath <= 0) {
                 this.repath = 10;
-                this.suit.getNavigation().moveTo(owner, owner.distanceTo(this.suit) > SPRINT ? 2.0 : 1.0);
+                this.suit.getNavigation().moveTo(owner, owner.distanceTo(this.suit) > SPRINT ? PowerArmorEntity.SPRINT_MULTIPLIER : 1.0);
             }
         }
 

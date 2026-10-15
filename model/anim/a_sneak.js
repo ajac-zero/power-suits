@@ -1,10 +1,10 @@
 // SNEAKWALK: deep crouch, rolling heel-toe creep, cannon shouldered, support hand on cannon, scanning head
 const {TAU,spring,addTo,pnoise,plant,gaitFoot,REST,ik,setTo}=K;
 const T=1.0, beta=0.64, S=8.5, zc=-1.4;
-const Gr={x:6.6,zc,S,beta,H:2.0,yaw:REST.r.yaw,strike:7,toe:16,hang:-8,rin:0.18,rout:0.25,vm:0.35};
+const Gr={x:6.6,zc,S,beta,H:1.6,yaw:REST.r.yaw,strike:7,toe:16,hang:-8,rin:0.18,rout:0.25,vm:0.35};
 const Gl={...Gr,x:-6.8,yaw:REST.l.yaw};
 const phR=t=>t/T, phL=t=>t/T+0.5;
-const yHip=t=>-4.3-0.35*Math.cos(2*TAU*(t/T-beta/2));
+const yHip=t=>-1.9-0.35*Math.cos(2*TAU*(t/T-beta/2));
 const yS=spring(yHip,{f:2.2,z:0.4,T,loop:true});const rel=t=>yS(t)-yHip(t);
 const n1=pnoise(31,T,0.6,[1,2,3]),n2=pnoise(32,T,0.5,[1,2,3]);
 const HAND=[-12,16.6,0];               // left hand centre (left_forearm space)

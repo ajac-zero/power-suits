@@ -1,18 +1,24 @@
-// WALK v4 (power armor): heavy jog, short flight phase, stride 18, 0.6 s, ~4.95 blocks/s. Cannon stabilized.
-// v3 march (3.54 b/s) a_walk_v3.js, v2 (2.35) a_walk_v2.js, v1 = old IK walk + a_walk_upper.js.
-const {TAU,spring,addTo,pnoise,plant,gaitFoot,REST}=K;
-const T=0.6, beta=0.375, S=18, zc=-1.8;
-const Gr={x:6.0,zc,S,beta,H:4.6,yaw:REST.r.yaw*0.7,strike:12,toe:22,hang:-14,rin:0.14,rout:0.24,vm:0.45};
-const Gl={...Gr,x:-6.1,yaw:REST.l.yaw*0.7};
+// WALK v5 (power armor, 2026-10-14 overhaul): a real walk, one foot always down (duty > 0.5), hips as high as the
+// planted foot allows (knee >= KMIN, reachHip), heel strike -> flat -> toe-off, low swing. Tool arm stabilized.
+// v4 (5 b/s jog with a flight phase and hips 3.6 px down: knees to 128 deg, clipping) in a_walk_v4.js.
+const {TAU,spring,addTo,pnoise,plant,gaitFoot,reachHip,REST}=K;
+const O=Object.assign({T:0.6,beta:0.6,S:15,zc:0,H:2.0,KMIN:8,strike:10,toe:18,hang:-6,sway:1.1,rout:0.26,w:0.03,kneeOut:6,roll:3.5},K.P||{});
+const {T,beta,S,zc}=O;
+const Gr={x:REST.r.pivot[0],zc,S,beta,H:O.H,yaw:REST.r.yaw*0.9,strike:O.strike,toe:O.toe,hang:O.hang,rin:0.14,rout:O.rout,vm:0.45};
+const Gl={...Gr,x:REST.l.pivot[0],yaw:REST.l.yaw*0.9};
 const phR=t=>t/T, phL=t=>t/T+0.5;
-// jogging: hips lowest at mid-stance (loading), highest in flight
-const yHip=t=>{const p=t/T;return -3.6-0.8*Math.cos(2*TAU*(p-beta/2));};
-const yS=spring(yHip,{f:2.8,z:0.35,T,loop:true});
+const xr=Math.sign(K.rig.bones.right_leg.origin[0]);       // sway toward the stance leg
+const swayX=t=>O.sway*xr*Math.sin(TAU*t/T);
+const foot=(s,t)=>{const ph=s==='r'?phR(t):phL(t);return gaitFoot(s,ph,s==='r'?Gr:Gl);};
+const inStance=(s,t)=>{const ph=(((s==='r'?phR(t):phL(t))%1)+1)%1;return ph<beta;};
+// walking: hips highest over the planted leg, lowest in double support (the curve comes from the leg reach)
+const yHip=O.fixedHip!=null?(t=>O.fixedHip+O.bob*Math.cos(2*TAU*(t/T-beta/2))):reachHip(T,['r','l'].map(s=>t=>({s,pivot:foot(s,t).pivot,contact:inStance(s,t)})),{kmin:O.KMIN,w:O.w,sway:swayX});
+const yS=spring(yHip,{f:2.6,z:0.4,T,loop:true});
 const rel=t=>yS(t)-yHip(t);
-const n1=pnoise(41,T,0.4,[1,2,3]);
-// --- cannon stabilizer (same block in a_walk.js / a_run.js) ---------------------------------------
-// Holds the cannon steady relative to the suit (it sits right in the cockpit view): IK the upper arm
-// so the elbow stays near its cycle-average position, and fix the forearm's world orientation.
+const n1=pnoise(41,T,0.3,[1,2,3]);
+// --- tool arm stabilizer (same block in a_walk.js / a_run.js; spec names: right_* = the live tool arm) -----------
+// Holds the tool steady relative to the suit (it sits in the cockpit view): IK the upper arm so the elbow stays
+// near its cycle-average position, and fix the forearm's world orientation.
 // keepPos / keepRot = how much of the original bob/sway survives (0 = rigid mount).
 function stabilize(raw,T,{keepPos=0.25,keepRot=0.15,N=30}={}){
   const L=K.L,rig=K.rig,EL=rig.bones.right_forearm.origin;let ref=null;
@@ -31,24 +37,28 @@ function stabilize(raw,T,{keepPos=0.25,keepRot=0.15,N=30}={}){
 // ---
 const SAMPLE=stabilize(RAW,T);
 return {name:'animation.marine.walk',length:T,loop:'loop',fps:30,tol:{r:0.05,p:0.01},
- target(t,s){return gaitFoot(s,s==='r'?phR(t):phL(t),s==='r'?Gr:Gl).pivot;},
+ target(t,s){return foot(s,t).pivot;},
  sample(t){return SAMPLE(t);}};
 function RAW(t){
   const P={},f=TAU*t/T,R=rel(t);
-  addTo(P,'marine','p',[0.5*Math.sin(f),yHip(t),0]);
-  const by=5*Math.cos(f),bz=3*Math.sin(f),bx=-5-1*Math.cos(2*f);
+  addTo(P,'marine','p',[swayX(t),yHip(t),0]);
+  // a heavy walk: the weight rolls over onto each planted leg (sway + the waist leaning over it, lagging a little),
+  // the hips turn with the legs, the shoulders counter-turn, little pitch
+  const by=4*Math.cos(f),bz=-O.roll*xr*Math.sin(f-0.35),bx=-0.6*Math.cos(2*f);
   addTo(P,'body','r',[bx,by,bz]);
-  const ty=-7*Math.cos(f-0.25),tz=-4*Math.sin(f-0.15),tx=-2-1.2*Math.cos(2*f-0.6);
+  const ty=-5*Math.cos(f-0.25),tz=1.2*xr*Math.sin(f-0.6),tx=-0.8*Math.cos(2*f-0.6);
   addTo(P,'torso','r',[tx,ty,tz]);
-  addTo(P,'head','r',[-(bx+tx)*0.8-1+0.6*Math.cos(2*f-1.2)+n1(t),-(by+ty)*0.85,-(bz+tz)*0.7]);
-  // cannon arm steady, heavy lag on the bob
-  addTo(P,'right_arm','r',[3+2.4*Math.cos(2*f-1.0)+1.6*R,-(by+ty)*0.45,-2]);
-  addTo(P,'right_forearm','r',[2+2.8*Math.cos(2*f-1.6)+1.3*R,0,0]);
-  addTo(P,'right_pad','p',[0,0.6*R,0]);addTo(P,'right_pad','r',[0,0,2.6*R]);
+  addTo(P,'head','r',[-(bx+tx)*0.8+0.4*Math.cos(2*f-1.2)+n1(t),-(by+ty)*0.85,-(bz+tz)*0.7]);
+  // tool arm steady, a little lag on the bob
+  addTo(P,'right_arm','r',[2+1.5*Math.cos(2*f-1.0)+1.2*R,-(by+ty)*0.45,0]);
+  addTo(P,'right_forearm','r',[1+1.8*Math.cos(2*f-1.6)+1.0*R,0,0]);
+  addTo(P,'right_pad','p',[0,0,0]);
   // free arm swings opposite the left leg
-  addTo(P,'left_arm','r',[18*Math.cos(f-0.35),0,-2+2*Math.sin(f)]);
-  addTo(P,'left_forearm','r',[14+10*Math.cos(f-0.9),0,0]);
-  addTo(P,'left_pad','p',[0,0.6*R,0]);addTo(P,'left_pad','r',[0,0,-2.6*R]);
-  const fr=gaitFoot('r',phR(t),Gr),fl=gaitFoot('l',phL(t),Gl);
+  addTo(P,'left_arm','r',[14*Math.cos(f-0.35),0,0]);
+  addTo(P,'left_forearm','r',[10+7*Math.cos(f-0.9),0,0]);
+  // knees track outward over the toes (thigh twist; the IK keeps the feet where they are), most while loaded
+  for(const s of ['r','l']){const out=Math.sign(K.rig.bones[s==='r'?'right_leg':'left_leg'].origin[0]);
+    const load=0.6+0.4*Math.cos(f-(s==='r'?0.9:0.9+Math.PI));addTo(P,s==='r'?'right_leg':'left_leg','r',[0,-out*O.kneeOut*load,0]);}
+  const fr=foot('r',t),fl=foot('l',t);
   plant(P,'r',fr.pivot,fr.R);plant(P,'l',fl.pivot,fl.R);
   return P;}

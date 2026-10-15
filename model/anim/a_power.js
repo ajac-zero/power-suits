@@ -7,7 +7,7 @@ const {track,addTo,plant,flatPivot,footR,REST,vnoise}=K;
 const MODE=K.MODE||'shutdown';
 const STANCE={};for(const s of ['r','l'])STANCE[s]={pv:flatPivot(s,REST[s].pivot[0],REST[s].pivot[2],REST[s].yaw),R:footR(REST[s].yaw)};
 // The slump: hips down, leaning forward, head hanging to one side, arms dangling, pads dropped.
-const SLUMP={marine_p:[0,-5.5,0.9],body:[-7,0,1.5],torso:[-13,4,-2.5],head:[-9,10,7],
+const SLUMP={marine_p:[0,-4.0,0.9],body:[-7,0,1.5],torso:[-13,4,-2.5],head:[-9,10,7],
   right_arm:[15,0,4],right_forearm:[-7,0,0],left_arm:[17,0,-5],left_forearm:[-12,0,0],
   right_pad:[0,0,-5],left_pad:[0,0,5],right_pad_p:[0,-0.6,0],left_pad_p:[0,-0.6,0]};
 function pose(k,extra){

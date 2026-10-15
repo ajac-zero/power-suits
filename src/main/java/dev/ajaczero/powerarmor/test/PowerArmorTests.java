@@ -1443,9 +1443,9 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    /** Pushed 6 blocks from home, the idle mind walks back at a pilot's jog (vanilla mobs move at speed squared; see
+    /** Pushed 6 blocks from home, the idle mind walks back at a pilot's walk (vanilla mobs move at speed squared; see
      *  travel) and onto the block itself (vanilla's path for a 2-block-wide mob ended 1.7 blocks short). */
-    @SuitTest(timeoutTicks = 100)
+    @SuitTest(timeoutTicks = 140)
     public static void idleSuitWalksBackHome(GameTestHelper helper) {
         PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(7, 2, 4));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
@@ -1457,9 +1457,9 @@ public final class PowerArmorTests {
             fastest[0] = Math.max(fastest[0], suit.position().subtract(last[0]).horizontalDistance() * 20);
             last[0] = suit.position();
         });
-        helper.runAfterDelay(60, () -> {
-            helper.assertTrue(!suit.isAwayFromHome(0.5), "should be back home after 3 s, at " + suit.position().subtract(Vec3.atBottomCenterOf(home)));
-            helper.assertTrue(fastest[0] > 4.3 && fastest[0] < 6, "walks at a jog (~5 blocks/s), fastest " + fastest[0]);
+        helper.runAfterDelay(100, () -> {
+            helper.assertTrue(!suit.isAwayFromHome(0.5), "should be back home after 5 s, at " + suit.position().subtract(Vec3.atBottomCenterOf(home)));
+            helper.assertTrue(fastest[0] > 2.3 && fastest[0] < 3.3, "walks (~2.7 blocks/s), fastest " + fastest[0]);
             helper.succeed();
         });
     }

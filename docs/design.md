@@ -56,7 +56,7 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
 | EM projector (Phase 4) | Hold to grab items / mobs / players (16 blocks; heavy things are pinned instead) and hold them floating; items are collected; release throws, tap shoves; wall slam damage. Socket only. See section 3. |
 | Drill + chainsaw (Phase 5) | Diamond-tipped 3x3 drill (pickaxe + shovel blocks, diamond tier) and a chainsaw (axe blocks + leaves, fells natural trees above the cut). BreakEvent per block, vanilla drops, crack overlay, tool-bone loop animations. See section 3. |
 | Suit menu (Phase 1) | Socket slot (power tools only), fuel slot, live suit preview, burn flame, hull/fuel/status display, Pack up button. See section 5. |
-| Movement | Jog 5 blocks/s, sprint 10 (players: 4.3 / 5.6). Steps up 1 block, steps down up to 2 without falling; step changes eased for camera + model. Jump: hold Space (crouch wind-up, horse jump bar), release; launch 2 ticks later. |
+| Movement | Walk 2.6 blocks/s, sprint 6.25 (players: 4.3 / 5.6; until 2026-10-14 a 5 blocks/s jog and a 10 sprint, see Animations). Steps up 1 block, steps down up to 2 without falling; step changes eased for camera + model. Jump: hold Space (crouch wind-up, horse jump bar), release; launch 2 ticks later. |
 | Turning | Legs face the direction of travel; torso + arms twist up to 90 deg and lean to face the pilot's view. |
 | Camera | First person: eye at the visor, only the suit's legs drawn, arms = cockpit viewmodel (tool left, gauntlet + item right), cockpit footfall bob, speed FOV. Third person: camera pulled back to 6.5. |
 | Damage | Hits on the pilot go to the suit (except drowning, starvation, void//kill; "suffocating" because the pilot's head pokes out of the hitbox against a wall is ignored). Suit: 100 HP, armor 12, toughness 4, full knockback resistance, no fall damage. Death: animation, pilot ejected, drops iron. |
@@ -67,7 +67,7 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
 | Smashing (2026-10-13) | While piloted, powered and steering: blocks in `powerarmor:suit_smashes_walking` (leaves, panes, cobweb, snow layer, berry bush, azalea, dripleaf, bamboo) break in the hitbox + 0.6 ahead + under the feet; sprinting adds `suit_smashes_sprinting` (glass, ice) 1.1 ahead. No drops, BreakEvent via ToolMining. Config switch. |
 | Lightning (2026-10-13) | A weakness: a strike on a suit with fuel knocks it out for 100 ticks (electrified once + shutdown slump, sparks), no seal meanwhile, then startup. No boost. The bolt itself doesn't ignite a running suit; the fire it leaves at the suit's feet catches the knocked-out one. A suit that is off (empty, knocked out, standing up) doesn't flinch when hit (`reactsToHits`): the hit animation would cut into the convulsion, slump and startup. |
 | Water | Fallout-style: sinks (~2.5 blocks/s), walks the bottom at half speed, suit never drowns, ignores currents. Powered: the pilot breathes the suit's air; unpowered: their air drains once their head is under. Lava: same bottom-walking at 35% speed (vanilla lava swimming crawled at 0.4 blocks/s). |
-| Animations | idle, walk (jog), run, jump_charge, jump, fall, land, hit, death, shutdown, powered_off, startup, electrified (lightning), tool_recoil, hold_item/use_item, drill_run, chainsaw_run (+ unused: attack, throw, stim, idle_fidget, sneakwalk). Walk/run hold the cannon steady (arm IK stabiliser). |
+| Animations | Upright stance (knees ~20 deg). The walk is a real walk (one foot always down, hips as high as the planted leg allows); the sprint a heavy run with a short flight; the sprint is an energetic bounding run (lean, heel kick, knee drive, arm pump, footfall jolt); knees stay under ~115 deg (the back of the knee is cut away so it bends cleanly that far). Overhaul of 2026-10-14: the old 5 blocks/s walk was a jog with the hips 3.6 px down and the knees bent to 128 deg (run 150), clipping the shin through the thigh. idle, walk, run, jump_charge, jump, fall, land, hit, death, shutdown, powered_off, startup, electrified (lightning), tool_recoil, hold_item/use_item, drill_run, chainsaw_run (+ unused: attack, throw, stim, idle_fidget, sneakwalk). Walk/run hold the cannon steady (arm IK stabiliser). |
 | Old saves | Suits loaded from older versions get current base stats (`readAdditionalSaveData`). |
 
 ## 3. Arms: one hand, one power socket
@@ -207,7 +207,7 @@ An empty suit is a mob, like a horse: a machine mind drives it whenever nobody e
   Without a pilot, blocks are broken as a FakePlayer with the owner's UUID (`blockBreaker`), so claim mods veto as
   for the owner. The mind aims with `setAiAim` (snaps the head onto a point, after the goals and before vanilla's look
   control) and fires with `setAiTrigger`. Vanilla mobs move at speed squared (MoveControl passes the speed as the
-  forward input); `travel` normalises the mind's input so speed modifier 1.0 = the pilot's 5 blocks/s jog.
+  forward input); `travel` normalises the mind's input so speed modifier 1.0 = the pilot's walk (2.6 blocks/s).
 
 ## 9. Out of scope for now
 Wearable armor, multiple sockets, upgrade trees, multiplayer permissions beyond the server's PvP setting.

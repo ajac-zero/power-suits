@@ -234,7 +234,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   To park one, take the fuel out. Its state is only set on its first tick: tests wait 2 ticks before boarding/aiming.
 - **Vanilla mobs move at speed squared**: `MoveControl` passes the speed as the forward input (zza) and `moveRelative`
   applies it again (a 0.119 suit crawled at 0.6 blocks/s). `PowerArmorEntity.travel` normalises the mind's input, so
-  a navigation speed of 1.0 = the pilot's jog. Measure position deltas, not `getDeltaMovement()` (it already holds the
+  a navigation speed of 1.0 = the pilot's walk. Measure position deltas, not `getDeltaMovement()` (it already holds the
   next tick's drag: it read 2.9 for a 5.2 blocks/s walk).
 - **`Mob.serverAiStep` is final**: gate the mind with each goal's `canUse`/`canContinueToUse` + `updateControlFlags`.
   `LookControl` zeroes the pitch and eases the head to the body every tick unless asked to look; `customServerAiStep`
@@ -250,6 +250,11 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **Autopilot worlds are peaceful** (`AutoPilot` creates them so): monsters spawned by a scene vanish the same tick. Set
   the difficulty in the scene (the mind scene sets NORMAL before its zombies).
 - **`AABB.clip` misses a segment that starts inside the box**: line-of-fire checks also test `box.contains(start)`.
+- **Gaits come from the legs, not the game speed**: legs this long (hip 22.6 px) can't walk 5 blocks/s. The old "walk" had
+  each foot down only 37.5% of the cycle (a run: both feet in the air) and dropped the hips 3.6 px, which bent the knees
+  to 128 deg through the thigh. Hip height is very sensitive (1 px lower ~ +20 deg of knee): derive it from the planted
+  leg's reach (`reachHip` in the skill's `k2.js`) and pick the game speed from the gait (2026-10-14: walk 2.6, sprint 6.25). A limited ankle (`model/anim/kit.json` "ankle") needs straight-ish stance
+  knees and short steps: a bent stance knee tilts the shin forward by about half its angle.
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
   `model/anim/` (walk/run carry a tool-arm `stabilize()` wrapper). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.

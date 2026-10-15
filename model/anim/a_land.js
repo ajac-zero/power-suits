@@ -4,7 +4,7 @@ const {TAU,track,spring,addTo,plant,flatPivot,footR,REST,vnoise}=K;
 const T=0.6;
 const STANCE={};for(const s of ['r','l'])STANCE[s]={pv:flatPivot(s,REST[s].pivot[0],REST[s].pivot[2],REST[s].yaw),R:footR(REST[s].yaw)};
 const imp=t=>t<0.03?t/0.03:Math.exp(-(t-0.03)/0.06);
-const drop=track([[0,0],[0.08,-6.5,'out'],[0.2,-5.2],[0.45,-0.6],[0.6,0]]);
+const drop=track([[0,0],[0.08,-4.0,'out'],[0.2,-3.2],[0.45,-0.6],[0.6,0]]);
 const tor=spring(imp,{f:3.2,z:0.45,T}), arm=spring(imp,{f:4.5,z:0.3,T}), pad=spring(imp,{f:8,z:0.22,T});
 const env=t=>Math.exp(-t/0.12), sh1=vnoise(61,28,1), sh2=vnoise(62,31,1);
 const fade=t=>t<0.5?1:Math.max(0,1-(t-0.5)/0.1);    // everything exactly 0 at the end
