@@ -8,7 +8,7 @@ Used to build a full, "premium" animation set for a Bedrock entity: every animat
 | `lib.js` | Math + rig: `makeRig(model)`, `fk(rig,pose)` (exact Blockbench convention), `rot`, `euler` (ZYX), `xf`, `cubeCorners`. |
 | `k1.js` | Authoring: `track` (eased key tracks), `pnoise` (seamless loop noise), `vnoise` (one-shot noise), `spring` (damped follower), `addTo`/`setTo`, `ik` (damped least squares), `orient` (world rotation \u2192 local euler). |
 | `k2.js` | Legs: `plant(pose, 'r'|'l', pivot, R)`, `flatPivot`, `footR(yaw,pitch,roll)`, `rolled` (heel/toe roll about the contact edge), `gaitFoot(side, phase, G)`, `REST`, `footLow`, `bodyLow`. Assumes bones `right_leg/right_shin/right_foot` (and `left_*`) and a foot cube named `sole*`; adapt `SIDE` otherwise. |
-| `k2.js` (gait heights) | `legLen(side, knee)` and `reachHip(T, feet, {kmin, harm, sway})`: the hip height a gait can afford, as high as the planted feet allow with the knee bent at least `kmin`, low-passed to a few harmonics (walks: hips highest over the planted leg). |
+| `k2.js` (gait heights) | `legLen(side, knee)` and `reachHip(T, feet, {kmin, harm, sway})`: the hip height a gait can afford, as high as the planted feet allow with the knee bent at least `kmin`, low-passed to a few harmonics (walks: hips highest over the planted leg). `knee` is the bone's flex: legLen corrects for an ankle pivot off the shin's axis (before 2026-10-15 it took the pivot-line angle, and a heel-hinged boot 4 px back hyperextended knees by 19 deg). |
 | `bbrun.mjs`, `views.mjs`, `film.mjs`, `gif.mjs`, `isolate.mjs`, `shots_run.js` | From node: run a codemode-style script, render stills / animation frames / a GIF, hide all but one leg and the hips, review sheet. |
 | `knees.mjs` | `node knees.mjs spec.js ...`: knee / thigh / hip ranges and the knee while a foot is on the ground, per spec (`DUMP=1` per frame). |
 | `k3.js` | `bake(spec)`: sample \u2192 drop neutral channels \u2192 unwrap euler \u2192 reduce keys (Catmull-Rom error \u2264 tol, max gap). |
@@ -19,7 +19,7 @@ Used to build a full, "premium" animation set for a Bedrock entity: every animat
 | `vfeet.mjs` | Live lowest-foot check through Blockbench's own interpolation. |
 | `clip.js`, `diag.js`, `montage.py` | Penetration depth, IK error/joint ranges, image tiling. |
 | `check.mjs` | `node check.mjs spec.js ...`: dry bake + IK error, lowest foot, joint ranges per spec. |
-| `speed.mjs` / `livespeed.mjs` | Ground speed (blocks/s) of a gait from the spec (exact) / from Blockbench's live playback via `animation_timeline`. |
+| `speed.mjs` / `livespeed.mjs` | Ground speed (blocks/s) of a gait from the spec (exact; flat-stance samples: foot level at its most common height) / from Blockbench's live playback via `animation_timeline`. |
 | `cannon.mjs` | Muzzle travel and aim swing of the cannon over a cycle (jiggle metric). |
 | `trace.mjs` | Per-time leg angles, foot lows and IK error of a spec (`check.mjs` and `trace.mjs` honour `K_JSON` for multi-mode specs). |
 | `zfight.mjs` | Coplanar same-direction face scan (z-fighting). Rest pose by default; `ANIMS="anim@N;..." TOL=0.05 SKIP=bone,...` scans live animated poses. |
@@ -79,6 +79,11 @@ live world matrix after = S·before·S (S = diag(-1,1,1)) with names swapped, fo
 (was exact, 0 deviation). Why not swap only the arm keys: the free arm would swing with the same-side leg, and an
 IK-stabilised arm compensated the torso motion of the old side (sway doubles). Then add `kit.json` to the spec
 folder so re-bakes stay valid, and mirror anything outside the model (game-side offsets, item models).
+
+## Square feet sink at the edges
+With `ankleSquare` the foot follows the shin's roll, so a toed-out, swaying gait put one sole edge 0.2 px under the
+ground; `plant()` now lifts such a foot until its lowest corner is at y 0 (IK error against the gait's target then
+reads up to that lift). `film.mjs` takes a JSON view (`'{"pos":[..],"target":[..]}'`) for close-ups.
 
 ## Baking and upload pitfalls
 - `create_animation` rejects keys past `animation_length` ("must include the last keyframe"). Sample with `N = ceil(length\u00b7fps)` and clamp `t = min(i/fps, length)`; a rounded N silently drops the loop's last frame.

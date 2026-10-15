@@ -23,7 +23,11 @@ function plantRaw(pose,s,pivot,Rw){const S=SIDE[s];
   WARM[s]=[pose[S.leg].r.slice(),pose[S.shin].r.slice()];
   orient(pose,S.foot,Rw);
   // squared foot: no twist against the shin, a little roll (+-4: the slot's play) to keep the sole flat
-  if(OPT.square){const rr=rig.bones[S.foot].rest;pose[S.foot].r[1]=-rr[1];pose[S.foot].r[2]=clamp(pose[S.foot].r[2]+rr[2],-4,4)-rr[2];}
+  if(OPT.square){const rr=rig.bones[S.foot].rest;pose[S.foot].r[1]=-rr[1];pose[S.foot].r[2]=clamp(pose[S.foot].r[2]+rr[2],-4,4)-rr[2];
+    // the squared foot follows the shin's roll, so one sole edge can dip under a target set for a level foot (0.2 px
+    // on a toed-out, swaying walk): lift the foot until its lowest corner is back on the ground (y 0)
+    if(!OPT.lifting){const lo=footLow(pose,s);if(lo<-0.005&&pivot[1]+minY(s,Rw)<0.05){OPT.lifting=true;
+      try{return plantRaw(pose,s,[pivot[0],pivot[1]-lo,pivot[2]],Rw);}finally{OPT.lifting=false;}}}}
   return err;}
 // Ankle bend limits (degrees, foot X rotation incl. its rest, + = toes up toward the shin; null = free). A rig whose
 // ankle is hidden inside a boot (Power Armor's stompers: -25..+30) can't bend the foot far against the shin: plant() then rolls the foot instead,
@@ -91,9 +95,15 @@ function footLow(pose,s){const W=fk(rig,pose);const f=SIDE[s].foot;let m=1e9;
 // whole-body lowest point (for death/ground contact)
 function bodyLow(pose){const W=fk(rig,pose);let m=1e9;
   for(const n of rig.order){if(n==='muzzle_flash'||n==='grenade')continue;for(const c of rig.bones[n].cubes)for(const p of cubeCorners(c)){const y=xf(W[n],p)[1];if(y<m)m=y;}}return m;}
-// leg length hip pivot -> ankle pivot with the knee bent kneeDeg (thigh/shin lengths from the rig)
+// leg length hip pivot -> ankle pivot with the knee bent kneeDeg (thigh/shin lengths from the rig). kneeDeg is the
+// bone's flex (-(shin x rotation incl. rest)), not the angle between the pivot lines: an ankle pivot behind the knee
+// (Power Armor's boot hinges at its heel, 4 px back) makes the pivot line lean back ~19 deg at a straight bone, and
+// treating the two as equal let reachHip hyperextend the knee by that much.
 function legLen(s,kneeDeg){const S=SIDE[s],h=rig.bones[S.leg].origin,k=rig.bones[S.shin].origin,a=rig.bones[S.foot].origin;
-  const A=len(sub(k,h)),B=len(sub(a,k));return Math.sqrt(A*A+B*B+2*A*B*Math.cos(kneeDeg*PI/180));}
+  const u=sub(k,h),v=sub(a,k),A=len(u),B=len(v);
+  // signed angle (YZ plane, + = shin vector leaning back, the flex direction) between the thigh and shin pivot lines
+  const off=-Math.atan2(u[1]*v[2]-u[2]*v[1],u[1]*v[1]+u[2]*v[2]);   // legs hang down (u[1] < 0)
+  const g=kneeDeg*PI/180+off;return Math.sqrt(A*A+B*B+2*A*B*Math.cos(g));}
 // Hip height (root 'p' y offset) a gait can afford: as high as the planted feet allow with the knees bent at least
 // kmin degrees. The raw limit has sharp dips (double support), so it is eroded (min over +-2w of the cycle) and then
 // box-blurred twice (+-w each): every blurred value only averages limits taken within reach of its own time, so the

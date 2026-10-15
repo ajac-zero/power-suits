@@ -1,9 +1,17 @@
-// WALK v5 (power armor, 2026-10-14 overhaul): a real walk, one foot always down (duty > 0.5), hips as high as the
-// planted foot allows (knee >= KMIN, reachHip), heel strike -> flat -> toe-off, low swing. Tool arm stabilized.
-// v4 (5 b/s jog with a flight phase and hips 3.6 px down: knees to 128 deg, clipping) in a_walk_v4.js.
+// WALK v6 (2026-10-15, legs v9): a slow, heavy stride. A 1.0 s cycle instead of v5's 0.6 with steps half as long
+// again (stance 22 px instead of 15), 2.22 blocks/s: longer double support (duty 0.62), the hips dropping between
+// the feet and rising over the planted leg (reachHip, knee >= KMIN), a weight-accepting knee dip after each heel strike,
+// a footfall jolt through the torso, more weight roll over the planted leg, a slower and wider free-arm swing.
+// Tool arm stabilized. v5 (0.6 s, 2.6 blocks/s, shorter quicker steps) in a_walk_v5.js; v4 jog in a_walk_v4.js.
 const {TAU,spring,addTo,pnoise,plant,gaitFoot,reachHip,REST}=K;
-const O=Object.assign({T:0.6,beta:0.6,S:15,zc:0,H:2.0,KMIN:8,strike:10,toe:18,hang:-6,sway:1.1,rout:0.26,w:0.03,kneeOut:0,roll:3.5},K.P||{});
+const O=Object.assign({T:1.0,beta:0.62,S:22,zc:0,H:2.6,KMIN:10,strike:20,toe:20,hang:-8,sway:1.5,rout:0.26,w:0.03,kneeOut:0,roll:4.5,
+  dip:0.4,jolt:1.0,arm:18,yaw:5,
+  // the boot may point its toes down at most 4 deg against the shin: further, the shin's front lifts off the boot and
+  // shows the dark top of the boot's slot (user, 2026-10-15). The forward step then lands on the heel and rocks the
+  // boot flat only once the shin comes over it (plant() rolls the boot about its heel).
+  ankle:[-4,30]},K.P||{});
 const {T,beta,S,zc}=O;
+if(O.ankle)K.setAnkleLimit(O.ankle);   // [toes down, toes up] against the shin; kit.json's range otherwise
 const Gr={x:REST.r.pivot[0],zc,S,beta,H:O.H,yaw:REST.r.yaw,strike:O.strike,toe:O.toe,hang:O.hang,rin:0.14,rout:O.rout,vm:0.45};
 const Gl={...Gr,x:REST.l.pivot[0],yaw:REST.l.yaw};
 const phR=t=>t/T, phL=t=>t/T+0.5;
@@ -13,9 +21,16 @@ const foot=(s,t)=>{const ph=s==='r'?phR(t):phL(t);return gaitFoot(s,ph,s==='r'?G
 const inStance=(s,t)=>{const ph=(((s==='r'?phR(t):phL(t))%1)+1)%1;return ph<beta;};
 // walking: hips highest over the planted leg, lowest in double support (the curve comes from the leg reach)
 const yHip=O.fixedHip!=null?(t=>O.fixedHip+O.bob*Math.cos(2*TAU*(t/T-beta/2))):reachHip(T,['r','l'].map(s=>t=>({s,pivot:foot(s,t).pivot,contact:inStance(s,t)})),{kmin:O.KMIN,w:O.w,sway:swayX});
+// weight acceptance: the planted knee gives a little after each heel strike (an impulse shaped dip, both feet)
+const hit=u=>{u=((u%1)+1)%1;return u<0.06?Math.sin(Math.PI/2*u/0.06):Math.exp(-(u-0.06)/0.09);};
+const dipY=t=>-O.dip*(hit(phR(t))+hit(phL(t)));
 const yS=spring(yHip,{f:2.6,z:0.4,T,loop:true});
 const rel=t=>yS(t)-yHip(t);
 const n1=pnoise(41,T,0.3,[1,2,3]);
+// footfall impulse (both heel strikes) through springs: torso pitch forward, the head nods after it, the free arm swings on
+const imp=t=>hit(phR(t)-0.0)+hit(phL(t)-0.0);
+const sT=spring(imp,{f:4,z:0.35,T,loop:true}),sH=spring(imp,{f:3,z:0.3,T,loop:true}),sA=spring(imp,{f:2.5,z:0.25,T,loop:true});
+const jolt=t=>({t:sT(t),hs:sH(t),a:sA(t)-imp(t)});
 // --- tool arm stabilizer (same block in a_walk.js / a_run.js; spec names: right_* = the live tool arm) -----------
 // Holds the tool steady relative to the suit (it sits in the cockpit view): IK the upper arm so the elbow stays
 // near its cycle-average position, and fix the forearm's world orientation.
@@ -36,26 +51,28 @@ function stabilize(raw,T,{keepPos=0.25,keepRot=0.15,N=30}={}){
 }
 // ---
 const SAMPLE=stabilize(RAW,T);
-return {name:'animation.marine.walk',length:T,loop:'loop',fps:30,tol:{r:0.05,p:0.01},
+return {name:'animation.marine.walk',length:T,loop:'loop',fps:30,tol:{r:0.05,p:0.01},speed:S/(beta*T)/16,
  target(t,s){return foot(s,t).pivot;},
  sample(t){return SAMPLE(t);}};
 function RAW(t){
   const P={},f=TAU*t/T,R=rel(t);
-  addTo(P,'marine','p',[swayX(t),yHip(t),0]);
+  addTo(P,'marine','p',[swayX(t),yHip(t)+dipY(t),0]);
+  // footfall jolt: each heel strike shakes the upper body (springs of different stiffness: torso, head, tool arm)
+  const J=jolt(t);
   // a heavy walk: the weight rolls over onto each planted leg (sway + the waist leaning over it, lagging a little),
   // the hips turn with the legs, the shoulders counter-turn, little pitch
-  const by=4*Math.cos(f),bz=-O.roll*xr*Math.sin(f-0.35),bx=-0.6*Math.cos(2*f);
+  const by=O.yaw*Math.cos(f),bz=-O.roll*xr*Math.sin(f-0.35),bx=-0.6*Math.cos(2*f);
   addTo(P,'body','r',[bx,by,bz]);
   const ty=-5*Math.cos(f-0.25),tz=1.2*xr*Math.sin(f-0.6),tx=-0.8*Math.cos(2*f-0.6);
-  addTo(P,'torso','r',[tx,ty,tz]);
-  addTo(P,'head','r',[-(bx+tx)*0.8+0.4*Math.cos(2*f-1.2)+n1(t),-(by+ty)*0.85,-(bz+tz)*0.7]);
+  addTo(P,'torso','r',[tx-1.2*O.jolt*J.t,ty,tz]);   // -x: the top pitches forward
+  addTo(P,'head','r',[-(bx+tx)*0.8+O.jolt*(0.8*J.t-1.0*J.hs)+0.4*Math.cos(2*f-1.2)+n1(t),-(by+ty)*0.85,-(bz+tz)*0.7]);
   // tool arm steady, a little lag on the bob
   addTo(P,'right_arm','r',[2+1.5*Math.cos(2*f-1.0)+1.2*R,-(by+ty)*0.45,0]);
   addTo(P,'right_forearm','r',[1+1.8*Math.cos(2*f-1.6)+1.0*R,0,0]);
   addTo(P,'right_pad','p',[0,0,0]);
   // free arm swings opposite the left leg
-  addTo(P,'left_arm','r',[14*Math.cos(f-0.35),0,0]);
-  addTo(P,'left_forearm','r',[10+7*Math.cos(f-0.9),0,0]);
+  addTo(P,'left_arm','r',[O.arm*Math.cos(f-0.35)+O.jolt*1.5*J.a,0,0]);
+  addTo(P,'left_forearm','r',[12+0.55*O.arm*Math.cos(f-0.9)+O.jolt*2*J.a,0,0]);
   // extra knee-out twist while loaded (0: the rest pose's 7 deg hip twist already points knees and toes out; the foot
   // must stay square to the shin, whose slot it sits in)
   for(const s of ['r','l']){const out=Math.sign(K.rig.bones[s==='r'?'right_leg':'left_leg'].origin[0]);
