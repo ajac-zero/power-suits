@@ -41,7 +41,7 @@ function sampleRaw(t){
   // legs: blend planted IK stance into FK collapse
   const w=ikW(t);const fkL={right_leg:rLeg(t),right_shin:rShin(t),right_foot:rFoot(t),left_leg:lLeg(t),left_shin:lShin(t),left_foot:lFoot(t)};
   for(const n in fkL)fkL[n]=fkL[n].map((v,i)=>v+FIX[n][i]);
-  for(const n of ['right_foot','left_foot']){const r0=K.rig.bones[n].rest[0];fkL[n][0]=Math.max(-30,Math.min(40,fkL[n][0]+r0))-r0;}   // the boots' ankle range (kit.json)
+  for(const n of ['right_foot','left_foot']){const r0=K.rig.bones[n].rest[0];fkL[n][0]=Math.max(-30,Math.min(30,fkL[n][0]+r0))-r0;}   // the boots' ankle range (kit.json)
   if(w>0){const Q=JSON.parse(JSON.stringify(P));Q.marine.p=[mp[0],mp[1]+0.2,mp[2]];
     for(const s of ['r','l'])plant(Q,s,STANCE[s].pv,STANCE[s].R);
     for(const n in fkL)P[n]={r:fkL[n].map((v,i)=>v*(1-w)+Q[n].r[i]*w)};

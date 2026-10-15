@@ -18,12 +18,18 @@ function plantRaw(pose,s,pivot,Rw){const S=SIDE[s];
   if(WARM[s]){if(!(pose[S.leg]&&pose[S.leg].r))setTo(pose,S.leg,'r',WARM[s][0]);if(!(pose[S.shin]&&pose[S.shin].r))setTo(pose,S.shin,'r',WARM[s][1]);}
   const err=ik(pose,[[S.leg,0],[S.leg,2],[S.shin,0]],S.foot,rig.bones[S.foot].origin,pivot,{iters:40});
   WARM[s]=[pose[S.leg].r.slice(),pose[S.shin].r.slice()];
-  orient(pose,S.foot,Rw);return err;}
+  orient(pose,S.foot,Rw);
+  // squared foot: no twist against the shin, a little roll (+-4: the slot's play) to keep the sole flat
+  if(OPT.square){const rr=rig.bones[S.foot].rest;pose[S.foot].r[1]=-rr[1];pose[S.foot].r[2]=clamp(pose[S.foot].r[2]+rr[2],-4,4)-rr[2];}
+  return err;}
 // Ankle bend limits (degrees, foot X rotation incl. its rest, + = toes up toward the shin; null = free). A rig whose
 // ankle is hidden inside a boot (Power Armor's stompers: -25..+30) can't bend the foot far against the shin: plant() then rolls the foot instead,
 // about its lowest edge while it touches the ground (the contact point doesn't slip), lifting it if it would dig in.
-const OPT={ankle:null};   // [min, max] degrees or null (free)
+const OPT={ankle:null,square:false};   // ankle: [min, max] degrees or null (free); square: the ankle only bends (pitch)
 function setAnkleLimit(d){OPT.ankle=Array.isArray(d)?d:[-d,d];}
+// A foot that sits in a slot of the shin (Power Armor's boots) can't twist or roll against it: plant() then keeps the
+// foot's Y/Z at zero total (square to the shin) and only bends it; the sole follows the shin's small yaw/roll.
+function setAnkleSquare(b){OPT.square=!!b;}
 function plant(pose,s,pivot,Rw){const S=SIDE[s];
   if(!OPT.ankle)return plantRaw(pose,s,pivot,Rw);
   const warm=WARM[s]&&WARM[s].map(a=>a.slice()),[lo0,hi0]=OPT.ankle;

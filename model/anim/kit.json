@@ -3,7 +3,8 @@
  "why": "The specs were written with the socket tools on the right arm. Power Armor swapped the arms (2026-10-13) by mirroring the whole model, so bb.mjs mirrors the model back for the specs and mirrors their output onto the live rig.",
  "ankle": [
   -30,
-  40
+  30
  ],
- "ankle_why": "The boot's ankle cuff (model/art/legs_stomper_art.py) has room for the shin from 30 deg toes-down to 40 deg toes-up; past that plant() rolls the boot (k2.js)."
+ "ankle_why": "The foot swings up into the slot under the shin's sloped underside (model/art/legs_stomper_art.py v3): about 33 deg toes-up hidden; the range is -30..+30, past which plant() rolls the boot (k2.js).",
+ "ankleSquare": true
 }

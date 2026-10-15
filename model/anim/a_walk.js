@@ -2,10 +2,10 @@
 // planted foot allows (knee >= KMIN, reachHip), heel strike -> flat -> toe-off, low swing. Tool arm stabilized.
 // v4 (5 b/s jog with a flight phase and hips 3.6 px down: knees to 128 deg, clipping) in a_walk_v4.js.
 const {TAU,spring,addTo,pnoise,plant,gaitFoot,reachHip,REST}=K;
-const O=Object.assign({T:0.6,beta:0.6,S:15,zc:0,H:2.0,KMIN:8,strike:10,toe:18,hang:-6,sway:1.1,rout:0.26,w:0.03,kneeOut:6,roll:3.5},K.P||{});
+const O=Object.assign({T:0.6,beta:0.6,S:15,zc:0,H:2.0,KMIN:8,strike:10,toe:18,hang:-6,sway:1.1,rout:0.26,w:0.03,kneeOut:0,roll:3.5},K.P||{});
 const {T,beta,S,zc}=O;
-const Gr={x:REST.r.pivot[0],zc,S,beta,H:O.H,yaw:REST.r.yaw*0.9,strike:O.strike,toe:O.toe,hang:O.hang,rin:0.14,rout:O.rout,vm:0.45};
-const Gl={...Gr,x:REST.l.pivot[0],yaw:REST.l.yaw*0.9};
+const Gr={x:REST.r.pivot[0],zc,S,beta,H:O.H,yaw:REST.r.yaw,strike:O.strike,toe:O.toe,hang:O.hang,rin:0.14,rout:O.rout,vm:0.45};
+const Gl={...Gr,x:REST.l.pivot[0],yaw:REST.l.yaw};
 const phR=t=>t/T, phL=t=>t/T+0.5;
 const xr=Math.sign(K.rig.bones.right_leg.origin[0]);       // sway toward the stance leg
 const swayX=t=>O.sway*xr*Math.sin(TAU*t/T);
@@ -56,7 +56,8 @@ function RAW(t){
   // free arm swings opposite the left leg
   addTo(P,'left_arm','r',[14*Math.cos(f-0.35),0,0]);
   addTo(P,'left_forearm','r',[10+7*Math.cos(f-0.9),0,0]);
-  // knees track outward over the toes (thigh twist; the IK keeps the feet where they are), most while loaded
+  // extra knee-out twist while loaded (0: the rest pose's 7 deg hip twist already points knees and toes out; the foot
+  // must stay square to the shin, whose slot it sits in)
   for(const s of ['r','l']){const out=Math.sign(K.rig.bones[s==='r'?'right_leg':'left_leg'].origin[0]);
     const load=0.6+0.4*Math.cos(f-(s==='r'?0.9:0.9+Math.PI));addTo(P,s==='r'?'right_leg':'left_leg','r',[0,-out*O.kneeOut*load,0]);}
   const fr=foot('r',t),fl=foot('l',t);

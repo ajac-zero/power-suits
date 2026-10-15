@@ -30,18 +30,21 @@ stay within 10° (the ankle cuffs). The specs still bake
 the old motion: after re-baking, run `../art/shoulders_apply.js` step `limits` and re-check with the skill's
 `scripts/livesweep.js`. The arm pivots also moved 2 px in (x ±9, same date); specs that solve arm IK need a re-check.
 
-**Upright stance and heavier legs (2026-10-14 overhaul).** The legs' rest pose is upright and symmetric (thigh 11,
-shin -20, foot 9 with 7 deg toe-out, splay ±2; it was a crouched, staggered combat stance: 32/-42 and 12/-24, splay
-±8), on hips 11 px apart with heavier legs and armoured boots (`../art/legs_stomper_art.py`). The back of the knee is
-open: it bends cleanly to ~100. The ankle bends inside the boot's cuff from -30 (toes down) to +40 (toes up):
-`kit.json` `"ankle"` makes the kit's `plant()` roll the boot about its heel or toe past that (no slip while it touches
-the ground). Keep the knees under ~100 and run the skill's `scripts/knees.mjs` on every changed spec (knee / thigh /
-hip / ankle ranges; `DUMP=1` per frame). A tight ankle punishes bent stance knees: a bent knee tilts the shin forward by
-about half its angle, the boot rolls onto its toe, the ankle rises and the knee folds more (a first try at ±18 folded
-the walk's knee to ~100). Hip heights are relative to the stance: 0 = feet flat with the knees at ~22. `a_death.js`'s
-FK leg keys were written on the old rest pose and are converted (`OLD_REST`), its feet clamped to the ankle range.
-After re-baking, run `../art/shoulders_apply.js` step `limits` (re-run it if it reports 0 clamped right after an
-upload) and `livesweep.js` (`^shin(_knee)?_[rl]$` vs `^thigh(_knee)?_[rl]$`, arms vs thighs).
+**Upright stance and heavier legs (2026-10-14 overhaul).** The legs' rest pose is upright, symmetric and without
+sideways splay (thigh 11 with a 7 deg outward twist, shin -20, foot 9; it was a crouched, staggered combat stance:
+32/-42 and 12/-24, splay ±8), on hips 11 px apart with heavier legs (`../art/legs_stomper_art.py`). The lower leg is
+one block whose sloped underside hides the ankle: the boot swings up into a slot under it, so the ankle bends only from
+-30 (toes down) to +30 (toes up) and never twists or rolls more than 4 against the shin. `kit.json` `"ankle"` and
+`"ankleSquare"` make the kit's `plant()` respect that: past the range it rolls the boot about its heel or toe (no slip
+while it touches the ground), and toe-out comes from the hip twist (gaits use `REST.yaw`, not a foot twist). The knee
+bends cleanly to ~100. Keep the knees under ~100 and run the skill's `scripts/knees.mjs` on every changed spec (knee /
+thigh / hip / ankle ranges; `DUMP=1` per frame). A tight ankle punishes bent stance knees: a bent knee tilts the shin
+forward by about half its angle, the boot rolls onto its toe, the ankle rises and the knee folds more (a first try at
+±18 folded the walk's knee to ~100). Hip heights are relative to the stance: 0 = feet flat with the knees at ~20.
+`a_death.js`'s FK leg keys were written on the old rest pose and are converted (`OLD_REST`), its feet clamped to the
+ankle range. After re-baking, run `../art/shoulders_apply.js` step `limits` (re-run it if it reports 0 clamped right
+after an upload) and `livesweep.js` (shin pieces `^shin(_knee|_ramp|_low|_back|_skirt.)?_[rl]$` vs thighs and boots,
+arms vs thighs).
 
 | File | Animation | Type |
 |---|---|---|

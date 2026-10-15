@@ -8,8 +8,8 @@ const {TAU,spring,addTo,pnoise,plant,gaitFoot,footR,REST,smooth,clamp,lerp}=K;
 const O=Object.assign({T:0.56,beta:0.3,S:16.8,zc:3.5,hip:-0.3,bob:1.4,H:3.0,up:0.48,wide:0.5,kick:0.28,
   strike:12,toe:30,hang:-20,lean:-11,arm:44,low:0.35},K.P||{});
 const {T,beta,S,zc}=O;
-const Gr={x:REST.r.pivot[0],zc,S,beta,H:0,yaw:REST.r.yaw*0.6,strike:O.strike,toe:O.toe,hang:-10,rin:0.12,rout:0.32,vm:0.5};
-const Gl={...Gr,x:REST.l.pivot[0],yaw:REST.l.yaw*0.6};
+const Gr={x:REST.r.pivot[0],zc,S,beta,H:0,yaw:REST.r.yaw,strike:O.strike,toe:O.toe,hang:-10,rin:0.12,rout:0.32,vm:0.5};
+const Gl={...Gr,x:REST.l.pivot[0],yaw:REST.l.yaw};
 const phR=t=>t/T, phL=t=>t/T+0.5;            // right heel strike at t=0, left at T/2
 const Tsw=(1-beta)*T, vg=S/(beta*T);          // swing time, ground speed (px/s)
 // Sprint swing (body frame, +z = back): the foot keeps travelling back with the ground after toe-off and rises
@@ -73,8 +73,6 @@ function RAW(t){
   // free arm pumps hard opposite the left leg, elbow bent ~90, driving forward-up and back
   addTo(P,'left_arm','r',[-4+O.arm*Math.cos(f-0.35),0,0]);
   addTo(P,'left_forearm','r',[62+22*Math.cos(f-0.9),0,0]);
-  // knees track a little outward over the toes (thigh twist; the IK keeps the feet where they are)
-  for(const s of ['r','l']){const n=s==='r'?'right_leg':'left_leg';addTo(P,n,'r',[0,-Math.sign(K.rig.bones[n].origin[0])*4,0]);}
   const fr=foot('r',t),fl=foot('l',t);
   plant(P,'r',fr.pivot,fr.R);plant(P,'l',fl.pivot,fl.R);
   return P;}

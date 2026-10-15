@@ -88,7 +88,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final double RUN_ANIM_RATE = WALK_SPEED * SPRINT_MULTIPLIER * BLOCKS_PER_SECOND_PER_SPEED / RUN_ANIM_AUTHORED;
 
     /** Average hip height (model px) of the walk / run cycles: yHip mean in a_walk.js / a_run.js. */
-    private static final float WALK_HIP_MEAN = -0.14F;
+    private static final float WALK_HIP_MEAN = -0.29F;
     private static final float RUN_HIP_MEAN = -0.3F;
 
     // ---- Terrain ----------------------------------------------------------------------------
