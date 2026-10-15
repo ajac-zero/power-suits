@@ -22,7 +22,8 @@ replace older advice. The how-to for this kind of work (setup, GeckoLib, riding,
   `Project.save_path` to this file before saving.
 - Show every model change with the review sheet from `.agents/skills/blockbench-mcp/scripts/shots.js`: it
   includes the in-game third-person view from behind, which the user considers the most important (the player
-  mostly sees the suit's back), and shoots the normal pose, not the editing T-pose.
+  mostly sees the suit's back). Keep the model in its in-game rest pose (the T-pose used for a while is retired:
+  the animations are built on the rest pose).
 
 ## Layout
 - `src/` the mod; `tools/` export / art / test helpers; `docs/` design + plan; `run/` dev game (not in git).

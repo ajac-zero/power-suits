@@ -41,8 +41,7 @@ const model = JSON.parse((r.contents || r.content)[0].text);
 - Use `format: "jpeg"` and `max_size` ~250-900 to keep it cheap. Small images (250-350) are fine for sequences of animation frames.
 - **Model reviews: run `scripts/shots.js`** (codemode helper, usage in its header). It tiles the in-game third-person views
   from behind (exact camera: eye 2.6 blocks, 6.5 back, FOV 70; level and looking down 25, full frame + zoomed) with
-  back 3/4, front and side into one labelled sheet, in the suit's normal (in-game rest) pose: model/t-pose keeps the
-  rest rotations at 0 for editing, so it poses the bones for the shots and restores them. The player mostly sees the
+  back 3/4, front and side into one labelled sheet, as the project stands (keep it in its rest pose). The player mostly sees the
   suit's back: show these with every model change (user's request). Load it with `bash cat`, not `tools.read` (which served a stale copy).
 - Use a new offscreen view id per shot: recreating a just-deleted id reused the old view's camera target.
 - Do not move the user's camera. Make an offscreen view, inspect, and delete it when done:
@@ -115,6 +114,9 @@ Known gaps with no tool (use `risky_eval`): delete an animation, save the projec
   - Detect both by scanning cube `from/to` for equal planes across the groups of a limb. Fix by inflating one cube by ~0.25 (keeps the UVs) or offsetting it by ~0.5.
 - **Child pivots.** Rotating a parent group carries its child groups. Child groups with their own rotation do not compensate, so feet, hands and plates can detach or clip after a parent change. Check the end-of-chain parts.
 - **Rebuilding a group changes its UUID.** Animation keyframes are keyed by group UUID. After `rename` + `create` + `remove_element`, the new group may have no keyframes. Warn the user and check animations afterwards.
+- **Clipping on the live project: `scripts/livesweep.js`** (codemode helper): pairs of cube-name regexes, deepest
+  point of A inside B at rest and over every animation, using Blockbench's own meshes. Parts animated on their own
+  (the Power Armor pauldrons had keys of their own) clip things their parent bone never would: sweep, don't reason.
 - **Bigger parts clip more in motion.** After adding geometry to a moving limb, sample points on the new cubes, transform them into the neighbouring bone's frame at every animation phase, and measure how deep they go inside its boxes. Compare against the rest-pose overlap (intended armor wrap) as the baseline.
 - **Armour clearance ("chest clips the helmet").** Build the head's swept envelope: for every animation sample, transform head/helmet cube points into the torso's rest frame (only head/helmet channels matter, since head is a child of torso) and record the lowest y per z slice. Redesign the chest below that envelope (a single plate tilted back ~34° worked) and re-check with `scripts/clipcheck.mjs`, restricted to the new cubes. Tweak the worst animation (e.g. less head pitch, more yaw/roll toward the side that rises) instead of shrinking the armour. Ignore intended overlaps (the neck socket inside the chest block) by measuring only the visible-front cubes.
 - **Cross-body arm reach clips bulky torsos.** A support hand on a cannon across the chest gave ≥ 2 units of upper-arm/elbow penetration for every grip point and elbow swivel tried. Check with the clip checker before committing; prefer a guard pose or a reach that stays on the arm's own side.

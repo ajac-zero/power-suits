@@ -7,28 +7,11 @@
 //   await shots();                                    // default set -> /private/tmp/shots/review.jpg
 //   await shots({views: ["tp", "tp_down"], out: "/private/tmp/shots/hips_v2.jpg"});
 //   await shots({views: [{name: "hip", pos: [30,16,-50], target: [0,20,0]}]});   // custom view
-//   await shots({pose: "asis"});                    // as the project stands (T-pose), no normal pose
 // View fields: pos, target, fov (35), w/h (600), size (jpeg max side, 400), row (new sheet row).
 // Third-person numbers come from the mod: eye 2.6 blocks up (ModEntities eyeHeight), the pilot sits
 // 0.55 forward (passengerAttachments), PilotView pulls the camera 6.5 blocks back, vanilla FOV 70
 // (vertical), 16:9 window. The model is 16 px per block and faces -Z, so "behind" is +Z.
 const EYE = [0, 2.6 * 16, -0.55 * 16], BACK = 6.5 * 16;
-// The suit's normal (in-game rest) pose: bone rest rotations from before the T-pose editing commit
-// (72edc69^). model/t-pose keeps every rest rotation at 0 (arms out) for editing, so shots apply
-// this pose for the duration of the shots and put the old rotations back afterwards
-// (pose: "normal" by default; "asis" = shoot the project as it stands).
-const NORMAL_POSE = {
-  body: [-2, 0, 0], torso: [-5, 0, 0], head: [6, 0, 0],
-  left_arm: [18, 0, -18], left_forearm: [62, -4, 0], right_arm: [10, 0, 15], right_forearm: [14, 0, -4],
-  left_leg: [32, 0, -8], left_shin: [-42, 0, 0], left_foot: [10, 6, 8],
-  right_leg: [12, 0, 8], right_shin: [-24, 0, 0], right_foot: [12, -6, -8],
-};
-// risky_eval returns its string result JSON-encoded once more.
-const unwrap = (t) => { let v = JSON.parse(t); return typeof v === "string" ? JSON.parse(v) : v; };
-const setPose = async (pose) => unwrap((await tools.mcp__blockbench__risky_eval({code: `(() => {
-  const P = ${JSON.stringify(pose)}, old = {};
-  Group.all.forEach(g => { if (P[g.name]) { old[g.name] = g.rotation.slice(); g.rotation = P[g.name].slice(); } });
-  Canvas.updateAll(); return JSON.stringify(old); })()`})).content[0].text);
 const tp = (pitchDown) => {
   const p = pitchDown * Math.PI / 180;
   return {pos: [0, EYE[1] + BACK * Math.sin(p), EYE[2] + BACK * Math.cos(p)], target: EYE,
@@ -52,8 +35,6 @@ return async function shots(opts = {}) {
   const dir = "/private/tmp/shots", out = opts.out || dir + "/review.jpg";
   await tools.bash({command: `mkdir -p ${dir} && rm -f ${dir}/shot_*`});
   const files = [];
-  const restore = (opts.pose || "normal") === "normal" ? await setPose(NORMAL_POSE) : null;
-  try {
   for (const [i, v] of views.entries()) {
     const id = `shots${i}_${Date.now() % 100000}`, w = v.w || 600, h = v.h || 600;
     try { await tools.mcp__blockbench__delete_offscreen_view({view: id}); } catch (e) {}
@@ -65,9 +46,6 @@ return async function shots(opts = {}) {
     await tools.write({path: f + ".b64", content: img.data});
     files.push(f);
     try { await tools.mcp__blockbench__delete_offscreen_view({view: id}); } catch (e) {}
-  }
-  } finally {
-    if (restore && Object.keys(restore).length) await setPose(restore);
   }
   const decode = files.map(f => `base64 -d -i ${f}.b64 -o ${f}.jpg`).join(" && ");
   const r = await tools.bash({command: `${decode} && uv run --with pillow python3 ` +

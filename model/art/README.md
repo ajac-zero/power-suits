@@ -16,6 +16,10 @@ One-off scripts that added parts to `../power_armor.bbmodel` (kept as reference 
 | `tassets_art.py`, `tassets_refit_art.py` | Cover the hip housing with blue tassets, then refit them into six separated front/rear/side panels with reduced flare and shorter sides. |
 | `hips_art.py` | Replace the girdle + tassets with real hips (`pelvis` bone under `body`, pivot on the hip axis): an 18x4x10 blue pelvis shell whose lower edge is the hip axis, a crotch piece between the thighs and dark bearing caps at the hip pivots; drops the hidden hip joints. |
 | `thighs_art.py` | Then slimmer thighs so the hips match the chest: thighs 6x8x7 centred on the hip pivots (armour ends 1 below the hip axis), knee-sized hip joints (knee texture) on the leg bones, a dark hip core in the crotch, pelvis shell 16x4x10 on the hip axis; side caps dropped. |
+| `shoulders_apply.js`, `shoulders_art.py`, `collar_art.py` | Shoulders that join the torso: arms 2 px in (pivots x ±9) with the pauldrons left in place 1 px higher, knee-sized shoulder joints on the arm bones, blue upper arms, collars 3 → 2 wide. Mobility limits in the animations (rigid pauldrons, arm Z rotation within 6° of rest either way): `shoulders_apply.js` step `limits`, re-run after any re-bake. |
+| `arms_refit_art.py` | Arms refitted to one rule (axis x ±10.5): pauldrons fit the 7x7 upper arm (0.5 px clearance, no tilt of their own), knee-sized elbow joints on both arms, right forearm an 8x7x8 gauntlet + 5x2x5 wrist, hand re-centred. Resized cubes keep their art (middle rows/columns dropped). |
+| `pauldron_art.py` | Space-marine pauldrons: outer wall and front/back plates 5 → 10 px tall (down to y 31.625, 3 px above the elbow); faces keep their top rows and grey rim, the added rows are plain armour. |
+| `hand_art.py` | The right hand as a closed 7x5x7 fist straight under the gauntlet (no wrist, no open fingers): blue plating, grey thumb / knuckles / curled fingers, dark palm. The `right_hand` grip bone moves to the fist's lower end (y 15.625). |
 
 ## T-pose visual pass (`model/t-pose`)
 
@@ -25,10 +29,13 @@ Run from the repository root with `uv run --with pillow python3 model/art/<scrip
 They produce edit plans and texture PNG hex, not saved models; apply plans in Blockbench with an Undo transaction.
 These are references for individual iterations, **not an automatic replay pipeline**.
 
-The saved model is deliberately in an editing T-pose. Front shin/thigh plates were removed;
-hip joints reuse the knee texture. The abdomen belongs to `body`, the torso turns above it at
-`[0, 27.125, 0.5]`, and the hips (`pelvis`, from `hips_art.py`) are attached to `body`.
-No game assets have been exported from this pass. Before integrating: restore the original base
-rotations, check animations and tasset/leg clearance, update game-side torso pivot/aim offsets,
-and export all derived assets. The T-pose starting commit retains the old model's geometry;
-the preceding commit retains the original base rotations.
+The model was edited in a T-pose (72edc69) during this pass; the T-pose is retired and the saved
+model is back in its in-game rest pose (the bone rest rotations of 72edc69^, which the animations
+are built on). Front shin/thigh plates were removed; hip joints reuse the knee texture. The abdomen
+belongs to `body`, the torso turns above it at `[0, 27.125, 0.5]`, and the hips (`pelvis`, from
+`hips_art.py`) are attached to `body`. No game assets have been exported from this pass. Before
+integrating: check animations and leg/hip clearance, update game-side torso pivot/aim offsets and
+anything placed from the arm pivots (now x ±9, e.g. `SocketAim`, muzzles, cockpit viewmodel; `tools/extract-view-geo.py`
+filters the gauntlet by cube size: the 8x8x8 cuff is now the 8x7x8 `forearm_r` + 5x4x5 `elbow_joint_r`; `CockpitHands`
+places the gauntlet by its fingertips at y -17 from the elbow, the fist now ends at -13), and
+export all derived assets.
