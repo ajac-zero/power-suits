@@ -14,12 +14,12 @@ return async function apply(planPath) {
         ctx.putImageData(id, v(0), v(2)); n++; }
       return canvas; }, {edit_name: "Stomper legs texture"});
     return n; })()`);
-  const rebuilt = await ev(`(() => { const removed = ${JSON.stringify(plan.removed)}, groups = ${JSON.stringify(plan.groups)}, pel = ${JSON.stringify(plan.pelvis)};
-    const gone = Cube.all.filter(c => removed.includes(c.name)); const shell = Cube.all.find(c => c.name === pel.name);
-    Undo.initEdit({elements: gone.concat([shell]), outliner: true});
+  const rebuilt = await ev(`(() => { const removed = ${JSON.stringify(plan.removed)}, groups = ${JSON.stringify(plan.groups)}, pel = ${JSON.stringify(plan.pelvis || null)};
+    const gone = Cube.all.filter(c => removed.includes(c.name)); const shell = pel && Cube.all.find(c => c.name === pel.name);
+    Undo.initEdit({elements: shell ? gone.concat([shell]) : gone, outliner: true});
     gone.forEach(c => c.remove());
     Group.all.forEach(g => { if (groups[g.name]) g.origin.splice(0, 3, ...groups[g.name]); });
-    shell.from.splice(0, 3, ...pel.from_); shell.to.splice(0, 3, ...pel.to); shell.uv_offset = pel.uv_offset.slice();
+    if (shell) { shell.from.splice(0, 3, ...pel.from_); shell.to.splice(0, 3, ...pel.to); shell.uv_offset = pel.uv_offset.slice(); }
     Undo.finishEdit("Stomper legs: remove old leg cubes, leg pivots out, wider pelvis");
     Canvas.updateAll(); return gone.length + " removed"; })()`);
   for (const c of plan.cubes) await tools.mcp__blockbench__place_cube({group: c.group, elements: [{name: c.name,

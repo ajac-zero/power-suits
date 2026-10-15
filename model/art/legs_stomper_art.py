@@ -25,6 +25,15 @@ and the legs looked comically large under the upper body. v2, between the old le
     pivots  the ankle (foot bone) moves to the back-bottom corner of the slot (y 1.125, z 4): the foot hinges there
   Neutral pose: the lower leg vertical (thigh 6, shin -6), the foot flat, toes out 7 deg from the hips, no splay.
   The animations will be redone on the final model.
+  v6 (one wide hip housing over both thighs) was dropped by the user for v7, his sketch: separate thighs, each going
+  up to the hip on its own side, and a V-shaped piece in the middle as wide as the chest above it:
+    hips    hip_band 16x2x10 (two mirrored halves) under the waist; the V under it from two halves (hip_v, 9x2x10,
+            turned 25 deg about the tip 2.6 px under the hip axis) and a centre fill; a dark hip_core behind, seen in
+            the gaps between the V and the thighs and under the V's tip
+    thigh   thigh_main 9x4x8 (as wide as the shin, its front tucked behind the knee cap) and thigh_top 8x4x8 turned
+            25 deg about its outer top corner (at the hip axis): its top runs down toward the crotch parallel to the
+            V's side (a 1.2 px dark gap) and its outer end leans out going down, like the sketch's outer edge. The
+            knee slope under the thigh is gone (the thigh's bottom is flat; the shin's slope leaves a V behind the knee)
 Bone pivots keep their heights (hip 22.625, knee 13.625, ankle 3.625), so leg lengths and the animations' IK hold.
 Re-running rebuilds every leg cube (old and v1 names) from a fresh snapshot of the live project.
 
@@ -57,12 +66,14 @@ STEEL, STEEL_LO = (128, 134, 140), (95, 100, 106)
 SOLE = (40, 44, 48)
 IRON = [(47, 52, 55), (37, 41, 44), (59, 66, 70), (47, 52, 55), (26, 29, 31)]
 X = 5.5                                   # new leg axis (was 4.5; v1 6.5)
-REMOVED = [p + side for side in ('_r', '_l') for p in
+REMOVED = ['hip_core', 'seat_upper', 'seat_lower', 'codpiece_upper', 'codpiece_lower', 'hip_skirt',
+           'hip_shell_r', 'hip_shell_l', 'hip_skirt_r', 'hip_skirt_l', 'hip_band_r', 'hip_band_l', 'hip_v_r', 'hip_v_l',
+           'hip_fill'] + [p + side for side in ('_r', '_l') for p in
            ('thigh', 'thigh_knee', 'hip_joint', 'knee_joint', 'shin', 'shin_knee',
             'stomper_sole', 'stomper_foot', 'stomper_toe', 'stomper_ankle',
             'shin_guard', 'shin_core', 'boot_shaft', 'boot_upper', 'boot_toe', 'boot_sole', 'boot_cuff',
             'shin_ramp', 'shin_low', 'shin_back', 'shin_skirt1', 'shin_skirt2',
-            'shin_main', 'shin_cap', 'shin_heel', 'boot_foot', 'boot_fill', 'boot_tip')]   # re-runs rebuild these
+            'shin_main', 'shin_cap', 'shin_heel', 'boot_foot', 'boot_fill', 'boot_tip', 'thigh_main', 'thigh_low', 'thigh_top')]   # re-runs rebuild these
 
 
 def size(c):
@@ -202,6 +213,64 @@ def back(f, w, h):
     return plate(w, h, top_edge=False, bottom_edge=True)
 
 
+def housing(f, w, h):
+    if f == 'down':
+        return iron(w, h)
+    return plate(w, h, top_edge=True, bottom_edge=False)
+
+
+def skirt(f, w, h):
+    if f in ('up', 'down'):
+        return iron(w, h)
+    return plate(w, h, top_edge=False, bottom_edge=True)
+
+
+def thigh_main(f, w, h):
+    if f == 'up':
+        return iron(w, h)                                  # inside the hip housing
+    if f == 'down':
+        return plate(w, h, False, False, 0.62)
+    return plate(w, h, top_edge=False, bottom_edge=False)
+
+
+def thigh_top(f, w, h):
+    if f == 'up':
+        return plate(w, h, top_edge=True, bottom_edge=False)   # the diagonal top, down toward the crotch
+    if f == 'down':
+        return iron(w, h)
+    return plate(w, h, top_edge=True, bottom_edge=False)
+
+
+def band(f, w, h):
+    if f == 'down':
+        return iron(w, h)
+    return plate(w, h, top_edge=True, bottom_edge=True)
+
+
+def vee(f, w, h):
+    if f == 'up':
+        return plate(w, h, False, False)                   # meets the recessed centre fill: dark iron showed as a line
+    if f == 'down':
+        return plate(w, h, False, False, 0.8)              # the V's slanted underside
+    return plate(w, h, top_edge=False, bottom_edge=True)
+
+
+def core(f, w, h):
+    return iron(w, h)
+
+
+def fill_plate(f, w, h):
+    return plate(w, h, top_edge=False, bottom_edge=False)
+
+
+def thigh_low(f, w, h):
+    if f == 'up':
+        return iron(w, h)
+    if f == 'down':
+        return plate(w, h, False, False, 0.62)             # the thigh's underside over the knee's V
+    return plate(w, h, top_edge=False, bottom_edge=True)
+
+
 def soled(w, h, shade=1.0, top_edge=False):
     """Plate whose lowest row is the dark sole with a grey welt row above it."""
     px = plate(w, h, top_edge=top_edge, bottom_edge=False, shade=shade)
@@ -271,9 +340,10 @@ def joint(f, w, h):
 
 
 # ---- pelvis shell 16x4x10 -> 20x4x10: widen its faces in the middle (edges and details kept) ---------------------
-pel = by['pelvis_shell']
-pw, ph, pd = size(pel)
-NW = 18
+pel = by.get('pelvis_shell')                   # gone once the hip housing (v6) replaced it
+pw, ph, pd = size(pel) if pel else (20, 4, 11)
+NW = 20
+ND = 11
 
 
 def widen(f, w, h):
@@ -285,9 +355,9 @@ def widen(f, w, h):
 
 # ---- plan --------------------------------------------------------------------------------------------------------
 PARTS = [  # name, bone, from, to (right side), inflate, painter, rotation, rotation origin
-    ('thigh', 'leg', [X - 3.5, 15.625, -4], [X + 3.5, 21.625, 4], 0.25, thigh, None, None),
-    ('thigh_knee', 'leg', [X - 3.5, 13.625, -4], [X + 3.5, 15.625, 0], 0.15, thigh_knee, None, None),
-    ('hip_joint', 'leg', [X - 3, 20.125, -3], [X + 3, 25.125, 3], 0, joint, None, None),
+    ('thigh_main', 'leg', [X - 4.5, 15.125, -4], [X + 4.5, 19.125, 4], -0.05, thigh_main, None, None),
+    # the top: turned 25 deg about its outer top corner (x X+2.75, the hip axis), so it slopes down to the crotch side
+    ('thigh_top', 'leg', [X - 5.25, 18.625, -4], [X + 2.75, 22.625, 4], -0.1, thigh_top, [0, 0, 25], [X + 2.75, 22.625, 0]),
     ('knee_joint', 'shin', [X - 3, 11.125, -3], [X + 3, 16.125, 3], 0, joint, None, None),
     # the main block reaches 12.6 so the top slope ends on its back face's top edge (it stopped 1.4 px above it)
     ('shin_main', 'shin', [X - 4.5, 4.625, -5], [X + 4.5, 12.625, 4], 0, shin, None, None),
@@ -319,8 +389,30 @@ for name, bone, f, t, inf, painter, rot, ro in order:
     uv = pack(sz)
     paint(uv, sz, painter)
     nets[name] = uv
-puv = pack([NW, ph, pd])
-paint(puv, [NW, ph, pd], widen)
+# the housing and its skirt are each two mirrored halves sharing one net (a whole 20-wide net found no room in the
+# texture); the halves meet at x = 0 like two plates
+# hips: a band as wide as the chest, a V under it (two mirrored halves turned about the tip, a centre fill where their
+# tops don't reach the band) and a dark core behind, which shows in the gaps (the sketch's black undersuit)
+BUV = pack([8, 2, 10]); paint(BUV, [8, 2, 10], band)
+VUV = pack([9, 2, 10]); paint(VUV, [9, 2, 10], vee)
+FUV = pack([6, 2, 10]); paint(FUV, [6, 2, 10], fill_plate)
+CUV = pack([10, 6, 6]); paint(CUV, [10, 6, 6], core)
+TIP = 20.0
+SINGLES = [dict(name='hip_fill', group='pelvis', from_=[-3, 21.625, -5], to=[3, 23.625, 5], inflate=-0.1,
+                origin=[0, 22.625, 0], uv_offset=FUV, mirror_uv=False),
+           dict(name='hip_core', group='pelvis', from_=[-5, 17.625, -3], to=[5, 23.625, 3],
+                origin=[0, 22.625, 0], uv_offset=CUV, mirror_uv=False)]
+for sx, nm in ((1, 'r'), (-1, 'l')):
+    x0, x1 = (0, 8) if sx > 0 else (-8, 0)
+    SINGLES.append(dict(name=f'hip_band_{nm}', group='pelvis', from_=[x0, 23.625, -5], to=[x1, 25.625, 5],
+                        origin=[0, 22.625, 0], uv_offset=BUV, mirror_uv=sx > 0))
+    v0, v1 = (0, 9) if sx > 0 else (-9, 0)
+    c = dict(name=f'hip_v_{nm}', group='pelvis', from_=[v0, TIP, -5], to=[v1, TIP + 2, 5], rotation=[0, 0, 25 * sx],
+             origin=[0, TIP, 0], uv_offset=VUV, mirror_uv=sx > 0)
+    if sx > 0:
+        c['inflate'] = -0.05                               # where the halves cross at the tip, the left one shows
+    SINGLES.append(c)
+
 
 PIVOTS = {'leg': (22.625, 0), 'shin': (13.625, 0), 'foot': (1.125, 4)}   # bone pivots (y, z); the ankle hinges at the slot's back
 cubes = []
@@ -336,19 +428,19 @@ for side, sx in (('r', 1), ('l', -1)):
         if inf:
             c['inflate'] = inf
         if rot:
-            c['rotation'] = rot
+            c['rotation'] = rot if sx > 0 else [rot[0], -rot[1], -rot[2]]
             c['origin'] = [sx * ro[0], ro[1], ro[2]]
         cubes.append(c)
 groups = {f'{p}_{b}': [sx * X, PIVOTS[b][0], PIVOTS[b][1]] for p, sx in (('right', 1), ('left', -1)) for b in PIVOTS}
-pelvis = dict(name='pelvis_shell', from_=[-NW / 2, 22.625, -5], to=[NW / 2, 26.625, 5], uv_offset=puv)
+cubes = SINGLES + cubes
 
 changed = [(x, y, *tex.getpixel((x, y))) for y in range(H) for x in range(W)
            if tex.getpixel((x, y)) != live.getpixel((x, y))]
 (scratch/'stomper-plan.json').write_text(json.dumps(dict(
-    removed=REMOVED, groups=groups, cubes=cubes, pelvis=pelvis,
+    removed=REMOVED + ['pelvis_shell'], groups=groups, cubes=cubes,
     pixels=''.join(f'{x:02x}{y:02x}{r:02x}{g:02x}{b:02x}{a:02x}' for x, y, r, g, b, a in changed))))
 prev = tex.resize((W * 4, H * 4), Image.NEAREST)
 bg = Image.new('RGBA', prev.size, (255, 0, 255, 255))
 bg.alpha_composite(prev)
 bg.save(scratch/'stomper-preview.png')
-print('nets', nets, 'pelvis', puv, len(changed), 'px')
+print('nets', nets, 'hips', BUV, VUV, FUV, CUV, len(changed), 'px')
