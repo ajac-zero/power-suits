@@ -34,6 +34,18 @@ and the legs looked comically large under the upper body. v2, between the old le
             25 deg about its outer top corner (at the hip axis): its top runs down toward the crotch parallel to the
             V's side (a 1.2 px dark gap) and its outer end leans out going down, like the sketch's outer edge. The
             knee slope under the thigh is gone (the thigh's bottom is flat; the shin's slope leaves a V behind the knee)
+  v8: the knee 2 px lower (pivot y 11.6; the shin's top pieces with it) for longer thighs; the thighs end in a slope
+  opposite to the shin's again (thigh_low, turned -7 deg: low at the front over the knee cap, rising toward the back),
+  so the two open a V behind the knee instead of the thigh running into the shin; the hips' V ends in a 2 px flat base
+  (hip_tip) instead of a point; the dark hip core is 5 deep (it showed through the backs of the turned-out thighs).
+  v9 (the user's side-view sketch of the knee): thigh bottom and shin top PARALLEL (both slope down toward the back,
+  27 deg in the neutral pose) with a dark band of knee joint between them, 1.8 px tall, joining them edge to edge.
+  The shin's top is one slope from its front top corner to its back (shin_front, a 1 px front block, then shin_ramp);
+  the thigh's bottom is thigh_low (turned to match) with thigh_back closing its back end; the knee joint is one box
+  (inset 1 px from the leg's sides) that fills the band and hides its excess inside thigh and shin. Knee pivot 12.6.
+  Cube sizes may be fractional now: the texture nets are painted at Blockbench's floored box-UV sizes. Overlapping
+  cubes of one bone are inflated by different amounts (0 / -0.05 / -0.1) so their side faces never share a plane
+  (thigh_low and shin_ramp flickered against their neighbours).
 Bone pivots keep their heights (hip 22.625, knee 13.625, ankle 3.625), so leg lengths and the animations' IK hold.
 Re-running rebuilds every leg cube (old and v1 names) from a fresh snapshot of the live project.
 
@@ -73,11 +85,13 @@ REMOVED = ['hip_core', 'seat_upper', 'seat_lower', 'codpiece_upper', 'codpiece_l
             'stomper_sole', 'stomper_foot', 'stomper_toe', 'stomper_ankle',
             'shin_guard', 'shin_core', 'boot_shaft', 'boot_upper', 'boot_toe', 'boot_sole', 'boot_cuff',
             'shin_ramp', 'shin_low', 'shin_back', 'shin_skirt1', 'shin_skirt2',
-            'shin_main', 'shin_cap', 'shin_heel', 'boot_foot', 'boot_fill', 'boot_tip', 'thigh_main', 'thigh_low', 'thigh_top')]   # re-runs rebuild these
+            'shin_main', 'shin_cap', 'shin_heel', 'boot_foot', 'boot_fill', 'boot_tip', 'thigh_main', 'thigh_low', 'thigh_top',
+            'shin_front', 'shin_main_f', 'shin_main_b', 'thigh_back', 'thigh_outer')] + ['hip_tip']   # re-runs rebuild these
 
 
 def size(c):
-    return [math.ceil(b - a - 1e-6) for a, b in zip(c['from'], c['to'])]
+    """Box-UV net size: Blockbench floors fractional cube sizes (checked: 2.5x3.3x4.7 -> a 2x3x4 net)."""
+    return [math.floor(b - a + 1e-6) for a, b in zip(c['from'], c['to'])]
 
 
 def faces(w, h, d):
@@ -354,35 +368,62 @@ def widen(f, w, h):
 
 
 # ---- plan --------------------------------------------------------------------------------------------------------
+# ---- knee geometry (v9), computed: shin-local = model coordinates of the shin bone, thigh-local likewise ----------
+KNEE = 12.625                                         # knee pivot y (z 0)
+TS = math.degrees(math.atan2(8, 9 * 0) if False else math.acos(8 / 9))   # shin slope: a 9-long ramp spans 8 px
+TAN = math.tan(math.radians(TS))
+def slope(z):                                         # the shin's top surface (shin-local)
+    return 13.6 - (z + 5) * TAN
+BAND = 1.8                                            # dark knee band, vertical (3.4 showed too much joint)
+def to_thigh(y, z, deg=-6.0):                         # a shin-local point in thigh-local coordinates (neutral pose:
+    a = math.radians(deg); c, sn = math.cos(a), math.sin(a)   # the shin is turned -6 deg against the thigh)
+    yy, zz = y - KNEE, z
+    return KNEE + yy * c - zz * sn, yy * sn + zz * c
+_ya, _za = to_thigh(slope(-4) + BAND, -4)
+_yb, _zb = to_thigh(slope(4) + BAND, 4)
+TT = math.degrees(math.atan2(_ya - _yb, _zb - _za))   # thigh bottom slope in thigh-local (deg, descending to the back)
+def tline(z):                                         # the thigh's bottom line (thigh-local)
+    return _ya - (z - _za) * math.tan(math.radians(TT))
+_T_LOW = 8 * math.sin(math.radians(TT)) + 0.25         # thick enough to reach the main block's flat bottom at the back
+_ZBB = 3.95 - _T_LOW * math.sin(math.radians(TT))      # its back end leans; the thigh_back strip closes behind it
+_L_LOW = (_ZBB + 3.95) / math.cos(math.radians(TT))
+_RAMP_T = 2.1                                         # ramp: its front end leans 0.96 px, hidden in the 1 px front block
+
 PARTS = [  # name, bone, from, to (right side), inflate, painter, rotation, rotation origin
-    ('thigh_main', 'leg', [X - 4.5, 15.125, -4], [X + 4.5, 19.125, 4], -0.05, thigh_main, None, None),
-    # the top: turned 25 deg about its outer top corner (x X+2.75, the hip axis), so it slopes down to the crotch side
-    ('thigh_top', 'leg', [X - 5.25, 18.625, -4], [X + 2.75, 22.625, 4], -0.1, thigh_top, [0, 0, 25], [X + 2.75, 22.625, 0]),
-    ('knee_joint', 'shin', [X - 3, 11.125, -3], [X + 3, 16.125, 3], 0, joint, None, None),
-    # the main block reaches 12.6 so the top slope ends on its back face's top edge (it stopped 1.4 px above it)
-    ('shin_main', 'shin', [X - 4.5, 4.625, -5], [X + 4.5, 12.625, 4], 0, shin, None, None),
-    ('shin_cap', 'shin', [X - 4.5, 12.625, -5], [X + 4.5, 16.625, -2], 0, cap, None, None),
-    # top slope: 7 long, turned 31 deg about the cap's back top edge (z -2): its top runs from the cap down to the back
-    # face (z 4, y 13.0); its other corners end inside the cap and the main block
-    ('shin_ramp', 'shin', [X - 4.5, 11.625, -2], [X + 4.5, 16.625, 5], -0.05, ramp, [31, 0, 0], [X, 16.625, -2]),
-    # bottom diagonal: 8 long, 4 thick, turned 20 deg about a point on it (z 2.63) chosen so its top back corner ends on
-    # the back face; its underside runs up to y 4.4 at the front
-    ('shin_heel', 'shin', [X - 4.5, 1.623, -5.37], [X + 4.5, 5.623, 2.63], -0.05, heel, [20, 0, 0], [X, 1.623, 2.63]),
+    ('thigh_main', 'leg', [X - 4.5, tline(-3.95), -4], [X + 4.5, 18.625, 4], -0.05, thigh_main, None, None),
+    # the top: turned 25 deg about its outer top corner (x X+2.75, 0.5 under the hip axis), so it slopes down to the
+    # crotch side parallel to the hips' V
+    ('thigh_top', 'leg', [X - 5.25, 18.125, -4], [X + 2.75, 22.125, 4], -0.1, thigh_top, [0, 0, 25], [X + 2.75, 22.125, 0]),
+    # the bottom: parallel to the shin's top slope (in the neutral pose), turned about its front bottom corner
+    ('thigh_low', 'leg', [X - 4.5, tline(-3.95), -3.95], [X + 4.5, tline(-3.95) + _T_LOW, -3.95 + _L_LOW], -0.1,
+     thigh_low, [TT, 0, 0], [X, tline(-3.95), -3.95]),
+    ('thigh_back', 'leg', [X - 4.5, tline(_ZBB), _ZBB], [X + 4.5, tline(-3.95), 4], -0.05, thigh_main, None, None),
+    # the knee joint fills the band between thigh and shin; inset 1 px from the leg's sides, its excess hides inside them
+    # its front stays 0.1 behind the thigh's front face where it runs up inside the thigh (the thigh leans 6 deg
+    # forward in the neutral pose; a front at -3.9 showed through the thigh's front as a dark patch), so the band's
+    # front edge sits a little inside the thigh and shin fronts, like the sketch
+    ('knee_joint', 'shin', [X - 3.5, slope(4) - 0.5, -3.3], [X + 3.5, slope(-3.9) + BAND + 0.6, 3.9], 0, joint, None, None),
+    ('shin_front', 'shin', [X - 4.5, 5.0, -5], [X + 4.5, slope(-4), -4], -0.05, cap, None, None),
+    ('shin_ramp', 'shin', [X - 4.5, slope(-4) - _RAMP_T, -4], [X + 4.5, slope(-4), 5], -0.1, ramp, [TS, 0, 0], [X, slope(-4), -4]),
+    ('shin_main_f', 'shin', [X - 4.5, 4.625, -5], [X + 4.5, slope(0) - 0.15, 0], 0, shin, None, None),
+    ('shin_main_b', 'shin', [X - 4.5, 4.625, 0], [X + 4.5, slope(4) - 0.1, 4], 0, shin, None, None),
+    ('shin_heel', 'shin', [X - 4.5, 1.623, -5.37], [X + 4.5, 5.623, 2.63], -0.1, heel, [20, 0, 0], [X, 1.623, 2.63]),
     ('shin_back', 'shin', [X - 4.5, 0.625, 2], [X + 4.5, 4.625, 4], 0, back, None, None),
-    ('boot_foot', 'foot', [X - 4.5, -0.375, -5], [X + 4.5, 4.625, 4], -0.1, foot_box, None, None),
-    ('boot_tip', 'foot', [X - 4.5, -0.375, -9], [X + 4.5, 2.625, -4], -0.15, tip, None, None),
+    # -0.15, not -0.1: the shin's heel piece (-0.1) runs down into it and their sides flickered
+    ('boot_foot', 'foot', [X - 4.5, -0.375, -5], [X + 4.5, 4.625, 4], -0.15, foot_box, None, None),
+    ('boot_tip', 'foot', [X - 4.5, -0.375, -9], [X + 4.5, 2.625, -4], -0.2, tip, None, None),
     # the slope: turned down 30 deg about the foot's front top edge, ending on the tip's top 3.5 px ahead
     ('boot_toe', 'foot', [X - 4.5, 2.625, -9], [X + 4.5, 4.625, -5], 0, toe, [-30, 0, 0], [X, 4.625, -5]),
 ]
 nets = {}
 def net_area(p):
-    w, h, d = (math.ceil(p[3][i] - p[2][i] - 1e-6) for i in range(3))
+    w, h, d = (math.floor(p[3][i] - p[2][i] + 1e-6) for i in range(3))
     return 2 * (w + d) * (d + h)
 
 
 order = sorted(PARTS, key=lambda p: -net_area(p))   # biggest nets first
 for name, bone, f, t, inf, painter, rot, ro in order:
-    sz = [math.ceil(b - a - 1e-6) for a, b in zip(f, t)]
+    sz = [math.floor(b - a + 1e-6) for a, b in zip(f, t)]
     if name == 'knee_joint' and 'hip_joint' in nets:       # same size and art: share the net
         nets[name] = nets['hip_joint']
         continue
@@ -394,27 +435,28 @@ for name, bone, f, t, inf, painter, rot, ro in order:
 # hips: a band as wide as the chest, a V under it (two mirrored halves turned about the tip, a centre fill where their
 # tops don't reach the band) and a dark core behind, which shows in the gaps (the sketch's black undersuit)
 BUV = pack([8, 2, 10]); paint(BUV, [8, 2, 10], band)
-VUV = pack([9, 2, 10]); paint(VUV, [9, 2, 10], vee)
+VUV = pack([8, 2, 10]); paint(VUV, [8, 2, 10], vee)
 FUV = pack([6, 2, 10]); paint(FUV, [6, 2, 10], fill_plate)
-CUV = pack([10, 6, 6]); paint(CUV, [10, 6, 6], core)
+CUV = pack([10, 6, 5]); paint(CUV, [10, 6, 5], core)
+TUV = pack([2, 2, 10]); paint(TUV, [2, 2, 10], fill_plate)
 TIP = 20.0
-SINGLES = [dict(name='hip_fill', group='pelvis', from_=[-3, 21.625, -5], to=[3, 23.625, 5], inflate=-0.1,
+SINGLES = [dict(name='hip_fill', group='pelvis', from_=[-3, 21.625, -5], to=[3, 23.625, 5], inflate=-0.15,
                 origin=[0, 22.625, 0], uv_offset=FUV, mirror_uv=False),
-           dict(name='hip_core', group='pelvis', from_=[-5, 17.625, -3], to=[5, 23.625, 3],
+           dict(name='hip_tip', group='pelvis', from_=[-1, TIP, -5], to=[1, TIP + 2, 5], inflate=-0.05,
+                origin=[0, 22.625, 0], uv_offset=TUV, mirror_uv=False),
+           dict(name='hip_core', group='pelvis', from_=[-5, 17.625, -2.5], to=[5, 23.625, 2.5],
                 origin=[0, 22.625, 0], uv_offset=CUV, mirror_uv=False)]
 for sx, nm in ((1, 'r'), (-1, 'l')):
     x0, x1 = (0, 8) if sx > 0 else (-8, 0)
     SINGLES.append(dict(name=f'hip_band_{nm}', group='pelvis', from_=[x0, 23.625, -5], to=[x1, 25.625, 5],
                         origin=[0, 22.625, 0], uv_offset=BUV, mirror_uv=sx > 0))
-    v0, v1 = (0, 9) if sx > 0 else (-9, 0)
+    v0, v1 = (1, 9) if sx > 0 else (-9, -1)                 # each half starts 1 px out: a 2 px base between them
     c = dict(name=f'hip_v_{nm}', group='pelvis', from_=[v0, TIP, -5], to=[v1, TIP + 2, 5], rotation=[0, 0, 25 * sx],
-             origin=[0, TIP, 0], uv_offset=VUV, mirror_uv=sx > 0)
-    if sx > 0:
-        c['inflate'] = -0.05                               # where the halves cross at the tip, the left one shows
+             origin=[sx, TIP, 0], uv_offset=VUV, mirror_uv=sx > 0, inflate=-0.1)   # inside the band (0): no shared faces
     SINGLES.append(c)
 
 
-PIVOTS = {'leg': (22.625, 0), 'shin': (13.625, 0), 'foot': (1.125, 4)}   # bone pivots (y, z); the ankle hinges at the slot's back
+PIVOTS = {'leg': (22.625, 0), 'shin': (KNEE, 0), 'foot': (1.125, 4)}   # bone pivots (y, z); the ankle hinges at the slot's back
 cubes = []
 for side, sx in (('r', 1), ('l', -1)):
     prefix = 'right_' if side == 'r' else 'left_'

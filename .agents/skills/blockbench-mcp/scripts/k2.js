@@ -3,7 +3,10 @@ const SIDE={r:{leg:'right_leg',shin:'right_shin',foot:'right_foot'},l:{leg:'left
 const FOOT={};
 for(const s of ['r','l']){const fb=rig.bones[SIDE[s].foot];const pts=[];
   fb.cubes.forEach(c=>cubeCorners(c).forEach(p=>pts.push(sub(p,fb.origin))));
-  const sole=fb.cubes.find(c=>/(^|_)sole/.test(c.name));const cx=(sole.from[0]+sole.to[0])/2-fb.origin[0];const y=sole.from[1]-fb.origin[1];
+  // heel / toe edges: the cube named *sole*, else the foot cubes' bounding box (a boot whose sole is painted on)
+  let sole=fb.cubes.find(c=>/(^|_)sole/.test(c.name));
+  if(!sole){const lo=[1e9,1e9,1e9],hi=[-1e9,-1e9,-1e9];fb.cubes.forEach(c=>cubeCorners(c).forEach(p=>{for(let i=0;i<3;i++){lo[i]=Math.min(lo[i],p[i]);hi[i]=Math.max(hi[i],p[i]);}}));sole={from:lo,to:hi};}
+  const cx=(sole.from[0]+sole.to[0])/2-fb.origin[0];const y=sole.from[1]-fb.origin[1];
   FOOT[s]={pts,heel:[cx,y,sole.to[2]-fb.origin[2]],toe:[cx,y,sole.from[2]-fb.origin[2]]};}
 function minY(s,R){let m=1e9;for(const p of FOOT[s].pts){const y=mv(R,p)[1];if(y<m)m=y;}return m;}
 const footR=(yaw,pitch=0,roll=0)=>mm(ry(yaw),mm(rx(pitch),rz(roll)));
