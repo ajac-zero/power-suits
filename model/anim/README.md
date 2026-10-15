@@ -25,7 +25,8 @@ arm's hip carry, 2026-10-13), the offset animations follow by themselves; re-bak
 rest pose (walk/run `stabilize()`, `a_hand.js` for the hand arm) and re-check clipping (`clipcheck.mjs`).
 
 **Shoulder limits (2026-10-14).** The live animations are clamped for a heavy suit: the pauldrons don't move on
-their own (all `right_pad`/`left_pad` keys zero) and the arms' Z rotation stays within 6° of the rest pose (sideways out or in). The specs still bake
+their own (all `right_pad`/`left_pad` keys zero) and the arms' Z rotation stays within 6° of the rest pose (sideways out or in); the feet's twist (Y) and roll (Z)
+stay within 10° (the ankle cuffs). The specs still bake
 the old motion: after re-baking, run `../art/shoulders_apply.js` step `limits` and re-check with the skill's
 `scripts/livesweep.js`. The arm pivots also moved 2 px in (x ±9, same date); specs that solve arm IK need a re-check.
 

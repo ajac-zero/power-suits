@@ -3,8 +3,15 @@
 Before: the blue 8x9x8 shin stood on a separate stack (navy ankle band, grey foot slab, navy toe wedge,
 dark sole), tilted against it by the rest pose's ankle angle, so it read as a box on a pallet.
 Now, with the ankle still bending (foot bone unchanged):
-  ankle   8x3x8 (y 2.625..5.625, was 8x2x8) with inflate 0.25: a cuff over the shin's lower 2 px,
-          blue like the shin, so the boot's shaft runs down into the foot without a step
+  ankle   9x2x10 (y 2.625..4.625, x 0.5 / z 1 px wider than the shin each side, was 8x2x8) with
+          inflate 0.25: a cuff around the shin's lower 1 px, blue like the shin, so the boot's shaft
+          runs down into the foot without a step.
+          The ankle bends up to ~50 degrees in walk/run (35 with the foot planted, so it can't be
+          limited without breaking ground contact): a point of the shin h px above the ankle pivot
+          moves h*sin(50) along z. v1 (8x3x8, 2 px over the shin, 0.25 clearance) let the shin swing
+          1.5 px out through the cuff; 1 px high with 1.25 px clearance front and back keeps it inside.
+          The sideways clearance covers the foot's twist (Y) and roll (Z), limited to 10 degrees
+          (shoulders_apply.js step "limits"): the shin stays within 0.25 px of the cuff in every animation.
   foot    8x2x12 blue armour sides and top, a grey welt along the bottom of the sides
   toe     the sloped 8x2x4 toe cap in the same blue
   sole    dark, unchanged
@@ -118,12 +125,13 @@ def pack(w, h, d):
 
 paint(by['stomper_foot_l']['uv_offset'], [8, 2, 12], foot)      # nets shared by both feet (right mirrored)
 paint(by['stomper_toe_l']['uv_offset'], [8, 2, 4], toe)
-ankle_uv = pack(8, 3, 8)
-paint(ankle_uv, [8, 3, 8], ankle)
+ankle_uv = pack(9, 2, 10)
+paint(ankle_uv, [9, 2, 10], ankle)
 edits = []
 for side in 'lr':
     a = by[f'stomper_ankle_{side}']
-    edits.append(dict(name=a['name'], from_=[a['from'][0], 2.625, a['from'][2]], to=[a['to'][0], 5.625, a['to'][2]],
+    cx = -4.5 if side == 'l' else 4.5                      # on the foot's axis, 0.5 px wider than the shin each side
+    edits.append(dict(name=a['name'], from_=[cx - 4.5, 2.625, -5], to=[cx + 4.5, 4.625, 5],
                       uv_offset=ankle_uv, inflate=0.25))
 
 changed = [(x, y, *tex.getpixel((x, y))) for y in range(tex.height) for x in range(tex.width)
