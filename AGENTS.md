@@ -255,6 +255,17 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   to 128 deg through the thigh. Hip height is very sensitive (1 px lower ~ +20 deg of knee): derive it from the planted
   leg's reach (`reachHip` in the skill's `k2.js`) and pick the game speed from the gait (2026-10-14: walk 2.6, sprint 6.25). A limited ankle (`model/anim/kit.json` "ankle") needs straight-ish stance
   knees and short steps: a bent stance knee tilts the shin forward by about half its angle.
+- **Model first, animations after** (user, 2026-10-15): while the shape is in flux the user judges the neutral pose
+  only ("no part of the model is safe"); animations are redone once the model is final. Since the legs v5-v9 rework
+  the animations in the `.bbmodel` are stale (knee pivot 12.6, ankle pivot at the boot's heel, rest thigh 6 / shin -6 /
+  foot 0, no `sole` cube); re-bake every leg animation before exporting.
+- **Read the user's sketches literally and confirm a reading in words before building**: "an opposite slope" for the
+  thigh meant a thigh bottom PARALLEL to the shin top (both falling toward the back, a dark knee band between), and
+  "the slot where the foot is" meant the shin coming down to the ground around the foot, not an empty pocket above it.
+  Each misreading cost a full rebuild.
+- **The legs are rebuilt by a script** (`model/art/legs_stomper_art.py` + `legs_stomper_apply.js`, from a fresh snapshot
+  of the live project): when the user tweaks a leg cube by hand, carry the change into the script before the next
+  rebuild, or it is undone (the knee joint's 6.2 depth, 2026-10-15).
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
   `model/anim/` (walk/run carry a tool-arm `stabilize()` wrapper). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.

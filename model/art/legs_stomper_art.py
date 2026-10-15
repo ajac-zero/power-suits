@@ -257,13 +257,13 @@ def thigh_top(f, w, h):
 
 def band(f, w, h):
     if f == 'down':
-        return iron(w, h)
+        return plate(w, h, False, False, 0.8)              # its underside shows a little above the V's sloped tops
     return plate(w, h, top_edge=True, bottom_edge=True)
 
 
 def vee(f, w, h):
     if f == 'up':
-        return plate(w, h, False, False)                   # meets the recessed centre fill: dark iron showed as a line
+        return plate(w, h, False, False)                   # meets the centre fill: dark iron showed as a line
     if f == 'down':
         return plate(w, h, False, False, 0.8)              # the V's slanted underside
     return plate(w, h, top_edge=False, bottom_edge=True)
@@ -402,7 +402,8 @@ PARTS = [  # name, bone, from, to (right side), inflate, painter, rotation, rota
     # its front stays 0.1 behind the thigh's front face where it runs up inside the thigh (the thigh leans 6 deg
     # forward in the neutral pose; a front at -3.9 showed through the thigh's front as a dark patch), so the band's
     # front edge sits a little inside the thigh and shin fronts, like the sketch
-    ('knee_joint', 'shin', [X - 3.5, slope(4) - 0.5, -3.3], [X + 3.5, slope(-3.9) + BAND + 0.6, 3.9], 0, joint, None, None),
+    # back at 2.9 (user, 2026-10-15: 6.2 deep keeps all its edges inside the thigh and shin)
+    ('knee_joint', 'shin', [X - 3.5, slope(4) - 0.5, -3.3], [X + 3.5, slope(-3.9) + BAND + 0.6, 2.9], 0, joint, None, None),
     ('shin_front', 'shin', [X - 4.5, 5.0, -5], [X + 4.5, slope(-4), -4], -0.05, cap, None, None),
     ('shin_ramp', 'shin', [X - 4.5, slope(-4) - _RAMP_T, -4], [X + 4.5, slope(-4), 5], -0.1, ramp, [TS, 0, 0], [X, slope(-4), -4]),
     ('shin_main_f', 'shin', [X - 4.5, 4.625, -5], [X + 4.5, slope(0) - 0.15, 0], 0, shin, None, None),
@@ -436,15 +437,17 @@ for name, bone, f, t, inf, painter, rot, ro in order:
 # tops don't reach the band) and a dark core behind, which shows in the gaps (the sketch's black undersuit)
 BUV = pack([8, 2, 10]); paint(BUV, [8, 2, 10], band)
 VUV = pack([8, 2, 10]); paint(VUV, [8, 2, 10], vee)
-FUV = pack([6, 2, 10]); paint(FUV, [6, 2, 10], fill_plate)
+FUV = pack([8, 2, 10]); paint(FUV, [8, 2, 10], fill_plate)
 CUV = pack([10, 6, 5]); paint(CUV, [10, 6, 5], core)
 TUV = pack([2, 2, 10]); paint(TUV, [2, 2, 10], fill_plate)
 TIP = 20.0
-SINGLES = [dict(name='hip_fill', group='pelvis', from_=[-3, 21.625, -5], to=[3, 23.625, 5], inflate=-0.15,
+# the fill is flush with the band (front/back at z -+5, under the band, so no shared face); the V halves (-0.1) sit
+# a hair behind it, the tip (-0.05) too: a recessed fill read as a hole under the band (user)
+SINGLES = [dict(name='hip_fill', group='pelvis', from_=[-4, 21.625, -5], to=[4, 23.625, 5], inflate=0,
                 origin=[0, 22.625, 0], uv_offset=FUV, mirror_uv=False),
            dict(name='hip_tip', group='pelvis', from_=[-1, TIP, -5], to=[1, TIP + 2, 5], inflate=-0.05,
                 origin=[0, 22.625, 0], uv_offset=TUV, mirror_uv=False),
-           dict(name='hip_core', group='pelvis', from_=[-5, 17.625, -2.5], to=[5, 23.625, 2.5],
+           dict(name='hip_core', group='pelvis', from_=[-5, 17.625, -2.5], to=[5, 23.5, 2.5],
                 origin=[0, 22.625, 0], uv_offset=CUV, mirror_uv=False)]
 for sx, nm in ((1, 'r'), (-1, 'l')):
     x0, x1 = (0, 8) if sx > 0 else (-8, 0)

@@ -30,6 +30,11 @@ stay within 10° (the ankle cuffs). The specs still bake
 the old motion: after re-baking, run `../art/shoulders_apply.js` step `limits` and re-check with the skill's
 `scripts/livesweep.js`. The arm pivots also moved 2 px in (x ±9, same date); specs that solve arm IK need a re-check.
 
+**Stale since the leg rework (2026-10-15).** The legs and hips were rebuilt (`../art/legs_stomper_art.py`, v5-v9):
+knee pivot y 12.6, the ankle pivot at the boot's heel (y 1.1, z 4), rest thigh 6 / shin -6 / foot 0 (lower leg
+vertical), no `sole` cube (the kit then takes the boot's bounding box for heel and toe). Every leg animation below was
+baked for the previous legs and must be re-baked and re-checked (knee range, ankle range, clipping) before export.
+
 **Upright stance and heavier legs (2026-10-14 overhaul).** The legs' rest pose is upright, symmetric and without
 sideways splay (thigh 11 with a 7 deg outward twist, shin -20, foot 9; it was a crouched, staggered combat stance:
 32/-42 and 12/-24, splay ±8), on hips 11 px apart with heavier legs (`../art/legs_stomper_art.py`). The lower leg is

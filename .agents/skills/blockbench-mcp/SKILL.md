@@ -20,6 +20,14 @@ Learned from real sessions: rigging/posing a Bedrock entity, fixing its walk cyc
 - **Keep scripts short.** A long codemode script can hit the output-token limit and is then not executed at all. Put reusable helpers (FK, solvers) in a source string, `store("lib", src)`, and rebuild them in later scripts with `const L = new Function(load("lib"))()`. `store`/`load` also carry computed data (e.g. solved keyframes) between scripts.
 - `tools.read({path})` works inside codemode, which is the way to pull a file produced by bash (e.g. a generated pixel payload) into a script.
 - **The `write` tool has an output limit too.** A ~250-line file in one call was rejected ("response hit the output token limit"). Split code into files of ≤ ~120 lines (e.g. `k1.js`, `k2.js`, `k3.js`) and concatenate when loading: `new Function("L","rig", src1 + src2 + src3 + "\nreturn {...}")`. Code that lives on disk can be re-run after edits with `sed`/small `edit` calls instead of re-sending it.
+- **If Blockbench itself lost the project** (`risky_eval` errors like `Collection.all is not iterable`, `Project` is 0):
+  reopen it with `risky_eval` `Blockbench.read(["<path>.bbmodel"], {}, files => loadModelFile(files[0]))`.
+- **Scripts from node** when codemode's Blockbench tools are gone: `scripts/bbrun.mjs file.js '[args]'` runs a
+  codemode-style function body (e.g. an art `*_apply.js`, `shots_run.js` for the review sheet) with a node `tools`
+  facade; `views.mjs` (rest-pose or animation stills from given cameras), `film.mjs` (frames of an animation),
+  `gif.mjs` (an animated GIF of a loop, side by side views) and `isolate.mjs` work the same way.
+- **The `read` tool can lag a minute or more on new image files** (ENOENT, or a stale copy for a reused name): write
+  each render to a new file name and wait (`sleep 60`) before reading it.
 - **If the Blockbench tools vanish mid-session** (`tools.mcp__blockbench__* does not exist`), the agent's MCP connection dropped, not Blockbench. Check `lsof -nP -iTCP:3000 -sTCP:LISTEN`; if Blockbench still listens, drive it directly with `scripts/bb.mjs` (Node streamable-HTTP JSON-RPC client: `initialize` → `mcp-session-id` header → `notifications/initialized` → `tools/call`/`resources/read`). It exposes a `tools` facade with the same shape as codemode, so the same upload code works. Mention the fallback to the user.
 
 ## 2. Read the live project as JSON (best inspection tool)
@@ -123,6 +131,26 @@ Known gaps with no tool (use `risky_eval`): delete an animation, save the projec
 - **Moving a part to the other side** (weapon arm <-> hand arm): mirror the whole model and its animations instead of rebuilding or swapping arm keys; recipe + verification in [ANIMATION.md](ANIMATION.md) (Swapping sides).
 - **Shape readability.** Two rounded plates side by side with a centre strip and a dark underside read as breasts. For robots use one continuous plate with horizontal seams and a central emissive core.
 - `/tmp` on macOS is a symlink; if the `read` tool cannot see a file there, use `/private/tmp/...`.
+
+- **Box UV floors fractional sizes.** A 2.5x3.3x4.7 cube gets a 2x3x4 net (checked with `place_cube` + `faces.*.uv`).
+  Paint nets at `floor(size)`; painting at `ceil` shifted every face and left transparent pixels in the model.
+- **Rotated cubes have leaning ends.** A box turned about X (a slope) has end faces perpendicular to the slope, so one
+  corner of each end swings out past where you expect (rotating about the top front corner pushes the bottom front
+  corner forward by `T*sin(angle)`). Plan every rotated cube so its ends sit inside an axis-aligned neighbour (a thin
+  front block, a back strip) and check each corner numerically before placing; a fillet that "almost" covers leaves
+  see-through slivers or steps the user will spot.
+- **An inflate ladder kills flicker.** Overlapping cubes (same bone or not) whose side faces land on one plane z-fight.
+  Give nested pieces different inflates (0 / -0.05 / -0.1 / -0.15) and re-run `zfight.mjs` after every geometry
+  change (it caught a shin piece against the boot below it and the hip V against its band).
+- **A narrower inner piece hides inside an outer one.** A foot 0.1-1 px narrower than the shin above it can swing up
+  into the shin without poking through; the same for a joint block inset 1 px from both limbs: let its excess sit
+  inside them instead of fitting it exactly.
+- **Bones meet at an angle in the rest pose.** A piece on the shin that reaches up inside the thigh is straight while the
+  thigh leans (Power Armor: thigh 6 deg forward, shin -6); its corner poked out of the thigh's front. Check overlaps in
+  the posed model, not in model coordinates.
+- **Hide everything else to focus** (`scripts/isolate.mjs on|off`), and restore before saving: visibility is saved.
+- **Faces nobody should see still show as slivers**: where a slope meets a block, the block's top or the slope's
+  underside peeks through at grazing angles. Paint such faces in the armour colour, not dark iron.
 
 ## 9. Adding new textured parts (box UV)
 1. `get_texture`, copy the temp PNG, and map alpha occupancy (Python with `uv run --with pillow`) to find free space. **Also mark every existing cube's net rectangle as used** (`2(w+d)` x `d+h` at `uv_offset`; a cube without `uv_offset` in the project JSON sits at [0,0]): transparent pixels can still belong to a net. Example packer + painter: `model/art/mining_tools_art.py`.
