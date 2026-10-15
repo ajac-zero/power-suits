@@ -181,8 +181,8 @@ def cap(f, w, h):
 def ramp(f, w, h):
     if f == 'up':
         return plate(w, h, top_edge=True, bottom_edge=False)   # the slope from the knee cap down to the back
-    if f in ('east', 'west'):
-        return plate(w, h, top_edge=False, bottom_edge=False)  # the shin's sides under the slope
+    if f in ('east', 'west', 'south'):
+        return plate(w, h, top_edge=False, bottom_edge=False)  # the shin's sides under the slope, its sliver at the back
     return iron(w, h)
 
 
@@ -289,8 +289,9 @@ PARTS = [  # name, bone, from, to (right side), inflate, painter, rotation, rota
     ('thigh_knee', 'leg', [X - 3.5, 13.625, -4], [X + 3.5, 15.625, 0], 0.15, thigh_knee, None, None),
     ('hip_joint', 'leg', [X - 3, 20.125, -3], [X + 3, 25.125, 3], 0, joint, None, None),
     ('knee_joint', 'shin', [X - 3, 11.125, -3], [X + 3, 16.125, 3], 0, joint, None, None),
-    ('shin_main', 'shin', [X - 4.5, 4.625, -5], [X + 4.5, 11.625, 4], 0, shin, None, None),
-    ('shin_cap', 'shin', [X - 4.5, 11.625, -5], [X + 4.5, 16.625, -2], 0, cap, None, None),
+    # the main block reaches 12.6 so the top slope ends on its back face's top edge (it stopped 1.4 px above it)
+    ('shin_main', 'shin', [X - 4.5, 4.625, -5], [X + 4.5, 12.625, 4], 0, shin, None, None),
+    ('shin_cap', 'shin', [X - 4.5, 12.625, -5], [X + 4.5, 16.625, -2], 0, cap, None, None),
     # top slope: 7 long, turned 31 deg about the cap's back top edge (z -2): its top runs from the cap down to the back
     # face (z 4, y 13.0); its other corners end inside the cap and the main block
     ('shin_ramp', 'shin', [X - 4.5, 11.625, -2], [X + 4.5, 16.625, 5], -0.05, ramp, [31, 0, 0], [X, 16.625, -2]),
