@@ -15,7 +15,7 @@ const {TAU,spring,addTo,pnoise,plant,gaitFoot,footR,REST,smooth,clamp,lerp}=K;
 // slower heel strike (strike 6, rin 0.3: the boot slapping flat about its heel dropped the front hinge 2 px and the
 // knee straightened back mid-landing), a softened touchdown (land 0.2) and swing targets kept within reach
 const O=Object.assign({T:0.7,beta:0.32,S:22.4,zc:0,hip:-0.3,bob:1.4,H:4,up:0.4,wide:0.5,kick:1,strike:6,toe:30,
-  hang:-20,lean:-11,arm:44,low:0.35,rin:0.3,paw:0.4,land:0.2,KMIN:30,fly:1.5,kneeFloor:22,cap:0.3,rw:0.02,
+  hang:-20,lean:-11,arm:14,armF:6,toolPump:true,armZ:-5,elbow:70,low:0.35,rin:0.3,paw:0.4,land:0.2,KMIN:30,fly:1.5,kneeFloor:22,cap:0.3,rw:0.02,
   swingK:42,soft:1.5,sink:2,sinkAt:0.25},K.P||{});
 const {T,beta,S,zc}=O;
 // legs v10: stay on the bent knee solution (the front ankle hinge's straighter one flips with it near full stretch)
@@ -80,7 +80,9 @@ function stabilize(raw,T,{keepPos=0.25,keepRot=0.15,N=30}={}){
     return P;};
 }
 // ---
-const SAMPLE=stabilize(RAW,T,{keepPos:0.6,keepRot:0.5});
+// v8 (user): the tool arm pumps like the hand arm (same short swing, opposite phase) instead of being held steady:
+// shots leave from the pilot's eye and the cockpit draws its own viewmodel, so its third-person pose never aims
+const SAMPLE=O.toolPump?RAW:stabilize(RAW,T,{keepPos:0.6,keepRot:0.5});
 return {name:'animation.marine.run',length:T,loop:'loop',fps:60,tol:{r:0.04,p:0.01},
  target(t,s){return foot(s,t).pivot;},
  sample(t){return SAMPLE(t);}};
@@ -102,11 +104,15 @@ function RAW(t){
   addTo(P,'torso','r',[tx,ty,tz]);
   addTo(P,'head','r',[-(bx+tx)*0.85-3+1.5*Math.cos(2*f-1.6)+3.5*J+n1(t),-(by+ty)*0.8,-(bz+tz)*0.6]);
   // tool arm: heavy, pumps a little against the free arm, jolts on impact
-  addTo(P,'right_arm','r',[10-12*Math.cos(f-0.35)+3*Math.cos(2*f-1.2)+2.5*R+4*J,-(by+ty)*0.3,0]);
-  addTo(P,'right_forearm','r',[8+3*Math.cos(2*f-1.8)+2*R+5*J,0,0]);
-  // free arm pumps hard opposite the left leg, elbow bent ~90, driving forward-up and back
-  addTo(P,'left_arm','r',[-4+O.arm*Math.cos(f-0.35),0,0]);
-  addTo(P,'left_forearm','r',[62+22*Math.cos(f-0.9),0,0]);
+  if(O.toolPump){addTo(P,'right_arm','r',[10-O.arm*Math.cos(f-0.35)+2.5*R+4*J,-(by+ty)*0.3,0]);
+    addTo(P,'right_forearm','r',[8-O.armF*Math.cos(f-0.9)+2*R+5*J,0,0]);}
+  else{addTo(P,'right_arm','r',[10-12*Math.cos(f-0.35)+3*Math.cos(2*f-1.2)+2.5*R+4*J,-(by+ty)*0.3,0]);
+    addTo(P,'right_forearm','r',[8+3*Math.cos(2*f-1.8)+2*R+5*J,0,0]);}
+  // free arm pumps opposite the left leg, elbow bent ~90 (v8: a short, heavy pump, arm 14 / armF 6: the old 44 / 22
+  // swung the fist 17 px against the tool arm's steady 2.6, user: 'jarring'); held 5 deg out from the body and the elbow
+  // at 70 so the driving thigh passes under the forearm (it came up 1 px into it)
+  addTo(P,'left_arm','r',[(O.armX??-4)+O.arm*Math.cos(f-0.35),0,O.armZ??0]);
+  addTo(P,'left_forearm','r',[(O.elbow??62)+O.armF*Math.cos(f-0.9),0,0]);
   const fr=reach('r',foot('r',t),P),fl=reach('l',foot('l',t),P);
   plant(P,'r',fr.pivot,fr.R);plant(P,'l',fl.pivot,fl.R);
   return P;}
