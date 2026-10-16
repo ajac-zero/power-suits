@@ -23,6 +23,10 @@ Used to build a full, "premium" animation set for a Bedrock entity: every animat
 | `cannon.mjs` | Muzzle travel and aim swing of the cannon over a cycle (jiggle metric). |
 | `trace.mjs` | Per-time leg angles, foot lows and IK error of a spec (`check.mjs` and `trace.mjs` honour `K_JSON` for multi-mode specs). |
 | `zfight.mjs` | Coplanar same-direction face scan (z-fighting). Rest pose by default; `ANIMS="anim@N;..." TOL=0.05 SKIP=bone,...` scans live animated poses. |
+| `gaitsweep.mjs` | `node gaitsweep.mjs spec.js '[{P}, ...]'`: per parameter set (`K.P` overrides) knee / flat-foot knee / thigh / ankle ranges, lowest foot, biggest one-frame knee step, biggest kink (second difference), knee direction changes. `MODEL=f.bbmodel` sweeps a saved model (e.g. a git revision). The workhorse of the gait iteration below. |
+| `kinks.mjs` | When a spec kinks: time:value of second differences over a threshold (legs + root height). |
+| `livefeet.mjs` | Boot heel/toe heights and pitch through Blockbench's own playback (stale keys after a rig change show up here). |
+| `savekeep.mjs` / `snapshot.mjs` | Save the project with every cube visible and re-hide the user's hidden cubes / dump `{model, texture}` for art scripts. |
 
 Run from the project folder, e.g. `node .agents/skills/blockbench-mcp/scripts/run.mjs model/anim/a_idle.js 0,1,2 fl`. In codemode you can also load the same files with `tools.read` + `new Function` (as the original session did).
 
@@ -61,6 +65,48 @@ return {name:'animation.x.idle', length:4.0, loop:'loop'|'once'|'hold', fps:20,
 - Probes of live playback can read stale data after re-uploading; measure via `animation_timeline set_time` (livespeed.mjs) and cross-check with the spec.
 - The `read` tool may serve a cached image for a path it already read; copy to a new filename to view a regenerated montage.
 - Z-fight scans must orient face normals outward: flush stacked cubes (opposite normals) are harmless; same-direction coplanar faces flicker. Inflate 0.1 fixes them without touching box UVs.
+
+## Gait iteration (Power Armor walk v6 / run v8, 2026-10-15)
+The method that turned "baby steps", "hopping" and "a stutter" into gaits the user approved:
+1. **Translate the user's words into gait numbers** before touching anything: cycle length T, stance length S, duty
+   beta (speed = S / (beta T); keep the game speed, so a longer T means longer steps), flight time, hip height curve,
+   arm amplitude. "Slower, bigger steps" -> T and S up; "baby steps" -> S and T too small; "hopping" -> too much flight;
+   "pushing hard into the ground" -> more ground time, the hips sinking into the loaded leg, a push-off that throws the
+   trailing leg back.
+2. **Make each idea a spec parameter** (`O = Object.assign({...defaults}, K.P)`) so one spec covers every variant and
+   `gaitsweep.mjs` can compare dozens of sets in seconds without uploading anything.
+3. **Sweep, then read the numbers**: flat-foot knee (crouch), thigh range (leg split; a push-off needs the trailing
+   thigh behind vertical), ankle range against the boot's clean range, lowest foot, and smoothness (step, kink, turns).
+   A clean run/walk turns its knee 4 times a cycle; a bump at landing adds 2.
+4. **Locate defects with `kinks.mjs`** and read the spec at that time (strike, toe-off, a clamp, a limit).
+5. **Bake one candidate, film it** (`film.mjs` side + `tp` from behind, `gif.mjs` for the user) and only then show it.
+   Keep the candidate's parameters in a file; when approved, write them into the spec's defaults, re-bake from the
+   file and check it reproduces the numbers, then commit.
+
+Lessons, each from a real failure:
+- **Two IK solutions per foot.** The kit's 3-DOF leg reaches each foot pivot with a straighter and a more bent knee,
+  mirrored about the knee angle where hip, knee and ankle pivot line up (`kneeOff`). An ankle pivot behind the shin's
+  axis (a heel hinge) puts that point in hyperextension, so only one solution is valid. A pivot IN FRONT (Power
+  Armor's front hinge, offset -22.6) puts it at a 23 deg bent knee: lowering the hips at all from standing folds the
+  knee to 70-90, a crouch reads as a squat, and near full stretch the solver flips between the solutions (one-frame
+  jumps of 30-47 deg). Fixes: `setKneeFloor(-offset)` for the gait (stay on the bent one), `KMIN` >= -offset in
+  `reachHip`, and keep swing targets a few degrees short of full stretch.
+- **`legLen` must use the bone's knee flex** (it used the pivot-line angle: a heel hinge 4 px behind the shin let
+  `reachHip` hyperextend the knees by 19 deg).
+- **Clamps make corners.** A hard reach clamp held a leg at its limit and left a kink going in and out: ease into the
+  limit (`n2 = L - w exp(-(n - (L - w)) / w)`). The same for contacts: a heel strike whose boot gets snapped to the ankle
+  limit at contact, or a foot slapping down about its heel while the ankle hinge sits near the toe, puts a bump in the
+  knee (land flatter, roll slower: `strike`, `rin`).
+- **Hip curves**: `reachHip` (as high as the planted legs allow) + a flight bounce + a stance sink (lowest early in the
+  stance, `sinkAt` 0.25, through a spring) gave the "pushing" run; fixed bob curves went out of the legs' reach at
+  push-off. `reachHip` has `cap` (max height) and `w` (smoothing window).
+- **A swing path must lift where the hips are**: with the hips low, a low swing (`H`) drags the trailing shin flat along
+  the ground (reads as kneeling); a high one folds the knee past 130. Look at the trailing leg from the side.
+- **Name things the kit doesn't misread**: a foot cube named `*sole*` is taken as the whole sole.
+- **Measure the live result too** (`livefeet.mjs`): keys baked for an older pivot play "fine" in Blockbench while the
+  planted boot tilts and sinks.
+- **Sample finer than the bake**: at 120 fps the walk's foot dips 0.4 px for an instant between its 30 fps keys (the
+  baked loop doesn't show it); check `gaitsweep` low at 120 fps before raising a spec's fps.
 
 ## Game-facing design rules (Bedrock)
 - Bedrock **adds** simultaneously playing animations. Make one-shot actions that should work while moving (attack, throw, hit, stim, fidget, helmet) **upper-body overlays**: no `marine`/root, leg, shin or foot channels; start and end at exactly zero offset. Full-body animations (idle, walk, run, sneak, death, electrified) own the legs and root.

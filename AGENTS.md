@@ -257,8 +257,9 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   knees and short steps: a bent stance knee tilts the shin forward by about half its angle.
 - **Model first, animations after** (user, 2026-10-15): while the shape is in flux the user judges the neutral pose
   only ("no part of the model is safe"); animations are redone once the model is final. Since the legs v5-v9 rework
-  the animations in the `.bbmodel` are stale (knee pivot 12.6, ankle pivot at the boot's heel, rest thigh 6 / shin -6 /
-  foot 0, no `sole` cube); re-bake every leg animation before exporting.
+  the leg animations in the `.bbmodel` are stale except walk and run (legs v10, re-solved 2026-10-15); re-bake every
+  other leg animation before exporting. The assets aren't exported yet: on export set `WALK_ANIM_AUTHORED` to 2.218
+  (the run stays 6.25) and decide the game walk speed (user: open; the animation plays faster at 2.6).
 - **Read the user's sketches literally and confirm a reading in words before building**: "an opposite slope" for the
   thigh meant a thigh bottom PARALLEL to the shin top (both falling toward the back, a dark knee band between), and
   "the slot where the foot is" meant the shin coming down to the ground around the foot, not an empty pocket above it.
@@ -271,8 +272,23 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   about that hinge. Every slot/slope/band variant failed: with big steps the shin leans ~30-40 deg over the flat boot at
   push-off, so whatever sits under the shin must be shaped around the hinge. A front hinge makes the leg straightest with
   the knee bent ~23 (gaits use KMIN 23; the kit's knee guard keeps the solver off the backward-bending solution).
-- Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
-  `model/anim/` (walk/run carry a tool-arm `stabilize()` wrapper). Measure gait
+- **The user judges motion by feel, in words; translate each word into a measurable gait change** (2026-10-15):
+  "slower, bigger steps" = longer cycle + longer stance (walk 0.6 -> 1.0 s, 15 -> 22 px); "baby steps" = short stance
+  and cadence; "hopping, frolicking" = long flights, high hips, little ground time (v7 run rejected); "pushing hard into
+  the ground at every step" = more ground time (foot planted 32%), hips sinking into the loaded leg right after each
+  footfall and a push-off that throws the trailing leg out behind (v8 run, approved). Arms: both calm in the run (fist
+  ~5 px of travel against the chest; a 17 px swing next to the steady tool arm read as "jarring"), the tool arm pumps
+  like the hand in the run (its third-person pose never aims: shots leave from the eye, the cockpit has a viewmodel).
+- **Moving a bone pivot invalidates every baked animation on it**: the keys are joint angles, so after the ankle hinge
+  moved, the old walk tilted the planted boot up to 30 deg toes-up ("looks like it's going up a slope") and sank it 3 px.
+  Re-solve the IK specs (and check the live result with the skill's `scripts/livefeet.mjs`).
+- **A stutter is usually one frame, not a style**: the run's "stutter" was the knee flipping between its two IK
+  solutions (47 deg in one frame) where the leg ran out of reach; then corners where a clamp or a foot contact kicked
+  in. Measure before tuning: `gaitsweep.mjs` (step / kink / turns per parameter set) and `kinks.mjs` (when).
+- **The animation kit takes any foot cube named `*sole*` as the whole sole** (heel and toe edges): a `boot_sole_back`
+  strip put the toe in the middle of the boot and skewed every gait solve until renamed (`boot_back_strip`).
+- Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md` (its "Gait iteration" section is the method
+  that produced walk v6 / run v8); specs in `model/anim/` (the walk stabilizes the tool arm, the run doesn't). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.
 
 ## Code map (see README for the full list)
