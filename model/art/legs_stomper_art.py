@@ -88,7 +88,7 @@ REMOVED = ['hip_core', 'seat_upper', 'seat_lower', 'codpiece_upper', 'codpiece_l
             'shin_guard', 'shin_core', 'boot_shaft', 'boot_upper', 'boot_toe', 'boot_sole', 'boot_cuff',
             'shin_ramp', 'shin_low', 'shin_back', 'shin_skirt1', 'shin_skirt2',
             'shin_main', 'shin_cap', 'shin_heel', 'boot_foot', 'boot_fill', 'boot_tip', 'thigh_main', 'thigh_low', 'thigh_top',
-            'shin_front', 'shin_main_f', 'shin_main_b', 'thigh_back', 'thigh_outer')] + ['hip_tip']   # re-runs rebuild these
+            'shin_front', 'shin_main_f', 'shin_main_b', 'thigh_back', 'thigh_outer', 'boot_sole_back', 'boot_heel_a', 'boot_heel_b')] + ['hip_tip']   # re-runs rebuild these
 
 
 def size(c):
@@ -205,6 +205,16 @@ def shin_low(f, w, h):
     if f == 'down':
         return solid(EDGE, w, h)                           # the shin's underside over the boot
     return plate(w, h, top_edge=False, bottom_edge=True)   # dark edge row along the bottom, like the old heel step
+
+
+def sole_strip(f, w, h):
+    return solid(SOLE, w, h)                               # the dark sole under the shin's back half
+
+
+def heel_slab(f, w, h):
+    if f in ('up', 'down'):
+        return iron(w, h)                                  # inside the boot
+    return plate(w, h, top_edge=False, bottom_edge=False)  # the boot's blue, seen when the shin rocks forward
 
 
 def cap(f, w, h):
@@ -398,6 +408,18 @@ _T_LOW = 8 * math.sin(math.radians(TT)) + 0.25         # thick enough to reach t
 _ZBB = 3.95 - _T_LOW * math.sin(math.radians(TT))      # its back end leans; the thigh_back strip closes behind it
 _L_LOW = (_ZBB + 3.95) / math.cos(math.radians(TT))
 SHIN_LOW = 0.625                                      # the shin's flat bottom, 0.85 px above the sole's underside
+# the boot's hidden heel follows the circle the shin's back bottom edge travels about the ankle hinge (the shin's front
+# bottom edge, 9 px ahead): as the shin rocks forward over the boot, its back edge slides over boot instead of lifting
+# off it (no gap behind the ankle) and nothing of the boot swings out behind it. Two slabs, each one chord of the circle.
+HINGE = (SHIN_LOW, -5)
+HEEL_R = 9
+def arc(deg, r=HEEL_R):
+    a = math.radians(deg)
+    return HINGE[0] + r * math.sin(a), HINGE[1] + r * math.cos(a)
+def heel_chord(a, b, inset=0.0, depth=4.6):            # inset: the slab's inflate (< 0) pulls its back face in; undo it
+    (y0, z0), (y1, z1) = arc(a, HEEL_R - inset), arc(b, HEEL_R - inset)
+    tilt = math.degrees(math.atan2(z0 - z1, y1 - y0))   # its top leans forward
+    return [X - 4.5, y0, z0 - depth], [X + 4.5, y0 + math.hypot(y1 - y0, z1 - z0), z0], [-tilt, 0, 0], [X, y0, z0]
 _RAMP_T = 2.1                                         # ramp: its front end leans 0.96 px, hidden in the 1 px front block
 
 PARTS = [  # name, bone, from, to (right side), inflate, painter, rotation, rotation origin
@@ -423,7 +445,12 @@ PARTS = [  # name, bone, from, to (right side), inflate, painter, rotation, rota
     ('shin_main_f', 'shin', [X - 4.5, SHIN_LOW, -5], [X + 4.5, slope(0) - 0.15, 0], 0, shin_low, None, None),
     ('shin_main_b', 'shin', [X - 4.5, SHIN_LOW, 0], [X + 4.5, slope(4) - 0.1, 4], 0, shin_low, None, None),
     # -0.15, not -0.1: the shin's heel piece (-0.1) runs down into it and their sides flickered
-    ('boot_foot', 'foot', [X - 4.5, -0.375, -5], [X + 4.5, 4.625, 4], -0.15, foot_box, None, None),
+    # (v10: its back stops at z -0.5: a square back corner swung out behind the shin when the shin rocked forward)
+    ('boot_foot', 'foot', [X - 4.5, -0.375, -5], [X + 4.5, 4.625, -0.5], -0.15, foot_box, None, None),
+    ('boot_sole_back', 'foot', [X - 4.5, -0.375, -0.5], [X + 4.5, SHIN_LOW, 4], -0.15, sole_strip, None, None),
+    # -0.2: its tilted bottom dips 0.8 px into the sole strip at the front: narrower, it stays hidden inside it
+    ('boot_heel_a', 'foot', *heel_chord(0, 20, -0.2)[:2], -0.2, heel_slab, *heel_chord(0, 20, -0.2)[2:]),
+    ('boot_heel_b', 'foot', *heel_chord(20, 45, -0.05)[:2], -0.05, heel_slab, *heel_chord(20, 45, -0.05)[2:]),
     ('boot_tip', 'foot', [X - 4.5, -0.375, -9], [X + 4.5, 2.625, -4], -0.2, tip, None, None),
     # the slope: turned down 30 deg about the foot's front top edge, ending on the tip's top 3.5 px ahead
     ('boot_toe', 'foot', [X - 4.5, 2.625, -9], [X + 4.5, 4.625, -5], -0.05, toe, [-30, 0, 0], [X, 4.625, -5]),   # -0.05: its back corner sits inside the shin (v10: side planes flickered)

@@ -266,6 +266,11 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **The legs are rebuilt by a script** (`model/art/legs_stomper_art.py` + `legs_stomper_apply.js`, from a fresh snapshot
   of the live project): when the user tweaks a leg cube by hand, carry the change into the script before the next
   rebuild, or it is undone (the knee joint's 6.2 depth, 2026-10-15).
+- **The feet are final (user, 2026-10-15, legs v10)**: the shin is a solid block down to the boot's sole strip, the ankle
+  hinges at the shin's FRONT bottom edge, and the boot's hidden heel follows the circle the shin's back edge travels
+  about that hinge. Every slot/slope/band variant failed: with big steps the shin leans ~30-40 deg over the flat boot at
+  push-off, so whatever sits under the shin must be shaped around the hinge. A front hinge makes the leg straightest with
+  the knee bent ~23 (gaits use KMIN 23; the kit's knee guard keeps the solver off the backward-bending solution).
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md`; specs in
   `model/anim/` (walk/run carry a tool-arm `stabilize()` wrapper). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.

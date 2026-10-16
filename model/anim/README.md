@@ -31,7 +31,7 @@ the old motion: after re-baking, run `../art/shoulders_apply.js` step `limits` a
 `scripts/livesweep.js`. The arm pivots also moved 2 px in (x ±9, same date); specs that solve arm IK need a re-check.
 
 **Stale since the leg rework (2026-10-15).** The legs and hips were rebuilt (`../art/legs_stomper_art.py`, v5-v9):
-knee pivot y 12.6, the ankle pivot at the boot's heel (y 1.1, z 4), rest thigh 6 / shin -6 / foot 0 (lower leg
+knee pivot y 12.6, the ankle pivot at the shin's front bottom edge (y 0.625, z -5; v10, final), rest thigh 6 / shin -6 / foot 0 (lower leg
 vertical), no `sole` cube (the kit then takes the boot's bounding box for heel and toe). Every leg animation below except the walk (v6) was
 baked for the previous legs and must be re-baked and re-checked (knee range, ankle range, clipping) before export.
 
@@ -54,7 +54,7 @@ arms vs thighs).
 | File | Animation | Type |
 |---|---|---|
 | a_idle.js | idle | full body loop, IK feet |
-| a_walk.js | walk v6 (2026-10-15, legs v9): slow heavy stride, 1.0 s cycle, stance 22 px, duty 0.62, 2.22 blocks/s, hips from the leg reach (`reachHip`, knee >= 10, bob 3 px), the forward step lands on the heel with the boot square to the shin and rocks flat (ankle >= -4: further toes-down shows the dark top of the boot's slot), knee dip after each heel strike, footfall jolt through torso/head/free arm, knees <= 60 (the knee is clean to ~40: the thigh's back block sinks <= 1 px into the shin's slope at the back of the knee in swing), tool stabilized (v5 0.6 s / 2.6 blocks/s in a_walk_v5.js, v4 jog in a_walk_v4.js, v3/v2 in a_walk_v3.js/a_walk_v2.js) | full body gait loop |
+| a_walk.js | walk v6 (2026-10-15, legs v10): slow heavy stride, 1.0 s cycle, stance 22 px, duty 0.62, 2.22 blocks/s, knee >= 23 (the front ankle hinge stretches the leg along hip-knee-hinge with the knee bent ~23: planted 38-60, swing 89), ankle -4..+40, stance zc -2, knee dip after each heel strike, footfall jolt, tool stabilized (v5 0.6 s / 2.6 blocks/s in a_walk_v5.js, v4 jog in a_walk_v4.js) | full body gait loop |
 | a_walk_upper.js | old walk upper-body layer (v1 walk, superseded by a_walk.js) | legacy |
 | a_run.js / a_sneak.js | run v6 (2026-10-14): energetic bounding sprint, duty 0.3, 0.56 s, 6.25 blocks/s, lean 11, hips -0.3 +-1.4 (rising into the push-off), own swing path (heel kick, knee drive, paw-back), knees <= 101, hard arm pump, footfall jolt, tool arm half stabilized (v5 "shuffle" in a_run_v5.js, v4 10 blocks/s in a_run_v4.js, v3/v2/v1 in a_run_v3/v2/v1.js) / sneakwalk | full body gait loops |
 | a_jump_charge.js | jump_charge (hold): crouch wind-up, ends on jump t=0 | full body |
