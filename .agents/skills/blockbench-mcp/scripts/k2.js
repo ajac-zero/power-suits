@@ -39,7 +39,11 @@ function plantRaw(pose,s,pivot,Rw){const S=SIDE[s];
 // Ankle bend limits (degrees, foot X rotation incl. its rest, + = toes up toward the shin; null = free). A rig whose
 // ankle is hidden inside a boot (Power Armor's stompers: -25..+30) can't bend the foot far against the shin: plant() then rolls the foot instead,
 // about its lowest edge while it touches the ground (the contact point doesn't slip), lifting it if it would dig in.
-const OPT={ankle:null,square:false,kneeFloor:2};   // ankle: [min, max] degrees or null (free); square: the ankle only bends (pitch)
+const OPT={ankle:null,square:false,kneeFloor:2};
+// the least knee flex plant() accepts (deg). A boot hinged in front of the shin's axis (offset -22.6 on Power Armor's
+// v10 legs) has a straighter solution below -offset that flips back and forth with the bent one near full stretch
+// (knee jumps of 30-47 deg in a frame): such rigs set the floor at -offset (kit.json "kneeFloor") and stay bent.
+function setKneeFloor(d){OPT.kneeFloor=d;}   // ankle: [min, max] degrees or null (free); square: the ankle only bends (pitch)
 function setAnkleLimit(d){OPT.ankle=Array.isArray(d)?d:[-d,d];}
 // A foot that sits in a slot of the shin (Power Armor's boots) can't twist or roll against it: plant() then keeps the
 // foot's Y/Z at zero total (square to the shin) and only bends it; the sole follows the shin's small yaw/roll.

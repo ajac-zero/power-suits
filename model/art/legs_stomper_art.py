@@ -88,7 +88,7 @@ REMOVED = ['hip_core', 'seat_upper', 'seat_lower', 'codpiece_upper', 'codpiece_l
             'shin_guard', 'shin_core', 'boot_shaft', 'boot_upper', 'boot_toe', 'boot_sole', 'boot_cuff',
             'shin_ramp', 'shin_low', 'shin_back', 'shin_skirt1', 'shin_skirt2',
             'shin_main', 'shin_cap', 'shin_heel', 'boot_foot', 'boot_fill', 'boot_tip', 'thigh_main', 'thigh_low', 'thigh_top',
-            'shin_front', 'shin_main_f', 'shin_main_b', 'thigh_back', 'thigh_outer', 'boot_sole_back', 'boot_heel_a', 'boot_heel_b')] + ['hip_tip']   # re-runs rebuild these
+            'shin_front', 'shin_main_f', 'shin_main_b', 'thigh_back', 'thigh_outer', 'boot_sole_back', 'boot_back_strip', 'boot_heel_a', 'boot_heel_b')] + ['hip_tip']   # re-runs rebuild these
 
 
 def size(c):
@@ -447,7 +447,8 @@ PARTS = [  # name, bone, from, to (right side), inflate, painter, rotation, rota
     # -0.15, not -0.1: the shin's heel piece (-0.1) runs down into it and their sides flickered
     # (v10: its back stops at z -0.5: a square back corner swung out behind the shin when the shin rocked forward)
     ('boot_foot', 'foot', [X - 4.5, -0.375, -5], [X + 4.5, 4.625, -0.5], -0.15, foot_box, None, None),
-    ('boot_sole_back', 'foot', [X - 4.5, -0.375, -0.5], [X + 4.5, SHIN_LOW, 4], -0.15, sole_strip, None, None),
+    # (not named *sole*: the animation kit takes a cube named sole* as the whole sole, for the heel and toe edges)
+    ('boot_back_strip', 'foot', [X - 4.5, -0.375, -0.5], [X + 4.5, SHIN_LOW, 4], -0.15, sole_strip, None, None),
     # -0.2: its tilted bottom dips 0.8 px into the sole strip at the front: narrower, it stays hidden inside it
     ('boot_heel_a', 'foot', *heel_chord(0, 20, -0.2)[:2], -0.2, heel_slab, *heel_chord(0, 20, -0.2)[2:]),
     ('boot_heel_b', 'foot', *heel_chord(20, 45, -0.05)[:2], -0.05, heel_slab, *heel_chord(20, 45, -0.05)[2:]),
