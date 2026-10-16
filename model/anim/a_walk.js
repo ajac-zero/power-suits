@@ -1,15 +1,16 @@
-// WALK v6 (2026-10-15, legs v9): a slow, heavy stride. A 1.0 s cycle instead of v5's 0.6 with steps half as long
+// WALK v6 (2026-10-15, legs v10: solid shin, front ankle hinge): a slow, heavy stride. A 1.0 s cycle instead of v5's 0.6 with steps half as long
 // again (stance 22 px instead of 15), 2.22 blocks/s: longer double support (duty 0.62), the hips dropping between
 // the feet and rising over the planted leg (reachHip, knee >= KMIN), a weight-accepting knee dip after each heel strike,
 // a footfall jolt through the torso, more weight roll over the planted leg, a slower and wider free-arm swing.
 // Tool arm stabilized. v5 (0.6 s, 2.6 blocks/s, shorter quicker steps) in a_walk_v5.js; v4 jog in a_walk_v4.js.
 const {TAU,spring,addTo,pnoise,plant,gaitFoot,reachHip,REST}=K;
-const O=Object.assign({T:1.0,beta:0.62,S:22,zc:0,H:2.6,KMIN:10,strike:20,toe:20,hang:-8,sway:1.5,rout:0.26,w:0.03,kneeOut:0,roll:4.5,
+const O=Object.assign({T:1.0,beta:0.62,S:22,zc:-2,H:2.6,KMIN:23,strike:20,toe:20,hang:-8,sway:1.5,rout:0.26,w:0.03,kneeOut:0,roll:4.5,
   dip:0.4,jolt:1.0,arm:18,yaw:5,
-  // the boot may point its toes down at most 4 deg against the shin: further, the shin's front lifts off the boot and
-  // shows the dark top of the boot's slot (user, 2026-10-15). The forward step then lands on the heel and rocks the
-  // boot flat only once the shin comes over it (plant() rolls the boot about its heel).
-  ankle:[-4,30]},K.P||{});
+  // legs v10 (2026-10-15): the shin is a solid block down to the sole and the boot hinges at its front bottom edge. Toes
+  // down at most 4 deg (the shin's back would sink into the sole), toes up to 40 (the shin's back lifts off the heel).
+  // KMIN 23: with the hinge 5 px in front of the shin's axis the leg is stretched along hip-knee-hinge with the knee
+  // bent ~23, so the planted knee bends 38-60 (12-20 with the old heel hinge); zc -2 places the stance for the hinge.
+  ankle:[-4,40]},K.P||{});
 const {T,beta,S,zc}=O;
 if(O.ankle)K.setAnkleLimit(O.ankle);   // [toes down, toes up] against the shin; kit.json's range otherwise
 const Gr={x:REST.r.pivot[0],zc,S,beta,H:O.H,yaw:REST.r.yaw,strike:O.strike,toe:O.toe,hang:O.hang,rin:0.14,rout:O.rout,vm:0.45};
