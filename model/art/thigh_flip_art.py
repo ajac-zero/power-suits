@@ -10,6 +10,10 @@ Built like the shin's top, upside down (side view, thigh-local, the leg's right 
   thigh_ramp   the slope: a slab turned about the plate's back bottom edge, rising to the back face
   thigh_mid_f / thigh_mid_b  blocks filling the wedge above the slope up into thigh_main, their bottoms just above it
   thigh_main   the rest of the thigh, from the slope's back end up (replaces thigh_main, thigh_low, thigh_back)
+  knee_joint   its top 15.43 -> JOINT_TOP (14.7, shin-local): with the thigh's front lower, the joint's top front
+               corner swung out through the thigh's front face as the knee bent (0.33 px in the walk, 0.29 in the run);
+               14.7 keeps 0.12 / 0.25 px inside and still reaches the thigh's underside at the back (a 0.16 px wedge in
+               the idle's straightest frame, closing toward the front: no see-through)
 Run: uv run --with pillow --with shapely python3 model/art/thigh_flip_art.py
 Input .scratch/stomper-source.json (the skill's scripts/snapshot.mjs); output .scratch/thigh-flip-plan.json for
 thigh_flip_apply.js and .scratch/thigh-flip-preview.png.
@@ -27,6 +31,7 @@ B = B_WORLD + REL          # the slope in thigh-local coordinates
 T = 1.8                    # ramp thickness (its front end leans T sin B = 0.99 px, inside the 1 px plate)
 X = 5.5
 K = 12.625
+JOINT_TOP = 14.7
 
 s = json.loads(Path('.scratch/stomper-source.json').read_text())
 m = s['model'] if isinstance(s['model'], dict) else json.loads(s['model'])
@@ -147,7 +152,8 @@ for name, f, t, inf, rot, ro, kind in sorted(PARTS, key=lambda p: -2 * (lambda s
         if rot: c['rotation'] = rot; c['origin'] = [sx * ro[0], ro[1], ro[2]]
         cubes.append(c)
 changed = [(x, y, *tex.getpixel((x, y))) for y in range(H) for x in range(W) if tex.getpixel((x, y)) != live.getpixel((x, y))]
-Path('.scratch/thigh-flip-plan.json').write_text(json.dumps(dict(removed=REMOVED, cubes=cubes,
+edits = [dict(name=f'knee_joint_{sd}', to=[by[f'knee_joint_{sd}']['to'][0], JOINT_TOP, by[f'knee_joint_{sd}']['to'][2]]) for sd in 'rl']
+Path('.scratch/thigh-flip-plan.json').write_text(json.dumps(dict(removed=REMOVED, cubes=cubes, edits=edits,
     pixels=''.join(f'{x:02x}{y:02x}{r:02x}{g_:02x}{b:02x}{a:02x}' for x, y, r, g_, b, a in changed))))
 prev = tex.resize((W * 4, H * 4), Image.NEAREST); bg = Image.new('RGBA', prev.size, (255, 0, 255, 255)); bg.alpha_composite(prev)
 bg.save('.scratch/thigh-flip-preview.png')

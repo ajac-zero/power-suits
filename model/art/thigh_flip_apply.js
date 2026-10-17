@@ -18,6 +18,9 @@ return async function apply(planPath) {
     const gone = Cube.all.filter(c => names.includes(c.name));
     Undo.initEdit({elements: gone, outliner: true}); gone.forEach(c => c.remove()); Undo.finishEdit("Thigh flip: remove old thigh cubes");
     Canvas.updateAll(); return gone.length + " removed"; })()`);
+  if (plan.edits) await ev(`(() => { const edits = ${JSON.stringify(plan.edits)}; const cs = edits.map(e => Cube.all.find(c => c.name === e.name));
+    Undo.initEdit({elements: cs}); edits.forEach((e, i) => cs[i].to.splice(0, 3, ...e.to)); Undo.finishEdit("Thigh flip: lower knee joint top");
+    Canvas.updateAll(); return cs.length; })()`);
   for (const c of plan.cubes) await tools.mcp__blockbench__place_cube({group: c.group, elements: [{name: c.name,
     from: c.from_, to: c.to, origin: c.origin, uv_offset: c.uv_offset, mirror_uv: c.mirror_uv,
     ...(c.inflate ? {inflate: c.inflate} : {}), ...(c.rotation ? {rotation: c.rotation} : {})}]});
