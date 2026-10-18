@@ -254,6 +254,7 @@ for name, f, t, inf, rx, kind in sorted(LEG_PARTS + HOOD_PARTS, key=lambda p: -2
         for j, row in enumerate(P(kind)(fc, w, h)):
             for i, q in enumerate(row): tex.putpixel((uv[0] + x + i, uv[1] + y + j), (*q, 255))
     if name == 'cap_c': nets['cap_f'] = nets['cap_b'] = uv
+# hip_centre was replaced by the hip axle (2026-10-18, user): run model/art/hip_axle_apply.js after drum_hips_apply.js
 CENTRE = ('hip_centre', [-0.25, 19.5, -4.5], [0.25, PY + RH, 4.5])
 csz = size(CENTRE[1], CENTRE[2]); cuv = pack(csz)
 for fc, (x, y, w, h) in faces(*csz).items():
