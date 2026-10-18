@@ -267,4 +267,4 @@ src/main/resources/
   animation stayed consistent (the gait now leads with the other foot). The specs in `model/anim/` are
   still written for the old rig; its `kit.json` makes the bake tools mirror them onto the new one. Hand-held tool
   items are mirrored back to the right-arm shape by `tools/extract-tool-geo.py` (you hold them in your right hand).
-- Unused animations so far: attack (3-round burst), throw (lost its grenade prop), stim, electrified, idle_fidget, sneakwalk.
+- Unused animations so far: attack (3-round burst), idle_fidget (throw, stim and sneakwalk were removed 2026-10-18).

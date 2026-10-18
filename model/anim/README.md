@@ -30,10 +30,14 @@ stay within 10° (the ankle cuffs). The specs still bake
 the old motion: after re-baking, run `../art/shoulders_apply.js` step `limits` and re-check with the skill's
 `scripts/livesweep.js`. The arm pivots also moved 2 px in (x ±9, same date); specs that solve arm IK need a re-check.
 
-**Stale since the leg rework (2026-10-15).** The legs and hips were rebuilt (`../art/legs_stomper_art.py`, v5-v9):
+**The leg rework (2026-10-15).** The legs and hips were rebuilt (`../art/legs_stomper_art.py`, v5-v9):
 knee pivot y 12.6, the ankle pivot at the shin's front bottom edge (y 0.625, z -5; v10, final), rest thigh 6 / shin -6 / foot 0 (lower leg
-vertical), no `sole` cube (the kit then takes the boot's bounding box for heel and toe). Every leg animation below except the walk (v6) was
-baked for the previous legs and must be re-baked and re-checked (knee range, ankle range, clipping) before export.
+vertical), no `sole` cube (the kit then takes the boot's bounding box for heel and toe). Every leg animation below was
+re-baked on these legs (walk v6 / run v8 2026-10-15, the others unchanged from their specs 2026-10-18, then `shoulders_apply.js`
+`limits`): feet planted within 0.05 px. Still open (to be redone with the upper-body rework): arms into the thighs in
+jump_charge / jump (EM projector 0.67), land (forearm 0.73), death (fist 1.56), shutdown (saw motor 0.3); death's 18 deg leg
+roll puts the drums 0.85 px into the hip post; the crouches (jump_charge, land, shutdown / powered_off) fold the knees to
+85-93 with the thighs ~60 forward (the front ankle hinge: a squat).
 
 **Upright stance and heavier legs (2026-10-14 overhaul).** The legs' rest pose is upright, symmetric and without
 sideways splay (thigh 11 with a 7 deg outward twist, shin -20, foot 9; it was a crouched, staggered combat stance:
@@ -56,10 +60,11 @@ arms vs thighs).
 | a_idle.js | idle | full body loop, IK feet |
 | a_walk.js | walk v6 (2026-10-15, legs v10): slow heavy stride, 1.0 s cycle, stance 22 px, duty 0.62, 2.22 blocks/s, knee >= 23 (the front ankle hinge stretches the leg along hip-knee-hinge with the knee bent ~23: planted 38-60, swing 89), ankle -4..+40, stance zc -2, knee dip after each heel strike, footfall jolt, tool stabilized (v5 0.6 s / 2.6 blocks/s in a_walk_v5.js, v4 jog in a_walk_v4.js) | full body gait loop |
 | a_walk_upper.js | old walk upper-body layer (v1 walk, superseded by a_walk.js) | legacy |
-| a_run.js / a_sneak.js | run v8 (2026-10-15, legs v10): a driving run, 0.7 s stride, foot planted 32% (22 px), 6.25 blocks/s, the suit sinks 2 px into each planted leg and drives up through a push-off that throws the trailing leg out behind (thigh -19), hips from the legs' reach (KMIN 30) + 1.5 px in flight, swing targets eased into reach, both arms pump the same short swing in opposite phase (arm 14, armF 6, toolPump: the tool arm is no longer stabilized in the run; its third-person pose never aims), knee kept bent (kneeFloor 22: the front hinge's straighter knee solution flipped with the bent one, the old run's 47 deg 'stutter'); v7 bounding and v6 short steps rejected by the user (v5/v4/... in a_run_v*.js) / sneakwalk (stale) | full body gait loops |
+| a_run.js / a_sneak.js | run v8 (2026-10-15, legs v10): a driving run, 0.7 s stride, foot planted 32% (22 px), 6.25 blocks/s, the suit sinks 2 px into each planted leg and drives up through a push-off that throws the trailing leg out behind (thigh -19), hips from the legs' reach (KMIN 30) + 1.5 px in flight, swing targets eased into reach, both arms pump the same short swing in opposite phase (arm 14, armF 6, toolPump: the tool arm is no longer stabilized in the run; its third-person pose never aims), knee kept bent (kneeFloor 22: the front hinge's straighter knee solution flipped with the bent one, the old run's 47 deg 'stutter'); v7 bounding and v6 short steps rejected by the user (v5/v4/... in a_run_v*.js) / sneakwalk (**removed from the model** 2026-10-18: the suit doesn't sneak) | full body gait loops |
 | a_jump_charge.js | jump_charge (hold): crouch wind-up, ends on jump t=0 | full body |
 | a_jump.js, a_fall.js, a_land.js | jump (once, ends on fall t=0) -> fall (loop), land (once, ends at rest stance) | full body, shared airborne pose block |
-| a_attack.js, a_throw.js, a_hit.js, a_stim.js, a_fidget.js | attack, throw, hit, stim, idle_fidget | upper-body overlays |
+| a_attack.js, a_hit.js, a_fidget.js | attack, hit, idle_fidget | upper-body overlays |
+| a_throw.js, a_stim.js | throw, stim: **removed from the model** (2026-10-18, user: leftovers from the marine), kept as reference | legacy |
 | a_helmet.js | helmetoff / helmeton (`K_JSON='{"MODE":"on"}'`) | overlay; **removed from the model** (robot has no unmasking), kept as a prop-in-hand reference |
 | a_death.js, a_elec.js | death (hold), electrified (loop) | full body |
 | a_hand.js | hold_item (loop 2 s, hand carry), use_item (once 0.3 s, reach): `K_JSON='{"MODE":"use_item"}'`; arm IK to the `left_hand` grip (spec frame; live: `right_hand`) | hand-arm overlays (live: right arm) |

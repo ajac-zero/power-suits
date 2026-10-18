@@ -256,9 +256,10 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   leg's reach (`reachHip` in the skill's `k2.js`) and pick the game speed from the gait (2026-10-14: walk 2.6, sprint 6.25). A limited ankle (`model/anim/kit.json` "ankle") needs straight-ish stance
   knees and short steps: a bent stance knee tilts the shin forward by about half its angle.
 - **Model first, animations after** (user, 2026-10-15): while the shape is in flux the user judges the neutral pose
-  only ("no part of the model is safe"); animations are redone once the model is final. Since the legs v5-v9 rework
-  the leg animations in the `.bbmodel` are stale except walk and run (legs v10, re-solved 2026-10-15); re-bake every
-  other leg animation before exporting. The assets aren't exported yet: on export set `WALK_ANIM_AUTHORED` to 2.218
+  only ("no part of the model is safe"); animations are redone once the model is final. Every leg animation is baked on the
+  current legs (walk/run 2026-10-15, the rest re-baked unchanged from their specs 2026-10-18). Known open (user: wait for the
+  upper-body rework): arms clip the thighs in jump_charge/jump/land/death/shutdown (0.3-1.6 px), death's leg roll
+  pushes the drums 0.85 px into the hip post, the crouches fold the knees to ~90 (reads as a squat). The assets aren't exported yet: on export set `WALK_ANIM_AUTHORED` to 2.218
   (the run stays 6.25) and decide the game walk speed (user: open; the animation plays faster at 2.6).
 - **Read the user's sketches literally and confirm a reading in words before building**: "an opposite slope" for the
   thigh meant a thigh bottom PARALLEL to the shin top (both falling toward the back, a dark knee band between), and
