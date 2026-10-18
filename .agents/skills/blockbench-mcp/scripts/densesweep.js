@@ -1,6 +1,6 @@
 // Dense clip sweep on the live project (codemode function body): like the skill's livesweep.js, but samples a grid on
 // every face of the A cubes (step opts.step, default 0.5 px), so edges cutting through faces count too.
-// const sweep = new Function("tools", (await tools.bash({command: "cat model/art/densesweep.js"})).output)(tools);
+// const sweep = new Function("tools", (await tools.bash({command: "cat .agents/skills/blockbench-mcp/scripts/densesweep.js"})).output)(tools);
 // await sweep({pairs: [["^thigh_.*_r$", "^hip_"]], anims: ["walk", "run"], samples: 40})
 return async function sweep(opts) {
   const code = `(() => {

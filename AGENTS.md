@@ -287,6 +287,29 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   in. Measure before tuning: `gaitsweep.mjs` (step / kink / turns per parameter set) and `kinks.mjs` (when).
 - **The animation kit takes any foot cube named `*sole*` as the whole sole** (heel and toe edges): a `boot_sole_back`
   strip put the toe in the middle of the boot and skewed every gait solve until renamed (`boot_back_strip`).
+- **Armour that covers a joint caps its range** (knee/hip rework, 2026-10-17/18, branch `knee-clearance`): a corner d px from
+  the hinge axis rises d sin(angle). The hips sat 1 px above the hip axis over 8 px deep thighs (clean only -15..+20 deg;
+  the walk needs 4..57, the run -19..70); the shin's sloped top clipped the thigh from 38 deg of knee. Fixes that kept every
+  pivot and animation: shins 3 px shorter from the top (`shin_drop_art.py`, clean to 120), the thigh's underside sloped
+  the other way (`thigh_flip_art.py`), and **drum hips** (`drum_hips_art.py`): each thigh's top an octagon centred on the
+  hip axis under a static hood that stays outside the thigh's swept region, with a shoulder slab from the thigh's outer
+  corner up into the drum. The fixes that move armour away from the joint beat the ones that shorten the swings.
+- **Moving a hinge to an edge (the ankle trick) changes the leg's IK**: the knee at the shin's back corner made the leg
+  longest at a 65 deg knee (re-solved walk: knee -8..21 or 96-176); the hip at the thigh's front edge turned the walk
+  into a squat (planted knees 75-103). Check on a copy with the skill's `scripts/movepivot.py` + `gaitsweep.mjs` (MODEL=)
+  before building a hinge anywhere else than where the bone pivots now.
+- **Static armour on a joint must ride a bone that shares the joint's axis**: `pelvis` is a child of `body` (twists +-8 deg
+  in the run), so the hip hoods hang from new root bones (`hips` > `right_hood` / `left_hood`) yawed like the legs (-7/+7).
+- **The arms hang beside the hips**: in the walk/run they come to x 7.2-8.8 between y 22 and 29 (both sides). The old V
+  and thigh tops were fitted to that; anything wider at the waist clips an arm. Measure the arm envelope before widening.
+- **What the user likes in the legs (2026-10-17/18)**: armour faces forward, so more exposed joint at the back is fine;
+  no bevels / chamfers on thigh tops ("terrible", even when the numbers worked); shapes run into each other (a thigh top
+  that stops against the drum "stops arbitrarily": the shoulder ramp fixed it); thigh and hip designed as one piece, like
+  the shin and boot. Dark iron undersides read as a hollow bracket from the side: shade undersides in the armour blue.
+- **The way of working the user liked (same session)**: measure the cause, offer options with numbers and a sketch, build
+  cheap prototypes (A/B) and film them with the same cameras next to the committed model, then checkpoint each approved
+  step as its own commit. Before every checkpoint diff the live project against the saved file plus the planned edits
+  (the user inspects and hides cubes in Blockbench between turns): "make sure I didn't move anything".
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md` (its "Gait iteration" section is the method
   that produced walk v6 / run v8); specs in `model/anim/` (the walk stabilizes the tool arm, the run doesn't). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.

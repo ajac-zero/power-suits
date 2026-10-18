@@ -26,6 +26,7 @@ Used to build a full, "premium" animation set for a Bedrock entity: every animat
 | `gaitsweep.mjs` | `node gaitsweep.mjs spec.js '[{P}, ...]'`: per parameter set (`K.P` overrides) knee / flat-foot knee / thigh / ankle ranges, lowest foot, biggest one-frame knee step, biggest kink (second difference), knee direction changes. `MODEL=f.bbmodel` sweeps a saved model (e.g. a git revision). The workhorse of the gait iteration below. |
 | `kinks.mjs` | When a spec kinks: time:value of second differences over a threshold (legs + root height). |
 | `livefeet.mjs` | Boot heel/toe heights and pitch through Blockbench's own playback (stale keys after a rig change show up here). |
+| `densesweep.js` / `visible.sh` / `showall.sh` / `movepivot.py` | Clip sweep with a grid on every face (codemode) / where some cubes show in an animation (magenta diff) / show everything and restore the user's hidden cubes / a model copy with bone pivots moved, rest pose kept, for IK sweeps. |
 | `savekeep.mjs` / `snapshot.mjs` | Save the project with every cube visible and re-hide the user's hidden cubes / dump `{model, texture}` for art scripts. |
 
 Run from the project folder, e.g. `node .agents/skills/blockbench-mcp/scripts/run.mjs model/anim/a_idle.js 0,1,2 fl`. In codemode you can also load the same files with `tools.read` + `new Function` (as the original session did).
@@ -105,6 +106,10 @@ Lessons, each from a real failure:
 - **Name things the kit doesn't misread**: a foot cube named `*sole*` is taken as the whole sole.
 - **Measure the live result too** (`livefeet.mjs`): keys baked for an older pivot play "fine" in Blockbench while the
   planted boot tilts and sinks.
+- **A hinge moved off the bone's axis changes which knee the IK can use**: a pivot at a limb's edge kinks the hip-knee-ankle
+  pivot line (the kit's `kneeOff`), so the leg is longest with the knee bent that much (Power Armor: knee hinge at the
+  shin's back corner -> 65 deg; hip hinge at the thigh's front edge -> knee 46, a squatting walk). Sweep the gaits on a
+  `movepivot.py` copy (`MODEL=`) before moving any hinge.
 - **Sample finer than the bake**: at 120 fps the walk's foot dips 0.4 px for an instant between its 30 fps keys (the
   baked loop doesn't show it); check `gaitsweep` low at 120 fps before raising a spec's fps.
 

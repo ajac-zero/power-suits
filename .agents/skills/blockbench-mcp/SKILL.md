@@ -148,6 +148,23 @@ Known gaps with no tool (use `risky_eval`): delete an animation, save the projec
 - **Bones meet at an angle in the rest pose.** A piece on the shin that reaches up inside the thigh is straight while the
   thigh leans (Power Armor: thigh 6 deg forward, shin -6); its corner poked out of the thigh's front. Check overlaps in
   the posed model, not in model coordinates.
+- **`livesweep.js` samples box corners and edge midpoints only**: an edge cutting through the middle of a face is missed
+  (it read 0 for a thigh sliding 1.9 px into the hips). Use `scripts/densesweep.js` (a grid on every face) to confirm 0.
+- **Rotating limbs vs static armour, in 2D first**: side-view slices with shapely (limb profile rotated over the swing range,
+  armour region above) give each design's clean range in seconds; then build and confirm with `densesweep.js`. For a
+  joint that must never clip at any angle, make the limb's end round about the axis (chord slabs, like a heel arc) and
+  keep the static part outside the **swept region** (union of the limb's profile over the swing, grown for roll/yaw).
+- **Where does a part show?** `scripts/visible.sh` films an animation with and without cubes matching a regex and tints the
+  difference magenta (found dark undersides reading as a hollow "bracket" from the side).
+- **The user's visibility changes during a session** (they hide cubes to inspect): wrap renders in `scripts/showall.sh
+  show|restore`, and save with `savekeep.mjs`.
+- **Moving a pivot without moving the model**: `scripts/movepivot.py` shifts the bone's subtree by (I - R^-1)(o' - o) so the
+  rest pose stays put (checked to 1e-14); sweep the gaits on that copy before deciding on a hinge.
+- **codemode `tools.bash` can return a cached result for an identical command**: re-reading an edited file with the same
+  `cat` gave the old text. Vary the command (`cat f # v2`). Bash output over ~512 KB is cut (a `.bbmodel` won't parse
+  through it): extract the part you need with python first.
+- **New bones get empty animators in every animation** (Blockbench adds them on preview): ignore animators without keys
+  when diffing animations.
 - **Hide everything else to focus** (`scripts/isolate.mjs on|off`), and restore before saving: visibility is saved.
 - **Faces nobody should see still show as slivers**: where a slope meets a block, the block's top or the slope's
   underside peeks through at grazing angles. Paint such faces in the armour colour, not dark iron.
