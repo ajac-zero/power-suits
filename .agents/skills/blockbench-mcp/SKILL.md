@@ -87,6 +87,13 @@ Known gaps with no tool (use `risky_eval`): delete an animation, save the projec
   - Delete an animation: first read `{name, uuid, path}`; then `anim.remove(true, false)` (undoable; `false` = do not delete it from an external animation file on disk).
   - Set an animation's loop mode (`create_animation` only knows loop true/false; Bedrock also has `hold`): `const a = Animation.all.find(...); Undo.initEdit({animations:[a]}); a.loop = 'hold'; Undo.finishEdit('Set loop hold');`.
   - Read live bone matrices (verify FK, measure feet/clipping exactly as Blockbench interpolates): `Group.all.forEach(g => { g.mesh.updateMatrixWorld(true); out[g.name] = g.mesh.matrixWorld.elements.slice(); })` (column-major; world(p) = R·(p − group.origin) + t).
+  - Undo quirks (Blockbench 5.2): group rotations / pivots only undo with `Undo.initEdit({groups: [...]})`
+    (`outliner: true` restored the cubes but not the bones); undoing the creation of groups left them as empty
+    orphans (parent null: remove them by hand); removing cubes in the same edit that moves their bone brought one back
+    on redo (do removals as their own edit). Test undo + redo on a read-only check after every new kind of edit.
+  - Split a box-UV cube without touching the texture: give the pieces per-face UV (`box_uv = false`, `faces[f].uv`)
+    cut out of the parent's faces (`model/art/neck_notch_apply.js`: u1 / v1 sit on a fixed edge per face; the mirror
+    flag only swaps the numbers). Check with a pixel diff of before / after renders (only seam pixels may differ).
   - Paint pixels undoably: `tex.edit(canvas => { const ctx = canvas.getContext("2d"); ... ctx.putImageData(...); return canvas; }, {edit_name: "..."})`. Inside the callback, first check the target region is fully transparent and abort if not. Check `Texture.all` for `layers_enabled`/`path` first.
 
 ## 5. Undo and safety
