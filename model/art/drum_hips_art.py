@@ -10,7 +10,10 @@ Side view (axis along x through the hip pivot y 22.625 z 0; angles from the fron
           (the same box turned -45 / +45): the upper half of an octagon with faces 4 from the axis (corners 4.33).
           Only on the inner part of the thigh (x 1..XD): the hanging arms come to x ~7.2 between y 26 and 29 in the
           walk / run, so outside it the thigh keeps its old sloped top (thigh_top, 25 deg) and the drum shows its
-          octagonal end. The old V's line is painted across the drum's front and back (V_LINE).
+          octagonal end. The old V's line is painted across the drum's front and back (V_LINE). A shoulder slab
+          (thigh_shoulder, turned about z) runs from that sloped top's outer corner up into the drum's side, so the
+          thigh grows into the joint instead of stopping against the drum's flat end (user); the hood stops at
+          x XH1 = XD - 0.5 so the shoulder's high inner edge (just outside the drum circle) swings by it.
   hood    pieces outside the thigh's swept region (drum circle + its flat faces at the swing limits FWD / BACK, grown by
           ROOM for the gaits' 9 deg roll): a top block (under the chest, whose bottom is RH above the axis), front and
           back plates with fills behind them (no hollow from the side), slabs on the tangents at FWD and 135 deg; a
@@ -41,7 +44,8 @@ ZF, ZB, TOP = -5.5, 5.75, 6.5   # hood outline (relative to the pivot): front fa
 XD = 6.5                    # the drum (thigh_upper + caps) spans x 1..XD: further out the hanging arms come within ~7.2 of
                             # the centre between y 26 and 29 (walk/run swings), so the thigh keeps its old sloped top
                             # (thigh_top, 25 deg, outer corner 8.25 / 22.1) outside and the drum shows its octagonal end
-XH0, XH1 = 0.25, XD + 0.1   # hood x span (right side); a thin dark centre plate between the two hoods
+XH0, XH1 = 0.25, XD - 0.5   # hood x span (right side): stops short of the drum's outer end, where the shoulder's high
+                            # inner edge (outside the drum circle) swings by; a thin dark centre plate between the hoods
 T8 = math.tan(math.radians(22.5))
 
 def n(phi):                 # outward normal of the tangent at elevation phi (deg from the front horizontal): (y, z)
@@ -65,11 +69,20 @@ s = json.loads(BASE.read_text())
 m = s['model'] if isinstance(s['model'], dict) else json.loads(s['model'])
 by = {e['name']: e for e in m['elements']}
 tm = by['thigh_main_r']
-THIGH = [  # name, from, to (right side, model coords), inflate, rotation x
+# shoulder (user, 2026-10-18): the thigh's sloped top used to stop against the drum's flat side; a slab turned about z
+# runs from the thigh's outer top corner (8.25 / 22.125, thigh_top's) up and in to the drum's side at SH_Y, so the thigh
+# grows into the joint. Its high inner end stays SH_ROOM inside the swept circle's hood clearance (checked below).
+SH_C = (8.25, 22.125)
+SH_Y = 25.0
+SH_T = 3.0
+SH_L = math.hypot(SH_C[0] - XD, SH_Y - SH_C[1])
+SH_A = -math.degrees(math.atan2(SH_Y - SH_C[1], SH_C[0] - XD))   # z rotation (negative: the inner end rises)
+THIGH = [  # name, from, to (right side, model coords), inflate, rotation x (or [x, y, z] about SH_C)
     ('thigh_upper', [1, 18.5, -4], [XD, PY + RD * T8, 4], 0, 0),   # on top of thigh_main (kept: 15.27..18.625)
     ('cap_c', [1, PY, -RD * T8], [XD, PY + RD, RD * T8], -0.1, 0),
     ('cap_f', [1, PY, -RD * T8], [XD, PY + RD, RD * T8], -0.15, -45),
     ('cap_b', [1, PY, -RD * T8], [XD, PY + RD, RD * T8], -0.2, 45),
+    ('thigh_shoulder', [SH_C[0] - SH_L, SH_C[1] - SH_T, -4], [SH_C[0], SH_C[1], 4], -0.06, [0, 0, SH_A]),
 ]
 # ---- hood (right_hood bone) ----------------------------------------------------------------------------------------
 # Blockbench's X rotation by a: (y, z) -> (y cos a - z sin a, y sin a + z cos a). A box whose inner face is y = RH,
@@ -151,7 +164,8 @@ live = Image.open(io.BytesIO(base64.b64decode(s['texture'].split(',')[1]))).conv
 tex = live.copy(); W, H = tex.size
 rng = random.Random(41)
 REMOVED = ['hip_v_r', 'hip_v_l', 'hip_band_r', 'hip_band_l', 'hip_fill', 'hip_tip', 'hip_joint_r', 'hip_joint_l',
-           'cap_c_r', 'cap_c_l', 'cap_f_r', 'cap_f_l', 'cap_b_r', 'cap_b_l', 'thigh_upper_r', 'thigh_upper_l', 'hip_centre'] + \
+           'cap_c_r', 'cap_c_l', 'cap_f_r', 'cap_f_l', 'cap_b_r', 'cap_b_l', 'thigh_upper_r', 'thigh_upper_l', 'hip_centre',
+           'thigh_shoulder_r', 'thigh_shoulder_l'] + \
           [f'hood_{p}_{sd}' for p in ('top', 'front', 'back', 'fslab', 'mslab', 'bslab', 'ffill', 'bfill') for sd in 'rl']   # (v1 pieces: re-runs replace them)
 size = lambda f, t: [math.floor(b - a + 1e-6) for a, b in zip(f, t)]
 def net_pts(c):
@@ -214,7 +228,11 @@ def P(kind):
         if f == 'down': return plate(w, h, False, False, 0.62)
         return plate(w, h, top_edge=False, bottom_edge=False)
     def centre(f, w, h): return iron(w, h)
-    return dict(thigh_main=thigh_main, cap=cap, hood=hood, slab=slab, centre=centre)[kind]
+    def shoulder(f, w, h):                        # its top is the slope into the drum (lit edge along the corner)
+        if f == 'up': return plate(w, h, top_edge=False, bottom_edge=False)
+        if f == 'down': return iron(w, h)
+        return plate(w, h, top_edge=True, bottom_edge=False)
+    return dict(thigh_main=thigh_main, cap=cap, hood=hood, slab=slab, centre=centre, shoulder=shoulder)[kind]
 def V_LINE(w, h):     # pixels (col, row) of the slope line on thigh_upper's front: y = 18.74 + 0.466 * (distance from x 1)
     top, ht, wd = PY + RD * T8, PY + RD * T8 - 18.5, XD - 1
     out = []
@@ -223,7 +241,7 @@ def V_LINE(w, h):     # pixels (col, row) of the slope line on thigh_upper's fro
         r = int((top - y) / (ht / h))
         if 0 <= r < h: out.append((c, r))
     return out
-LEG_PARTS = [(nm, f, t, inf, rx, 'thigh_main' if nm == 'thigh_upper' else 'cap') for nm, f, t, inf, rx in THIGH]
+LEG_PARTS = [(nm, f, t, inf, rx, 'thigh_main' if nm == 'thigh_upper' else 'shoulder' if nm == 'thigh_shoulder' else 'cap') for nm, f, t, inf, rx in THIGH]
 HOOD_PARTS = []
 for name, a, b, rx, inf in HOOD:
     HOOD_PARTS.append((name, [XH0, PY + a[0], a[1]], [XH1, PY + b[0], b[1]], inf, rx, 'slab' if rx or 'fill' in name else 'hood'))
@@ -251,7 +269,9 @@ for side, sx in (('r', 1), ('l', -1)):
                  from_=fr, to=to, origin=[sx * X, PY, 0], uv_offset=nets[name], mirror_uv=side == 'r')
         inf2 = inf - (0.05 if (hood_part and sx < 0) else 0)   # the two hoods overlap in the middle (leg yaw): offset faces
         if inf2: c['inflate'] = round(inf2, 3)
-        if rx: c['rotation'] = [rx, 0, 0]
+        if isinstance(rx, list):                   # turned about the thigh's outer top corner (mirrored on the left)
+            c['rotation'] = [rx[0], rx[1] * sx, rx[2] * sx]; c['origin'] = [sx * SH_C[0], SH_C[1], 0]
+        elif rx: c['rotation'] = [rx, 0, 0]
         cubes.append(c)
 cubes.append(dict(name='hip_centre', group='hips', from_=CENTRE[1], to=CENTRE[2], origin=[0, PY, 0], uv_offset=cuv, mirror_uv=False))
 groups = [dict(name='hips', parent='marine', origin=[0, PY, 0], rotation=[0, 0, 0]),
