@@ -316,4 +316,5 @@ def main():
     for k, (u, v) in sorted(at.items(), key=lambda kv: kv[1][1] * 1000 + kv[1][0]): print(k, u, v)
 
 
-main()
+if __name__ == "__main__":
+    main()
