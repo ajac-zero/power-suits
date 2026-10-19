@@ -21,17 +21,16 @@ SRC, OUT = ".scratch/head/pumpkin_source.json", ".scratch/head/pumpkin_plan.json
 C = dict(C, GM='89939a', VG='262c34', VE='1e232a', VH='46505c')
 HEAD = [0, 41, 1]
 ZF = -5.25                                    # the frame's front (shell front -4.5)
-FB = 38.625                                   # the frame's bottom
 CUBES = {
     "helmet_shell": ([-5, 38, -4.5], [5, 48, 5.5]),
-    "helmet_brow": ([-5, 45.625, ZF], [5, 47.625, -4.5]),
-    # the frame stops at the breastplate's top (38.625): it stands 0.25 in front of the chest's front plane (z -5)
-    "cheek_r": ([3.5, FB, ZF], [5, 45.625, -4.5]),
-    "cheek_l": ([-5, FB, ZF], [-3.5, 45.625, -4.5]),
-    # the mouthpiece (user: keep the old helmet's grill): 0.5 px proud of the frame, its slotted top 2 rows just above
-    # the collar rim (40.625), the rest behind it; still behind the rim's back (z -6.1) when the head pitches
-    "chin_guard": ([-3.5, FB, -5.75], [3.5, 42.625, -4.5]),
-    "visor": ([-3.5, 42.625, -5], [3.5, 45.625, -4.5]),
+    # v4 (user: no frame under the mouthpiece; the face's bottom is the helmet's): brow 46..48, visor 40.625..46,
+    # the grill from the helmet's bottom (38) up to 40.625; the chest's collar rim comes down to the breastplate's top
+    # (38.625, sm_chest_art.py), so the grill's upper 2 rows show over it
+    "helmet_brow": ([-5, 46, ZF], [5, 48, -4.5]),
+    "cheek_r": ([3.5, 38, ZF], [5, 46, -4.5]),
+    "cheek_l": ([-5, 38, ZF], [-3.5, 46, -4.5]),
+    "chin_guard": ([-3.5, 38, -5.75], [3.5, 40.625, -4.5]),
+    "visor": ([-3.5, 40.625, -5], [3.5, 46, -4.5]),
 }
 
 
@@ -58,9 +57,9 @@ def frame(name, face, w, h):
         if name == "helmet_brow": return [['W'] * w, ['GM'] * w]
         if name == "cheek_r": return [['W', 'GR'] for _ in range(h - 1)] + [['GM', 'G2']]
         if name == "cheek_l": return [['GR', 'GM'] for _ in range(h - 1)] + [['G2', 'G2']]
-        if name == "chin_guard":            # the old chin guard's grill: grey bars and dark slots, then plain
+        if name == "chin_guard":            # the old chin guard's grill (grey bars, dark slots) down to the bottom
             return [['GR', 'I0', 'GR', 'I0', 'GR', 'I0', 'G2'], ['G2', 'I1', 'G2', 'I1', 'G2', 'I1', 'G2'],
-                    ['G2'] * w, ['G2'] * w][:h]
+                    ['G2', 'I1', 'G2', 'I1', 'G2', 'I1', 'G2']][:h]
     if face == "up": return grid(w, h, 'W')
     if face == "down": return grid(w, h, 'G2')
     if face == "east": return grid(w, h, 'GR')
@@ -89,6 +88,13 @@ def main():
     # the cubes being rebuilt give up their old UV (the old art stays in the texture, unused)
     model = dict(src["model"], elements=[e for e in src["model"]["elements"] if e["name"] not in CUBES])
     used = used_mask(model, tex)
+    # v3: the rebuilt cubes' own current faces are free to repaint (pixels no other cube's UV touches)
+    others = used_mask(model, Image.new("RGBA", tex.size, (0, 0, 0, 0)))
+    own = used_mask(dict(src["model"], elements=[e for e in src["model"]["elements"] if e["name"] in CUBES]),
+                    Image.new("RGBA", tex.size, (0, 0, 0, 0)))
+    for y in range(tex.height):
+        for x in range(tex.width):
+            if own[y][x] and not others[y][x]: used[y][x] = False
     faces, rects = {}, []
     for name, (f, t) in CUBES.items():
         for face in ("north", "east", "south", "west", "up", "down"):
@@ -101,7 +107,7 @@ def main():
     # don't reuse the old helmet's texture area either: its pixels are still painted (alpha), so used_mask keeps them
     at = pack(used, rects)
     plan = {"cubes": {n: {"from": f, "to": t, "faces": {}} for n, (f, t) in CUBES.items()}, "pixels": [], "origin": HEAD,
-            "bone": "helmet", "pilot_head_dy": -1}
+            "bone": "helmet", "pilot_head_dy": 0, "overwrite": True}
     for (name, face), (fw, fh, g) in faces.items():
         u, v = at[(name, face)]
         plan["cubes"][name]["faces"][face] = [u, v, u + fw, v + fh]

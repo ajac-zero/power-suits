@@ -1,16 +1,17 @@
 // Applies model/art/head_pumpkin_art.py's plan (.scratch/head/pumpkin_plan.json): checkpoint, paint (aborts if a
 // target pixel is in use), rebuild the helmet cubes (per-face UV, inflate 0) and move the pilot's head (bone pivot +
-// stand-in cube) by the plan's pilot_head_dy. Codemode function body.
+// stand-in cube) by the plan's pilot_head_dy. With plan.overwrite (v3) the paint may cover the helmet's own old faces
+// (the art script only frees pixels no other cube uses). Codemode function body.
 const plan = JSON.parse((await tools.bash({command: "cat .scratch/head/pumpkin_plan.json # " + Date.now()})).output);
 const R = async code => { const t = (await tools.mcp__blockbench__risky_eval({code})).content[0].text; try { return JSON.parse(t); } catch (e) { return t; } };
 // re-run: undo the previous build + paint (only if they are the last entries on the undo stack)
 const undone = await R("(() => { const names = ['Pumpkin helmet', 'Pumpkin helmet paint', 'Spine piece 2 px lower']; let n = 0; while (Undo.history[Undo.index - 1] && names.includes(Undo.history[Undo.index - 1].action) && n < 4) { Undo.undo(); n++; } Canvas.updateAll(); return n; })()");
-if (!undone) await tools.mcp__blockbench__save_checkpoint({name: "before pumpkin helmet"});
+if (!undone) await tools.mcp__blockbench__save_checkpoint({name: plan.overwrite ? "before helmet face v3" : "before pumpkin helmet"});
 const hex = plan.pixels.map(([x, y, c]) => x.toString(16).padStart(2, "0") + y.toString(16).padStart(2, "0") + c).join("");
 const p = await R(`(() => { const h = '${hex}', tex = Texture.all[0], px = []; let bad = 0;
   for (let i = 0; i < h.length; i += 10) px.push([0, 2, 4, 6, 8].map(k => parseInt(h.substr(i + k, 2), 16)));
   tex.edit(canvas => { const ctx = canvas.getContext('2d'); const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    for (const [x, y] of px) if (d.data[(y * canvas.width + x) * 4 + 3] !== 0) bad++;
+    if (!${!!plan.overwrite}) for (const [x, y] of px) if (d.data[(y * canvas.width + x) * 4 + 3] !== 0) bad++;
     if (bad) return canvas;
     for (const [x, y, r, g, b] of px) { const i = (y * canvas.width + x) * 4; d.data[i] = r; d.data[i + 1] = g; d.data[i + 2] = b; d.data[i + 3] = 255; }
     ctx.putImageData(d, 0, 0); return canvas; }, {edit_name: 'Pumpkin helmet paint'});

@@ -6,7 +6,7 @@ Shapes (torso frame, px; the model faces -Z):
   chest        x +-7.5, y 31.625..39.625, z -5..6    the old chest block, now ending 4 px higher (the waist shows below)
   bp_main      x +-6.5, y 34.625..38.625, z -7..-5   the breastplate, 2 px proud of the chest (1 px past the pauldrons)
   bp_lower     the chest's underside: a plate turned about bp_main's front bottom edge, down to y 31.6, 1.5 px back
-  gorget_lip   x +-5.6, y 38.625..40.625, z -7.5..-6.1  the collar's front rim, in front of the chin
+  gorget_lip   x +-5.6, y 36.625..38.625, z -7.5..-6.1  the collar's front rim, under the helmet's mouthpiece
   gorget_r/l   x 5.6..6.6, y 38.625..42.625, z -7.5..-2.5  the rim turning back and up into the collar
 (A winged emblem on the chest was tried and removed: the user prefers the chest bare. The first version, a 4 px rim over
 a 5 px breastplate, read as two stacked slabs.)
@@ -41,7 +41,8 @@ CUBES = {
     "bp_main":    ([-6.5, 34.625, -7], [6.5, 38.625, -5]),
     # the chest's underside: a plate turned about the breastplate's front bottom edge, its bottom 1.5 px back
     "bp_lower":   ([-6.5, 34.625 - BL, -7], [6.5, 34.625, -5.4], [0, 34.625, -7], [-BA, 0, 0]),
-    "gorget_lip": ([-5.6, 38.625, -7.5], [5.6, 40.625, -6.1]),
+    # the rim's top at the breastplate's top, y 38.625 (was 40.625, user 2026-10-18): the helmet's mouthpiece shows
+    "gorget_lip": ([-5.6, 36.625, -7.5], [5.6, 38.625, -6.1]),
     "gorget_r":   ([5.6, 38.625, -7.5], [6.6, 42.625, -2.5]),
     "gorget_l":   ([-6.6, 38.625, -7.5], [-5.6, 42.625, -2.5]),
     # B (2026-10-18, user): the abdomen plate 0.75 px deeper (front -5.25 -> -4.5) so the run's lean and twist keep it

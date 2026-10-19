@@ -34,7 +34,7 @@ out.push(await R(`(() => { const P = ${JSON.stringify(plan)};
     c.box_uv = false; c.from = s.from.slice(); c.to = s.to.slice();
     if (s.origin) { c.origin = s.origin.slice(); c.rotation = s.rotation.slice(); }
     // off shared planes (flicker): the underside's sides are the breastplate's, the core's top / bottom the plate's
-    c.inflate = {bp_lower: -0.05, abd_core: 0.03}[name] || 0;
+    c.inflate = {bp_lower: -0.05, abd_core: 0.03, gorget_lip: 0.05}[name] || 0;
     for (const f in s.faces) { c.faces[f].texture = tex.uuid; c.faces[f].uv = s.faces[f].slice(); }
     made.push(c); }
   Undo.finishEdit('Space marine chest', {elements: made, outliner: true});
