@@ -3,7 +3,8 @@
 
     python3 tools/extract-tool-geo.py        (after node tools/export-model.mjs)
 
-For each tool: copy its bone subtree (+ extra cubes: the elbow socket ring the tool locks onto), move it
+For each tool: copy its bone subtree (its 7x1x7 socket base + head; since 2026-10-18 the forearm belongs to the suit,
+user's choice for the icons), move it
 so its bounding box is centred on the origin (GeckoLib already moves item models to the middle of the block),
 and put it under one root bone (the layout GeckoLib items use; the tools were 3D GeckoLib items until 2026-10-13).
 The suit carries its tools on the LEFT forearm; on foot you hold them in your right hand, so the copy is mirrored
@@ -17,11 +18,11 @@ ASSETS = ROOT / 'src/main/resources/assets/powerarmor'
 SUIT = ASSETS / 'geckolib/models/entity/power_armor.geo.json'
 
 TOOLS = {
-    # tool name: (bone subtree, extra bone whose cubes of these sizes are included, bones to drop)
-    'chaingun': ('chaingun', ('left_forearm', [[7, 1, 7]]), {'muzzle'}),
-    'em_projector': ('em_projector', ('left_forearm', [[7, 1, 7]]), set()),
-    'drill': ('drill', ('left_forearm', [[7, 1, 7]]), set()),
-    'chainsaw': ('chainsaw', ('left_forearm', [[7, 1, 7]]), set()),
+    # tool name: (bone subtree, extra bone whose cubes of these sizes are included (none now), bones to drop)
+    'chaingun': ('chaingun', ('left_forearm', []), {'muzzle'}),
+    'em_projector': ('em_projector', ('left_forearm', []), set()),
+    'drill': ('drill', ('left_forearm', []), set()),
+    'chainsaw': ('chainsaw', ('left_forearm', []), set()),
 }
 
 

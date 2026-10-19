@@ -45,9 +45,9 @@ GLOW = {
     H('5c1813'): ('em_core', H('f0200c')), H('701f17'): ('em_core', H('ff6a4a')),
     H('4e1411'): ('em_arc', H('c01206')), H('621a14'): ('em_arc', H('ff2a14')),
 }
-EXPECTED = {'fire': 15, 'visor': 35, 'heat': 16, 'heat_barrel': 120, 'em_core': 42, 'em_arc': 20}  # pixels per mask (firebox 12 + 3 slits; the 7x5 visor;
+EXPECTED = {'fire': 15, 'visor': 35, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20}  # pixels per mask (firebox 12 + 3 slits; the 7x5 visor;
 # 4 barrel sides x 2x2 tips; 4 barrel sides x 2x3 behind them + the front collar's 6x1x6 net, 96;
-# em_core: the 3x1x3 lens's faces 30 + 3 vent slits on each of the housing's 4 sides; em_arc: the shared prong net's
+# em_core: the 3x1x3 lens's faces 30 (the housing and its vent slits went with the shared forearm, 2026-10-18); em_arc: the shared prong net's
 # tip, 2x2 end + 4 sides x 2x2)
 
 

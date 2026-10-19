@@ -4,13 +4,14 @@ with Blockbench:
     python3 tools/extract-view-geo.py        (after node tools/export-model.mjs)
 
 Two roots, each moved so its joint sits on the origin (CockpitHands places them in front of the camera):
-  view_tool      every socket tool (left forearm) with its moving parts (drill_bit, chainsaw_chain, the rivet gun's drum, piston and vent), and the
-                 empty-socket stump (ring + plate + pins, only shown when nothing is installed); hangs down -Y
+  view_tool      the tool arm's forearm (the shared gauntlet, always shown), every socket tool (its own 7x1x7 socket
+                 base + head, with its moving parts: drill_bit, chainsaw_chain, the chaingun's barrels); the empty
+                 socket is the coupling painted on the gauntlet's underside (the socket bone is empty). Hangs down -Y
                  from the socket like on the suit.
   view_gauntlet  the right wrist, hand and fingers (the empty main hand; held items are vanilla's); hangs down -Y
                  from the elbow.
-Trimmed for the first-person view: the socket ring and the gauntlet's elbow cuff sat right in front of the
-camera as big blocks, so the ring only shows as part of the empty stump and the cuff is left out.
+Trimmed for the first-person view: the elbow joints sat right in front of the camera as big blocks, so they're left
+out (the gauntlet's elbow cuff on the right).
 Bone names match the suit, so the suit's animation file drives the tools' moving parts here too.
 """
 import json
@@ -24,7 +25,9 @@ OUT = ASSETS / 'geckolib/models/view/power_armor_view.geo.json'
 # root name: (bone whose cubes it takes, size filter, keep (True) or drop (False) those sizes, bone the cubes go to,
 #             top-level bones re-parented under the root, joint to centre on)
 ROOTS = {
-    'view_tool': ('left_forearm', [[7, 1, 7]], True, 'socket', ['socket', 'chaingun', 'em_projector', 'drill', 'chainsaw'], 'socket'),
+    # Since 2026-10-18 the tools sit on a shared forearm (forearm_l 8x7x8): it stays on the root, so every tool shows
+    # it; the 5x4x5 elbow joint is left out. Each tool brings its own socket base (in its bone).
+    'view_tool': ('left_forearm', [[8, 7, 8]], True, None, ['socket', 'chaingun', 'em_projector', 'drill', 'chainsaw'], 'socket'),
     'view_gauntlet': ('right_forearm', [[8, 8, 8]], False, None, ['right_hand'], 'right_forearm'),
 }
 
