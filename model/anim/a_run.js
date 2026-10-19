@@ -16,7 +16,7 @@ const {TAU,spring,addTo,pnoise,plant,gaitFoot,footR,REST,smooth,clamp,lerp}=K;
 // knee straightened back mid-landing), a softened touchdown (land 0.2) and swing targets kept within reach
 const O=Object.assign({T:0.7,beta:0.32,S:22.4,zc:0,hip:-0.3,bob:1.4,H:4,up:0.4,wide:0.5,kick:1,strike:6,toe:30,
   hang:-20,lean:-11,arm:14,armF:6,toolPump:true,armZ:-5,elbow:70,low:0.35,rin:0.3,paw:0.4,land:0.2,KMIN:30,fly:1.5,kneeFloor:22,cap:0.3,rw:0.02,
-  swingK:42,soft:1.5,sink:2,sinkAt:0.25},K.P||{});
+  swingK:42,soft:1.5,sink:2,sinkAt:0.25,waistLean:true},K.P||{});
 const {T,beta,S,zc}=O;
 // legs v10: stay on the bent knee solution (the front ankle hinge's straighter one flips with it near full stretch)
 if(O.kneeFloor!=null)K.setKneeFloor(O.kneeFloor);
@@ -99,9 +99,12 @@ function RAW(t){
   addTo(P,'marine','p',[0.45*Math.sin(f),yHip(t),0]);
   // lean into the run from the waist; the hips twist with the legs, the shoulders against them
   const by=8*Math.cos(f),bz=3*Math.sin(f),bx=O.lean-1.5*Math.cos(2*f-0.4)-2.5*J;
-  addTo(P,'body','r',[bx,by,bz]);
   const ty=-14*Math.cos(f-0.2),tz=-4*Math.sin(f-0.2),tx=-4-1.5*Math.cos(2*f-1.0)-2*J;
-  addTo(P,'torso','r',[tx,ty,tz]);
+  // waistLean (2026-10-18, space-marine chest): the forward lean pivots at the waist (torso, y 27.125) instead of the
+  // hip axis (body, y 22.625): leaning from 4.5 px lower swung the abdomen ~2 px out in front of the static belt
+  // (the hip hoods). Same angles; the body keeps only its twist and roll.
+  addTo(P,'body','r',[O.waistLean?0:bx,by,bz]);
+  addTo(P,'torso','r',[O.waistLean?tx+bx:tx,ty,tz]);
   addTo(P,'head','r',[-(bx+tx)*0.85-3+1.5*Math.cos(2*f-1.6)+3.5*J+n1(t),-(by+ty)*0.8,-(bz+tz)*0.6]);
   // tool arm: heavy, pumps a little against the free arm, jolts on impact
   if(O.toolPump){addTo(P,'right_arm','r',[10-O.arm*Math.cos(f-0.35)+2.5*R+4*J,-(by+ty)*0.3,0]);

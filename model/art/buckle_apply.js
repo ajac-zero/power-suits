@@ -16,7 +16,7 @@ if (String(p).startsWith("ABORT")) return p;
 const b = await R(`(() => { const P = ${JSON.stringify(plan)}; const bone = Group.all.find(g => g.name === P.bone), tex = Texture.all[0];
   if (Object.keys(P.cubes).some(n => Cube.all.some(c => c.name === n))) return 'ABORT exists';
   Undo.initEdit({elements: [], outliner: true}); const made = [];
-  for (const [name, s] of Object.entries(P.cubes)) { const c = new Cube({name, origin: P.origin.slice(), from: s.from, to: s.to, box_uv: false}).addTo(bone).init();
+  for (const [name, s] of Object.entries(P.cubes)) { const c = new Cube({name, origin: P.origin.slice(), from: s.from, to: s.to, box_uv: false, inflate: 0.05}).addTo(bone).init();
     for (const f in s.faces) { c.faces[f].texture = tex.uuid; c.faces[f].uv = s.faces[f].slice(); } made.push(c); }
   Undo.finishEdit('Belt buckle', {elements: made, outliner: true}); Canvas.updateAll(); return 'built ' + made.length; })()`);
 return [p, b];

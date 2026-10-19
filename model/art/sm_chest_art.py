@@ -11,7 +11,7 @@ Shapes (torso frame, px; the model faces -Z):
 (A winged emblem on the chest was tried and removed: the user prefers the chest bare. The first version, a 4 px rim over
 a 5 px breastplate, read as two stacked slabs.)
   abd_core     x +-6, y 28.625..31.625, z -3.5..5.5  dark ribbed waist (undersuit)
-  abd_plate    x +-3, y 28.625..31.625, z -5.25..-3.5  the abdomen plate, tucked behind the hood (belt) front
+  abd_plate    x +-3, y 28.625..31.625, z -4.5..-3   the abdomen plate, 1 px behind the hood (belt) front
 Known clash, left for the helmet rework (user: the head will get player-like proportions): the helmet pivots at
 (y 41, z 1) and pitches up to 20 deg down (the game's aim) plus the animations; its chin guard's front-bottom edge then
 sweeps (39, -6) -> (36.7, -4.9) and the cheeks do the same at x 3.5..5.6, through the breastplate's top. The rim itself
@@ -44,8 +44,11 @@ CUBES = {
     "gorget_lip": ([-5.6, 38.625, -7.5], [5.6, 40.625, -6.1]),
     "gorget_r":   ([5.6, 38.625, -7.5], [6.6, 42.625, -2.5]),
     "gorget_l":   ([-6.6, 38.625, -7.5], [-5.6, 42.625, -2.5]),
+    # B (2026-10-18, user): the abdomen plate 0.75 px deeper (front -5.25 -> -4.5) so the run's lean and twist keep it
+    # behind the belt (hood fronts z -5.5); the least that keeps walk / run clean (-4.75 pokes 0.3 px out in the run;
+    # only death still does, 0.54). The core can stay where it was.
     "abd_core":   ([-6, 28.625, -3.5], [6, 31.625, 5.5]),
-    "abd_plate":  ([-3, 28.625, -5.25], [3, 31.625, -3.5]),
+    "abd_plate":  ([-3, 28.625, -4.5], [3, 31.625, -3]),
 }
 # the chest keeps its old south / up art (cut to the new height), everything else is painted here
 KEEP = {"chest": ["south", "up"]}

@@ -1,6 +1,6 @@
 """Belt buckle (2026-10-18, user: the gap between the hip hoods' fronts is the place for a buckle that closes it).
 A 4 x 3 steel buckle on the `hips` bone (static, like the hoods), centred over the 0.5 px gap, 0.6 px proud of the
-hood fronts (z -5.5) and inside their side profile (y 26.125..29.125, back at z -5), so the thigh drums swinging under
+hood fronts (z -5.5), inflated 0.05 (its top sat on the hood tops' plane: flicker from above) and inside their side profile (y 26.125..29.125, back at z -5), so the thigh drums swinging under
 the hoods never reach it. Per-face UV on newly packed rects, painted in the hoods' grey band colours.
 
     uv run --with pillow python3 model/art/buckle_art.py   (reads .scratch/head/buckle_source.json from the skill's
