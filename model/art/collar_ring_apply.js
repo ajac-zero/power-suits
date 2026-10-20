@@ -5,7 +5,7 @@
 // If the ring is already built, only the cubes whose box changed are repainted and rebuilt, and ring cubes the plan no
 // longer has (chest_rim_f) are removed: re-running after a parameter change doesn't need an undo (the user's own edits
 // may sit on top of the undo stack).
-const plan = JSON.parse((await tools.bash({command: "cat .scratch/collar-ring/plan.json # " + Math.random()  /* codemode: Date.now() is frozen and identical bash commands return a cached result */})).output);
+const plan = JSON.parse((await tools.bash({command: "cat .scratch/collar-ring/plan.json"})).output);
 const R = async code => { const t = (await tools.mcp__blockbench__risky_eval({code})).content[0].text; try { return JSON.parse(t); } catch (e) { return t; } };
 const RING = ["collar_post_r", "collar_r", "collar_post_l", "collar_l", "collar_back", "neck_guard", "neck_floor", "chest_rim_f"];
 const live = await R(`JSON.stringify(Object.fromEntries(Cube.all.filter(c => ${JSON.stringify(RING)}.includes(c.name)).map(c => [c.name, [c.from, c.to]])))`);

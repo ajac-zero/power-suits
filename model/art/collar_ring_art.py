@@ -5,10 +5,11 @@ The collar had grown out of six overlapping blocks: collar_r/l (inner face x 5.5
 the nape strips (4.55, 43.575) and nape_back, over a floor at three heights (the breastplate top 38.625 in front, the
 neck notch 39.625, the chest rims 40.625). It becomes one ring (torso frame, px; the model faces -Z):
 
-  collar_post_r/l   x 5.5..6.6, y 38.675..43.625, z -7.5..-5    the front corners, down onto the breastplate
-  collar_r/l        x 5.5..6.6, y 40.625..43.625, z -5..6       the side walls, on the chest rims, to the chest's back
-  collar_back       x -5.5..5.5, y 40.625..43.625, z 4.9..6     between the walls, flush with the chest's back
-  neck_guard        x -5.5..5.5, y 38.675..41.625, z -7.5..-6.5 the low front: a 1 px wall over the gorget lip
+  collar_r/l        x 5.5..6.6, y 38.625..42.625, z -7.5..6     a block per side, front corner to back (WELL below)
+  collar_back       x -5.5..5.5, y 38.625..42.625, z 4.9..6     between the walls, flush with the chest's back
+  neck_guard        x -5.5..5.5, y 38.675..40.625, z -7.5..-6.5 the low front: a 1 px wall over the gorget lip
+The ring was built 1 px taller (top 43.625, guard 41.625); the user had it lowered 1 px all round (2026-10-19): the
+grill's top row now shows over the guard head-on too.
 Inside, the walls are flat: x +-5.5 at the sides (1 px off the helmet's sides; the helmet's sway stays clear of it in
 every animation but idle / death / power-down), z 4.9 at the back, z -6.5 at the front (the guard's inner face, 1 px
 above the floor; the helmet's chin reaches z -5.9 at most). The floor is the chest rims' top (40.625) except at the
@@ -22,11 +23,12 @@ The user tried a 1 px band at 39.625 (the grill shows straight from the front to
 WELL (2026-10-19, user: "the chest is still covering part of the helmet"): the helmet's bottom (38.95) and grill (39..41)
 sat below that floor, so collar_well_apply.js cut the chest's top 1 px away inside the collar (floor 38.625, the
 breastplate's top, level with the groove behind the guard): the posts and walls became one block per side
-(collar_r/l, y 38.625..43.625, z -7.5..6) and collar_back reaches down to the floor too.
+(collar_r/l, z -7.5..6) and collar_back reaches down to the floor too. So the floor described above (rims 40.625, notch
+39.625, groove 38.625) is now 38.625 throughout, the helmet and its grill entirely above it.
 Pieces meet without sharing a plane in the same direction (GeckoLib draws both faces: flicker); bottoms at
 38.675 keep the front faces off the gorget lip's (inflated to z -7.55, top 38.675).
 
-Post + wall read as one piece: their faces are cut from one painted virtual box (x 5.5..6.6, y 38.675..43.625,
+Post + wall read as one piece: their faces are cut from one painted virtual box (x 5.5..6.6, y 38.625..TOP,
 z -7.5..6), so the paint runs across the joint. Painting follows the chest recipe (sm_chest_art.py palette and plate()):
 flat armour blue, lit top rim, light from the viewer's upper left (+x lit), inner faces shaded. The notch filler's top
 reuses the chest's own top-face pixels (the notch region of the old chest top, still on the texture).
@@ -45,7 +47,7 @@ SRC = ".scratch/collar-ring/source.json"
 OUT = ".scratch/collar-ring/plan.json"
 TORSO = [0, 24.625, 0]
 
-FLOOR, TOP, GUARD_TOP, BASE = 40.625, 43.625, 41.625, 38.675
+FLOOR, TOP, GUARD_TOP, BASE = 40.625, 42.625, 40.625, 38.675   # 1 px lower all round (user, 2026-10-19; was 43.625 / 41.625)
 GUARD_DEPTH = 1         # the guard wall; neck_floor fills the rest up to the chest front (z -5)
 WELL = True             # collar_well_apply.js cut the chest top inside the collar: walls + back reach the floor at 38.625
 NECK_FLOOR = False      # True: neck_floor (x +-5.5, y 38.675..40.625) fills the groove between guard and chest
@@ -113,10 +115,11 @@ def guard_front(w, h):
     """The neck guard's front (11 x 3), above the gorget lip: a lit top rim, flat blue, the shaded right end."""
     if h == 1:      # the 1 px band: a plain blue strip above the lip's bright top (its own top face carries the rim)
         return [['L'] + ['M'] * 2 + ['B'] * (w - 4) + ['S']]
-    g = [['H2'] * 5 + ['H'] * (w - 6) + ['L'],
-         ['L'] + ['M'] * 2 + ['B'] * (w - 4) + ['S'],
-         ['M'] + ['B'] * (w - 3) + ['S', 'S']]
-    g[1][7] = 'M'
+    top = ['H2'] * 5 + ['H'] * (w - 6) + ['L']                     # lit rim
+    mid = ['L'] + ['M'] * 2 + ['B'] * (w - 4) + ['S']
+    low = ['M'] + ['B'] * (w - 3) + ['S', 'S']                      # bottom row, over the gorget lip
+    g = [top] + [mid[:] for _ in range(h - 2)] + [low]
+    if h >= 3: g[1][7] = 'M'
     return g
 
 
