@@ -70,6 +70,12 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'mech'
         }
 
+        // Dev tool: only the pose check (torso lean / tool raise / twist from fixed cameras, ap_pose_*.png), ~30 s.
+        autopilotPose {
+            client()
+            systemProperty 'powerarmor.autopilot', 'pose'
+        }
+
         // Dev tool: live-tunes the cockpit viewmodel (see AutoPilot.viewTuner); stays open until closed.
         autopilotView {
             client()

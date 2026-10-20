@@ -111,13 +111,16 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         float aim = info.getOrDefaultGeckolibData(SuitRenderData.AIM_BLEND, 1F);
         // Look yaw relative to the legs (Minecraft already wraps it to -180..180; unwrapped, a pilot who had turned round
         // twice twisted the torso the wrong way).
-        float yaw = Mth.clamp(Mth.wrapDegrees(state.yRot), -90F, 90F) * aim;
+        float yaw = Mth.clamp(Mth.wrapDegrees(state.yRot), -90F, 90F) * aim; // + = looking to the right of the legs
         float pitch = state.xRot * aim;                                // + = looking down
+        // Bone rotations here have Blockbench's signs (see raiseTool): +Y turns the front to the suit's left and +X tips
+        // the top back, so a look to the right / down is a negative Y / X. (Until 2026-10-20 both were added, so the
+        // torso twisted away from the view and leaned back when the pilot looked down: in third person, nearly always.)
         bones.ifPresent("torso", torso -> {
-            torso.setRotY(torso.getRotY() + yaw * Mth.DEG_TO_RAD);
-            torso.setRotX(torso.getRotX() + Mth.clamp(pitch * 0.55F, -25F, 25F) * Mth.DEG_TO_RAD);
+            torso.setRotY(torso.getRotY() - yaw * Mth.DEG_TO_RAD);
+            torso.setRotX(torso.getRotX() - Mth.clamp(pitch * 0.55F, -25F, 25F) * Mth.DEG_TO_RAD);
         });
-        bones.ifPresent("head", head -> head.setRotX(head.getRotX() + Mth.clamp(pitch * 0.35F, -20F, 20F) * Mth.DEG_TO_RAD));
+        bones.ifPresent("head", head -> head.setRotX(head.getRotX() - Mth.clamp(pitch * 0.35F, -20F, 20F) * Mth.DEG_TO_RAD));
     }
 
     // The tool arm's rest pose is a hip carry (Blockbench: left_arm [11.34, -2.16, -17.87], left_forearm [62, -4, 0]).
@@ -129,8 +132,9 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
 
     /**
      * Raise the tool arm by the suit's toolRaise blend, added on top of the animation, so the gait's sway and the shot
-     * recoil still show. GeckoLib flips the sign of X and Y rotations relative to Blockbench (Bedrock -> Java model
-     * space); Z keeps it.
+     * recoil still show. Code offsets on GeckoLib 5 bones use Blockbench's signs on all three axes: the Bedrock export
+     * negates X and Y and GeckoLib negates them back when it loads the model and the animations (GeckoLib 4 code that
+     * subtracted Blockbench X/Y swung the arm back instead of up; caught 2026-10-20 by runAutopilotPose).
      */
     private static void raiseTool(RenderPassInfo<LivingEntityRenderState> info, BoneSnapshots bones) {
         float w = info.getOrDefaultGeckolibData(SuitRenderData.TOOL_RAISE, 0F);
@@ -141,10 +145,10 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         // the muzzle climbs); at full spin ten small kicks a second become a shudder.
         float kick = info.getOrDefaultGeckolibData(SuitRenderData.RECOIL, 0F) * w;
         bones.ifPresent("left_arm", arm -> {
-            arm.setRotX(arm.getRotX() - (RAISE_ARM_X * w - 3F * kick) * Mth.DEG_TO_RAD);
+            arm.setRotX(arm.getRotX() + (RAISE_ARM_X * w - 3F * kick) * Mth.DEG_TO_RAD);
             arm.setRotZ(arm.getRotZ() + RAISE_ARM_Z * w * Mth.DEG_TO_RAD);
         });
-        bones.ifPresent("left_forearm", forearm -> forearm.setRotX(forearm.getRotX() - (RAISE_FOREARM_X * w + 7F * kick) * Mth.DEG_TO_RAD));
+        bones.ifPresent("left_forearm", forearm -> forearm.setRotX(forearm.getRotX() + (RAISE_FOREARM_X * w + 7F * kick) * Mth.DEG_TO_RAD));
     }
 
     /** GeckoLib draws both sides of every face by default. From inside the suit that exposes the

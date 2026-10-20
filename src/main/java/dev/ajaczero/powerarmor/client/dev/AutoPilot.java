@@ -49,6 +49,8 @@ public final class AutoPilot {
     private static final boolean VIEW = "view".equals(System.getProperty("powerarmor.autopilot"));
     /** "mech" mode: skip straight to the suit-mechanics scene (MECH_START), for quick iterations. */
     private static final boolean MECH_ONLY = "mech".equals(System.getProperty("powerarmor.autopilot"));
+    /** "pose" mode: only the pose check (PoseScene: torso lean, tool raise and twist from fixed cameras), ~30 s. */
+    private static final boolean POSE_ONLY = "pose".equals(System.getProperty("powerarmor.autopilot"));
     private static final int MECH_START = 1712;
     /** A file run/cleanzap: no fire from the lightning scene's bolt, so the knock-out animation can be seen. */
     private static final boolean CLEAN_ZAP = Files.exists(Path.of("cleanzap"));
@@ -94,6 +96,10 @@ public final class AutoPilot {
         }
         if (VIEW) {
             viewTuner(mc, tick++);
+        } else if (POSE_ONLY) {
+            if (!PoseScene.step(mc, tick++)) {
+                mc.stop();
+            }
         } else {
             script(mc, tick++);
         }

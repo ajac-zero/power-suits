@@ -162,6 +162,7 @@ upgrades a world the first time it's opened and there's no way back: let it make
 | `./gradlew build` | Builds the mod jar into `build/libs/` (put it in a real `mods/` folder, plus GeckoLib) |
 | `node tools/export-model.mjs` | Re-exports model, animations and texture from the open Blockbench project |
 | `./gradlew runAutopilot` | Dev tool: scripted test drive in a fresh flat world (pool, running out of fuel, chaingun range, right hand, EM projector, drill + chainsaw, tool items on foot), saves `run/screenshots/ap_*.png`, `run/autopilot_{water,fuel,cannon,em,mine}.csv`, quits |
+| `./gradlew runAutopilotPose` | Dev tool (~30 s): the code-driven pose from fixed cameras (torso lean with the view pitch, tool raise, torso twist with the view yaw toward marker blocks); `run/screenshots/ap_pose_*.png`, `run/autopilot_pose.csv` |
 | `./gradlew runAutopilotMech` | Dev tool: only the autopilot's last scene (~25 s): smashing through panes/leaves/glass/ice, a 9-block stomp on mobs, lightning, a punch, wading through lava + poison; `run/screenshots/ap_mech_*.png`, `run/autopilot_mech.csv`. A file `run/cleanzap` keeps the bolt's fire away (to see the knock-out animation) |
 | `./gradlew runAutopilotTerrain` | Dev tool: drives a suit over real terrain in a **copy** of `run/saves/New World`, logs `run/autopilot_terrain.csv` (speed, height, ground contact, animation, camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`, `fuel`, `menu`) |

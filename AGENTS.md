@@ -48,6 +48,7 @@ Mojang's names are official since 26.1 (no Parchment). Porting primers: `neoforg
 | `./gradlew runGameTestServer` | headless GameTests in `src/main/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
 | `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, chaingun range, right hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
 | `./gradlew runAutopilotMech` | only the autopilot's last scenes (~3 min): smashing blocks, stomp, lightning, punch, lava + poison (`ap_mech_*.png`, `run/autopilot_mech.csv`), then the machine mind: walk home, drill, chaingun follow/defend/fists, EM guard (`ap_ai_*`, `run/autopilot_mind.csv`), the workers (`client/dev/WorkScene`: `ap_work_*`, `run/autopilot_work.csv`), rogues (`RogueScene`) and the helmet (`HelmetScene`: `ap_helmet_*`, `ap_menu_helmet`, `run/autopilot_helmet.csv`) |
+| `./gradlew runAutopilotPose` | ~30 s pose check (`client/dev/PoseScene`): side shots looking level / down 40 / up 30 / tool raised, top shots with the view at yaw +40 (gold block) / -40 (redstone): looking down must lean forward, the torso and raised tool must face the shot's block (`ap_pose_*.png`, `run/autopilot_pose.csv`) |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
@@ -181,9 +182,12 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **Right click is shared by the hand and the tool** (vanilla's main hand -> off hand order): `ToolInput` claims a press
   only when NeoForge's InteractionKeyMappingTriggered fires for OFF_HAND (= the main hand passed), then cancels every
   use event until the button is released. Scripts that use a tool must empty the pilot's hand first (food or blocks
-  would win). GeckoLib bones: rest rotations load as (-X, -Y, +Z) of Blockbench, so code offsets on GeoBone are
-  `rotX -= bbX`; check a raise/pose change with a same-camera before/after pair (`cannon_side_976` vs
-  `cannon_side_lowered`): one shot with torso twist and recoil was misread as the wrong sign.
+  would win).
+- *(26.3)* **Code offsets on GeckoLib 5 bones have Blockbench's signs on all three axes** (the Bedrock export negates X/Y,
+  GeckoLib negates them back for the geo and the keyframes): `rotX += bbX`. The GeckoLib 4 rule (`rotX -= bbX`, Y too)
+  survived the port and for six days the torso twisted away from the view, leaned back when the pilot looked down
+  (third person: nearly always) and the tool "raise" swung the arm back. Check any code pose with `runAutopilotPose`
+  (fixed side + top cameras, marker blocks along the view yaws), not with one action shot.
 - **Glowing pixels are painted in reserved colours** (dark coal / smoked glass, listed in `tools/make-glowmasks.py`):
   the masks are generated from them, so never reuse those colours elsewhere (the script counts them and refuses).
   The glow is additive (`RenderTypes.eyes`): dark base + bright mask = dead when off, glowing when on, also by day.
