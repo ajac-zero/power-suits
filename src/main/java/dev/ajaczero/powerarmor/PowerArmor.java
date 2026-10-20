@@ -54,6 +54,10 @@ public class PowerArmor {
             event.accept(ModItems.EM_PROJECTOR);
             event.accept(ModItems.DRILL);
             event.accept(ModItems.CHAINSAW);
+            event.accept(ModItems.SUIT_HELMET);
+            event.accept(ModItems.SUIT_TORSO);
+            event.accept(ModItems.SUIT_ARM);
+            event.accept(ModItems.SUIT_LEG);
         }
     }
 }

@@ -7,6 +7,7 @@ import dev.ajaczero.powerarmor.item.ChainsawItem;
 import dev.ajaczero.powerarmor.item.DrillItem;
 import dev.ajaczero.powerarmor.item.EmProjectorItem;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import dev.ajaczero.powerarmor.item.SuitPartItem;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
@@ -44,6 +45,13 @@ public final class ModItems {
 
     /** Fourth: chainsaw, fells whole trees. */
     public static final DeferredItem<ChainsawItem> CHAINSAW = ITEMS.registerItem("chainsaw", ChainsawItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
+
+    // The suit's parts (2026-10-19): crafted one by one, then assembled into the suit (an arm and a leg are crafted twice:
+    // both sides are the same piece). Stack to 1 like vanilla armour.
+    public static final DeferredItem<SuitPartItem> SUIT_TORSO = ITEMS.registerItem("suit_torso", SuitPartItem::new, props -> props.stacksTo(1));
+    public static final DeferredItem<SuitPartItem> SUIT_ARM = ITEMS.registerItem("suit_arm", SuitPartItem::new, props -> props.stacksTo(1));
+    public static final DeferredItem<SuitPartItem> SUIT_LEG = ITEMS.registerItem("suit_leg", SuitPartItem::new, props -> props.stacksTo(1));
+    public static final DeferredItem<SuitPartItem> SUIT_HELMET = ITEMS.registerItem("suit_helmet", SuitPartItem::new, props -> props.stacksTo(1));
 
     private ModItems() {}
 }

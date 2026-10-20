@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "ILI",
+    "IGI"
+  ],
+  "key": {
+    "I": "minecraft:iron_block",
+    "L": "minecraft:lapis_block",
+    "G": "minecraft:glass"
+  },
+  "result": {
+    "id": "powerarmor:suit_helmet",
+    "count": 1
+  }
+}

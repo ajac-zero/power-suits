@@ -112,8 +112,14 @@ def quads(tool):
 
 def render(tool):
     view = mul(rot_z(math.radians(ROLL)), mul(rot_x(math.radians(TILT)), rot_y(math.radians(SPIN))))
+    return render_quads(quads(tool), view, TEXTURE)
+
+
+def render_quads(quads_, view, texture):
+    """Draws textured quads [(4 corners, 4 uvs)] turned by `view` (camera looks down -z, +y up) into a SIZE x SIZE
+    icon with a dark outline. Shared with tools/make-part-icons.py (the suit's parts)."""
     faces = []
-    for pts, uv in quads(tool):
+    for pts, uv in quads_:
         p = [apply(view, q) for q in pts]
         e1 = [p[1][i] - p[0][i] for i in range(3)]
         e2 = [p[3][i] - p[0][i] for i in range(3)]
@@ -141,8 +147,8 @@ def render(tool):
 
     color = [None] * (big * big)
     depth = [-1e9] * (big * big)
-    tex = TEXTURE.load()
-    tw, th = TEXTURE.size
+    tex = texture.load()
+    tw, th = texture.size
     for p, uv, shade in faces:
         s = [screen(q) for q in p]
         for tri in ((0, 1, 2), (0, 2, 3)):

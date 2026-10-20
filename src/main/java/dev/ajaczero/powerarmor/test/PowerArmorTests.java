@@ -2029,5 +2029,40 @@ public final class PowerArmorTests {
         return helper.getLevel().getEntitiesOfClass(PowerArmorEntity.class, new AABB(helper.absolutePos(SUIT_POS)).inflate(5));
     }
 
+    /**
+     * The suit is crafted from parts (2026-10-19): helmet, torso, arm and leg from iron blocks, lapis blocks and vanilla
+     * parts, then assembled like a body. Crafts every step through the server's real recipe list (the JSON files), so
+     * a typo in a recipe or an arm pattern that also matches the leg fails here.
+     */
+    @SuitTest
+    public static void partsAssembleIntoTheSuit(GameTestHelper helper) {
+        ItemStack i = new ItemStack(Items.IRON_BLOCK), l = new ItemStack(Items.LAPIS_BLOCK), p = new ItemStack(Items.PISTON);
+        ItemStack e = ItemStack.EMPTY;
+        checkCraft(helper, 3, 3, List.of(i, l, i, l, new ItemStack(Items.FURNACE), l, i, l, i), ModItems.SUIT_TORSO.get());
+        checkCraft(helper, 3, 2, List.of(i, l, i, i, new ItemStack(Items.GLASS), i), ModItems.SUIT_HELMET.get());
+        checkCraft(helper, 3, 1, List.of(l, p, i), ModItems.SUIT_ARM.get());
+        checkCraft(helper, 3, 1, List.of(i, p, l), ModItems.SUIT_ARM.get()); // mirrored: the other arm
+        checkCraft(helper, 1, 3, List.of(l, p, i), ModItems.SUIT_LEG.get());
+        ItemStack h = new ItemStack(ModItems.SUIT_HELMET.get()), t = new ItemStack(ModItems.SUIT_TORSO.get());
+        ItemStack a = new ItemStack(ModItems.SUIT_ARM.get()), g = new ItemStack(ModItems.SUIT_LEG.get());
+        checkCraft(helper, 3, 3, List.of(e, h, e, a, t, a, g, e, g), ModItems.POWER_ARMOR.get());
+        // the old recipe (iron armour + pistons) is gone
+        ItemStack ib = new ItemStack(Items.IRON_BLOCK);
+        helper.assertTrue(craft(helper, 3, 3, List.of(ib, new ItemStack(Items.IRON_HELMET), ib, p, new ItemStack(Items.IRON_CHESTPLATE), p,
+                new ItemStack(Items.IRON_BOOTS), e, new ItemStack(Items.IRON_BOOTS))).isEmpty(), "the old iron-armour recipe should be gone");
+        helper.succeed();
+    }
+
+    private static ItemStack craft(GameTestHelper helper, int w, int h, List<ItemStack> grid) {
+        net.minecraft.world.item.crafting.CraftingInput input = net.minecraft.world.item.crafting.CraftingInput.of(w, h, grid);
+        return helper.getLevel().recipeAccess().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, input, helper.getLevel())
+                .map(r -> r.value().assemble(input)).orElse(ItemStack.EMPTY);
+    }
+
+    private static void checkCraft(GameTestHelper helper, int w, int h, List<ItemStack> grid, net.minecraft.world.item.Item expected) {
+        ItemStack out = craft(helper, w, h, grid);
+        helper.assertTrue(out.is(expected), "expected " + expected + " from " + grid + ", got " + out);
+    }
+
     private PowerArmorTests() {}
 }

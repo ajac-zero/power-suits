@@ -9,7 +9,7 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 
 | Action | How |
 |---|---|
-| Get the suit | Creative tab *Tools & Utilities*, or craft it (iron blocks, iron helmet/chestplate/boots, pistons) |
+| Get the suit | Creative tab *Tools & Utilities*, or craft it from its parts (see *Crafting the suit* below) |
 | Deploy | Right-click the ground with the item (needs a 3-block-tall space) |
 | Climb in | Right-click the suit |
 | Suit menu | Sneak + right-click an empty suit: fuel slot, tool socket, status, **Pack up** |
@@ -34,6 +34,21 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Load ammo | Right-click the suit with iron nuggets: the stack goes into its hidden store (up to 640, config). The menu shows it (Ammo), a packed suit keeps it, a wreck drops it. The mind's chaingun uses it; yours too, after the nuggets in your own inventory |
 | Rogue suits | Extremely rare (2% chance per in-game day, config): a rogue suit with a red visor turns up 48-64 blocks from a player. It needs no fuel or ammo and attacks any player or mob it sees: a chaingun rogue shoots, an EM rogue hurls (players too; a suit is too heavy to lift: it pins yours in place, you crawl at a quarter speed, then shoves it). It can't be boarded. Defeated, it drops only its tool; **struck by lightning** (a storm, a Channeling trident, a lightning rod) its mind reboots friendly with one coal's worth of fuel, and the first player to climb in claims it. It leaves after an in-game day once nobody is near. Your chaingun suits shoot rogues on sight. Test one: `/summon powerarmor:power_armor ~ ~ ~5 {Mind:"ROGUE",Inventory:{Items:[{Slot:1b,id:"powerarmor:chaingun",count:1}]}}` (or `powerarmor:em_projector`) |
 | Lightning | A strike knocks a fuelled suit out: it convulses, slumps (you're stuck, the seal is off, so the fire the bolt leaves at your feet usually catches it) and restarts by itself after 5 s; the flames die as it powers up |
+
+### Crafting the suit
+
+Each part is crafted on its own, then the parts are assembled like a body (at a crafting table):
+
+| Item | Recipe |
+|---|---|
+| Power Armor Helmet | top row: iron block, lapis block, iron block; middle row: iron block, glass, iron block |
+| Power Armor Torso | iron blocks in the corners, lapis blocks on the edges, a furnace in the middle (the firebox) |
+| Power Armor Arm (x2) | a row: lapis block, piston, iron block (either way round) |
+| Power Armor Leg (x2) | a column: lapis block, piston, iron block (top to bottom) |
+| Power Armor | helmet top middle; arm, torso, arm across the middle; legs in the bottom corners |
+
+A whole suit takes 12 iron blocks, 9 lapis blocks, 4 pistons, a furnace and glass. The blue is lapis enamel on iron.
+The helmet will become removable later (it seals the suit); for now it's part of the assembly.
 
 ### Balance and config
 Everything that costs fuel, plus damage, ranges and speeds, is in `config/powerarmor-common.toml` (in the
@@ -152,6 +167,7 @@ upgrades a world the first time it's opened and there's no way back: let it make
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
 | `python3 tools/extract-tool-geo.py` | Rebuilds the tool item models from the suit model (run after `export-model.mjs`) |
 | `uv run --with pillow python3 tools/make-item-icons.py` | Redraws the tool items' icons from those tool models (run after `extract-tool-geo.py`) |
+| `uv run --with pillow python3 tools/make-part-icons.py` | Redraws the suit parts' icons (torso, arm, leg, helmet) straight from `model/power_armor.bbmodel` |
 | `python3 tools/extract-view-geo.py` | Rebuilds the cockpit viewmodel (`geckolib/models/view`) from the suit model (run after `export-model.mjs`) |
 | `uv run --with pillow python3 tools/make-glowmasks.py` | Rebuilds the glowmasks (`power_armor_glow_{fire,visor,heat,heat_barrel,em_core,em_arc}.png`) from the texture's reserved colours (run after `export-model.mjs`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | Live-tunes the cockpit viewmodel's placement (`run/view/tuning.json`, shots `run/screenshots/ap_view_*.png`) |
@@ -224,9 +240,10 @@ src/main/resources/
   assets/powerarmor/models/item/chaingun.json         a flat hand-held item, like a vanilla tool (item/handheld)
   assets/powerarmor/items/<item>.json                 which model each item shows (needed since 1.21.4)
   assets/powerarmor/textures/item/<tool>.png          the tools' item icons, rendered from their 3D models (tools/make-item-icons.py)
+  assets/powerarmor/textures/item/suit_<part>.png     the suit parts' icons, rendered from the .bbmodel (tools/make-part-icons.py)
   data/powerarmor/damage_type/bullet.json             "shredded" damage type (+ minecraft is_projectile, no_knockback, bypasses_cooldown tags)
   data/powerarmor/damage_type/em_slam.json            "slammed into a wall" (EM throws)
-  data/powerarmor/recipe/*.json                       crafting recipes (suit + 4 tools)
+  data/powerarmor/recipe/*.json                       crafting recipes (suit parts, suit + 4 tools)
   data/powerarmor/structure/test_pad.nbt              floor used by the GameTests (9x11x9, floor on its second layer)
 ```
 
