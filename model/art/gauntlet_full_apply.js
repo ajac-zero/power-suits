@@ -2,17 +2,19 @@
 // project folder as cwd. Checkpoint, paint the new side faces (aborts if a target pixel is in use), then turn each
 // forearm block into the full-length box (per-face UV: new sides, its old top and wrist faces) and remove the stepped
 // pieces above it (fa_ramp / fa_mid / fa_back) and the elbow ramps on the upper arms. Paint and build are separate undo
-// entries.
+// entries. Run again after the gauntlets are built (fa_ramp_r gone): it repaints the sides only, clearing the pixels of
+// the sides it replaces (plan.clear), and points the forearms' side faces at the new paint.
 const plan = JSON.parse((await tools.bash({command: "cat .scratch/gauntlet/plan.json"})).output);
 const R = async code => { const t = (await tools.mcp__blockbench__risky_eval({code})).content[0].text; try { return JSON.parse(t); } catch (e) { return t; } };
-if (await R(`Cube.all.some(c => c.name === 'fa_ramp_r') ? 'ok' : 'gone'`) !== "ok") return "ABORT already applied (fa_ramp_r gone)";
-await tools.mcp__blockbench__save_checkpoint({name: "before full gauntlets"});
+const built = await R(`Cube.all.some(c => c.name === 'fa_ramp_r') ? 'no' : 'yes'`) === "yes";
+await tools.mcp__blockbench__save_checkpoint({name: built ? "before gauntlet repaint" : "before full gauntlets"});
 const out = [];
 const hex = plan.pixels.map(([x, y, c]) => x.toString(16).padStart(2, "0") + y.toString(16).padStart(2, "0") + c).join("");
 out.push(await R(`(() => { const h = '${hex}', tex = Texture.all[0], px = [];
   for (let i = 0; i < h.length; i += 10) px.push([parseInt(h.substr(i, 2), 16), parseInt(h.substr(i + 2, 2), 16), parseInt(h.substr(i + 4, 2), 16), parseInt(h.substr(i + 6, 2), 16), parseInt(h.substr(i + 8, 2), 16)]);
-  let bad = 0;
+  let bad = 0; const clear = ${JSON.stringify(plan.clear || [])};
   tex.edit(canvas => { const ctx = canvas.getContext('2d'); const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    for (const [u0, v0, u1, v1] of clear) for (let y = Math.min(v0, v1); y < Math.max(v0, v1); y++) for (let x = Math.min(u0, u1); x < Math.max(u0, u1); x++) d.data[(y * canvas.width + x) * 4 + 3] = 0;
     for (const [x, y] of px) if (d.data[(y * canvas.width + x) * 4 + 3] !== 0) bad++;
     if (bad) return canvas;
     for (const [x, y, r, g, b] of px) { const i = (y * canvas.width + x) * 4; d.data[i] = r; d.data[i + 1] = g; d.data[i + 2] = b; d.data[i + 3] = 255; }
