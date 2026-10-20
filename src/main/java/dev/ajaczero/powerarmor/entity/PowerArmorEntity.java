@@ -73,18 +73,20 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final double BLOCKS_PER_SECOND_PER_SPEED = 43.15;
     // A heavy walk and a heavy sprint (2026-10-14 animation overhaul). The suit used to jog at 5 blocks/s and sprint at
     // 10, but legs this long can't cover 5 blocks/s walking: the walk was really a run (both feet off the ground each
-    // step) with the hips dropped 3.6 px and the knees bent to 128 degrees. A real walk with upright hips is ~2.6
-    // (the boots limit the ankle, which wants short steps).
-    private static final double WALK_SPEED = 0.06035;     // ~2.6 blocks/s walk (a player walks at 4.3)
-    public static final float SPRINT_MULTIPLIER = 2.4F;   // ~6.25 blocks/s sprint (a player sprints at 5.6)
+    // step) with the hips dropped 3.6 px and the knees bent to 128 degrees. Since 2026-10-19 the game speeds are the
+    // animations' own (user: "set the walk speed correctly"): walk v6 (1.0 s cycle, 22 px stance) covers 2.218 blocks/s,
+    // the run v8 6.249, so both play at their authored rate (feet planted, no sliding). The sprint multiplier is their
+    // ratio, so the sprint stays at 6.25.
+    private static final double WALK_ANIM_AUTHORED = 2.218;
+    /** The walk on flat ground, blocks/s (tests compare against it). */
+    public static final double WALK_BLOCKS_PER_SECOND = WALK_ANIM_AUTHORED;
+    private static final double WALK_SPEED = WALK_ANIM_AUTHORED / BLOCKS_PER_SECOND_PER_SPEED; // 0.0514 (a player walks at 4.3)
+    public static final float SPRINT_MULTIPLIER = 2.817F;   // 6.25 blocks/s sprint (a player sprints at 5.6)
     /** Ground speed (blocks/s) between the walk and the sprint: the mind, which has no sprint key, runs above it. */
     private static final double RUN_THRESHOLD = 4.5;
 
     // The ground speed each Blockbench animation was authored for (blocks/s, measured from the
     // planted foot). Playing them at movementSpeed / authoredSpeed keeps the feet from sliding.
-    // Walk v6 (2026-10-15: 1.0 s cycle, 22 px stance) covers 2.218 blocks/s; the game walk stays 2.6 for now (the user
-    // hasn't picked it), so the walk plays 17% faster than authored.
-    private static final double WALK_ANIM_AUTHORED = 2.218;
     private static final double RUN_ANIM_AUTHORED = 6.249;
     private static final double WALK_ANIM_RATE = WALK_SPEED * BLOCKS_PER_SECOND_PER_SPEED / WALK_ANIM_AUTHORED;
     private static final double RUN_ANIM_RATE = WALK_SPEED * SPRINT_MULTIPLIER * BLOCKS_PER_SECOND_PER_SPEED / RUN_ANIM_AUTHORED;

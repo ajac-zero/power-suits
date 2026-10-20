@@ -1476,7 +1476,8 @@ public final class PowerArmorTests {
         });
         helper.runAfterDelay(100, () -> {
             helper.assertTrue(!suit.isAwayFromHome(0.5), "should be back home after 5 s, at " + suit.position().subtract(Vec3.atBottomCenterOf(home)));
-            helper.assertTrue(fastest[0] > 2.3 && fastest[0] < 3.3, "walks (~2.7 blocks/s), fastest " + fastest[0]);
+            double walk = PowerArmorEntity.WALK_BLOCKS_PER_SECOND; // the mind's speed 1.0 = the pilot's walk
+            helper.assertTrue(fastest[0] > walk * 0.88 && fastest[0] < walk * 1.27, "walks (~" + walk + " blocks/s), fastest " + fastest[0]);
             helper.succeed();
         });
     }

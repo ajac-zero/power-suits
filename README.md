@@ -15,7 +15,7 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Suit menu | Sneak + right-click an empty suit: helmet slot, tool socket, fuel slot, status, **Pack up** |
 | Helmet | Right-click a suit with a Power Armor Helmet (or use the menu's helmet slot) to put it on. It seals the suit, and the machine mind only runs with it: without one the suit still runs with you inside (unsealed: fire, poison and water reach you, and you can eat), and an empty one stands powered down. Taking the helmet off is the easy way to park a suit. Rogues always wear one |
 | Fuel | Put coal/charcoal (1:20 of walking each), lava buckets (2:40, the bucket stays) or blaze rods (4:00) in the fuel slot |
-| Walk / run | WASD (2.6 blocks/s walk) / sprint (6.25 blocks/s; double-tap W or Ctrl) |
+| Walk / run | WASD (2.2 blocks/s walk) / sprint (6.25 blocks/s; double-tap W or Ctrl) |
 | Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
@@ -251,7 +251,7 @@ src/main/resources/
 ## Notes
 
 - Animation playback rates are tied to movement speed so the feet don't slide. The authored
-  ground speeds were measured in Blockbench: walk 2.60, run 6.25, sneak 0.83 blocks/s.
+  ground speeds were measured in Blockbench: walk 2.218, run 6.249 blocks/s, and the game moves at exactly those speeds.
 - The walk and run keep the tool arm stabilized (IK on the arm), so it stays steady in the cockpit view.
 - Cockpit feel: the view dips with the hips on each footfall, and the FOV widens a little with speed.
 - Terrain: walking off ledges up to 2 blocks steps down instead of falling (keeps speed, no fall
