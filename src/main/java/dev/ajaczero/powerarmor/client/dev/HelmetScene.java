@@ -21,7 +21,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Autopilot scene for the helmet (2026-10-19), the last one of the mech run: a fuelled suit without its helmet stands
  * powered down; the player climbs in (it runs, unsealed, showing the stand-in face), climbs out (it powers down again:
- * no mind without the helmet), puts the helmet on by right-clicking (it boots, green visor: the mind drives), then opens
+ * no mind without the helmet; the pilot's head shows in the empty collar, ap_helmet_off_piloted(_back)), puts the helmet on by right-clicking (it boots, green visor: the mind drives), then opens
  * its menu (helmet slot). Shots ap_helmet_*.png, ap_menu_helmet.png; log run/autopilot_helmet.csv (server state each tick).
  */
 final class HelmetScene {
@@ -43,7 +43,9 @@ final class HelmetScene {
                                   p.setYHeadRot(180);
                               } }); }
             case 36 -> { AutoPilot.setView(180, 0); camera(mc); }
-            case 80 -> AutoPilot.shot(mc, "helmet_off_piloted");
+            case 76 -> AutoPilot.shot(mc, "helmet_off_piloted");
+            case 77 -> { mc.setCameraEntity(mc.player); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); AutoPilot.setView(180, 15); }
+            case 81 -> AutoPilot.shot(mc, "helmet_off_piloted_back"); // the pilot's own head in the collar (PilotHeadLayer), from behind
             case 84 -> { phase = "climbed_out"; AutoPilot.onServer(mc, p -> {
                               p.stopRiding();
                               if (suit != null) {

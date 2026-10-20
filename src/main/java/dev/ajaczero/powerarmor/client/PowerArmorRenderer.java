@@ -28,6 +28,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         super(context, new PowerArmorModel());
         this.shadowRadius = 0.9F;
         this.withRenderLayer(new HeldItemLayer(context, this)); // the pilot's selected item in the right hand
+        this.withRenderLayer(new PilotHeadLayer(context, this)); // no helmet: the pilot's own head in the collar
         this.withRenderLayer(new SuitGlowLayer(this));         // firebox + visor lights
     }
 
@@ -83,8 +84,8 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         }
         boolean socketHidden = !installed.isEmpty();
         bones.ifPresent("socket", bone -> bone.skipRender(socketHidden));
-        // Helmet slot: no helmet, no helmet bone (shell, visor, brow, cheeks, chin; the visor glow goes with it). The collar
-        // is empty then (the pilot's own head isn't drawn there yet: the pilot is hidden inside the suit, PilotView).
+        // Helmet slot: no helmet, no helmet bone (shell, visor, brow, cheeks, chin; the visor glow goes with it). The pilot's
+        // own head shows in the collar instead (PilotHeadLayer; the rest of the pilot stays hidden inside, PilotView).
         boolean helmet = info.getOrDefaultGeckolibData(SuitRenderData.HELMET, true);
         bones.ifPresent("helmet", bone -> bone.skipRender(!helmet).skipChildrenRender(!helmet));
         ChaingunParts.pose(bones, info.getOrDefaultGeckolibData(SuitRenderData.BARREL_ANGLE, 0F)); // turn (and coast) always
