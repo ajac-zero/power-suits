@@ -9,7 +9,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.CalculateDetachedCameraDistanceEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ComputeFovModifierEvent;
-import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import net.neoforged.neoforge.client.event.RenderLivingEvent;
@@ -97,15 +96,9 @@ public final class PilotView {
         }
     }
 
-    /** Cockpit stomp: dip the view with the mech's hips on every footfall (first person only). */
-    @SubscribeEvent
-    public static void cockpitBob(ViewportEvent.ComputeCameraAngles event) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null && mc.player.getVehicle() instanceof PowerArmorEntity suit && mc.options.getCameraType().isFirstPerson()) {
-            // hipBob is in model pixels; ~0.6 degrees per pixel of drop, capped.
-            event.setPitch(event.getPitch() - Mth.clamp(suit.getHipBob() * 0.6F, -2.5F, 2.5F));
-        }
-    }
+    // (No cockpit camera bob since 2026-10-20, user: "cinematic but it gets old very fast". It tipped the view's pitch
+    // down with the hips on every footfall, up to 2.5 degrees. The viewmodel still sways with the gait, if vanilla's
+    // View Bobbing is on: CockpitHands.bob.)
 
     /** Widen the view a little with speed, on top of vanilla's sprint FOV. */
     @SubscribeEvent

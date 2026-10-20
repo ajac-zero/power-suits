@@ -106,8 +106,12 @@ public final class CockpitHands {
                 .scale(toolScale);
     }
 
-    /** Gait bob (the suit's hip drop, model pixels) plus a slow breathing drift. */
+    /** Gait bob (the suit's hip drop, model pixels) plus a slow breathing drift; both off with vanilla's View Bobbing
+     *  option, like vanilla's own hand sway. */
     private static float bob(PowerArmorEntity suit) {
+        if (!Minecraft.getInstance().options.bobView().get()) {
+            return 0F;
+        }
         return suit.getHipBob() * 0.008F + Mth.sin((float) ClientUtil.getCurrentTick() * 0.07F) * 0.004F;
     }
 
