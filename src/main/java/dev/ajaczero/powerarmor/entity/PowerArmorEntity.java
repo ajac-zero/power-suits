@@ -2061,6 +2061,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     /** Fixed rate per gait (steps in time with the ground speed: WALK_ANIM_AUTHORED / RUN_ANIM_AUTHORED). */
+    /** Client/dev: the movement animation's playback rate this tick (the gait log compares it with the ground speed). */
+    public double getMovementAnimationRate() {
+        return this.movementAnimationRate();
+    }
+
     private double movementAnimationRate() {
         if (this.isDeadOrDying() || !this.isDriven() || !this.canOperate() || this.jumped || this.jumpAnimTicks > 0
                 || this.airTicks >= FALL_POSE_AFTER_TICKS || this.landTicks > 0) {

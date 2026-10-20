@@ -76,6 +76,12 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'pose'
         }
 
+        // Dev tool: only the foot-slip / leg-turning drive (run/autopilot_gait.csv, tools/gait-report.py), ~45 s.
+        autopilotGait {
+            client()
+            systemProperty 'powerarmor.autopilot', 'gait'
+        }
+
         // Dev tool: live-tunes the cockpit viewmodel (see AutoPilot.viewTuner); stays open until closed.
         autopilotView {
             client()
