@@ -15,7 +15,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Autopilot scene for foot slip and leg turning (2026-10-20, ./gradlew runAutopilotGait, ~45 s): the pilot walks
  * forward, backs up, strafes, walks diagonally, turns on the spot, looks around while walking, sprints and turns while
- * sprinting, on flat ground. Every client tick goes to run/autopilot_gait.csv: what the legs play (animation, rate),
+ * sprinting, taps the sprint key once and holds W (vanilla keeps a sprint going while W is held), on flat ground. Every client tick goes to run/autopilot_gait.csv: what the legs play (animation, rate),
  * where they face, where the pilot looks and how the suit really moves. The animations were authored for a ground
  * speed along the legs (walk 2.218, run 6.249 blocks/s x rate), so "slip" is how far the real velocity is from that:
  * a planted foot slides at that speed. Summarize with tools/gait-report.py. Shots ap_gait_*.png (third person).
@@ -29,7 +29,7 @@ final class GaitScene {
     private static final Object[][] PHASES = {
             {"stand", 0}, {"walk_fwd", 20}, {"back", 80}, {"strafe_r", 140}, {"strafe_l", 200}, {"diag", 260},
             {"settle", 320}, {"turn_spot", 340}, {"settle2", 420}, {"walk_look", 440}, {"sprint", 540},
-            {"sprint_turn", 600}, {"stop", 660}, {"end", 700}};
+            {"sprint_turn", 600}, {"sprint_tap", 660}, {"stop", 760}, {"end", 800}};
 
     static boolean step(Minecraft mc, int s) {
         var o = mc.options;
@@ -50,6 +50,10 @@ final class GaitScene {
             case "walk_look" -> AutoPilot.setView(sweepBase + 60 * Mth.sin((s - 440) * Mth.TWO_PI / 50F), 15); // look about
             case "sprint_turn" -> AutoPilot.setView(Math.min(90, (s - 600) * 4.5F), 15); // a 90 degree turn in 20 ticks
             default -> {}
+        }
+        if (s == 663) {
+            o.keySprint.setDown(false); // sprint_tap: Ctrl tapped for 3 ticks, W held on: the suit must keep sprinting
+            AutoPilot.hold(o.keySprint, false);
         }
         if (s == 100 || s == 160 || s == 280 || s == 350 || s == 470 || s == 610) {
             AutoPilot.shot(mc, "gait_" + phase + "_" + s);
@@ -73,13 +77,13 @@ final class GaitScene {
             case "strafe_r" -> AutoPilot.hold(o.keyRight, true);
             case "strafe_l" -> AutoPilot.hold(o.keyLeft, true);
             case "diag" -> { AutoPilot.hold(o.keyUp, true); AutoPilot.hold(o.keyRight, true); }
-            case "sprint", "sprint_turn" -> { AutoPilot.hold(o.keyUp, true); AutoPilot.hold(o.keySprint, true); }
+            case "sprint", "sprint_turn", "sprint_tap" -> { AutoPilot.hold(o.keyUp, true); AutoPilot.hold(o.keySprint, true); }
             default -> {}
         }
         if (name.equals("walk_look")) {
             sweepBase = 0;
         }
-        if (name.equals("sprint")) {
+        if (name.equals("sprint") || name.equals("sprint_tap")) {
             AutoPilot.setView(0, 15);
         }
     }

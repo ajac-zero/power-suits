@@ -73,15 +73,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final double BLOCKS_PER_SECOND_PER_SPEED = 43.15;
     // A heavy walk and a heavy sprint (2026-10-14 animation overhaul). The suit used to jog at 5 blocks/s and sprint at
     // 10, but legs this long can't cover 5 blocks/s walking: the walk was really a run (both feet off the ground each
-    // step) with the hips dropped 3.6 px and the knees bent to 128 degrees. Since 2026-10-19 the game speeds are the
-    // animations' own (user: "set the walk speed correctly"): walk v6 (1.0 s cycle, 22 px stance) covers 2.218 blocks/s,
-    // the run v8 6.249, so both play at their authored rate (feet planted, no sliding). The sprint multiplier is their
-    // ratio, so the sprint stays at 6.25.
+    // step) with the hips dropped 3.6 px and the knees bent to 128 degrees. From 2026-10-19 the game walked at the walk
+    // animation's own speed (walk v6: 1.0 s cycle, 22 px stance = 2.218 blocks/s); since 2026-10-20 the step rate follows
+    // the real speed (movementAnimationRate), so the walk is a game choice: 3.0 (user: half a player's 4.3 was too slow to
+    // get anywhere; the walk steps 1.35x its authored cadence). The sprint stays at the run's own 6.25.
     private static final double WALK_ANIM_AUTHORED = 2.218;
     /** The walk on flat ground, blocks/s (tests compare against it). */
-    public static final double WALK_BLOCKS_PER_SECOND = WALK_ANIM_AUTHORED;
-    private static final double WALK_SPEED = WALK_ANIM_AUTHORED / BLOCKS_PER_SECOND_PER_SPEED; // 0.0514 (a player walks at 4.3)
-    public static final float SPRINT_MULTIPLIER = 2.817F;   // 6.25 blocks/s sprint (a player sprints at 5.6)
+    public static final double WALK_BLOCKS_PER_SECOND = 3.0;
+    private static final double WALK_SPEED = WALK_BLOCKS_PER_SECOND / BLOCKS_PER_SECOND_PER_SPEED; // 0.0695 (a player walks at 4.3)
+    /** Sprint / walk: 6.25 blocks/s sprint (a player sprints at 5.6). */
+    public static final float SPRINT_MULTIPLIER = 2.083F;
     /** Ground speed (blocks/s) between the walk and the sprint: the mind, which has no sprint key, runs above it. */
     private static final double RUN_THRESHOLD = 4.5;
 

@@ -258,7 +258,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **Gaits come from the legs, not the game speed**: legs this long (hip 22.6 px) can't walk 5 blocks/s. The old "walk" had
   each foot down only 37.5% of the cycle (a run: both feet in the air) and dropped the hips 3.6 px, which bent the knees
   to 128 deg through the thigh. Hip height is very sensitive (1 px lower ~ +20 deg of knee): derive it from the planted
-  leg's reach (`reachHip` in the skill's `k2.js`) and pick the game speed from the gait (since 2026-10-19 exactly the animations' own: walk 2.218, sprint 6.249). A limited ankle (`model/anim/kit.json` "ankle") needs straight-ish stance
+  leg's reach (`reachHip` in the skill's `k2.js`) and pick the gait from the legs (the game speed is free since the step rate follows it: walk 3.0, sprint 6.25 since 2026-10-20). A limited ankle (`model/anim/kit.json` "ankle") needs straight-ish stance
   knees and short steps: a bent stance knee tilts the shin forward by about half its angle.
 - **The step rate follows the real speed along the legs** (2026-10-20, `movementAnimationRate`): a fixed rate per gait slid the
   feet whenever the suit moved at any other speed (strafe, diagonal, stopping: 0.4-1.4 blocks/s) and backing up played
@@ -269,8 +269,10 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   only ("no part of the model is safe"); animations are redone once the model is final. Every leg animation is baked on the
   current legs (walk/run 2026-10-15, the rest re-baked unchanged from their specs 2026-10-18). Known open (user: wait for the
   upper-body rework): arms clip the thighs in jump_charge/jump/land/death/shutdown (0.3-1.6 px), death's leg roll
-  pushes the drums 0.85 px into the hip post, the crouches fold the knees to ~90 (reads as a squat). Exported 2026-10-19; the game walks at the walk's
-  authored 2.218 blocks/s and sprints at the run's 6.249 (WALK_SPEED derives from WALK_ANIM_AUTHORED, user 2026-10-19).
+  pushes the drums 0.85 px into the hip post, the crouches fold the knees to ~90 (reads as a squat). Exported 2026-10-19. The game walked at the walk's
+  authored 2.218 blocks/s from 2026-10-19; since 2026-10-20 it walks at 3.0 (user: too slow to get anywhere at half a
+  player's walk; the steps follow the speed) and sprints at the run's 6.25. A tap of the sprint key keeps the sprint going
+  while W is held (vanilla; runAutopilotGait's sprint_tap checks it).
 - **Read the user's sketches literally and confirm a reading in words before building**: "an opposite slope" for the
   thigh meant a thigh bottom PARALLEL to the shin top (both falling toward the back, a dark knee band between), and
   "the slot where the foot is" meant the shin coming down to the ground around the foot, not an empty pocket above it.

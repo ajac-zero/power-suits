@@ -15,7 +15,7 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Suit menu | Sneak + right-click an empty suit: helmet slot, tool socket, fuel slot, status, **Pack up** |
 | Helmet | Right-click a suit with a Power Armor Helmet (or use the menu's helmet slot) to put it on. It seals the suit, and the machine mind only runs with it: without one the suit still runs with you inside (unsealed: fire, poison and water reach you, and you can eat), and an empty one stands powered down. Taking the helmet off is the easy way to park a suit. Rogues always wear one |
 | Fuel | Put coal/charcoal (1:20 of walking each), lava buckets (2:40, the bucket stays) or blaze rods (4:00) in the fuel slot |
-| Walk / run | WASD (2.2 blocks/s walk) / sprint (6.25 blocks/s; double-tap W or Ctrl) |
+| Walk / run | WASD (3.0 blocks/s walk; S backs up at half speed) / sprint (6.25 blocks/s; double-tap W or tap Ctrl once, it keeps going while W is held) |
 | Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
@@ -252,10 +252,12 @@ src/main/resources/
 
 ## Notes
 
-- Animation playback rates are tied to movement speed so the feet don't slide. The authored
-  ground speeds were measured in Blockbench: walk 2.218, run 6.249 blocks/s, and the game moves at exactly those speeds.
+- Animation playback rates follow the real speed along the legs so the feet don't slide (backing up plays the walk in
+  reverse, `walk_back`). The authored ground speeds were measured in Blockbench: walk 2.218, run 6.249 blocks/s; the game
+  walks at 3.0 (the walk steps 1.35x faster) and sprints at 6.25. Tap sprint once: it keeps going while W is held.
 - The walk and run keep the tool arm stabilized (IK on the arm), so it stays steady in the cockpit view.
-- Cockpit feel: the view dips with the hips on each footfall, and the FOV widens a little with speed.
+- Cockpit feel: the view stays level (no camera bob); the FOV widens a little with speed, and the viewmodel sways with the
+  gait under vanilla's View Bobbing option.
 - Terrain: walking off ledges up to 2 blocks steps down instead of falling (keeps speed, no fall
   pose), and step-ups/downs are eased for the camera and the model over ~6 ticks.
 - Saved suits: Minecraft stores attribute base values with each entity. `readAdditionalSaveData`

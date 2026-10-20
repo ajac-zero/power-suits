@@ -56,7 +56,7 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
 | EM projector (Phase 4) | Hold to grab items / mobs / players (16 blocks; heavy things are pinned instead) and hold them floating; items are collected; release throws, tap shoves; wall slam damage. Socket only. See section 3. |
 | Drill + chainsaw (Phase 5) | Diamond-tipped 3x3 drill (pickaxe + shovel blocks, diamond tier) and a chainsaw (axe blocks + leaves, fells natural trees above the cut). BreakEvent per block, vanilla drops, crack overlay, tool-bone loop animations. See section 3. |
 | Suit menu (Phase 1) | Socket slot (power tools only), fuel slot, live suit preview, burn flame, hull/fuel/status display, Pack up button. See section 5. |
-| Movement | Walk 2.22 blocks/s, sprint 6.25 (players: 4.3 / 5.6; the animations' own speeds since 2026-10-19, was walk 2.6; until 2026-10-14 a 5 blocks/s jog and a 10 sprint, see Animations). Steps up 1 block, steps down up to 2 without falling; step changes eased for camera + model. Jump: hold Space (crouch wind-up, horse jump bar), release; launch 2 ticks later. |
+| Movement | Walk 3.0 blocks/s, sprint 6.25 (players: 4.3 / 5.6). Walk 3.0 since 2026-10-20 (user: 2.22, the walk animation's own speed, was too slow to get anywhere; the steps follow the real speed, so any speed keeps the feet planted). A tap of the sprint key keeps the sprint going while W is held (vanilla), backing up is half speed, strafing full. (2026-10-19: the animations' own speeds, walk 2.22; before that walk 2.6; until 2026-10-14 a 5 blocks/s jog and a 10 sprint, see Animations). Steps up 1 block, steps down up to 2 without falling; step changes eased for camera + model. Jump: hold Space (crouch wind-up, horse jump bar), release; launch 2 ticks later. |
 | Turning | Legs face the direction of travel; torso + arms twist up to 90 deg and lean to face the pilot's view. |
 | Camera | First person: eye at the visor, only the suit's legs drawn, arms = cockpit viewmodel (tool left, gauntlet + item right), speed FOV (no camera bob: removed 2026-10-20, user; the viewmodel sways with the gait under vanilla's View Bobbing). Third person: camera pulled back to 6.5. |
 | Damage | Hits on the pilot go to the suit (except drowning, starvation, void//kill; "suffocating" because the pilot's head pokes out of the hitbox against a wall is ignored). Suit: 100 HP, armor 12, toughness 4, full knockback resistance, no fall damage. Death: animation, pilot ejected, drops iron. |
@@ -207,7 +207,7 @@ An empty suit is a mob, like a horse: a machine mind drives it whenever nobody e
   Without a pilot, blocks are broken as a FakePlayer with the owner's UUID (`blockBreaker`), so claim mods veto as
   for the owner. The mind aims with `setAiAim` (snaps the head onto a point, after the goals and before vanilla's look
   control) and fires with `setAiTrigger`. Vanilla mobs move at speed squared (MoveControl passes the speed as the
-  forward input); `travel` normalises the mind's input so speed modifier 1.0 = the pilot's walk (2.22 blocks/s).
+  forward input); `travel` normalises the mind's input so speed modifier 1.0 = the pilot's walk (3.0 blocks/s).
 
 ## 9. Out of scope for now
 Wearable armor, multiple sockets, upgrade trees, multiplayer permissions beyond the server's PvP setting.
