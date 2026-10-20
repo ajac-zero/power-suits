@@ -92,7 +92,7 @@ final class WorkScene {
             level.setBlock(home.offset(HOLE), Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(home.offset(HOLE).below(), Blocks.AIR.defaultBlockState(), 3);
             PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16));
+            s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16)); s.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             s.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.DRILL.get()));
             s.snapTo(x + 0.5, y, z + 0.5, 0, 0);
             s.setOwnerId(player.getUUID());

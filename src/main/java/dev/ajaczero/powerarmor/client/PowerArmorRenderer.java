@@ -37,6 +37,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
     public void addRenderData(PowerArmorEntity suit, @Nullable Void ignored, LivingEntityRenderState state, float partialTick) {
         state.addGeckolibData(SuitRenderData.COCKPIT, isCockpitView(suit));
         state.addGeckolibData(SuitRenderData.TOOL_BONE, suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.suitBone() : "");
+        state.addGeckolibData(SuitRenderData.HELMET, suit.hasHelmet());
         state.addGeckolibData(SuitRenderData.STEP_OFFSET, (float) suit.getStepOffset(partialTick));
         state.addGeckolibData(SuitRenderData.AIMING, suit.isDriven() && !suit.isDeadOrDying());
         state.addGeckolibData(SuitRenderData.AIM_BLEND, suit.getAimBlend());
@@ -82,6 +83,10 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         }
         boolean socketHidden = !installed.isEmpty();
         bones.ifPresent("socket", bone -> bone.skipRender(socketHidden));
+        // Helmet slot: no helmet, no helmet bone (shell, visor, brow, cheeks, chin; the visor glow goes with it). The collar
+        // is empty then (the pilot's own head isn't drawn there yet: the pilot is hidden inside the suit, PilotView).
+        boolean helmet = info.getOrDefaultGeckolibData(SuitRenderData.HELMET, true);
+        bones.ifPresent("helmet", bone -> bone.skipRender(!helmet).skipChildrenRender(!helmet));
         ChaingunParts.pose(bones, info.getOrDefaultGeckolibData(SuitRenderData.BARREL_ANGLE, 0F)); // turn (and coast) always
         aim(info, bones);
     }
@@ -115,10 +120,12 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         bones.ifPresent("head", head -> head.setRotX(head.getRotX() + Mth.clamp(pitch * 0.35F, -20F, 20F) * Mth.DEG_TO_RAD));
     }
 
-    // The tool arm's rest pose is a hip carry (Blockbench: left_arm [18, 0, -18], left_forearm [62, -4, 0]). Using the
-    // tool raises it to the aiming pose [46, 0, -22] / [38, -4, 0] (the muzzle SocketAim fires from), like raising a
-    // shield. These are the differences, in Blockbench degrees.
-    private static final float RAISE_ARM_X = 28F, RAISE_ARM_Z = -4F, RAISE_FOREARM_X = -24F;
+    // The tool arm's rest pose is a hip carry (Blockbench: left_arm [11.34, -2.16, -17.87], left_forearm [62, -4, 0]).
+    // Using the tool raises it to the aiming pose [54.09, -2.16, -21.87] / [38, -4, 0], where the tool points level
+    // along the view (5 deg inward) and its muzzle is where SocketAim fires from, like raising a shield. These are the
+    // differences, in Blockbench degrees. (The upright torso of the 2026-10-18 rework needed 42.75 instead of 28 on the
+    // upper arm: the old torso leaned 7 deg forward and carried the tool up with it.)
+    private static final float RAISE_ARM_X = 42.75F, RAISE_ARM_Z = -4F, RAISE_FOREARM_X = -24F;
 
     /**
      * Raise the tool arm by the suit's toolRaise blend, added on top of the animation, so the gait's sway and the shot

@@ -82,7 +82,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     // The ground speed each Blockbench animation was authored for (blocks/s, measured from the
     // planted foot). Playing them at movementSpeed / authoredSpeed keeps the feet from sliding.
-    private static final double WALK_ANIM_AUTHORED = 2.604;
+    // Walk v6 (2026-10-15: 1.0 s cycle, 22 px stance) covers 2.218 blocks/s; the game walk stays 2.6 for now (the user
+    // hasn't picked it), so the walk plays 17% faster than authored.
+    private static final double WALK_ANIM_AUTHORED = 2.218;
     private static final double RUN_ANIM_AUTHORED = 6.249;
     private static final double WALK_ANIM_RATE = WALK_SPEED * BLOCKS_PER_SECOND_PER_SPEED / WALK_ANIM_AUTHORED;
     private static final double RUN_ANIM_RATE = WALK_SPEED * SPRINT_MULTIPLIER * BLOCKS_PER_SECOND_PER_SPEED / RUN_ANIM_AUTHORED;
@@ -144,7 +146,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
 
     // ---- Fuel (works like a furnace, see SuitFuel) ---------------------------------------------
-    public static final int FUEL_SLOT = 0, SOCKET_SLOT = 1;
+    /** The suit's slots. The helmet (2026-10-19) seals the suit and lets its machine mind run: without one the suit
+     *  still runs with a pilot inside, unsealed, and an empty one stands powered down. */
+    public static final int FUEL_SLOT = 0, SOCKET_SLOT = 1, HELMET_SLOT = 2;
     // Drain per tick (idle / walking / sprinting), energy per jump and the low-fuel warning level are balance
     // knobs in PowerArmorConfig. Walking = 1 per tick, so SuitFuel values read as ticks of walking.
     /** Length of the startup animation (1.4 s): the suit can't move until it has stood up. */
@@ -192,9 +196,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
     private static final EntityDataAccessor<ItemStack> SOCKET_ITEM =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
+    /** Is a helmet in its slot: clients draw it (or not) and know whether the suit is sealed. */
+    private static final EntityDataAccessor<Boolean> HELMET =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
 
-    /** The suit's own two slots: fuel and the left-arm socket. Real contents only exist on the server. */
-    private final SimpleContainer inventory = new SimpleContainer(2) {
+    /** The suit's own slots: fuel, the left-arm socket and the helmet. Real contents only exist on the server. */
+    private final SimpleContainer inventory = new SimpleContainer(3) {
         @Override
         public void setChanged() {
             super.setChanged();
@@ -329,6 +336,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(TOOL_HEAT, 0F);
         builder.define(TOOL_SHOTS, 0);
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
+        builder.define(HELMET, false);
         builder.define(STUNNED, false);
         builder.define(MIND, (byte) SuitMind.FRIENDLY.ordinal());
         builder.define(NUGGETS, 0);
@@ -384,7 +392,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.rogueAge = tag.getIntOr("RogueAge", 0);
         this.syncSlots();
         this.syncBurn();
-        this.entityData.set(POWERED, this.hasEnergy());
+        this.entityData.set(POWERED, this.shouldRun(null)); // a pilot (if any) boards after loading: next tick knows
     }
 
     @Override
@@ -537,6 +545,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.aiAim = target;
     }
 
+    /** Server/dev: where the mind aims right now (autopilot logs), or null. */
+    @Nullable
+    public Vec3 getAiAim() {
+        return this.aiAim;
+    }
+
     /** Vanilla's look control resets the pitch and eases the head back toward the body every tick unless something
      *  asks it to look somewhere. This runs after the goals (which may have asked for something else) and before the
      *  look control, so an aim set by the mind wins; the tool fires later in the same tick (tickTool). */
@@ -630,14 +644,19 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     // Fuel, power, inventory
     // =========================================================================================
 
-    /** Server: one tick of the engine. A suit with fuel runs, piloted or not (without a pilot its machine mind drives
-     *  it): to park a suit for good, take the fuel out. */
+    /** Server: one tick of the engine. A suit with fuel runs while it's piloted, or while it wears its helmet (then its
+     *  machine mind drives it): to park a suit, take its helmet off (or the fuel out). */
     private void tickFuel() {
         Player pilot = this.getControllingPassenger() instanceof Player p ? p : null;
         if (this.stunTicks > 0 && --this.stunTicks == 0) {
             this.entityData.set(STUNNED, false); // back on: setPowered below plays the startup
         }
-        if (this.stunTicks == 0 && !this.isRogue() && (pilot != null || this.hasEnergy())) { // a knocked-out engine burns nothing
+        if (this.isRogue() && this.inventory.getItem(HELMET_SLOT).isEmpty()) {
+            // Rogues always wear one (/summon, or a rogue from before the helmet existed): its mind lives in it. A
+            // defeated rogue still drops only its tool; one rebooted by lightning keeps it.
+            this.inventory.setItem(HELMET_SLOT, new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
+        }
+        if (this.stunTicks == 0 && !this.isRogue() && this.shouldRun(pilot)) { // a knocked-out engine burns nothing
             if (this.burnLeft <= 0) {
                 this.igniteNextItem();
             }
@@ -652,8 +671,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 }
             }
         }
-        this.setPowered(this.hasEnergy() && this.stunTicks == 0);
+        this.setPowered(this.shouldRun(pilot) && this.stunTicks == 0);
         this.syncBurn();
+    }
+
+    /** Should the engine run: energy on board and someone to drive, the pilot or the mind (which needs the helmet). */
+    private boolean shouldRun(@Nullable Player pilot) {
+        return this.hasEnergy() && (pilot != null || this.hasHelmet());
     }
 
     private void syncBurn() {
@@ -750,12 +774,23 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (!this.level().isClientSide()) {
             this.entityData.set(FUEL_ITEM, this.inventory.getItem(FUEL_SLOT).copy());
             this.entityData.set(SOCKET_ITEM, this.inventory.getItem(SOCKET_SLOT).copy());
+            this.entityData.set(HELMET, !this.inventory.getItem(HELMET_SLOT).isEmpty());
         }
     }
 
     /** Both sides: the engine has energy (synced from the server). */
     public boolean isPowered() {
         return this.entityData.get(POWERED);
+    }
+
+    /** Both sides: a helmet sits in the helmet slot. */
+    public boolean hasHelmet() {
+        return this.entityData.get(HELMET);
+    }
+
+    /** Both sides: running with its helmet on, so fire, frost, harmful effects and water are kept out (SuitSeal). */
+    public boolean isSealed() {
+        return this.isPowered() && this.hasHelmet();
     }
 
     /** Powered and finished standing up: allowed to move, jump and use tools. */
@@ -968,20 +1003,21 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.burnLeft;
     }
 
-    /** What a packed suit item keeps: both slots and the half-burnt item. */
+    /** What a packed suit item keeps: its slots, the half-burnt item and the ammo. */
     public SuitLoadout getLoadout() {
         return new SuitLoadout(this.inventory.getItem(FUEL_SLOT).copy(), this.inventory.getItem(SOCKET_SLOT).copy(),
-                Mth.ceil(this.burnLeft), this.burnTotal, this.getStoredNuggets());
+                Mth.ceil(this.burnLeft), this.burnTotal, this.getStoredNuggets(), this.inventory.getItem(HELMET_SLOT).copy());
     }
 
     public void applyLoadout(SuitLoadout loadout) {
         this.inventory.setItem(FUEL_SLOT, loadout.fuel().copy());
         this.inventory.setItem(SOCKET_SLOT, loadout.socket().copy());
+        this.inventory.setItem(HELMET_SLOT, loadout.helmet().copy());
         this.burnLeft = loadout.burnLeft();
         this.burnTotal = loadout.burnTotal();
         this.setStoredNuggets(loadout.nuggets());
         this.syncBurn();
-        this.entityData.set(POWERED, this.hasEnergy());
+        this.entityData.set(POWERED, this.shouldRun(null));
     }
 
     /** Server: turn this parked suit back into an item (with its fuel and tool) for the player. */
@@ -1046,6 +1082,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (held.is(Items.IRON_NUGGET) && !player.isSecondaryUseActive()) {
             return this.loadNuggets(player, held); // feeding it ammo, like feeding a horse: no climbing in
         }
+        if (held.is(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()) && !player.isSecondaryUseActive() && !this.hasHelmet()) {
+            return this.putOnHelmet(player, held); // like saddling a horse: right-click it with the helmet
+        }
         if (!this.level().isClientSide()) {
             if (player.isSecondaryUseActive()) {
                 // Sneak + right-click: open the suit's menu (fuel, socket, pack up), like a horse's inventory.
@@ -1061,6 +1100,17 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     // ---- The hidden ammo store (no slot: one tool uses it) ------------------------------------------------
 
     /** Right-click with iron nuggets: the whole stack goes into the store, up to its size (config). */
+    /** Right-click with a helmet on a suit without one: put it on (the menu's helmet slot does the same). */
+    private InteractionResult putOnHelmet(Player player, ItemStack held) {
+        if (!this.level().isClientSide()) {
+            this.inventory.setItem(HELMET_SLOT, held.copyWithCount(1));
+            held.consume(1, player);
+            this.playSound(SoundEvents.ARMOR_EQUIP_IRON.value(), 1.0F, 0.9F);
+            this.playSound(SoundEvents.IRON_DOOR_CLOSE, 0.6F, 1.3F); // the visor clicks shut
+        }
+        return InteractionResult.SUCCESS;
+    }
+
     private InteractionResult loadNuggets(Player player, ItemStack held) {
         int room = PowerArmorConfig.NUGGET_STORE_MAX.get() - this.getStoredNuggets();
         if (room <= 0) {
@@ -1198,14 +1248,18 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     /**
-     * Vanilla calls this every tick (server and clients) to turn the body. For a piloted suit we
+     * Vanilla calls this every tick (server and clients) to turn the body. For a driven suit (pilot or mind) we
      * turn the legs ourselves: toward the direction of travel while moving (or away from it when
      * backing up), and in small catch-up shuffles when standing still. The renderer then twists
-     * the torso by (look - legs), so the upper body always faces where the pilot looks.
+     * the torso by (look - legs), so the upper body always faces where the pilot (or the mind) looks.
+     * The mind used vanilla's mob rule until 2026-10-19: it lets the head get past the torso's 90 degree twist before
+     * the body follows (the suit drilled a block while facing away from it), and each client works a mob's body yaw out
+     * from tiny position changes (the torso swung from side to side while it chased and punched). This rule depends
+     * only on the synced head yaw and the movement, so every side agrees.
      */
     @Override
     protected void tickHeadTurn(float movementYaw) {
-        if (!this.isVehicle()) {
+        if (!this.isVehicle() && !this.isAiDriven()) {
             this.realigning = false;
             super.tickHeadTurn(movementYaw);
             return;

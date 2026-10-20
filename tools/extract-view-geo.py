@@ -22,13 +22,25 @@ ASSETS = ROOT / 'src/main/resources/assets/powerarmor'
 SUIT = ASSETS / 'geckolib/models/entity/power_armor.geo.json'
 OUT = ASSETS / 'geckolib/models/view/power_armor_view.geo.json'
 
-# root name: (bone whose cubes it takes, size filter, keep (True) or drop (False) those sizes, bone the cubes go to,
-#             top-level bones re-parented under the root, joint to centre on)
+# root name: (bone whose cubes it takes, which of them (a test on the cube, in the bone's own coordinates), bone the
+#             cubes go to, top-level bones re-parented under the root, joint to centre on)
+# Since the 2026-10-19 export the forearms are a short gauntlet block, ramps and a back plate up to 1 px under the
+# elbow, a 7x5x7 fist, and the elbow joint (box + arcs, reaching up past the elbow's pivot): the joint pieces are the
+# cubes whose top comes within ELBOW_GAP of the elbow, the old size filter no longer told them apart.
+ELBOW_GAP = 0.5
+
+
+def below_elbow(bone):
+    top = bone['pivot'][1] - ELBOW_GAP
+    return lambda c: c['origin'][1] + c['size'][1] <= top
+
+
 ROOTS = {
-    # Since 2026-10-18 the tools sit on a shared forearm (forearm_l 8x7x8): it stays on the root, so every tool shows
-    # it; the 5x4x5 elbow joint is left out. Each tool brings its own socket base (in its bone).
-    'view_tool': ('left_forearm', [[8, 7, 8]], True, None, ['socket', 'chaingun', 'em_projector', 'drill', 'chainsaw'], 'socket'),
-    'view_gauntlet': ('right_forearm', [[8, 8, 8]], False, None, ['right_hand'], 'right_forearm'),
+    # The tools: each brings its own 7x1x7 socket base (in its bone); none of the shared forearm (it would fill the
+    # screen corner the tool reaches in from).
+    'view_tool': ('left_forearm', lambda bone: (lambda c: False), None, ['socket', 'chaingun', 'em_projector', 'drill', 'chainsaw'], 'socket'),
+    # The empty main hand: the forearm armour + fist, not the elbow joint.
+    'view_gauntlet': ('right_forearm', below_elbow, None, ['right_hand'], 'right_forearm'),
 }
 
 
@@ -36,7 +48,7 @@ def main():
     geo = json.loads(SUIT.read_text())['minecraft:geometry'][0]
     bones = {b['name']: b for b in geo['bones']}
     out = [{'name': 'view', 'pivot': [0, 0, 0]}]
-    for root, (cube_bone, sizes, keep_sizes, cubes_to, tops, joint) in ROOTS.items():
+    for root, (cube_bone, which, cubes_to, tops, joint) in ROOTS.items():
         shift = [-v for v in bones[joint]['pivot']]
         move = lambda p: [round(p[i] + shift[i], 4) for i in range(3)]
 
@@ -50,7 +62,8 @@ def main():
                 res.append(c)
             return res
 
-        own = moved([c for c in bones[cube_bone].get('cubes', []) if (c['size'] in sizes) == keep_sizes])
+        test = which(bones[cube_bone])
+        own = moved([c for c in bones[cube_bone].get('cubes', []) if test(c)])
         out.append({'name': root, 'parent': 'view', 'pivot': [0, 0, 0], 'cubes': [] if cubes_to else own})
         keep = list(tops)
         changed = True

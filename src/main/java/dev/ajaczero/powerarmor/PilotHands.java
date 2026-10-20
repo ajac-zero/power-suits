@@ -24,8 +24,8 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  * could run the tool). The socket tool is the suit's off hand, used with right click when the hand has nothing to do
  * (ToolInput), so:
  *  - the player's real off-hand item isn't used while piloting (the suit has no second hand for it);
- *  - no eating or drinking: the pilot is sealed in (food, potions, milk, honey, stew, cake). Food in the hand counts as
- *    "nothing to do", so right click goes on to the socket tool;
+ *  - no eating or drinking while the helmet is on: the pilot is sealed in (food, potions, milk, honey, stew, cake). Food
+ *    in the hand then counts as "nothing to do", so right click goes on to the socket tool. Without a helmet you eat;
  *  - a powered-down suit's hand doesn't move: no attacking, mining or using items;
  *  - mining isn't slowed down for riding (vanilla mines 5x slower when not standing on the ground) while the suit
  *    stands;
@@ -90,7 +90,7 @@ public final class PilotHands {
     public static void useOnBlock(PlayerInteractEvent.RightClickBlock event) {
         PowerArmorEntity suit = suitOf(event.getEntity());
         var block = event.getLevel().getBlockState(event.getPos()).getBlock();
-        if (suit != null && (block instanceof net.minecraft.world.level.block.CakeBlock || block instanceof net.minecraft.world.level.block.CandleCakeBlock)) {
+        if (suit != null && suit.hasHelmet() && (block instanceof net.minecraft.world.level.block.CakeBlock || block instanceof net.minecraft.world.level.block.CandleCakeBlock)) {
             // Cake is eaten by right-clicking the block itself. Deny only the block's reaction: the item in hand
             // (a block to place, say) still gets its turn.
             event.setUseBlock(net.minecraft.util.TriState.FALSE);
@@ -101,7 +101,7 @@ public final class PilotHands {
     @SubscribeEvent
     public static void useItem(PlayerInteractEvent.RightClickItem event) {
         PowerArmorEntity suit = suitOf(event.getEntity());
-        if (suit != null && event.getHand() == InteractionHand.MAIN_HAND && isEatOrDrink(event.getItemStack())) {
+        if (suit != null && suit.hasHelmet() && event.getHand() == InteractionHand.MAIN_HAND && isEatOrDrink(event.getItemStack())) {
             // FAIL (not CONSUME): the click isn't used up, so vanilla moves on to the off hand = the socket tool
             // (ToolInput). Holding bread then works like holding a stick, instead of blocking the tool.
             event.setCanceled(true);
@@ -123,7 +123,8 @@ public final class PilotHands {
     /** Backstop for anything that starts eating or drinking without a right click (other mods): refuse it. */
     @SubscribeEvent
     public static void startEating(net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Start event) {
-        if (event.getEntity() instanceof Player player && suitOf(player) != null && isEatOrDrink(event.getItem())) {
+        if (event.getEntity() instanceof Player player && suitOf(player) instanceof PowerArmorEntity suit && suit.hasHelmet()
+                && isEatOrDrink(event.getItem())) {
             event.setCanceled(true);
         }
     }

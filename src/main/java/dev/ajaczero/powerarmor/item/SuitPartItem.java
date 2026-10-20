@@ -9,20 +9,23 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 
 /**
- * A piece of the suit (torso, arm, leg, helmet): crafted on its own from iron blocks, lapis blocks and vanilla parts,
- * then four pieces + the helmet are assembled into the Power Armor at a crafting table (recipes in
- * data/powerarmor/recipe/suit_*.json and power_armor.json). For now they're only ingredients; the helmet will become
- * removable later (it seals the suit).
+ * A piece of the suit (torso, arm, leg, helmet): crafted on its own from iron blocks, lapis blocks and vanilla parts.
+ * Torso, arms and legs are assembled into the Power Armor at a crafting table (recipes in
+ * data/powerarmor/recipe/suit_*.json and power_armor.json); the helmet goes on the finished suit (its helmet slot):
+ * it seals the suit and lets its machine mind run.
  */
 public class SuitPartItem extends Item {
-    public SuitPartItem(Properties properties) {
+    private final String tooltipKey;
+
+    public SuitPartItem(Properties properties, String tooltipKey) {
         super(properties);
+        this.tooltipKey = tooltipKey;
     }
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip,
             TooltipFlag flag) {
-        // One shared line: every part says what it's for ("item.powerarmor.suit_part.tooltip").
-        tooltip.accept(Component.translatable("item.powerarmor.suit_part.tooltip").withStyle(ChatFormatting.GRAY));
+        // What the part is for: the body parts share one line, the helmet has its own.
+        tooltip.accept(Component.translatable(this.tooltipKey).withStyle(ChatFormatting.GRAY));
     }
 }

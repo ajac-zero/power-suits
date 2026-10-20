@@ -18,8 +18,9 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The suit is sealed while it has power: fire, frost and other "environmental" harm, harmful effects and drowning
- * don't reach the pilot (or the hull); keeping them out costs fuel instead. Without power the seal is gone and
+ * The suit is sealed while it has power and its helmet on: fire, frost and other "environmental" harm, harmful effects
+ * and drowning don't reach the pilot (or the hull); keeping them out costs fuel instead. Without power or helmet the
+ * seal is gone and
  * everything works as before: the hull takes the hits that are redirected to it (PilotProtection), effects reach the
  * pilot, and the pilot's air runs out under water. Lava is not sealed out: it still eats the hull.
  *
@@ -36,12 +37,12 @@ public final class SuitSeal {
      *  code, so the suit keeps its own clock: a fire block "hits" every tick, but is paid for once per 10 ticks. */
     public static final int SEAL_COOLDOWN_TICKS = 10;
 
-    /** The powered suit the entity sits in (or the entity itself if it is a suit), else null. */
+    /** The sealed suit (running, helmet on) the entity sits in (or the entity itself if it is a suit), else null. */
     @Nullable
     private static PowerArmorEntity sealedSuit(LivingEntity entity) {
         PowerArmorEntity suit = entity instanceof PowerArmorEntity s ? s
                 : entity.getVehicle() instanceof PowerArmorEntity s && entity instanceof Player ? s : null;
-        return suit != null && suit.isAlive() && suit.isPowered() ? suit : null;
+        return suit != null && suit.isAlive() && suit.isSealed() ? suit : null;
     }
 
     /**
@@ -50,7 +51,7 @@ public final class SuitSeal {
      * no power, not enough fuel): the hull takes it as usual.
      */
     public static boolean absorbs(PowerArmorEntity suit, DamageSource source, float amount) {
-        if (!source.is(SEALED_OUT) || !suit.isPowered()) {
+        if (!source.is(SEALED_OUT) || !suit.isSealed()) {
             return false;
         }
         if (suit.tickCount - suit.lastSealTick < SEAL_COOLDOWN_TICKS && suit.lastSealTick >= 0) {
@@ -96,13 +97,13 @@ public final class SuitSeal {
         }
     }
 
-    /** True if the suit feeds this pilot air (their head is under water in a powered suit). */
+    /** True if the suit feeds this pilot air (their head is under water in a sealed suit). */
     public static boolean feedsAir(Player pilot) {
-        return pilot.getVehicle() instanceof PowerArmorEntity suit && suit.isPowered() && pilot.isEyeInFluid(FluidTags.WATER);
+        return pilot.getVehicle() instanceof PowerArmorEntity suit && suit.isSealed() && pilot.isEyeInFluid(FluidTags.WATER);
     }
 
-    /** Every living thing asks every tick whether it can breathe. A powered suit's pilot always can (the fuel for it is
-     *  taken in the suit's engine tick, see {@link #feedsAir}). Runs on both sides; isPowered is synced, so they agree. */
+    /** Every living thing asks every tick whether it can breathe. A sealed suit's pilot always can (the fuel for it is
+     *  taken in the suit's engine tick, see {@link #feedsAir}). Runs on both sides; power and helmet are synced, so they agree. */
     @SubscribeEvent
     public static void breathe(LivingBreatheEvent event) {
         if (event.getEntity() instanceof Player pilot && sealedSuit(pilot) != null) {

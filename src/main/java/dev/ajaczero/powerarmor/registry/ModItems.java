@@ -46,12 +46,17 @@ public final class ModItems {
     /** Fourth: chainsaw, fells whole trees. */
     public static final DeferredItem<ChainsawItem> CHAINSAW = ITEMS.registerItem("chainsaw", ChainsawItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
 
-    // The suit's parts (2026-10-19): crafted one by one, then assembled into the suit (an arm and a leg are crafted twice:
-    // both sides are the same piece). Stack to 1 like vanilla armour.
-    public static final DeferredItem<SuitPartItem> SUIT_TORSO = ITEMS.registerItem("suit_torso", SuitPartItem::new, props -> props.stacksTo(1));
-    public static final DeferredItem<SuitPartItem> SUIT_ARM = ITEMS.registerItem("suit_arm", SuitPartItem::new, props -> props.stacksTo(1));
-    public static final DeferredItem<SuitPartItem> SUIT_LEG = ITEMS.registerItem("suit_leg", SuitPartItem::new, props -> props.stacksTo(1));
-    public static final DeferredItem<SuitPartItem> SUIT_HELMET = ITEMS.registerItem("suit_helmet", SuitPartItem::new, props -> props.stacksTo(1));
+    // The suit's parts (2026-10-19): crafted one by one; torso, two arms and two legs are assembled into the suit (an
+    // arm and a leg are crafted twice: both sides are the same piece), the helmet goes in the suit's helmet slot.
+    // Stack to 1 like vanilla armour.
+    public static final DeferredItem<SuitPartItem> SUIT_TORSO = ITEMS.registerItem("suit_torso",
+            props -> new SuitPartItem(props, "item.powerarmor.suit_part.tooltip"), props -> props.stacksTo(1));
+    public static final DeferredItem<SuitPartItem> SUIT_ARM = ITEMS.registerItem("suit_arm",
+            props -> new SuitPartItem(props, "item.powerarmor.suit_part.tooltip"), props -> props.stacksTo(1));
+    public static final DeferredItem<SuitPartItem> SUIT_LEG = ITEMS.registerItem("suit_leg",
+            props -> new SuitPartItem(props, "item.powerarmor.suit_part.tooltip"), props -> props.stacksTo(1));
+    public static final DeferredItem<SuitPartItem> SUIT_HELMET = ITEMS.registerItem("suit_helmet",
+            props -> new SuitPartItem(props, "item.powerarmor.suit_helmet.tooltip"), props -> props.stacksTo(1));
 
     private ModItems() {}
 }

@@ -58,6 +58,12 @@ public final class AutoPilot {
     private static int tick = -1;          // script time, starts once we sit in the suit
     private static final Map<KeyMapping, Boolean> held = new HashMap<>();
     private static float yaw, pitch;
+
+    /** For the scene classes: the view the script holds the player to (applied every tick). */
+    static void setView(float newYaw, float newPitch) {
+        yaw = newYaw;
+        pitch = newPitch;
+    }
     private static ArmorStand sideCamera;
 
     @SubscribeEvent
@@ -569,7 +575,7 @@ public final class AutoPilot {
             int x = player.getBlockX() + 60, z = player.getBlockZ();
             Vec3 pos = new Vec3(x + 0.5, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z), z + 0.5);
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 8));
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 8)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get()));
             suit.snapTo(pos.x, pos.y, pos.z, 0, 0);
             suit.setYBodyRot(0);
@@ -1040,7 +1046,7 @@ public final class AutoPilot {
             level.getGameRules().set(GameRules.SPAWN_MOBS, false, server);
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             // A full stack of blaze rods (~4 hours of walking): enough for any scripted drive.
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64));
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get()));
             suit.snapTo(player.getX() + 0.5, player.getY(), player.getZ() + 0.5, 0, 0);
             level.addFreshEntity(suit);
@@ -1218,7 +1224,11 @@ public final class AutoPilot {
             workRunning = false;
             rogueStart = m + 1;
         }
-        if (!workRunning && m >= rogueStart && !RogueScene.step(mc, m - rogueStart)) {
+        if (!workRunning && rogueRunning && m >= rogueStart && !RogueScene.step(mc, m - rogueStart)) {
+            rogueRunning = false;
+            helmetStart = m + 1;
+        }
+        if (!rogueRunning && m >= helmetStart && !HelmetScene.step(mc, m - helmetStart)) {
             mc.stop();
         }
         if (m >= 10 && m < 420) {
@@ -1233,6 +1243,8 @@ public final class AutoPilot {
 
     private static boolean workRunning = true;
     private static int rogueStart = Integer.MAX_VALUE;
+    private static boolean rogueRunning = true;
+    private static int helmetStart = Integer.MAX_VALUE;
     private static PowerArmorEntity mindSuit;
     // Filled on the server thread, read by the client thread (logMind): a copy-on-write list (an ArrayList threw mid-iteration).
     private static final java.util.List<net.minecraft.world.entity.Mob> mindMobs = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -1260,7 +1272,7 @@ public final class AutoPilot {
                 }
             }
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 16));
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 16)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.DRILL.get()));
             suit.snapTo(x + 0.5, y, z + 0.5, 0, 0);
             suit.setYBodyRot(0);
@@ -1323,7 +1335,7 @@ public final class AutoPilot {
     private static void openMindLog(Minecraft mc) {
         try {
             mindCsv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_mind.csv"));
-            mindCsv.write("tick,phase,dxHome,dzHome,speed,driven,anim,headYaw,bodyYaw,xRot,toolActive,clientRaise,faceLeft,drops,energy,visorR,visorG,visorB,navDone,goals,ownerDist,target,store,shots,mobsAlive,mobHealth,beam,mobTopY,mobs\n");
+            mindCsv.write("tick,phase,dxHome,dzHome,speed,driven,anim,headYaw,bodyYaw,xRot,toolActive,clientRaise,faceLeft,drops,energy,visorR,visorG,visorB,navDone,goals,ownerDist,target,store,shots,mobsAlive,mobHealth,beam,mobTopY,clientHead,clientBody,twist,drawnYaw,aimYaw,aimErr,mobs\n");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -1342,8 +1354,15 @@ public final class AutoPilot {
         }
         int drops = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(b).inflate(8)).size();
         float[] visor = client.getVisorColor();
+        // What this client draws: the torso twists by (head - legs), clamped to +-90 (PowerArmorRenderer.aim), so the
+        // torso faces drawnYaw. aimErr: how far that is from where the mind aims (its target point), degrees.
+        float twist = net.minecraft.util.Mth.wrapDegrees(client.getYHeadRot() - client.yBodyRot);
+        float drawnYaw = client.yBodyRot + net.minecraft.util.Mth.clamp(twist, -90F, 90F);
+        Vec3 aim = server.getAiAim();
+        float aimYaw = aim == null ? Float.NaN : (float) (net.minecraft.util.Mth.atan2(aim.z - server.getZ(), aim.x - server.getX()) * net.minecraft.util.Mth.RAD_TO_DEG) - 90F;
+        float aimErr = aim == null ? Float.NaN : net.minecraft.util.Mth.wrapDegrees(aimYaw - drawnYaw);
         try {
-            mindCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%s,%.1f,%.1f,%.1f,%b,%.2f,%d,%d,%d,%.2f,%.2f,%.2f,%b,%s,%.2f,%s,%d,%d,%d,%.1f,%s,%.1f,%s%n",
+            mindCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%s,%.1f,%.1f,%.1f,%b,%.2f,%d,%d,%d,%.2f,%.2f,%.2f,%b,%s,%.2f,%s,%d,%d,%d,%.1f,%s,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%s%n",
                     m, mindPhase, server.getX() - (b.getX() + 0.5), server.getZ() - (b.getZ() + 0.5),
                     Math.hypot(server.getX() - server.xo, server.getZ() - server.zo) * 20, server.isAiDriven(), client.getMovementAnimationName(),
                     server.getYHeadRot(), server.yBodyRot, server.getXRot(), server.isToolActive(), client.getToolRaise(1F), faceLeft, drops,
@@ -1353,6 +1372,7 @@ public final class AutoPilot {
                     mindMobs.stream().filter(e -> e.isAlive()).count(), mindMobs.stream().filter(e -> e.isAlive()).mapToDouble(e -> e.getHealth()).sum(),
                     server.getBeamTarget() == null ? "-" : server.getBeamTarget().getType().toShortString(),
                     mindMobs.stream().filter(e -> e.isAlive()).mapToDouble(e -> e.getY() - b.getY()).max().orElse(0),
+                    client.getYHeadRot(), client.yBodyRot, twist, drawnYaw, aimYaw, aimErr,
                     mindMobs.stream().map(e -> e.getType().toShortString() + ":" + (e.isAlive() ? String.format(java.util.Locale.ROOT, "%.0f@%.1f",
                                     e.getHealth(), Math.sqrt(e.distanceToSqr(Vec3.atBottomCenterOf(b)))) : "dead"))
                             .reduce((x, y) -> x + "/" + y).orElse("")));
@@ -1402,7 +1422,7 @@ public final class AutoPilot {
             BlockPos base = new BlockPos(x, y, z);
             mechBase = base;
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 32));
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 32)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             suit.snapTo(x + 0.5, y, z + 0.5, 0, 0);
             suit.setYBodyRot(0);
             level.addFreshEntity(suit);
@@ -1529,7 +1549,7 @@ public final class AutoPilot {
                     pilot != null && pilot.hasEffect(net.minecraft.world.effect.MobEffects.POISON), pilot == null ? -1 : pilot.getAirSupply(),
                     server.getTotalEnergy(), panes, leaves, glass, ice, snow, drops, server.lastStompVictims, mobs,
                     pilot == null ? -1 : pilot.getRemainingFireTicks(), mc.player.isOnFire(), last == null ? "-" : last.getMsgId(),
-                    pilot instanceof net.minecraft.world.entity.player.Player p ? p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) : -1,
+                    pilot instanceof net.minecraft.world.entity.player.Player p ? p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) : -1D, // -1D: an int -1 is boxed as Integer (%f crashed)
                     pilot instanceof net.minecraft.world.entity.player.Player p2 ? p2.getAttackStrengthScale(0.5F) : -1F,
                     mc.player.isUsingItem(), pilot instanceof net.minecraft.world.entity.player.Player p3 ? p3.getFoodData().getFoodLevel() : -1, suit.isOnFire(), actionAnim(suit)));
         } catch (IOException e) {

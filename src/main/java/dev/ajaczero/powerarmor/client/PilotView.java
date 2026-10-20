@@ -48,7 +48,7 @@ public final class PilotView {
         }
         switch (event.getOverlayType()) {
             case BLOCK -> event.setCanceled(!suit.isInWall());
-            case FIRE -> event.setCanceled(suit.isPowered());
+            case FIRE -> event.setCanceled(suit.isSealed()); // no helmet, no seal: the flames reach you
             default -> {}
         }
     }

@@ -23,7 +23,7 @@ import net.minecraft.world.entity.player.Inventory;
 public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
     private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/gui/power_armor.png");
     private static final Identifier LIT_PROGRESS = Identifier.withDefaultNamespace("container/furnace/lit_progress");
-    private static final int FLAME_X = 73, FLAME_Y = 35;
+    private static final int FLAME_X = 91, FLAME_Y = 55; // beside the fuel slot
     private static final int DISPLAY_X = 98, DISPLAY_Y = 18, LINE = 8; // four lines in the status display
     private static final int GREEN = 0xFF7CFF6B, AMBER = 0xFFFFB13B, RED = 0xFFFF5555, DIM = 0xFF5E7A5A;
 
@@ -38,7 +38,7 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         // server, which calls PowerArmorMenu.clickMenuButton.
         this.addRenderableWidget(Button.builder(Component.translatable("gui.powerarmor.pack_up"),
                         b -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_PACK))
-                .bounds(this.leftPos + 94, this.topPos + 53, 76, 16)
+                .bounds(this.leftPos + 108, this.topPos + 54, 62, 16)
                 .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("gui.powerarmor.pack_up.tooltip")))
                 .build());
     }
@@ -83,21 +83,24 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         int fuelColour = energy == 0 ? RED : suit.isLowOnFuel() ? AMBER : GREEN;
         graphics.text(this.font, Component.translatable("gui.powerarmor.hull", hull, max), DISPLAY_X, DISPLAY_Y, hullColour, false);
         graphics.text(this.font, Component.translatable("gui.powerarmor.range", PowerArmorItem.formatWalkTime(energy)), DISPLAY_X, DISPLAY_Y + LINE, fuelColour, false);
-        Component status = Component.translatable(suit.isPowered() ? "gui.powerarmor.online" : "gui.powerarmor.offline");
-        graphics.text(this.font, status, DISPLAY_X, DISPLAY_Y + 2 * LINE, suit.isPowered() ? GREEN : RED, false);
+        // Without its helmet a parked suit stays down whatever its fuel (its mind needs the helmet): say why.
+        Component status = Component.translatable(!suit.hasHelmet() ? "gui.powerarmor.no_helmet"
+                : suit.isPowered() ? "gui.powerarmor.online" : "gui.powerarmor.offline");
+        graphics.text(this.font, status, DISPLAY_X, DISPLAY_Y + 2 * LINE, !suit.hasHelmet() ? AMBER : suit.isPowered() ? GREEN : RED, false);
         // The hidden nugget store (no slot: right-click the suit with nuggets to load it). Dim when empty.
         int nuggets = suit.getStoredNuggets();
         graphics.text(this.font, Component.translatable("gui.powerarmor.ammo", nuggets), DISPLAY_X, DISPLAY_Y + 3 * LINE,
                 nuggets > 0 ? GREEN : DIM, false);
     }
 
-    /** Explain the two special slots while they're empty. */
+    /** Explain the suit's slots while they're empty. */
     private void renderEmptySlotHints(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (this.hoveredSlot == null || this.hoveredSlot.hasItem() || !this.menu.getCarried().isEmpty()) {
             return;
         }
         int index = this.menu.slots.indexOf(this.hoveredSlot);
-        String key = index == 0 ? "gui.powerarmor.socket_slot" : index == 1 ? "gui.powerarmor.fuel_slot" : null;
+        String key = index == 0 ? "gui.powerarmor.socket_slot" : index == 1 ? "gui.powerarmor.fuel_slot"
+                : index == 2 ? "gui.powerarmor.helmet_slot" : null;
         if (key != null) {
             graphics.setComponentTooltipForNextFrame(this.font, List.of(Component.translatable(key),
                     Component.translatable(key + ".hint").withStyle(net.minecraft.ChatFormatting.GRAY)), mouseX, mouseY);

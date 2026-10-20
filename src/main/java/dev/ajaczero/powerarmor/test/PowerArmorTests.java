@@ -48,7 +48,15 @@ public final class PowerArmorTests {
     private static final BlockPos SUIT_POS = new BlockPos(4, 2, 4);
 
     private static PowerArmorEntity spawnSuit(GameTestHelper helper) {
-        return helper.spawn(ModEntities.POWER_ARMOR.get(), SUIT_POS);
+        return suitAt(helper, SUIT_POS);
+    }
+
+    /** A suit as it's normally used: with its helmet on (it seals the suit and lets the mind run). The helmet tests
+     *  take it off. */
+    private static PowerArmorEntity suitAt(GameTestHelper helper, BlockPos pos) {
+        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), pos);
+        suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
+        return suit;
     }
 
     private static Player boardedPilot(GameTestHelper helper, PowerArmorEntity suit) {
@@ -176,7 +184,7 @@ public final class PowerArmorTests {
                 }
             }
         }
-        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 5, 4));
+        PowerArmorEntity suit = suitAt(helper, new BlockPos(4, 5, 4));
         helper.runAfterDelay(150, () -> {
             double depth = suit.getY() - helper.absolutePos(new BlockPos(4, 2, 4)).getY();
             helper.assertTrue(suit.isInWater(), "suit should be in the water");
@@ -351,14 +359,23 @@ public final class PowerArmorTests {
         helper.assertTrue(!menu.getSlot(0).mayPlace(new ItemStack(Items.COAL)), "socket only takes power tools");
         helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(ModItems.CHAINGUN.get())), "socket takes the chaingun");
         player.getInventory().setItem(10, new ItemStack(ModItems.CHAINGUN.get()));
-        menu.quickMoveStack(player, 3); // menu slot 3 = player inventory slot 10
+        menu.quickMoveStack(player, 4); // menu slot 4 = player inventory slot 10 (menu: socket, fuel, helmet, then the player's)
         helper.assertTrue(menu.getSlot(0).getItem().is(ModItems.CHAINGUN.get()), "shift-click should install the chaingun");
         helper.assertTrue(menu.getSlot(1).getItem().getCount() == 4, "menu shows the suit's fuel");
 
         // Shift-click coal from the player's inventory: it joins the coal in the fuel slot.
         player.getInventory().setItem(9, new ItemStack(Items.COAL, 10));
-        menu.quickMoveStack(player, 2); // menu slot 2 = player inventory slot 9
+        menu.quickMoveStack(player, 3); // menu slot 3 = player inventory slot 9
         helper.assertTrue(menu.getSlot(1).getItem().getCount() == 14, "shift-click should move coal into the fuel slot, got " + menu.getSlot(1).getItem());
+
+        // The helmet slot (2026-10-19) takes only the suit's helmet, one; shift-click puts a helmet there.
+        helper.assertTrue(menu.getSlot(2).getItem().is(ModItems.SUIT_HELMET.get()), "menu shows the suit's helmet");
+        helper.assertTrue(!menu.getSlot(2).mayPlace(new ItemStack(Items.IRON_HELMET)), "helmet slot refuses an iron helmet");
+        menu.getSlot(2).set(ItemStack.EMPTY);
+        helper.assertTrue(!suit.hasHelmet(), "taking it out of the menu takes it off the suit");
+        player.getInventory().setItem(11, new ItemStack(ModItems.SUIT_HELMET.get()));
+        menu.quickMoveStack(player, 5); // menu slot 5 = player inventory slot 11
+        helper.assertTrue(menu.getSlot(2).getItem().is(ModItems.SUIT_HELMET.get()) && suit.hasHelmet(), "shift-click should put the helmet on");
 
         Player pilot = boardedPilot(helper, suit);
         helper.assertTrue(!menu.stillValid(player), "menu closes when someone climbs in");
@@ -375,7 +392,7 @@ public final class PowerArmorTests {
     // =========================================================================================
 
     private static PowerArmorEntity armedSuit(GameTestHelper helper, BlockPos pos, ItemStack fuel) {
-        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), pos);
+        PowerArmorEntity suit = suitAt(helper, pos);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, fuel);
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
         return suit;
@@ -746,7 +763,7 @@ public final class PowerArmorTests {
     }
 
     private static PowerArmorEntity emSuit(GameTestHelper helper) {
-        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 2, 1));
+        PowerArmorEntity suit = suitAt(helper, new BlockPos(4, 2, 1));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.EM_PROJECTOR.get()));
         return suit;
@@ -885,7 +902,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 60)
     public static void heavyThingsFightTheField(GameTestHelper helper) {
         PowerArmorEntity suit = emSuit(helper);
-        PowerArmorEntity heavy = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 2, 7)); // unpowered: parked
+        PowerArmorEntity heavy = suitAt(helper, new BlockPos(4, 2, 7)); // unpowered: parked
         Vec3 start = heavy.position();
         Player pilot = emPilotLookingAt(helper, suit, heavy.position().add(0, 1.5, 0));
         suit.setTriggerHeld(pilot, true);
@@ -949,7 +966,7 @@ public final class PowerArmorTests {
     }
 
     private static PowerArmorEntity toolSuit(GameTestHelper helper) {
-        return helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 2, 1));
+        return suitAt(helper, new BlockPos(4, 2, 1));
     }
 
     @SuitTest(timeoutTicks = 60)
@@ -1306,7 +1323,7 @@ public final class PowerArmorTests {
     /** A suit at (4,2,2) facing +Z: its hitbox spans x 3.8..5.2, z 1.8..3.2; walking reaches 0.6 further (z 3.8), sprinting 1.1 (z 4.3). */
     @SuitTest(timeoutTicks = 20)
     public static void walkingSmashesPanesAndLeavesSprintingAlsoGlass(GameTestHelper helper) {
-        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(4, 2, 2));
+        PowerArmorEntity suit = suitAt(helper, new BlockPos(4, 2, 2));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 4));
         suit.setYRot(0);
         Player pilot = boardedPilot(helper, suit);
@@ -1447,7 +1464,7 @@ public final class PowerArmorTests {
      *  travel) and onto the block itself (vanilla's path for a 2-block-wide mob ended 1.7 blocks short). */
     @SuitTest(timeoutTicks = 140)
     public static void idleSuitWalksBackHome(GameTestHelper helper) {
-        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(7, 2, 4));
+        PowerArmorEntity suit = suitAt(helper, new BlockPos(7, 2, 4));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
         BlockPos home = helper.absolutePos(new BlockPos(1, 2, 4));
         suit.setHome(home);
@@ -1466,7 +1483,7 @@ public final class PowerArmorTests {
 
     @SuitTest(timeoutTicks = 40)
     public static void unpoweredSuitStaysPut(GameTestHelper helper) {
-        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(2, 2, 2));
+        PowerArmorEntity suit = suitAt(helper, new BlockPos(2, 2, 2));
         suit.setHome(helper.absolutePos(new BlockPos(6, 2, 6)));
         Vec3 start = suit.position();
         helper.runAfterDelay(30, () -> {
@@ -1477,7 +1494,7 @@ public final class PowerArmorTests {
 
     @SuitTest(timeoutTicks = 40)
     public static void boardingStopsTheMind(GameTestHelper helper) {
-        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(2, 2, 2));
+        PowerArmorEntity suit = suitAt(helper, new BlockPos(2, 2, 2));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
         suit.setHome(helper.absolutePos(new BlockPos(6, 2, 6)));
         helper.runAfterDelay(8, () -> {
@@ -1654,7 +1671,7 @@ public final class PowerArmorTests {
     }
 
     private static PowerArmorEntity chaingunMind(GameTestHelper helper, BlockPos at, int nuggets) {
-        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), at);
+        PowerArmorEntity suit = suitAt(helper, at);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
         suit.setStoredNuggets(nuggets);
@@ -1739,8 +1756,8 @@ public final class PowerArmorTests {
         var cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, new Vec3(1.5, 2, 4.5));
         var wolf = helper.spawn(net.minecraft.world.entity.EntityTypes.WOLF, new Vec3(7.5, 2, 4.5));
         wolf.tame(ownerPlayer);
-        PowerArmorEntity friend = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(7, 2, 1));
-        PowerArmorEntity rogue = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(1, 2, 7));
+        PowerArmorEntity friend = suitAt(helper, new BlockPos(7, 2, 1));
+        PowerArmorEntity rogue = suitAt(helper, new BlockPos(1, 2, 7));
         rogue.setMind(dev.ajaczero.powerarmor.entity.SuitMind.ROGUE);
         helper.assertTrue(rules.test(husk, false), "monsters: always");
         helper.assertTrue(!rules.test(cow, false) && rules.test(cow, true), "animals: only if they started it");
@@ -1756,7 +1773,7 @@ public final class PowerArmorTests {
     // =========================================================================================
 
     private static PowerArmorEntity emGuard(GameTestHelper helper, BlockPos at) {
-        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), at);
+        PowerArmorEntity suit = suitAt(helper, at);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.EM_PROJECTOR.get()));
         suit.setHome(helper.absolutePos(at));
@@ -1820,7 +1837,7 @@ public final class PowerArmorTests {
     // =========================================================================================
 
     private static PowerArmorEntity worker(GameTestHelper helper, BlockPos at, ItemStack tool) {
-        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), at);
+        PowerArmorEntity suit = suitAt(helper, at);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 8));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, tool);
         suit.setHome(helper.absolutePos(at));
@@ -1890,7 +1907,7 @@ public final class PowerArmorTests {
     // =========================================================================================
 
     private static PowerArmorEntity rogue(GameTestHelper helper, BlockPos at, boolean chaingun) {
-        PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), at);
+        PowerArmorEntity suit = suitAt(helper, at);
         dev.ajaczero.powerarmor.entity.RogueSpawner.makeRogue(suit, chaingun);
         return suit;
     }
@@ -1916,6 +1933,7 @@ public final class PowerArmorTests {
             helper.assertItemEntityPresent(ModItems.EM_PROJECTOR.get());
             helper.assertItemEntityNotPresent(Items.IRON_INGOT);
             helper.assertItemEntityNotPresent(ModItems.POWER_ARMOR.get());
+            helper.assertItemEntityNotPresent(ModItems.SUIT_HELMET.get()); // a rogue's helmet isn't loot either
             helper.succeed();
         });
     }
@@ -1933,7 +1951,7 @@ public final class PowerArmorTests {
             helper.assertTrue(suit.isStunned() && !suit.isPowered(), "knocked out first");
         });
         helper.runAfterDelay(PowerArmorConfig.LIGHTNING_STUN_TICKS.get() + 40, () -> {
-            helper.assertTrue(suit.isAiDriven(), "back up as a friendly mind on its last fuel");
+            helper.assertTrue(suit.isAiDriven() && suit.hasHelmet(), "back up as a friendly mind on its last fuel, helmet still on");
             suit.clearFire();
             Player pilot = boardedPilot(helper, suit);
             helper.assertTrue(pilot.getVehicle() == suit && pilot.getUUID().equals(suit.getOwnerId()), "the first pilot claims it");
@@ -1982,7 +2000,15 @@ public final class PowerArmorTests {
         var entity = EntityType.loadEntityRecursive(tag, helper.getLevel(), new net.minecraft.world.entity.EntitySpawnRequest(net.minecraft.world.entity.EntitySpawnReason.COMMAND, false), e -> e);
         helper.assertTrue(entity instanceof PowerArmorEntity suit && suit.isRogue()
                 && suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(ModItems.CHAINGUN.get()), "a chaingun rogue");
-        helper.succeed();
+        PowerArmorEntity rogue = (PowerArmorEntity) entity;
+        helper.getLevel().addFreshEntity(rogue);
+        rogue.snapTo(helper.absoluteVec(new Vec3(4.5, 2, 4.5)));
+        // Rogues always wear a helmet, even when the command gives none (its mind lives in it).
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(rogue.hasHelmet() && rogue.isPowered(), "the summoned rogue should put its helmet on and run");
+            rogue.discard();
+            helper.succeed();
+        });
     }
 
     /**
@@ -2031,7 +2057,7 @@ public final class PowerArmorTests {
 
     /**
      * The suit is crafted from parts (2026-10-19): helmet, torso, arm and leg from iron blocks, lapis blocks and vanilla
-     * parts, then assembled like a body. Crafts every step through the server's real recipe list (the JSON files), so
+     * parts; torso, arms and legs are assembled like a body (the helmet goes in the suit's slot). Crafts every step through the server's real recipe list (the JSON files), so
      * a typo in a recipe or an arm pattern that also matches the leg fails here.
      */
     @SuitTest
@@ -2045,12 +2071,67 @@ public final class PowerArmorTests {
         checkCraft(helper, 1, 3, List.of(l, p, i), ModItems.SUIT_LEG.get());
         ItemStack h = new ItemStack(ModItems.SUIT_HELMET.get()), t = new ItemStack(ModItems.SUIT_TORSO.get());
         ItemStack a = new ItemStack(ModItems.SUIT_ARM.get()), g = new ItemStack(ModItems.SUIT_LEG.get());
-        checkCraft(helper, 3, 3, List.of(e, h, e, a, t, a, g, e, g), ModItems.POWER_ARMOR.get());
+        checkCraft(helper, 3, 2, List.of(a, t, a, g, e, g), ModItems.POWER_ARMOR.get()); // the helmet goes on afterwards
+        helper.assertTrue(craft(helper, 3, 3, List.of(e, h, e, a, t, a, g, e, g)).isEmpty(), "the helmet isn't part of the assembly");
         // the old recipe (iron armour + pistons) is gone
         ItemStack ib = new ItemStack(Items.IRON_BLOCK);
         helper.assertTrue(craft(helper, 3, 3, List.of(ib, new ItemStack(Items.IRON_HELMET), ib, p, new ItemStack(Items.IRON_CHESTPLATE), p,
                 new ItemStack(Items.IRON_BOOTS), e, new ItemStack(Items.IRON_BOOTS))).isEmpty(), "the old iron-armour recipe should be gone");
         helper.succeed();
+    }
+
+    // =========================================================================================
+    // The helmet (2026-10-19): seals the suit and lets the machine mind run
+    // =========================================================================================
+
+    /** An empty suit without its helmet stays down whatever its fuel (no mind, no idle burn); right-click it with a
+     *  helmet and it starts up; the helmet survives packing and saving. */
+    @SuitTest(timeoutTicks = 80)
+    public static void emptySuitNeedsItsHelmetToRun(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 3));
+        suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, ItemStack.EMPTY);
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(!suit.hasHelmet() && !suit.isPowered() && !suit.isAiDriven(), "no helmet: powered down, no mind");
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 3 && suit.getBurnLeft() == 0,
+                    "and it burns nothing");
+            Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+            player.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.SUIT_HELMET.get()));
+            suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
+            helper.assertTrue(suit.hasHelmet() && player.getMainHandItem().isEmpty(), "right-click with the helmet puts it on");
+            helper.assertTrue(player.getVehicle() == null, "and doesn't climb in");
+        });
+        helper.runAfterDelay(20, () -> helper.assertTrue(suit.isPowered() && suit.getBurnLeft() > 0, "with its helmet on it runs"));
+        helper.runAfterDelay(60, () -> {
+            helper.assertTrue(suit.isAiDriven(), "and its mind drives it");
+            SuitLoadout packed = suit.getLoadout();
+            helper.assertTrue(packed.helmet().is(ModItems.SUIT_HELMET.get()), "a packed suit keeps its helmet");
+            PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+            loadTag(helper, loaded, saveTag(helper, suit));
+            helper.assertTrue(loaded.getInventory().getItem(PowerArmorEntity.HELMET_SLOT).is(ModItems.SUIT_HELMET.get()) && loaded.hasHelmet(),
+                    "the helmet survives saving");
+            helper.succeed();
+        });
+    }
+
+    /** Without the helmet a pilot can still drive the suit, but it's open: harmful effects reach them, and they can eat. */
+    @SuitTest(timeoutTicks = 30)
+    public static void helmetlessSuitRunsUnsealed(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, ItemStack.EMPTY);
+        Player pilot = boardedPilot(helper, suit);
+        pilot.getFoodData().setFoodLevel(10);
+        helper.runAfterDelay(3, () -> {
+            helper.assertTrue(suit.isPowered() && !suit.isSealed(), "piloted it runs, unsealed");
+            pilot.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 100));
+            helper.assertTrue(pilot.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "no seal: the poison reaches the pilot");
+            pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BREAD));
+            helper.assertTrue(net.neoforged.neoforge.common.CommonHooks.onItemRightClick(pilot, InteractionHand.MAIN_HAND) == null,
+                    "bread isn't refused");
+            pilot.startUsingItem(InteractionHand.MAIN_HAND);
+            helper.assertTrue(pilot.isUsingItem(), "no helmet: the pilot can eat");
+            helper.succeed();
+        });
     }
 
     private static ItemStack craft(GameTestHelper helper, int w, int h, List<ItemStack> grid) {

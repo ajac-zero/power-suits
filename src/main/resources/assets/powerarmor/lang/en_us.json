@@ -6,7 +6,7 @@
   "item.powerarmor.suit_arm": "Power Armor Arm",
   "item.powerarmor.suit_leg": "Power Armor Leg",
   "item.powerarmor.suit_helmet": "Power Armor Helmet",
-  "item.powerarmor.suit_part.tooltip": "Part of a Power Armor. Assemble it at a crafting table: helmet on top, arms beside the torso, legs below.",
+  "item.powerarmor.suit_part.tooltip": "Part of a Power Armor. Assemble it at a crafting table: arms beside the torso, legs below.",
   "message.powerarmor.no_room": "Not enough room to deploy the suit here",
   "item.powerarmor.power_armor.fuel": "Fuel: %s x %s",
   "item.powerarmor.power_armor.range": "Range: %s of walking",
@@ -20,7 +20,7 @@
   "gui.powerarmor.offline": "NO POWER",
   "gui.powerarmor.no_fuel": "NO FUEL",
   "gui.powerarmor.socket_slot": "Power tool socket",
-  "gui.powerarmor.socket_slot.hint": "Power tools go here: Plasma Cannon, EM Projector, Mining Drill, Chainsaw",
+  "gui.powerarmor.socket_slot.hint": "Power tools go here: Chaingun, EM Projector, Mining Drill, Chainsaw",
   "gui.powerarmor.fuel_slot": "Fuel",
   "gui.powerarmor.fuel_slot.hint": "Coal or charcoal 1:20, lava bucket 2:40, blaze rod 4:00 of walking each",
   "item.powerarmor.power_tool.stats": "%s hearts per shot, %s fuel, every %s s",
@@ -158,5 +158,9 @@
   "powerarmor.configuration.rogue_lifetime": "Rogue suit lifetime",
   "powerarmor.configuration.rogue_lifetime.tooltip": "A rogue suit leaves after this many ticks (24000 = an in-game day), as soon as no player is within 64 blocks to watch it go.",
   "entity.powerarmor.power_armor.rogue": "Rogue Power Armor",
-  "message.powerarmor.rogue_rebooted": "The rogue suit's mind rebooted: it's friendly now. Climb in to claim it."
+  "message.powerarmor.rogue_rebooted": "The rogue suit's mind rebooted: it's friendly now. Climb in to claim it.",
+  "item.powerarmor.suit_helmet.tooltip": "Put it on a Power Armor: right-click the suit with it, or use the helmet slot in its menu. It seals the suit (fire, frost, poison, air under water) and the suit's machine mind only runs with it on.",
+  "gui.powerarmor.no_helmet": "NO HELMET",
+  "gui.powerarmor.helmet_slot": "Helmet",
+  "gui.powerarmor.helmet_slot.hint": "Seals the suit and lets its machine mind run while you're out. Without it the suit only runs with you inside, unsealed."
 }

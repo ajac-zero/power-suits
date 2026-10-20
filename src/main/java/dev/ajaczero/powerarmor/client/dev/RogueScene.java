@@ -86,7 +86,7 @@ final class RogueScene {
                               }
                               if (rogue != null && rogue.isAlive() && base != null) {
                                   rogue.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, ItemStack.EMPTY);
-                                  rogue.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 8));
+                                  rogue.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 8)); rogue.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
                                   rogue.teleportTo(base.getX() + 0.5, base.getY(), base.getZ() - 6.5);
                                   p.teleportTo(base.getX() - 1.5, base.getY(), base.getZ() - 6.5);
                                   rogue.interact(p, net.minecraft.world.InteractionHand.MAIN_HAND, rogue.position());
@@ -129,7 +129,7 @@ final class RogueScene {
             player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 12000, 4));
             player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 12000, 2));
             PowerArmorEntity f = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            f.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16));
+            f.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16)); f.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             f.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
             f.setStoredNuggets(256);
             f.setOwnerId(player.getUUID());

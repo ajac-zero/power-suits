@@ -14,6 +14,8 @@ final class SuitRenderData {
     static final DataTicket<Boolean> COCKPIT = DataTicket.create("powerarmor_cockpit", Boolean.class);
     /** The installed tool's bone (PowerTool.suitBone), or "" for the bare socket. */
     static final DataTicket<String> TOOL_BONE = DataTicket.create("powerarmor_tool_bone", String.class);
+    /** The helmet is on (else its bone isn't drawn). */
+    static final DataTicket<Boolean> HELMET = DataTicket.create("powerarmor_helmet", Boolean.class);
     /** Smooths step-ups/downs (PowerArmorEntity.getStepOffset), blocks. */
     static final DataTicket<Float> STEP_OFFSET = DataTicket.create("powerarmor_step_offset", Float.class);
     /** Driven and alive: the torso aims and the tool arm can raise (parked suits keep the rest pose). */

@@ -47,7 +47,7 @@ Mojang's names are official since 26.1 (no Parchment). Porting primers: `neoforg
 | `./gradlew build` | compile + jar |
 | `./gradlew runGameTestServer` | headless GameTests in `src/main/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
 | `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, chaingun range, right hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
-| `./gradlew runAutopilotMech` | only the autopilot's last scenes (~2 min): smashing blocks, stomp, lightning, punch, lava + poison (`ap_mech_*.png`, `run/autopilot_mech.csv`), then the machine mind: walk home, drill, chaingun follow/defend/fists, EM guard (`ap_ai_*`, `run/autopilot_mind.csv`) and the workers (`client/dev/WorkScene`: `ap_work_*`, `run/autopilot_work.csv`) |
+| `./gradlew runAutopilotMech` | only the autopilot's last scenes (~3 min): smashing blocks, stomp, lightning, punch, lava + poison (`ap_mech_*.png`, `run/autopilot_mech.csv`), then the machine mind: walk home, drill, chaingun follow/defend/fists, EM guard (`ap_ai_*`, `run/autopilot_mind.csv`), the workers (`client/dev/WorkScene`: `ap_work_*`, `run/autopilot_work.csv`), rogues (`RogueScene`) and the helmet (`HelmetScene`: `ap_helmet_*`, `ap_menu_helmet`, `run/autopilot_helmet.csv`) |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
@@ -259,8 +259,8 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   only ("no part of the model is safe"); animations are redone once the model is final. Every leg animation is baked on the
   current legs (walk/run 2026-10-15, the rest re-baked unchanged from their specs 2026-10-18). Known open (user: wait for the
   upper-body rework): arms clip the thighs in jump_charge/jump/land/death/shutdown (0.3-1.6 px), death's leg roll
-  pushes the drums 0.85 px into the hip post, the crouches fold the knees to ~90 (reads as a squat). The assets aren't exported yet: on export set `WALK_ANIM_AUTHORED` to 2.218
-  (the run stays 6.25) and decide the game walk speed (user: open; the animation plays faster at 2.6).
+  pushes the drums 0.85 px into the hip post, the crouches fold the knees to ~90 (reads as a squat). Exported 2026-10-19 (`WALK_ANIM_AUTHORED`
+  2.218, the run 6.25); the game walk speed is still open (user; the walk plays 17% faster at 2.6).
 - **Read the user's sketches literally and confirm a reading in words before building**: "an opposite slope" for the
   thigh meant a thigh bottom PARALLEL to the shin top (both falling toward the back, a dark knee band between), and
   "the slot where the foot is" meant the shin coming down to the ground around the foot, not an empty pocket above it.
@@ -317,6 +317,21 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   where it tucks under the one above, a shaded bottom row), soft edge columns, sparse light 1 px marks. Shading by
   columns across a whole limb reads as a tube. Blocks that form one piece get no rims or seams between them, and a
   detail must use the whole piece (paint it in limb coordinates across its blocks: `model/art/thigh_upper_world.py`).
+- **Re-exporting after a model rework touches code numbers** (2026-10-19 export): the tool raise (`RAISE_ARM_X`: the old
+  torso leaned 7 deg and carried the tool up; upright, the tool pointed 13.5 deg down) and `SocketAim`'s muzzle were
+  re-measured by forward kinematics on the .bbmodel (`.scratch/aimfk.py` recipe: chain T(o) R(rot) T(-o) per bone);
+  `extract-view-geo.py` picks cubes by a rule, not by size (the elbow pieces changed size and slipped into the view);
+  `make-glowmasks.py`'s counts follow the visor/firebox (check which cube owns new reserved pixels before raising them).
+- **26.3 asks "Upgrading World Completed" after upgrading an old world's files**: the terrain pilot sat on it and drove
+  nothing (no CSV, no shots) until it learned to press Yes. Check output file dates before trusting a report: an old
+  `autopilot_terrain.csv` was read as a fresh "cockpit OK".
+- **The mind's legs use the pilot's leg rule** (`tickHeadTurn`): vanilla's mob body rotation let the head get past the
+  torso's 90 deg twist (drilled while facing away) and each client derived the unsynced body yaw from tiny moves (the
+  torso swung side to side). Judge facing from the client: the mind CSV logs clientHead/clientBody/twist/aimErr.
+- **A ternary of double and int inside String.format can box as Integer** (javac boxed each branch): `cond ? d : -1`
+  crashed `%f` the first time the branch ran (the mech log, with no pilot). Write `-1D`.
+- **The helmet (2026-10-19) seals the suit and lets the mind run**: anything that needs the seal or the mind (tests,
+  autopilot scenes) must put a `SUIT_HELMET` in `HELMET_SLOT` next to the fuel (GameTests' `suitAt` does).
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md` (its "Gait iteration" section is the method
   that produced walk v6 / run v8); specs in `model/anim/` (the walk stabilizes the tool arm, the run doesn't). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.

@@ -39,6 +39,7 @@ public final class TerrainPilot {
     private static final int LEG_TICKS = 100; // per gait per direction
 
     private static boolean worldRequested, suitRequested;
+    private static String lastScreen = "";
     private static int tick = -1;
     private static float startYaw;
     private static BufferedWriter csv, frames;
@@ -55,9 +56,28 @@ public final class TerrainPilot {
         }
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) {
+            // Log each screen we pass through while the world loads: a prompt nobody clicks (a world upgrade, a mod
+            // version warning) stalls the run silently otherwise.
+            String screen = mc.gui.screen() == null ? "none" : mc.gui.screen().getClass().getName();
+            if (!screen.equals(lastScreen)) {
+                lastScreen = screen;
+                PowerArmor.LOGGER.info("[terrain] screen: {} \"{}\" buttons {}", screen, mc.gui.screen() == null ? "" : mc.gui.screen().getTitle().getString(),
+                        mc.gui.screen() == null ? "" : mc.gui.screen().children().stream()
+                                .filter(w -> w instanceof net.minecraft.client.gui.components.Button)
+                                .map(w -> ((net.minecraft.client.gui.components.Button) w).getMessage().getString()).toList());
+            }
             if (!worldRequested && mc.gui.screen() instanceof TitleScreen) {
                 worldRequested = true;
                 openCopy(mc, MODE.substring("terrain:".length()));
+            }
+            // 26.3 then upgrades the files and asks "Upgrading World Completed": open it now? Yes (without this the
+            // run sat on that screen and no terrain was ever driven, 2026-10-19).
+            if (mc.gui.screen() instanceof net.minecraft.client.gui.screens.ConfirmScreen done
+                    && done.getTitle().equals(net.minecraft.network.chat.Component.translatable("upgradeWorld.done"))) {
+                done.children().stream()
+                        .filter(w -> w instanceof net.minecraft.client.gui.components.Button b
+                                && b.getMessage().equals(net.minecraft.network.chat.CommonComponents.GUI_YES))
+                        .findFirst().ifPresent(b -> ((net.minecraft.client.gui.components.Button) b).onPress(null));
             }
             // A world saved by an older Minecraft asks whether to back it up before upgrading it. This is our throwaway
             // copy (the original is never opened): press "Load without backup".
@@ -185,7 +205,7 @@ public final class TerrainPilot {
             level.getGameRules().set(GameRules.SPAWN_MOBS, false, server);
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             // A full stack of blaze rods (~4 hours of walking): enough for any scripted drive.
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64));
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             suit.snapTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 0);
             level.addFreshEntity(suit);
             player.startRiding(suit);
@@ -201,7 +221,7 @@ public final class TerrainPilot {
         server.execute(() -> {
             ServerPlayer player = server.getPlayerList().getPlayer(uuid);
             if (player != null && player.getVehicle() instanceof PowerArmorEntity suit) {
-                suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64));
+                suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             }
         });
     }

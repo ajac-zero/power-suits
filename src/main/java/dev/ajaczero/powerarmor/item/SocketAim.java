@@ -25,8 +25,10 @@ public final class SocketAim {
     // up from the feet, forward.
     // That's where everyone else sees the gun; the pilot's own first-person view draws its bullets from the cockpit
     // viewmodel's muzzle instead (visualMuzzle + Bullet.visualOffset).
-    // The torso pivot is 1.54 up; the torso faces the view and pitches with it (55%).
-    private static final double MUZZLE_LEFT = 0.95, MUZZLE_UP = 1.74, MUZZLE_FORWARD = 1.65, TORSO_PIVOT_UP = 1.54;
+    // The torso pivot is 1.695 up (27.125 px); the torso faces the view and pitches with it (55%).
+    // Re-measured for the 2026-10-19 export (model rework: upright torso, new arms) by forward kinematics on the .bbmodel:
+    // muzzle bone at (-11.34, 35.61, -27.81) px with the arm raised.
+    private static final double MUZZLE_LEFT = 0.709, MUZZLE_UP = 2.226, MUZZLE_FORWARD = 1.738, TORSO_PIVOT_UP = 1.695;
 
     /** Where muzzle effects (EM beam particles) start on this client. The client points it at the cockpit viewmodel's
      *  muzzle for its own pilot in first person (CockpitHands); everywhere else it's the suit's muzzle. */
