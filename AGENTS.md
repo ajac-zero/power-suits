@@ -260,6 +260,11 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   to 128 deg through the thigh. Hip height is very sensitive (1 px lower ~ +20 deg of knee): derive it from the planted
   leg's reach (`reachHip` in the skill's `k2.js`) and pick the game speed from the gait (since 2026-10-19 exactly the animations' own: walk 2.218, sprint 6.249). A limited ankle (`model/anim/kit.json` "ankle") needs straight-ish stance
   knees and short steps: a bent stance knee tilts the shin forward by about half its angle.
+- **The step rate follows the real speed along the legs** (2026-10-20, `movementAnimationRate`): a fixed rate per gait slid the
+  feet whenever the suit moved at any other speed (strafe, diagonal, stopping: 0.4-1.4 blocks/s) and backing up played
+  the walk forwards (a 3.15 blocks/s moonwalk). Backing up plays `walk_back` (the walk's keys reversed in time; rebuild it
+  from the walk if the walk is re-baked). GeckoLib 5 can't loop an animation at a negative speed (it clamps at 0).
+  Measure with `runAutopilotGait`; what's left is the legs swinging round (18 deg/tick) and turning on the spot.
 - **Model first, animations after** (user, 2026-10-15): while the shape is in flux the user judges the neutral pose
   only ("no part of the model is safe"); animations are redone once the model is final. Every leg animation is baked on the
   current legs (walk/run 2026-10-15, the rest re-baked unchanged from their specs 2026-10-18). Known open (user: wait for the

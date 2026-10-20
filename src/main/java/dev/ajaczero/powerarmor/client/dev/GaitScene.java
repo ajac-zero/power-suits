@@ -113,8 +113,7 @@ final class GaitScene {
         double fwd = v.dot(fwdDir), lat = v.dot(rightDir);
         String anim = suit.getMovementAnimationName();
         double rate = suit.getMovementAnimationRate();
-        double authored = anim.equals("walk") ? 2.218 : anim.equals("run") ? 6.249 : 0;
-        double expected = authored * rate; // the planted foot pushes the suit forward along the legs at this speed
+        double expected = suit.getSteppedSpeed(); // the planted foot pushes the suit along the legs at this speed
         double slip = Math.hypot(fwd - expected, lat);
         try {
             csv.write(String.format(Locale.ROOT, "%d,%s,%s,%s,%.3f,%b,%.1f,%.1f,%.1f,%.1f,%.3f,%.3f,%.3f,%.3f,%.3f%n", s, phase,

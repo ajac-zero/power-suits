@@ -86,10 +86,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final double RUN_THRESHOLD = 4.5;
 
     // The ground speed each Blockbench animation was authored for (blocks/s, measured from the
-    // planted foot). Playing them at movementSpeed / authoredSpeed keeps the feet from sliding.
+    // planted foot). Playing them at (real speed along the legs) / authoredSpeed keeps the feet from sliding.
     private static final double RUN_ANIM_AUTHORED = 6.249;
-    private static final double WALK_ANIM_RATE = WALK_SPEED * BLOCKS_PER_SECOND_PER_SPEED / WALK_ANIM_AUTHORED;
-    private static final double RUN_ANIM_RATE = WALK_SPEED * SPRINT_MULTIPLIER * BLOCKS_PER_SECOND_PER_SPEED / RUN_ANIM_AUTHORED;
+    /** Step-rate limits: below, a near-stop would freeze mid-step; above, a walk would flail before the run takes over. */
+    private static final double MIN_STEP_RATE = 0.25, MAX_STEP_RATE = 2.2;
+    /** Smoothed speed along the legs below this (blocks/s, backwards) plays the walk in reverse. */
+    private static final double BACKING_UP_SPEED = -0.3;
 
     /** Average hip height (model px) of the walk / run cycles: yHip mean in a_walk.js / a_run.js. */
     private static final float WALK_HIP_MEAN = -0.29F;
@@ -275,6 +277,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     // ---- Animations (names from the exported Blockbench animation file) --------------------
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.power_armor.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.power_armor.walk");
+    /** The walk with its keys reversed in time (made in Blockbench from the walk): backing up steps backwards. */
+    private static final RawAnimation WALK_BACK = RawAnimation.begin().thenLoop("animation.power_armor.walk_back");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_armor.run");
     private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.power_armor.death");
     private static final RawAnimation HIT = RawAnimation.begin().thenPlay("animation.power_armor.hit");
@@ -307,6 +311,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private boolean realigning;
     /** Client only: smoothed horizontal speed in blocks per second, used to pick walk/run/idle. */
     private double visualSpeed;
+    /** Client only: the same along the legs (where the boots point; negative = backing up), for the step rate. */
+    private double visualForward;
     /** Client only: vertical offset (blocks) that eases the camera and model over step-ups/downs. */
     private final StepSmoothing steps = new StepSmoothing(STEP_DOWN);
     /** Client only: airborne bookkeeping for the jump / fall / land animations. */
@@ -1208,7 +1214,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (!this.canOperate()) {
             return Vec3.ZERO; // out of fuel (or still booting): the legs don't move
         }
-        float strafe = player.xxa * 0.5F;  // A/D
+        // A/D: full speed since 2026-10-20 (was half). The legs turn to face the way the suit walks, so a strafe is a
+        // walk sideways with the torso twisted toward the view; at half speed its steps played in slow motion.
+        float strafe = player.xxa;
         float forward = player.zza;        // W/S
         if (forward < 0) {
             forward *= 0.5F;               // backing up is slow
@@ -1418,7 +1426,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public void setHipHeight(float y) {
         String anim = this.getMovementAnimationName();
         float target = switch (anim) {
-            case "walk" -> y - WALK_HIP_MEAN;
+            case "walk", "walk_back" -> y - WALK_HIP_MEAN;
             case "run" -> y - RUN_HIP_MEAN;
             default -> 0F;
         };
@@ -1799,6 +1807,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
             double speed = Math.sqrt(dx * dx + dz * dz) * 20.0;
             this.visualSpeed += (speed - this.visualSpeed) * 0.4;
+            float legs = this.yBodyRot * Mth.DEG_TO_RAD;
+            double forward = (dx * -Mth.sin(legs) + dz * Mth.cos(legs)) * 20.0;
+            this.visualForward += (forward - this.visualForward) * 0.4;
             tickStepSmoothing();
             tickAirborneAnimationState();
         }
@@ -1934,7 +1945,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             return state.setAndContinue(LAND);
         }
         if (this.isWalking() || this.realigning) {
-            return state.setAndContinue(this.isRunning() ? RUN : WALK);
+            return state.setAndContinue(this.isRunning() ? RUN : this.isBackingUp() ? WALK_BACK : WALK);
         }
         return state.setAndContinue(IDLE);
     }
@@ -2060,22 +2071,45 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.pilotWasSwinging = swinging;
     }
 
-    /** Fixed rate per gait (steps in time with the ground speed: WALK_ANIM_AUTHORED / RUN_ANIM_AUTHORED). */
     /** Client/dev: the movement animation's playback rate this tick (the gait log compares it with the ground speed). */
     public double getMovementAnimationRate() {
         return this.movementAnimationRate();
     }
 
+    /**
+     * The walk and run step at the speed the suit really moves along its legs, so a planted foot stays planted: strafing,
+     * diagonals, slowing down, slopes, water, walls and the mind's own speeds all change the ground speed, and a fixed
+     * rate slid the feet (runAutopilotGait measured 0.4-1.4 blocks/s of slide, 3.15 when backing up with the walk
+     * playing forwards: a moonwalk). Backing up plays walk_back at the backward speed.
+     */
     private double movementAnimationRate() {
         if (this.isDeadOrDying() || !this.isDriven() || !this.canOperate() || this.jumped || this.jumpAnimTicks > 0
                 || this.airTicks >= FALL_POSE_AFTER_TICKS || this.landTicks > 0) {
             return 1.0;
         }
-        double water = this.isInWater() ? UNDERWATER_SPEED : this.isInLava() ? LAVA_SPEED : 1.0; // slow-motion steps on the bottom
         if (!this.isWalking()) {
+            double water = this.isInWater() ? UNDERWATER_SPEED : this.isInLava() ? LAVA_SPEED : 1.0;
             return (this.realigning ? 0.6 : 1.0) * water; // turning on the spot: a slower step cycle
         }
-        return (this.isRunning() ? RUN_ANIM_RATE : WALK_ANIM_RATE) * water;
+        double authored = this.isRunning() ? RUN_ANIM_AUTHORED : WALK_ANIM_AUTHORED;
+        return Mth.clamp(Math.abs(this.visualForward) / authored, MIN_STEP_RATE, MAX_STEP_RATE);
+    }
+
+    /** Client/dev: the ground speed along the legs (blocks/s, negative = backwards) the gait the suit picks this tick
+     *  steps at: a planted foot slides by the difference to the real speed (GaitScene). GeckoLib's controller still
+     *  names the previous animation during the 5-tick blend, so the log asks this instead. */
+    public double getSteppedSpeed() {
+        if (!this.isDriven() || !this.canOperate() || !(this.isWalking() || this.realigning) || this.jumped || this.jumpAnimTicks > 0
+                || this.airTicks >= FALL_POSE_AFTER_TICKS) {
+            return 0;
+        }
+        double authored = this.isRunning() ? RUN_ANIM_AUTHORED : this.isBackingUp() ? -WALK_ANIM_AUTHORED : WALK_ANIM_AUTHORED;
+        return authored * this.movementAnimationRate();
+    }
+
+    /** Client: moving backwards along the legs (the legs keep facing the view when the pilot backs up). */
+    private boolean isBackingUp() {
+        return this.visualForward < BACKING_UP_SPEED;
     }
 
     @Override
