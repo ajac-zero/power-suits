@@ -311,6 +311,12 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   cheap prototypes (A/B) and film them with the same cameras next to the committed model, then checkpoint each approved
   step as its own commit. Before every checkpoint diff the live project against the saved file plus the planned edits
   (the user inspects and hides cubes in Blockbench between turns): "make sure I didn't move anything".
+- **Texture "noise" means loud decoration, not grain** (2026-10-19): on the pads it was the red stripes, white chevron and
+  grey rim; removing the wear grain made them "too flat". The armour's texture recipe is the breastplate's
+  (`sm_chest_art.py`): flat armour blue, structure in horizontal plate bands (highlight rim on a plate's top, a shadow row
+  where it tucks under the one above, a shaded bottom row), soft edge columns, sparse light 1 px marks. Shading by
+  columns across a whole limb reads as a tube. Blocks that form one piece get no rims or seams between them, and a
+  detail must use the whole piece (paint it in limb coordinates across its blocks: `model/art/thigh_upper_world.py`).
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md` (its "Gait iteration" section is the method
   that produced walk v6 / run v8); specs in `model/anim/` (the walk stabilizes the tool arm, the run doesn't). Measure gait
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.
