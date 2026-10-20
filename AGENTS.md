@@ -322,6 +322,8 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   re-measured by forward kinematics on the .bbmodel (`.scratch/aimfk.py` recipe: chain T(o) R(rot) T(-o) per bone);
   `extract-view-geo.py` picks cubes by a rule, not by size (the elbow pieces changed size and slipped into the view);
   `make-glowmasks.py`'s counts follow the visor/firebox (check which cube owns new reserved pixels before raising them).
+  First diff the bones (pivot, rotation, parent) and keyframes against the last export: the 2026-10-20 export changed
+  only cubes and texture, so `SocketAim` and the raise stayed as they were.
 - **26.3 asks "Upgrading World Completed" after upgrading an old world's files**: the terrain pilot sat on it and drove
   nothing (no CSV, no shots) until it learned to press Yes. Check output file dates before trusting a report: an old
   `autopilot_terrain.csv` was read as a fresh "cockpit OK".

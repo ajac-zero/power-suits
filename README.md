@@ -127,7 +127,7 @@ the suit's gauntlet holds it at the lower right (cockpit viewmodel). It's a norm
 has nothing to do, right click goes to the socket tool instead, exactly like vanilla tries your main hand and then a
 shield in your off hand (your real off-hand item isn't used while piloting). A powered-down suit's hand can't do anything.
 
-**Lights**: the firebox in the chest glows through its grate while the engine runs (brighter under load,
+**Lights**: the firebox on the backpack (under the fuel hatch) glows through its grate while the engine runs (brighter under load,
 dimmer when fuel runs low, embers dying out after shutdown), and the visor shows who is in control:
 **amber** = a pilot (whatever they do), **green** = the friendly machine mind, **red** = a rogue mind (only rogues,
 so red always means danger), **dark** = powered off; it stutters while starting up or shutting down and drops out

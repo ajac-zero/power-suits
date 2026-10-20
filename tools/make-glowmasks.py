@@ -5,7 +5,7 @@
 Glowing parts are painted in Blockbench with RESERVED colours: dark, so a powered-off suit shows dead coals and
 dark glass. Each reserved colour maps to a bright colour in one glowmask; everything else is transparent black,
 which adds nothing (SuitGlowLayer draws the masks full-bright and additively, tinted per frame):
-  power_armor_glow_fire.png   the firebox coals (yellow at the bottom -> red at the top) and the ember vent slits
+  power_armor_glow_fire.png   the firebox coals (yellow at the bottom -> red at the top), painted flat on the backpack
   power_armor_glow_visor.png  the visor glass, white (tinted green / amber / red by the suit's state)
   power_armor_glow_heat.png   the chaingun's barrel tips (tinted by the barrels' heat)
   power_armor_glow_heat_barrel.png  the barrels further back (dark red -> orange-red toward the tips) and the front collar
@@ -28,7 +28,7 @@ GLOW = {
     H('3f211b'): ('fire', H('ffdc6e')),   # coal, bottom row: yellow-white heat
     H('371d19'): ('fire', H('ff9632')),   # coal, middle: orange
     H('2f1a17'): ('fire', H('d24619')),   # coal, top: red
-    H('281614'): ('fire', H('963714')),   # vent slits under the firebox: dim ember
+    H('281614'): ('fire', H('963714')),   # dim ember (the vent slits under the old firebox; unused since backpack v3)
     H('262c34'): ('visor', H('ebebeb')),  # visor glass
     H('1e232a'): ('visor', H('a0a0a0')),  # visor glass, edge
     H('46505c'): ('visor', H('ffffff')),  # visor glass, highlight
@@ -45,7 +45,7 @@ GLOW = {
     H('5c1813'): ('em_core', H('f0200c')), H('701f17'): ('em_core', H('ff6a4a')),
     H('4e1411'): ('em_arc', H('c01206')), H('621a14'): ('em_arc', H('ff2a14')),
 }
-EXPECTED = {'fire': 20, 'visor': 244, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20}  # pixels per mask (firebox 12 + 8 vent slits under the back furnace; the visor cube: 7x5 glass front + 59 on its
+EXPECTED = {'fire': 12, 'visor': 244, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20}  # pixels per mask (fire: the backpack's painted firebox, 4 coals x 3 rows (backpack v3, 2026-10-20: the old firebox cube and its 8 vent slits are gone); the visor cube: 7x5 glass front + 59 on its
 # other faces, plus 150 left in the texture from the old visor that no cube uses (2026-10-19 export: harmless, never drawn);
 # 4 barrel sides x 2x2 tips; 4 barrel sides x 2x3 behind them + the front collar's 6x1x6 net, 96;
 # em_core: the 3x1x3 lens's faces 30 (the housing and its vent slits went with the shared forearm, 2026-10-18); em_arc: the shared prong net's
