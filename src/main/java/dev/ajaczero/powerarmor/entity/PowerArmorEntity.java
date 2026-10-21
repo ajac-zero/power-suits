@@ -40,6 +40,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.DismountHelper;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -204,6 +205,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Is a helmet in its slot: clients draw it (or not) and know whether the suit is sealed. */
     private static final EntityDataAccessor<Boolean> HELMET =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
+    /** The plates' paint: a dye's id (DyeColor.getId, 0..15), or -1 for bare steel. Synced: clients pick the texture by it. */
+    private static final EntityDataAccessor<Byte> PAINT =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BYTE);
 
     /** The suit's own slots: fuel, the left-arm socket and the helmet. Real contents only exist on the server. */
     private final SimpleContainer inventory = new SimpleContainer(3) {
@@ -350,6 +354,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(MIND, (byte) SuitMind.FRIENDLY.ordinal());
         builder.define(NUGGETS, 0);
         builder.define(FIELD_HELD, false);
+        builder.define(PAINT, (byte) -1);
     }
 
     /** The machine mind's goals (see SuitGoals). Vanilla calls this once, from Mob's constructor. */
@@ -399,6 +404,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.home = tag.read("Home", BlockPos.CODEC).orElse(null);
         this.setStoredNuggets(tag.getIntOr("Nuggets", 0));
         this.rogueAge = tag.getIntOr("RogueAge", 0);
+        this.setPaint(tag.read("Paint", DyeColor.CODEC).orElse(null)); // suits from before paint: bare
         this.syncSlots();
         this.syncBurn();
         this.entityData.set(POWERED, this.shouldRun(null)); // a pilot (if any) boards after loading: next tick knows
@@ -416,6 +422,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         tag.putInt("RogueAge", this.rogueAge);
         tag.storeNullable("Owner", net.minecraft.core.UUIDUtil.CODEC, this.ownerId); // int array, as before
         tag.storeNullable("Home", BlockPos.CODEC, this.home);
+        tag.storeNullable("Paint", DyeColor.CODEC, this.getPaint()); // the dye's name, e.g. "red"
     }
 
     // =========================================================================================
@@ -1088,6 +1095,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             return InteractionResult.PASS; // a rogue mind won't open up: no boarding, no menu
         }
         ItemStack held = player.getItemInHand(hand);
+        DyeColor dye = held.get(net.minecraft.core.component.DataComponents.DYE);
+        if (dye != null && !player.isSecondaryUseActive()) {
+            return this.paintWith(player, held, dye); // like dyeing a sheep: a dye in hand paints, it doesn't climb in
+        }
+        if (held.is(Items.WET_SPONGE) && !player.isSecondaryUseActive()) {
+            return this.washPaint(player);
+        }
         if (held.is(Items.IRON_NUGGET) && !player.isSecondaryUseActive()) {
             return this.loadNuggets(player, held); // feeding it ammo, like feeding a horse: no climbing in
         }
@@ -1102,6 +1116,51 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 player.startRiding(this);
                 this.playSound(SoundEvents.IRON_DOOR_CLOSE, 1.0F, 0.7F);
             }
+        }
+        return InteractionResult.SUCCESS;
+    }
+
+    // ---- Paint (2026-10-20): the suit is bare steel; a dye paints its armour plates ---------------------------------
+
+    /** Both sides: the plates' paint, or null for bare steel. */
+    public @Nullable DyeColor getPaint() {
+        byte id = this.entityData.get(PAINT);
+        return id < 0 ? null : DyeColor.byId(id);
+    }
+
+    public void setPaint(@Nullable DyeColor dye) {
+        this.entityData.set(PAINT, dye == null ? (byte) -1 : (byte) dye.getId());
+    }
+
+    /**
+     * Right-click with a dye: the plates take its colour (a new dye paints over the old one) and the dye is used up, like
+     * dyeing a sheep. The same colour again does nothing (and keeps the dye). The paint is only a texture: the renderer
+     * picks {@code textures/entity/paint/power_armor_<dye>.png} (tools/make-paint-textures.py).
+     */
+    private InteractionResult paintWith(Player player, ItemStack held, DyeColor dye) {
+        if (dye == this.getPaint()) {
+            return InteractionResult.SUCCESS; // nothing to do, but holding a dye still never climbs in
+        }
+        // playSound(player, ...) plays for everyone near except that player, whose own client plays it right away.
+        this.level().playSound(player, this, SoundEvents.DYE_USE, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 0.9F);
+        if (!this.level().isClientSide()) {
+            this.setPaint(dye);
+            held.consume(1, player); // consume() leaves creative players' stacks alone
+        }
+        return InteractionResult.SUCCESS;
+    }
+
+    /** Right-click with a wet sponge: wash the paint off, back to bare steel. The sponge stays wet (it isn't used up). */
+    private InteractionResult washPaint(Player player) {
+        if (this.getPaint() == null) {
+            return InteractionResult.SUCCESS;
+        }
+        this.level().playSound(player, this, SoundEvents.BUCKET_EMPTY, net.minecraft.sounds.SoundSource.PLAYERS, 0.8F, 1.3F);
+        if (this.level() instanceof ServerLevel server) {
+            this.setPaint(null);
+            // a splash on the plates (server particles reach every client near the suit)
+            server.sendParticles(net.minecraft.core.particles.ParticleTypes.SPLASH, this.getX(), this.getY() + 1.6, this.getZ(),
+                    40, 0.5, 0.6, 0.5, 0.1);
         }
         return InteractionResult.SUCCESS;
     }

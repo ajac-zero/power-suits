@@ -82,6 +82,12 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'gait'
         }
 
+        // Dev tool: only the paint scene (all 16 dyes + a wet sponge on a suit, ap_paint_*.png, run/autopilot_paint.csv), ~30 s.
+        autopilotPaint {
+            client()
+            systemProperty 'powerarmor.autopilot', 'paint'
+        }
+
         // Dev tool: live-tunes the cockpit viewmodel (see AutoPilot.viewTuner); stays open until closed.
         autopilotView {
             client()

@@ -11,6 +11,7 @@
   "item.powerarmor.power_armor.fuel": "Fuel: %s x %s",
   "item.powerarmor.power_armor.range": "Range: %s of walking",
   "item.powerarmor.power_armor.socket": "Socket: %s",
+  "item.powerarmor.power_armor.paint": "Painted: %s",
   "message.powerarmor.out_of_fuel": "Out of fuel! Climb out (Shift), then sneak + right-click the suit to refuel.",
   "gui.powerarmor.pack_up": "Pack up",
   "gui.powerarmor.pack_up.tooltip": "Turn the suit back into an item. Fuel and tool stay inside.",

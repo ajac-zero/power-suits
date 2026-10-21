@@ -2082,6 +2082,71 @@ public final class PowerArmorTests {
     }
 
     // =========================================================================================
+    // Paint (2026-10-20): the suit is bare steel; a dye paints its plates, a wet sponge washes them
+    // =========================================================================================
+
+    /** Right-click with a dye paints the suit and uses the dye; the same colour again does nothing; another dye paints
+     *  over it; creative players keep their dye; a wet sponge washes it off and stays wet; nobody climbs in meanwhile. */
+    @SuitTest
+    public static void dyePaintsTheSuitAndAWetSpongeWashesIt(GameTestHelper helper) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        helper.assertTrue(suit.getPaint() == null, "a new suit is bare steel");
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DYE.red(), 3));
+        helper.assertTrue(suit.interact(player, InteractionHand.MAIN_HAND, suit.position()).consumesAction(), "the suit takes the dye");
+        helper.assertTrue(suit.getPaint() == net.minecraft.world.item.DyeColor.RED && player.getMainHandItem().getCount() == 2,
+                "red dye paints it red and is used up, got " + suit.getPaint() + " / " + player.getMainHandItem());
+        suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
+        helper.assertTrue(player.getMainHandItem().getCount() == 2, "the same colour again keeps the dye");
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DYE.blue()));
+        suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
+        helper.assertTrue(suit.getPaint() == net.minecraft.world.item.DyeColor.BLUE && player.getMainHandItem().isEmpty(), "blue paints over red");
+
+        Player creative = helper.makeMockPlayer(GameType.CREATIVE);
+        creative.getAbilities().instabuild = true; // mock players don't get their game mode's abilities
+        creative.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        creative.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DYE.yellow()));
+        suit.interact(creative, InteractionHand.MAIN_HAND, suit.position());
+        helper.assertTrue(suit.getPaint() == net.minecraft.world.item.DyeColor.YELLOW && creative.getMainHandItem().getCount() == 1,
+                "creative paints without using the dye");
+
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WET_SPONGE));
+        suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
+        helper.assertTrue(suit.getPaint() == null && player.getMainHandItem().is(Items.WET_SPONGE), "the wet sponge washes it, and stays");
+        helper.assertTrue(player.getVehicle() == null && creative.getVehicle() == null, "painting and washing never climb in");
+        helper.succeed();
+    }
+
+    /** The paint survives saving and packing the suit up (the item shows it and puts it back on). */
+    @SuitTest
+    public static void paintSurvivesSavingAndPacking(GameTestHelper helper) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        suit.setPaint(net.minecraft.world.item.DyeColor.LIME);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        loadTag(helper, loaded, saveTag(helper, suit));
+        helper.assertTrue(loaded.getPaint() == net.minecraft.world.item.DyeColor.LIME, "saved paint, got " + loaded.getPaint());
+        PowerArmorEntity bare = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        loadTag(helper, bare, saveTag(helper, spawnSuitAtCorner(helper)));
+        helper.assertTrue(bare.getPaint() == null, "a bare suit loads bare");
+
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        suit.packUp(player);
+        ItemStack packed = packedSuit(player);
+        helper.assertTrue(packed.get(ModDataComponents.PAINT.get()) == net.minecraft.world.item.DyeColor.LIME, "the packed suit keeps its paint");
+        player.getInventory().removeItem(packed);
+        player.setItemInHand(InteractionHand.MAIN_HAND, packed);
+        useOnFloor(helper, player, packed, new BlockPos(4, 1, 4));
+        PowerArmorEntity deployed = suitsInTest(helper).stream().filter(s -> s != suit && s.getPaint() != null).findFirst().orElseThrow();
+        helper.assertTrue(deployed.getPaint() == net.minecraft.world.item.DyeColor.LIME, "and comes back painted");
+        helper.succeed();
+    }
+
+    private static PowerArmorEntity spawnSuitAtCorner(GameTestHelper helper) {
+        return suitAt(helper, new BlockPos(7, 2, 7));
+    }
+
+    // =========================================================================================
     // The helmet (2026-10-19): seals the suit and lets the machine mind run
     // =========================================================================================
 

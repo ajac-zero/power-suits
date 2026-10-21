@@ -50,10 +50,11 @@ Mojang's names are official since 26.1 (no Parchment). Porting primers: `neoforg
 | `./gradlew runAutopilotMech` | only the autopilot's last scenes (~3 min): smashing blocks, stomp, lightning, punch, lava + poison (`ap_mech_*.png`, `run/autopilot_mech.csv`), then the machine mind: walk home, drill, chaingun follow/defend/fists, EM guard (`ap_ai_*`, `run/autopilot_mind.csv`), the workers (`client/dev/WorkScene`: `ap_work_*`, `run/autopilot_work.csv`), rogues (`RogueScene`) and the helmet (`HelmetScene`: `ap_helmet_*`, `ap_menu_helmet`, `run/autopilot_helmet.csv`) |
 | `./gradlew runAutopilotPose` | ~30 s pose check (`client/dev/PoseScene`): side shots looking level / down 40 / up 30 / tool raised, top shots with the view at yaw +40 (gold block) / -40 (redstone): looking down must lean forward, the torso and raised tool must face the shot's block (`ap_pose_*.png`, `run/autopilot_pose.csv`) |
 | `./gradlew runAutopilotGait` | ~45 s foot-slip drive (`client/dev/GaitScene`): walk, back up, strafe, diagonal, turn on the spot, look around, sprint + turn; per-tick `run/autopilot_gait.csv`, summarize with `python3 tools/gait-report.py` (slip = how fast a planted foot slides, moon = moonwalk ticks) |
+| `./gradlew runAutopilotPaint` | ~30 s paint check (`client/dev/PaintScene`, also at the end of `runAutopilotMech`): all 16 dyes + a wet sponge on a suit, `ap_paint_*` (in-game back view + front), `run/autopilot_paint.csv` (server and client paint must agree a tick later) |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
-| `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000); then `extract-tool-geo.py`, `extract-view-geo.py`, `uv run --with pillow python3 tools/make-glowmasks.py` and `tools/make-item-icons.py` (the tool items' icons) |
+| `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000); then `extract-tool-geo.py`, `extract-view-geo.py`, `uv run --with pillow python3 tools/make-glowmasks.py`, `tools/make-item-icons.py` (the tool items' icons), `tools/make-part-icons.py` and `tools/make-paint-textures.py` (one painted texture per dye) |
 macOS has no `timeout`; run game tasks in the background and poll the log for completion.
 Extend the autopilot scripts (`client/dev/AutoPilot.java`, `TerrainPilot.java`) with a scenario for each
 new feature and log numbers to CSV: measuring beat guessing every time in this project.
@@ -355,3 +356,9 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 `entity/ai/` the machine mind's goals (`SuitMind` friendly/rogue); `menu/` the suit menu logic, `client/PowerArmorScreen` + `FuelGauge` its picture and the HUD;
 `client/` holds rendering + camera; `PilotProtection.java` redirects damage; `registry/` registers things.
 Comment the "why" for anything non-obvious; the user reads the code to learn.
+- **The suit is bare steel and paint is a texture swap** (2026-10-20): the armour is drawn in the 8 shades of the steel
+  ramp (`model/art/steel_art.py`, `STEEL` in `tools/make-paint-textures.py`); the dye textures swap those shades on the
+  plate cubes (`PLATES`) for each dye's ramp. So: repaint armour only in those 8 steel shades (another grey on a plate
+  won't take paint), keep them off the steel parts' trim, and re-run `make-paint-textures.py` after every texture export
+  (it refuses a texture with no steel ramp). The user's "metal" verdicts: flat vanilla greys read as plastic, random grain
+  as stone; what reads as metal is a wide value range with hue shift (cool shadows, warm glints).

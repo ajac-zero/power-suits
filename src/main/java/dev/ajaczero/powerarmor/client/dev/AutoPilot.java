@@ -53,6 +53,8 @@ public final class AutoPilot {
     private static final boolean POSE_ONLY = "pose".equals(System.getProperty("powerarmor.autopilot"));
     /** "gait" mode: only the foot-slip / leg-turning drive (GaitScene), ~45 s. */
     private static final boolean GAIT_ONLY = "gait".equals(System.getProperty("powerarmor.autopilot"));
+    /** "paint" mode: only the paint scene (PaintScene: dyes and a wet sponge on a suit), ~20 s. */
+    private static final boolean PAINT_ONLY = "paint".equals(System.getProperty("powerarmor.autopilot"));
     private static final int MECH_START = 1712;
     /** A file run/cleanzap: no fire from the lightning scene's bolt, so the knock-out animation can be seen. */
     private static final boolean CLEAN_ZAP = Files.exists(Path.of("cleanzap"));
@@ -104,6 +106,10 @@ public final class AutoPilot {
             }
         } else if (GAIT_ONLY) {
             if (!GaitScene.step(mc, tick++)) {
+                mc.stop();
+            }
+        } else if (PAINT_ONLY) {
+            if (!PaintScene.step(mc, tick++)) {
                 mc.stop();
             }
         } else {
@@ -1240,7 +1246,11 @@ public final class AutoPilot {
             rogueRunning = false;
             helmetStart = m + 1;
         }
-        if (!rogueRunning && m >= helmetStart && !HelmetScene.step(mc, m - helmetStart)) {
+        if (!rogueRunning && helmetRunning && m >= helmetStart && !HelmetScene.step(mc, m - helmetStart)) {
+            helmetRunning = false;
+            paintStart = m + 1;
+        }
+        if (!helmetRunning && m >= paintStart && !PaintScene.step(mc, m - paintStart)) {
             mc.stop();
         }
         if (m >= 10 && m < 420) {
@@ -1257,6 +1267,8 @@ public final class AutoPilot {
     private static int rogueStart = Integer.MAX_VALUE;
     private static boolean rogueRunning = true;
     private static int helmetStart = Integer.MAX_VALUE;
+    private static boolean helmetRunning = true;
+    private static int paintStart = Integer.MAX_VALUE;
     private static PowerArmorEntity mindSuit;
     // Filled on the server thread, read by the client thread (logMind): a copy-on-write list (an ArrayList threw mid-iteration).
     private static final java.util.List<net.minecraft.world.entity.Mob> mindMobs = new java.util.concurrent.CopyOnWriteArrayList<>();

@@ -16,6 +16,8 @@ final class SuitRenderData {
     static final DataTicket<String> TOOL_BONE = DataTicket.create("powerarmor_tool_bone", String.class);
     /** The helmet is on (else its bone isn't drawn). */
     static final DataTicket<Boolean> HELMET = DataTicket.create("powerarmor_helmet", Boolean.class);
+    /** The plates' paint: a dye id 0..15, or -1 for bare steel (PowerArmorModel picks the texture by it). */
+    static final DataTicket<Integer> PAINT = DataTicket.create("powerarmor_paint", Integer.class);
     /** Smooths step-ups/downs (PowerArmorEntity.getStepOffset), blocks. */
     static final DataTicket<Float> STEP_OFFSET = DataTicket.create("powerarmor_step_offset", Float.class);
     /** Driven and alive: the torso aims and the tool arm can raise (parked suits keep the rest pose). */

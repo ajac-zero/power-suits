@@ -6,8 +6,9 @@ they are built. `docs/design-notes.md` keeps the history of how we got here.
 ## 0. Identity (decided 2026-10-13)
 **A coal-fired, steam-and-diesel machine, not sci-fi.** Inspirations, not targets: Fallout's power armor and
 BioShock's Big Daddies (heavy plates, a glowing visor, a drill, a rivet gun); don't replicate either. Everything it does is powered by the firebox burning your fuel; the glow comes
-from fire, hot metal, redstone and sparks, never from futuristic energy. Keep the blue paint for now.
-- **Material palette: blue paint, grey steel, dark iron; light only from fire and glow.** No small accents in a new
+from fire, hot metal, redstone and sparks, never from futuristic energy.
+- **Material palette: polished steel, dark iron / slate, paint from dyes; light only from fire and glow.** (Until
+  2026-10-20 the armour was painted blue; now it is bare steel and the player paints its plates, see *Paint*.) No small accents in a new
   material (brass trim on the visor and firebox was tried 2026-10-13 and dropped: it read as stuck on).
 - Built 2026-10-13 (step 1): firebox, glowmask layer (`SuitGlowLayer`), visor states.
 - Chest: the blue core becomes a **firebox** (grated window, orange glow, flickers with load, fades with fuel, dark
@@ -35,7 +36,14 @@ from fire, hot metal, redstone and sparks, never from futuristic energy. Keep th
   bare steel between copper and tip): 13 px long, the others 15-16. Glow (`em_core` lens + vents: faint while mounted and powered, brighter while used, throbbing while
   holding; `em_arc` tips: only while holding, crackling), redstone-dust beam (red + orange-red strands; a dark-red
   strand read as blood round a pig), red sparks between the tips. No ammo.
-- Later (not now): dyeable paint like leather armor.
+- **Paint (built 2026-10-20, user):** the suit is bare polished steel (`model/art/steel_art.py`: the old blue's shades
+  mapped onto a steel ramp with cool shadows and warm glints). Right-click it with a dye to paint its plates (shoulder
+  pads, upper arms, chest + breastplate, hip hoods, thighs: "two-tone"); the helmet, collar, gauntlets, shins + boots
+  (one piece with the feet), backpack and waist stay steel. A new dye paints over the old one (the dye is used up, not
+  in creative; the same colour again does nothing); a wet sponge washes it off (the sponge stays wet). Texture only:
+  one texture per dye (`tools/make-paint-textures.py`: the steel ramp's 8 shades become the dye's 8 on the plates);
+  blue is the old lapis blue exactly. Saved with the suit (`Paint`), kept by a packed suit (`powerarmor:paint`
+  component, shown in the tooltip). Rogues can't be painted (they don't let anyone near).
 
 ## 1. Pillars
 1. **A machine you climb into** (Fallout / Titanfall), not wearable armor. Heavy, tall (3 blocks), fast.

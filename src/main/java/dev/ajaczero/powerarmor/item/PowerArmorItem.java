@@ -61,6 +61,7 @@ public class PowerArmorItem extends Item {
             suit.setCustomName(stack.getHoverName()); // name tags / anvil names carry over
         }
         suit.applyLoadout(stack.getOrDefault(ModDataComponents.LOADOUT.get(), SuitLoadout.EMPTY)); // fuel + tool
+        suit.setPaint(stack.get(ModDataComponents.PAINT.get()));
         // The machine mind works for whoever deployed it, from the spot it stands on, until a pilot takes over.
         if (player != null) {
             suit.setOwnerId(player.getUUID());
@@ -83,6 +84,7 @@ public class PowerArmorItem extends Item {
         if (!loadout.equals(SuitLoadout.EMPTY)) {
             stack.set(ModDataComponents.LOADOUT.get(), loadout);
         }
+        stack.set(ModDataComponents.PAINT.get(), suit.getPaint()); // null (bare steel) leaves the component off
         return stack;
     }
 
@@ -90,6 +92,11 @@ public class PowerArmorItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
             java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.power_armor.tooltip").withStyle(ChatFormatting.GRAY));
+        net.minecraft.world.item.DyeColor paint = stack.get(ModDataComponents.PAINT.get());
+        if (paint != null) { // vanilla names every dye colour ("color.minecraft.red" = "Red")
+            tooltip.accept(Component.translatable("item.powerarmor.power_armor.paint",
+                    Component.translatable("color.minecraft." + paint.getName())).withStyle(ChatFormatting.GRAY));
+        }
         SuitLoadout loadout = stack.get(ModDataComponents.LOADOUT.get());
         if (loadout != null) {
             int energy = loadout.burnLeft() + loadout.fuel().getCount() * SuitFuel.energyOf(loadout.fuel());
