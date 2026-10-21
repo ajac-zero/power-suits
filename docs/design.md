@@ -38,8 +38,9 @@ from fire, hot metal, redstone and sparks, never from futuristic energy.
   strand read as blood round a pig), red sparks between the tips. No ammo.
 - **Paint (built 2026-10-20, user):** the suit is bare polished steel (`model/art/steel_art.py`: the old blue's shades
   mapped onto a steel ramp with cool shadows and warm glints). Right-click it with a dye to paint its plates (shoulder
-  pads, upper arms, chest + breastplate, hip hoods, thighs: "two-tone"); the helmet, collar, gauntlets, shins + boots
-  (one piece with the feet), backpack and waist stay steel. A new dye paints over the old one (the dye is used up, not
+  pads, upper arms, chest + breastplate, hip hoods, thighs: "two-tone"; since 2026-10-20 also the helmet's shell, the
+  collar and the abdomen plate); the visor's band and grill, gauntlets, shins + boots (one piece with the feet),
+  backpack and the ribbed waist stay steel. A new dye paints over the old one (the dye is used up, not
   in creative; the same colour again does nothing); a wet sponge washes it off (the sponge stays wet). Texture only:
   one texture per dye (`tools/make-paint-textures.py`: the steel ramp's 8 shades become the dye's 8 on the plates);
   blue is the old lapis blue exactly. Saved with the suit (`Paint`), kept by a packed suit (`powerarmor:paint`

@@ -9,8 +9,10 @@ ramp. So every dye keeps the plates' shading (rims, tuck shadows, marks) and a r
 repaints every dye with it.
 
 Which parts are plates (user, 2026-10-20: "two-tone"): the shoulder pads, upper arms, chest + breastplate, hip hoods
-and thighs (PLATES, cube names in the .bbmodel). The helmet, collar, gauntlets, shins + boots (they read as one
-piece with the feet), backpack and waist stay steel. Their texels are found through each cube's faces, so the
+and thighs (PLATES, cube names in the .bbmodel), and since the helmet sketches (same day, user: the helmets, the collar
+and the abdomen plate "should carry their colours as well") the helmet's shell, the collar ring with the breastplate's
+rim under it (gorget_lip) and the abdomen plate. The visor's band, glass and grill, the gauntlets, shins + boots (they
+read as one piece with the feet), backpack and the ribbed waist stay steel. Their texels are found through each cube's faces, so the
 layout follows the model.
 
 The ramps: blue is the suit's old paint exactly (the blue dye gives back the pre-steel colours); every other dye is
@@ -36,7 +38,7 @@ hexs = lambda c: '%02x%02x%02x' % c
 #           deep      seam      shade     main      mid       lit       rim       mark
 STEEL    = ['22262e', '3c424c', '58606a', '757c85', '8a9097', '9fa4a9', 'cdcfcf', 'fbf8f0']
 OLD_BLUE = ['122f66', '1b4895', '2358b2', '2d6bcc', '3a7bd6', '4588e0', '62a3ef', '8ccaff']
-PLATES = re.compile(r'^(pad_|upper_core|chest$|bp_|hood_|thigh_|cap_)')
+PLATES = re.compile(r'^(pad_|upper_core|chest$|bp_|hood_|thigh_|cap_|helmet_shell$|collar_|neck_guard$|gorget_lip$|abd_plate$)')
 
 # dye -> (main colour, lightness range): vanilla's dye colours, tuned to read as paint next to the steel
 DYES = {
