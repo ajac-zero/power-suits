@@ -1,8 +1,9 @@
 """Helmet drafts, round 2 (2026-10-20, user: "more drafts, but keep the dimensions the same this time").
 
+(Round 1, five sketches of other sizes, was dropped by the user on 2026-10-21; the helpers it shared live here now.)
 Every draft is the current helmet's envelope: the shell 9 x 9 x 9 (x +-4.5, y 38.95..47.5, z -4..5) and front pieces
 inside the current band's reach (z -4.75, x +-4.75, top 47.75). The shell's sides, back and top reuse the current
-helmet's UV (same paint), so only the face changes. Hidden groups under `head` like round 1 (helmet_protos_art.py).
+helmet's UV (same paint), so only the face changes. Hidden groups under `head` named proto_helm_* (export-model.mjs leaves proto_* out).
 
   F porthole   a 7 x 7 round porthole, 0.75 proud
   G goggles    a steel band round the eyes (wrapping the corners) with two round lenses; a gas-mask filter below
@@ -14,15 +15,55 @@ helmet's UV (same paint), so only the face changes. Hidden groups under `head` l
 v2 (user: "too many of them share the mouth grill"): only the current helmet keeps the grill
 
     uv run --with pillow python3 model/art/helmet_drafts2_art.py   (reads .scratch/helmets/source2.json, a fresh
-    snapshot with round 1 in it; writes .scratch/helmets/plan2.json; apply: .scratch/helmets/apply.js {plan})
+    snapshot of the live project; writes .scratch/helmets/plan2.json; apply: .scratch/helmets/apply.js {plan})
 """
 import json, base64, io, math, sys
 from PIL import Image
 sys.path.insert(0, "model/art")
-from sm_chest_art import used_mask, pack, grid, plate, face_dims
-from helmet_protos_art import C, shell, trim, glass, _P, FACES
+from sm_chest_art import used_mask, pack, grid, plate, C, face_dims
 
 SRC, OUT = ".scratch/helmets/source2.json", ".scratch/helmets/plan2.json"
+# the suit's steel ramp under the blue keys sm_chest_art paints with; reserved visor-glass colours (they glow)
+STEEL = dict(G='22262e', D='3c424c', S='58606a', B='757c85', M='8a9097', L='9fa4a9', H='cdcfcf', H2='fbf8f0')
+C = dict(C, **STEEL, GM='89939a', VG='262c34', VE='1e232a', VH='46505c')
+FACES = ("north", "east", "south", "west", "up", "down")
+
+
+def shell(face, w, h):
+    """The suit's armour plate (lit top / left, shaded right / bottom); dark open-looking underside."""
+    if face == "down": return grid(w, h, 'I1')
+    if face == "up":
+        g = plate(w, h, top='L', left='L', right='S', bottom='S', base='B', marks=('M', 'M', 'S'))
+        g[0][0] = 'H2'
+        return g
+    lit = face in ("east", "north")
+    return plate(w, h, top='H', left='L' if lit else 'B', right='B' if lit else 'S', bottom='S', base='B',
+                 marks=('M', 'S'))
+
+
+def trim(face, w, h):
+    """Steel trim (bands, rims, ridges): lit top, shaded bottom."""
+    if face == "up": return grid(w, h, 'W')
+    if face == "down": return grid(w, h, 'G2')
+    g = grid(w, h, 'GR' if face != "west" else 'GM')
+    g[0] = ['W'] * w
+    if h > 1: g[h - 1] = ['G2'] * w
+    return g
+
+
+def glass(face, w, h):
+    """Visor glass: dark, a highlight streak in the top-left, a darker bottom-right edge."""
+    g = grid(w, h, 'VG')
+    for y in range(h): g[y][w - 1] = 'VE'
+    g[h - 1] = ['VE'] * w
+    for i in range(min(w, h, 3)):
+        if i < w - 1 and i < h - 1: g[i][0] = 'VH'
+    if w > 2 and h > 1: g[0][1] = 'VH'
+    if w > 3: g[0][2] = 'VH'
+    return g
+
+
+_P = {'.': 'B', 'o': 'H', 'W': 'W', 'R': 'GR', 'r': 'G2', 'g': 'VG', 'h': 'VH', 'e': 'VE'}
 SHELL = ([-4.5, 38.95, -4], [4.5, 47.5, 5])
 REUSE = "reuse"            # painter result: take the named current cube's face UV
 
@@ -160,7 +201,7 @@ def main():
     pre = tuple(n for g in DRAFTS.values() for n in g)
     mine = [e for e in model["elements"] if e["name"] in pre]
     rest = [e for e in model["elements"] if e not in mine]
-    # free = no other cube's UV uses it (transparent or old art nobody shows); round 1's sketches are kept
+    # free = no other cube's UV uses it (transparent or old art nobody shows)
     used = used_mask(dict(model, elements=rest), Image.new("RGBA", tex.size, (0, 0, 0, 0)))
     cur = {e["name"]: e for e in model["elements"]}
     plan = {"groups": {}, "pixels": [], "origin": [0, 41, 1], "parent": "head", "checkpoint": "before helmet drafts 2"}
