@@ -356,6 +356,11 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 `entity/ai/` the machine mind's goals (`SuitMind` friendly/rogue); `menu/` the suit menu logic, `client/PowerArmorScreen` + `FuelGauge` its picture and the HUD;
 `client/` holds rendering + camera; `PilotProtection.java` redirects damage; `registry/` registers things.
 Comment the "why" for anything non-obvious; the user reads the code to learn.
+- **Design drafts live in the .bbmodel as hidden groups named `proto_*`** (the helmet sketches under `head`, 2026-10-20:
+  round 1 `proto_helm_A-E`, round 2 `proto_helm_F-L`, same size as the real helmet). `export-model.mjs` and
+  `make-part-icons.py` leave them out (GeckoLib would draw them, hidden or not), but their painted texels stay in the
+  exported texture: the drafts' visor glass is in the reserved glow colours, so `make-glowmasks.py` refuses the next
+  export (visor count) until EXPECTED is raised or the drafts are deleted. Keep them hidden when saving.
 - **The suit is bare steel and paint is a texture swap** (2026-10-20): the armour is drawn in the 8 shades of the steel
   ramp (`model/art/steel_art.py`, `STEEL` in `tools/make-paint-textures.py`); the dye textures swap those shades on the
   plate cubes (`PLATES`) for each dye's ramp. So: repaint armour only in those 8 steel shades (another grey on a plate
