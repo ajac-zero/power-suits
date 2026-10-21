@@ -66,7 +66,7 @@ def cubes_of(outliner, groups, els, roots, skip):
 
     def walk(node, chain, inside):
         g = groups[node['uuid']]
-        if g['name'] in skip:
+        if g['name'] in skip or g['name'].startswith('proto_'):  # design drafts (hidden sketches) aren't part of it
             return
         inside = inside or g['name'] in roots
         chain = chain + [g] if inside else chain

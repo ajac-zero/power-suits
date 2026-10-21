@@ -47,6 +47,15 @@ if (!project.saved) process.stderr.write(`note: "${project.name}" has unsaved ch
 
 const geo = JSON.parse(await bb(`JSON.stringify(Codecs.bedrock.compile({raw: true}))`));
 geo['minecraft:geometry'][0].description.identifier = `geometry.${NAME}`;
+// Design drafts (groups named proto_*, e.g. the hidden helmet sketches under `head`) live in the .bbmodel only:
+// GeckoLib draws every bone in the file, hidden in Blockbench or not, so they and everything under them stay out.
+const bones = geo['minecraft:geometry'][0].bones, drafts = new Set();
+for (let grew = true; grew;) {
+  grew = false;
+  for (const b of bones) if (!drafts.has(b.name) && (b.name.startsWith('proto_') || drafts.has(b.parent))) { drafts.add(b.name); grew = true; }
+}
+geo['minecraft:geometry'][0].bones = bones.filter(b => !drafts.has(b.name));
+if (drafts.size) process.stdout.write(`left out ${drafts.size} draft bones (proto_*)\n`);
 
 const anims = JSON.parse(await bb(`JSON.stringify(Animator.buildFile())`));
 anims.animations = Object.fromEntries(Object.entries(anims.animations)
