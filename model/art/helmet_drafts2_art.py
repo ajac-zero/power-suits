@@ -3,10 +3,11 @@
 (Round 1, five sketches of other sizes, was dropped by the user on 2026-10-21; the helpers it shared live here now.)
 Every draft is the current helmet's envelope: the shell 9 x 9 x 9 (x +-4.5, y 38.95..47.5, z -4..5) and front pieces
 inside the current band's reach (z -4.75, x +-4.75, top 47.75). The shell's sides, back and top reuse the current
-helmet's UV (same paint), so only the face changes. Hidden groups under `head` named proto_helm_* (export-model.mjs leaves proto_* out).
+helmet's UV (same paint) where a draft leaves them alone. Hidden groups under `head` named proto_helm_* (export-model.mjs leaves proto_* out).
 
-  F delta      (after Subject Delta, BioShock 2) a glowing visor painted flat in a riveted frame, two raised bars
-               across it, riveted seams, a side port and a hatch on top (v1: a raised porthole; v2: glowing eyes)
+  F delta      (after Subject Delta, BioShock 2) a glowing visor painted flat in a riveted frame, three half-pixel
+               bars raised in front of it, riveted seams, a side port and a hatch on top (v1: a raised porthole; v2:
+               glowing eyes)
   G chief      (after Halo's Master Chief) a 1 px top band wrapping round the front and sides, the visor glass
                painted flat on the shell under it, round the sides too, its lower edge stepping up round the corners;
                a narrower mouthpiece with a ridge (v1 goggles: round lenses + gas-mask
@@ -14,12 +15,11 @@ helmet's UV (same paint), so only the face changes. Hidden groups under `head` n
   H eva        (after Emile's EVA helmet in Halo Reach) the visor painted flat over the whole front of the head (front,
                the front of the sides, the front half of the top); a steel band round the lower half with red ear
                marks, a mouthpiece (v1: a T-visor faceplate; v2-v3: a tiered dome, dropped: same shape as the others)
-  I slit       two face plates with a real 1 px gap between them, glass set back in it; a plain jaw (seam, rivets)
-  J wrap       a glass band round the front and both sides, half way back; plain below
   K guy        (after Guy-Manuel's Daft Punk helmet) one big dark visor painted flat (it glows), set in a gold U-frame
                (chin bar + side posts), round ear discs painted on (v1 split: the current helmet with a centre bar)
-  L bars       the current visor with three steel bars in front of the glass; a plain jaw
-v2 (user: "too many of them share the mouth grill"): only the current helmet keeps the grill
+The user reworked F, G, H and K one by one after a reference each (flat painted visors that glow, no grills, the
+current helmet's shape); the unreviewed I (slit), J (wrap) and L (bars) were dropped before merging (2026-10-21; in
+git history at 5b0a5fa).
 
     uv run --with pillow python3 model/art/helmet_drafts2_art.py   (reads .scratch/helmets/source2.json, a fresh
     snapshot of the live project; writes .scratch/helmets/plan2.json; apply: .scratch/helmets/apply.js {plan})
@@ -59,42 +59,12 @@ def trim(face, w, h):
     return g
 
 
-def glass(face, w, h):
-    """Visor glass: dark, a highlight streak in the top-left, a darker bottom-right edge."""
-    g = grid(w, h, 'VG')
-    for y in range(h): g[y][w - 1] = 'VE'
-    g[h - 1] = ['VE'] * w
-    for i in range(min(w, h, 3)):
-        if i < w - 1 and i < h - 1: g[i][0] = 'VH'
-    if w > 2 and h > 1: g[0][1] = 'VH'
-    if w > 3: g[0][2] = 'VH'
-    return g
-
-
 _P = {'.': 'B', 'o': 'H', 'W': 'W', 'R': 'GR', 'r': 'G2', 'g': 'VG', 'h': 'VH', 'e': 'VE'}
 SHELL = ([-4.5, 38.95, -4], [4.5, 47.5, 5])
 REUSE = "reuse"            # painter result: take the named current cube's face UV
 
 
-def pattern(rows):
-    return [[dict(_P, I='I0')[ch] for ch in r] for r in rows]
-
-
-
-
-def face_plate(w, h):
-    """A flat steel faceplate (lighter than the shell, like the band)."""
-    return plate(w, h, top='H', left='L', right='S', bottom='S', base='M', marks=('L',), n=0)
-
-
 # name -> (from, to, painter); painter(face, w, h) returns a grid or (REUSE, cube name)
-def shell_with(front):
-    return (*SHELL, lambda f, w, h: front(w, h) if f == "north" else (REUSE, "helmet_shell"))
-
-
-def plain_front(w, h): return shell("north", w, h)
-
-
 # ---------- F: Subject Delta (BioShock 2), on the standard shell ----------
 # v2 (user: keep the diver theme but "more Subject Delta inspired"; v1 was a raised 7 x 7 porthole), v3 (user: the
 # glowing eye portholes dropped, the main window is the visor and glows, with more detail; flat, its bars raised):
@@ -316,31 +286,6 @@ def eva_cubes():
     return out
 
 
-def i_plate(lower):
-    def p(f, w, h):
-        if f != "north": return trim(f, w, h)
-        g = face_plate(w, h)
-        if lower:                                         # a plain jaw: a centre seam, a rivet each side
-            m = w // 2
-            for y in range(1, h - 1): g[y][m] = 'S'
-            g[h // 2][1] = g[h // 2][w - 2] = 'H'
-        return g
-    return p
-
-
-def bar(f, w, h):
-    """A steel bar standing in front of the visor."""
-    if f == "north": return [['W']] + [['GR']] * (h - 2) + [['G2']]
-    return trim(f, w, h)
-
-
-def jaw(f, w, h):
-    """A plain steel jaw block (no grill): lit top row, a rivet at each end."""
-    g = trim(f, w, h)
-    if f == "north" and w > 4: g[h - 1][1] = g[h - 1][w - 2] = 'H'
-    return g
-
-
 def chief_shell(f, w, h):
     """G's shell (v7, user: the visor flat, not a 3D piece): the visor glass painted straight onto the shell's front and
     sides, flush, under the 1 px wrap-around top. Faces map 1:1 from the top (row r = y 47.5-r .. 46.5-r): the top
@@ -410,15 +355,6 @@ DRAFTS = {
     # the whole front of the head, a steel band round the lower half, a mouthpiece; v4: on the standard shell (a
     # tiered dome, v2-v3, was dropped: the drafts keep the current helmet's shape)
     "proto_helm_H_eva": eva_cubes(),
-    "proto_helm_I_slit": {
-        "hI_shell": shell_with(plain_front),
-        "hI_top": ([-4.5, 44.5, -4.75], [4.5, 47.75, -4], i_plate(False)),
-        "hI_bottom": ([-4.5, 38.95, -4.75], [4.5, 43.5, -4], i_plate(True)),
-        "hI_glass": ([-3.5, 43.5, -4.25], [3.5, 44.5, -4], lambda f, w, h: glass(f, w, h) if f == "north" else grid(w, h, 'I1'))},
-    "proto_helm_J_wrap": {
-        "hJ_shell": shell_with(plain_front),                             # plain below the glass
-        "hJ_band": ([-4.75, 42, -4.75], [4.75, 45, 0.5],
-                    lambda f, w, h: glass(f, w, h) if f in ("north", "east", "west") else grid(w, h, 'I1'))},
     "proto_helm_K_guy": {
         "hK_shell": (*SHELL, guy_shell),
         # the U-frame: a chin bar round the front corners, two side posts on it (sunk 0.1 into it, 0.05 in at the
@@ -426,16 +362,6 @@ DRAFTS = {
         "hK_chin": ([-4.75, 38.9, -4.75], [4.75, 40.5, -2], guy_plate),
         "hK_post_r": ([3.75, 40.4, -4.7], [4.7, 47.45, -2], guy_plate),
         "hK_post_l": ([-4.7, 40.4, -4.7], [-3.75, 47.45, -2], guy_plate)},
-    "proto_helm_L_cage": {
-        "hL_shell": shell_with(plain_front),
-        "hL_brow": ([-3.5, 46, -4.75], [3.5, 47.75, -2.75], reuse("helmet_brow")),
-        "hL_cheek_r": ([3.5, 41, -4.75], [4.75, 46, -2.75], reuse("cheek_r")),
-        "hL_cheek_l": ([-4.75, 41, -4.75], [-3.5, 46, -2.75], reuse("cheek_l")),
-        "hL_visor": ([-3.5, 41, -4.5], [3.5, 46, -4], reuse("visor")),
-        "hL_bar_r": ([1.5, 41, -4.75], [2.5, 46, -4.5], bar),             # three bars in front of the glass
-        "hL_bar_m": ([-0.5, 41, -4.75], [0.5, 46, -4.5], bar),
-        "hL_bar_l": ([-2.5, 41, -4.75], [-1.5, 46, -4.5], bar),
-        "hL_jaw": ([-3.5, 38.95, -4.75], [3.5, 41, -4], jaw)},
 }
 
 

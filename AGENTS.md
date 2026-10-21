@@ -357,7 +357,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 `client/` holds rendering + camera; `PilotProtection.java` redirects damage; `registry/` registers things.
 Comment the "why" for anything non-obvious; the user reads the code to learn.
 - **Design drafts live in the .bbmodel as hidden groups named `proto_*`** (the helmet drafts under `head`, 2026-10-20:
-  `proto_helm_F-L`, same size as the real helmet; round 1's A-E were dropped). `export-model.mjs` and
+  `proto_helm_F_delta`, `G_chief`, `H_eva`, `K_guy`, same size as the real helmet; `model/art/helmet_drafts2_art.py`). `export-model.mjs` and
   `make-part-icons.py` leave them out (GeckoLib would draw them, hidden or not), but their painted texels stay in the
   exported texture: the drafts' visor glass is in the reserved glow colours, so `make-glowmasks.py` refuses the next
   export (visor count) until EXPECTED is raised or the drafts are deleted. Keep them hidden when saving.
