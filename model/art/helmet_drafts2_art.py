@@ -6,7 +6,10 @@ inside the current band's reach (z -4.75, x +-4.75, top 47.75). The shell's side
 helmet's UV (same paint), so only the face changes. Hidden groups under `head` named proto_helm_* (export-model.mjs leaves proto_* out).
 
   F porthole   a 7 x 7 round porthole, 0.75 proud
-  G goggles    a steel band round the eyes (wrapping the corners) with two round lenses; a gas-mask filter below
+  G chief      (after Halo's Master Chief) a 1 px top band wrapping round the front and sides, the visor glass
+               painted flat on the shell under it, round the sides too, its lower edge stepping up round the corners;
+               a narrower mouthpiece with a ridge (v1 goggles: round lenses + gas-mask
+               filter; v2: a raised gold visor, dropped: the visor glows yellow already)
   H T-visor    a flat faceplate with a T cut in it
   I slit       two face plates with a real 1 px gap between them, glass set back in it; a plain jaw (seam, rivets)
   J wrap       a glass band round the front and both sides, half way back; plain below
@@ -16,6 +19,7 @@ v2 (user: "too many of them share the mouth grill"): only the current helmet kee
 
     uv run --with pillow python3 model/art/helmet_drafts2_art.py   (reads .scratch/helmets/source2.json, a fresh
     snapshot of the live project; writes .scratch/helmets/plan2.json; apply: .scratch/helmets/apply.js {plan})
+    ... helmet_drafts2_art.py _G_   rebuilds only the drafts whose group name contains _G_ (the others stay as they are)
 """
 import json, base64, io, math, sys
 from PIL import Image
@@ -73,7 +77,6 @@ def pattern(rows):
 
 
 PORT7 = pattern(("o.WWR.o", ".Whggr.", "Whhgggr", "Whggggr", "Wgggger", ".Rgeer.", "o.rrr.o"))
-LENS = pattern((".WR.", "Whgr", "Rger", ".rr."))
 
 
 def face_plate(w, h):
@@ -87,17 +90,6 @@ def shell_with(front):
 
 
 def plain_front(w, h): return shell("north", w, h)
-
-
-def g_band(f, w, h):
-    if f == "north":
-        g = trim(f, w, h)
-        for x0 in (1, 5):
-            for j, row in enumerate(LENS):
-                for i, k in enumerate(row):
-                    if k != 'B': g[j][x0 + i] = k
-        return g
-    return trim(f, w, h)
 
 
 def h_face(f, w, h):
@@ -143,11 +135,52 @@ def jaw(f, w, h):
     return g
 
 
-FILTER = pattern((".WR.", "WIRr", "RrIr", ".rr."))   # a round filter canister: steel rim, dark mesh
+def chief_shell(f, w, h):
+    """G's shell (v7, user: the visor flat, not a 3D piece): the visor glass painted straight onto the shell's front and
+    sides, flush, under the 1 px wrap-around top. Faces map 1:1 from the top (row r = y 47.5-r .. 46.5-r): the top
+    covers row 2, the glass rows 3-5 (y 41.5..44.5; the mouthpiece hides the bottom of the middle). One staircase round
+    the lower edge: 3 rows across the middle of the front, 2 at its ends and at the front of the sides, 1 at the back of
+    the sides (2 px round each corner). Glass in the glow colours (it lights up); the back, top and underside are the
+    current helmet's."""
+    if f not in ("north", "east", "west"): return (REUSE, "helmet_shell")
+    g = shell(f, w, h)
+    if f == "north":
+        rows = {x: (3, 4) if x in (0, 1, w - 2, w - 1) else (3, 4, 5) for x in range(w)}
+    else:                                                      # the side's front: east's last column, west's first
+        f0, f1 = (w - 1, w - 2) if f == "east" else (0, 1)
+        rows = {f0: (3, 4), f1: (3,)}
+    for x, ys in rows.items():
+        for y in ys:
+            g[y][x] = 'VE' if y == ys[-1] else 'VG'
+    if f == "north":
+        g[3][0] = g[3][1] = g[3][2] = g[4][0] = 'VH'           # the highlight, top left
+        for y in (3, 4, 5): g[y][w - 3] = 'VE' if y == 5 else g[y][w - 3]
+        g[3][w - 1] = 'VE'
+    else:
+        g[3][f0] = 'VH' if f == "east" else 'VG'               # light from the viewer's left, like the front
+    return g
 
 
-def g_filter(f, w, h):
-    return [r[:] for r in FILTER] if f == "north" else trim(f, w, h)
+def chief_brow(f, w, h):
+    """G's forehead: the top of the shell wrapping round the front and both sides over the visor (the cap comes down
+    round it, so the visor reads as an indent); painted like the shell, dark where it overhangs the glass."""
+    if f == "down": return grid(w, h, 'D')
+    if f == "north":
+        if h == 1: return [['L'] + ['B'] * (w - 2) + ['S']]       # v6: 1 px tall, a plain band
+        return plate(w, h, top='H', left='L', right='S', bottom='S', base='B', marks=('M',), n=0)
+    return shell(f, w, h)
+
+
+def chief_jaw(f, w, h):
+    """G's mouthpiece: a narrower block under the visor, a lit ridge down its middle, shaded flanks (no vents: two
+    dark dots read as a second pair of eyes)."""
+    if f != "north": return shell(f, w, h)
+    g = plate(w, h, top='L', left='L', right='S', bottom='S', base='B', marks=('M',), n=0)
+    m = w // 2
+    for y in range(1, h):
+        g[y][m - 1] = 'H' if y < h - 1 else 'L'; g[y][m] = 'M'
+        g[y][1] = 'M'; g[y][w - 2] = 'S'
+    return g
 
 
 def reuse(name): return lambda f, w, h: (REUSE, name)
@@ -157,10 +190,14 @@ DRAFTS = {
     "proto_helm_F_porthole": {
         "hF_shell": shell_with(plain_front),
         "hF_port": ([-3.5, 40, -4.75], [3.5, 47, -4], lambda f, w, h: [r[:] for r in PORT7] if f == "north" else trim(f, w, h))},
-    "proto_helm_G_goggles": {
-        "hG_shell": shell_with(plain_front),
-        "hG_filter": ([-2, 38.95, -4.75], [2, 42, -4], g_filter),        # gas-mask filter instead of a grill
-        "hG_band": ([-4.75, 42, -4.75], [4.75, 46, -2.75], g_band)},
+    # v2 (user: rework the green one, "more of a master chief reference look"): a forehead plate coming forward over
+    # one wide gold visor that wraps round the corners, a narrower mouthpiece under it with a ridge and two vents
+    "proto_helm_G_chief": {
+        "hG_shell": (*SHELL, chief_shell),
+        # v3 (user): no raised gold visor; the top wraps round the front and sides, the glowing visor under it
+        # v6: the top a 1 px band (y 44.5..45.5); v7: the visor flat, painted on the shell (chief_shell)
+        "hG_brow": ([-4.75, 44.5, -4.75], [4.75, 45.5, -2], chief_brow),
+        "hG_jaw": ([-2.5, 38.95, -4.75], [2.5, 41.75, -4], chief_jaw)},
     "proto_helm_H_tvisor": {
         "hH_shell": shell_with(plain_front),
         "hH_face": ([-4, 38.95, -4.75], [4, 47.5, -4], h_face)},
@@ -198,15 +235,17 @@ def main():
     src = json.load(open(SRC))
     model = src["model"]
     tex = Image.open(io.BytesIO(base64.b64decode(src["texture"].split(",", 1)[1]))).convert("RGBA")
-    pre = tuple(n for g in DRAFTS.values() for n in g)
+    only = [g for g in DRAFTS if any(k in g for k in sys.argv[1:])] if len(sys.argv) > 1 else list(DRAFTS)
+    drafts = {g: DRAFTS[g] for g in only}
+    pre = tuple(n for g in drafts.values() for n in g)
     mine = [e for e in model["elements"] if e["name"] in pre]
     rest = [e for e in model["elements"] if e not in mine]
     # free = no other cube's UV uses it (transparent or old art nobody shows)
     used = used_mask(dict(model, elements=rest), Image.new("RGBA", tex.size, (0, 0, 0, 0)))
     cur = {e["name"]: e for e in model["elements"]}
-    plan = {"groups": {}, "pixels": [], "origin": [0, 41, 1], "parent": "head", "checkpoint": "before helmet drafts 2"}
+    plan = {"groups": {}, "pixels": [], "origin": [0, 41, 1], "parent": "head", "checkpoint": "before helmet drafts: " + ", ".join(only)}
     faces, rects = {}, []
-    for group, cubes in DRAFTS.items():
+    for group, cubes in drafts.items():
         plan["groups"][group] = {}
         for name, (f, t, paint) in cubes.items():
             spec = plan["groups"][group][name] = {"from": f, "to": t, "faces": {}}
@@ -225,9 +264,10 @@ def main():
     for (group, name, face), (fw, fh, g) in faces.items():
         u, v = at[(group, name, face)]
         plan["groups"][group][name]["faces"][face] = [u, v, u + fw, v + fh]
-        plan["pixels"] += [[u + x, v + y, C[k]] for y, row in enumerate(g) for x, k in enumerate(row)]
+        plan["pixels"] += [[u + x, v + y, C[k]] for y, row in enumerate(g) for x, k in enumerate(row) if k != 'T']
+        plan.setdefault("clear", []).extend([u + x, v + y] for y, row in enumerate(g) for x, k in enumerate(row) if k == 'T')
     json.dump(plan, open(OUT, "w"))
-    print("drafts", len(DRAFTS), "cubes", sum(len(c) for c in DRAFTS.values()), "pixels", len(plan["pixels"]))
+    print("drafts", list(drafts), "cubes", sum(len(c) for c in drafts.values()), "pixels", len(plan["pixels"]))
 
 
 if __name__ == "__main__":
