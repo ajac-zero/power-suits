@@ -5,7 +5,8 @@ Every draft is the current helmet's envelope: the shell 9 x 9 x 9 (x +-4.5, y 38
 inside the current band's reach (z -4.75, x +-4.75, top 47.75). The shell's sides, back and top reuse the current
 helmet's UV (same paint), so only the face changes. Hidden groups under `head` named proto_helm_* (export-model.mjs leaves proto_* out).
 
-  F porthole   a 7 x 7 round porthole, 0.75 proud
+  F delta      (after Subject Delta, BioShock 2) a glowing visor painted flat in a riveted frame, two raised bars
+               across it, riveted seams, a side port and a hatch on top (v1: a raised porthole; v2: glowing eyes)
   G chief      (after Halo's Master Chief) a 1 px top band wrapping round the front and sides, the visor glass
                painted flat on the shell under it, round the sides too, its lower edge stepping up round the corners;
                a narrower mouthpiece with a ridge (v1 goggles: round lenses + gas-mask
@@ -78,7 +79,6 @@ def pattern(rows):
     return [[dict(_P, I='I0')[ch] for ch in r] for r in rows]
 
 
-PORT7 = pattern(("o.WWR.o", ".Whggr.", "Whhgggr", "Whggggr", "Wgggger", ".Rgeer.", "o.rrr.o"))
 
 
 def face_plate(w, h):
@@ -92,6 +92,74 @@ def shell_with(front):
 
 
 def plain_front(w, h): return shell("north", w, h)
+
+
+# ---------- F: Subject Delta (BioShock 2), on the standard shell ----------
+# v2 (user: keep the diver theme but "more Subject Delta inspired"; v1 was a raised 7 x 7 porthole), v3 (user: the
+# glowing eye portholes dropped, the main window is the visor and glows, with more detail; flat, its bars raised):
+#   - the visor painted flat in the glow colours, a rounded window in a riveted frame: shadow under the frame's top,
+#     a reflection streak
+#   - two bars standing 0.75 px out in front of it (the reference's window bars), anchored in the frame
+#   - a riveted seam down the chin, a riveted seam on each side near the front, a small dark side port, a round hatch
+#     on the top, a riveted seam across the back (the in-game view)
+# Frames, rivets and bars are in the armour's own shades: they take the paint (brown: Delta's brass).
+def delta_pat(rows):
+    """Pattern rows -> keys: '.' = leave the shell, H/M/S/B/L/D armour shades, h/g/e glass (glows), 0/1 dark iron."""
+    k = {'h': 'VH', 'g': 'VG', 'e': 'VE', '0': 'I0', '1': 'I1', '2': 'H2'}
+    return [[None if ch == '.' else k.get(ch, ch) for ch in r] for r in rows]
+
+
+# 9 x 7 over the face's rows 0-6 (y 40.5..47.5): a solid frame (lit top and left, shaded right and bottom) with a
+# rivet (H2) at each corner and halfway down each side, the glass rows 1-5 (y 41.5..46.5) its corners rounded off by
+# the frame: shadow under the frame's top, a reflection streak, darker bottom row. The bars stand over columns 3 and
+# 5 (x 0.5..1.5, -1.5..-0.5), since v4 three over columns 2, 4, 6. (v3a had rivets all along the frame and bar
+# shadows on the glass: it read as a cage.)
+DELTA_VISOR = delta_pat((".2HHHHH2.",
+                         "LMeeeeeMS",
+                         "LhhgggggS",
+                         "2hgggggg2",
+                         "LgggggggS",
+                         "LMeeeeeMS",
+                         ".2SSSSS2."))
+DELTA_BAR_W = 0.5    # bar width (px): half-pixel bars leave ~1.25 px panes (user's pick; 1 px bars left 1 px slits)
+DELTA_PORT = delta_pat((".HM.", "H01S", "M00S", ".SS."))
+DELTA_HATCH = delta_pat((".HHM.", "HMMMS", "HMDMS", "MMMSS", ".SSS."))
+
+
+def stamp(g, pat, r0, c0):
+    for r, row in enumerate(pat):
+        for c, k in enumerate(row):
+            if k and 0 <= r0 + r < len(g) and 0 <= c0 + c < len(g[0]): g[r0 + r][c0 + c] = k
+
+
+def delta(face, w, h):
+    if face == "down": return (REUSE, "helmet_shell")
+    # plain plates (no wear marks: the rivets and seams are the detail here)
+    if face == "up": g = plate(w, h, top='L', left='L', right='S', bottom='S', base='B', n=0)
+    else:
+        lit = face in ("east", "north")
+        g = plate(w, h, top='H', left='L' if lit else 'B', right='B' if lit else 'S', bottom='S', base='B', n=0)
+    if face == "north":                                        # 9 x 9, row r = y 47.5-r
+        stamp(g, DELTA_VISOR, 0, 0)
+        for r in range(7, h): g[r][4] = 'H' if r % 2 else 'S'  # the riveted seam down the chin
+    elif face in ("east", "west"):
+        fc = w - 2 if face == "east" else 1                    # one column in from the front edge
+        for r in range(1, h - 1): g[r][fc] = 'H' if r % 2 else 'S'
+        stamp(g, DELTA_PORT, 1, 3 if face == "east" else 2)
+    elif face == "up":
+        stamp(g, DELTA_HATCH, 2, 2)
+    elif face == "south":
+        for c in range(w): g[4][c] = 'H' if c % 2 else 'S'
+        g[5] = ['L'] * w
+    return g
+
+
+def delta_bar(f, w, h):
+    """F's window bars: armour shades (they take the paint), lit top and left side."""
+    if f == "up": return grid(w, h, 'H')
+    if f == "down": return grid(w, h, 'S')
+    if f == "north": return [['H']] + [['M']] * (h - 2) + [['S']]
+    return grid(w, h, 'L' if f == "east" else 'S')
 
 
 # ---------- H: Emile's EVA helmet (Halo Reach), on the standard shell ----------
@@ -286,9 +354,11 @@ def reuse(name): return lambda f, w, h: (REUSE, name)
 
 
 DRAFTS = {
-    "proto_helm_F_porthole": {
-        "hF_shell": shell_with(plain_front),
-        "hF_port": ([-3.5, 40, -4.75], [3.5, 47, -4], lambda f, w, h: [r[:] for r in PORT7] if f == "north" else trim(f, w, h))},
+    "proto_helm_F_delta": {
+        "hF_shell": (*SHELL, delta),
+        # the window bars, 0.75 out from the flat visor; v4 (user): three, centred over columns 2, 4, 6
+        **{f"hF_bar_{k}": ([x - 0.5 * DELTA_BAR_W, 41, -4.75], [x + 0.5 * DELTA_BAR_W, 47, -4], delta_bar)
+           for k, x in (("r", 2), ("m", 0), ("l", -2))}},
     # v2 (user: rework the green one, "more of a master chief reference look"): a forehead plate coming forward over
     # one wide gold visor that wraps round the corners, a narrower mouthpiece under it with a ridge and two vents
     "proto_helm_G_chief": {
