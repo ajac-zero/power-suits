@@ -16,7 +16,8 @@ helmet's UV (same paint), so only the face changes. Hidden groups under `head` n
                marks, a mouthpiece (v1: a T-visor faceplate; v2-v3: a tiered dome, dropped: same shape as the others)
   I slit       two face plates with a real 1 px gap between them, glass set back in it; a plain jaw (seam, rivets)
   J wrap       a glass band round the front and both sides, half way back; plain below
-  K split      the current helmet with a centre bar: two panes; a plain jaw instead of the grill
+  K guy        (after Guy-Manuel's Daft Punk helmet) one big dark visor painted flat (it glows), set in a gold U-frame
+               (chin bar + side posts), round ear discs painted on (v1 split: the current helmet with a centre bar)
   L bars       the current visor with three steel bars in front of the glass; a plain jaw
 v2 (user: "too many of them share the mouth grill"): only the current helmet keeps the grill
 
@@ -162,6 +163,50 @@ def delta_bar(f, w, h):
     return grid(w, h, 'L' if f == "east" else 'S')
 
 
+# ---------- K: Guy-Manuel's helmet (Daft Punk), on the standard shell ----------
+# v2 (user: the yellow one after Guy-Manuel de Homem-Christo's gold helmet; v1 was the current helmet with a centre
+# bar): a gold U-frame round one big visor painted flat, set back in the frame,
+#   - the visor over the whole face and the front of the top in the dim glow colour (dark glass that lights up), its
+#     top edge curving back over the head, a soft reflection (v2b: an LED display of stacked bars each side, the only
+#     part lit: "they look like teeth"; v2c: the visor glowing dimly, picked over one LED line that read as a slit)
+#   - the frame: a chin bar and two side posts standing out round the visor (0.7-0.75 px), wrapping the corners
+#   - a round ear disc painted on each side over a panel (v2: 3D discs 0.25 px out; user: painted)
+# Shell, frame and discs are in the armour's shades (they take the paint: yellow = gold); the glass doesn't.
+def guy_plate(f, w, h):
+    """K's frame pieces and ear discs: plain armour plate, lit top and left."""
+    if f == "up": return grid(w, h, 'H')
+    if f == "down": return grid(w, h, 'S')
+    return plate(w, h, top='H', left='L', right='S', bottom='S', base='M', n=0)
+
+
+# v2d (user): the ear discs painted, not 3D: a 4 x 4 disc outlined dark (shading alone read as a diagonal smear)
+GUY_EAR = delta_pat((".DD.", "DHMD", "DMSD", ".DD."))
+
+
+def guy_shell(f, w, h):
+    if f == "down": return (REUSE, "helmet_shell")
+    lit = f in ("east", "north")
+    g = plate(w, h, top='H', left='L' if lit else 'B', right='B' if lit else 'S', bottom='S', base='B', n=0)
+    if f == "up": g = plate(w, h, top='L', left='L', right='S', bottom='S', base='B', n=0)
+    # the visor in the dim glow colour, the reflection in the bright one (v2b: black with LED bars, read as teeth;
+    # v2c: black with one LED line, read as a visor slit)
+    if f == "north":                                           # 9 x 9: the glass above the chin bar (rows 0-6)
+        for r in range(7):
+            for c in range(w): g[r][c] = 'VE'
+        for r, c in ((0, 4), (1, 3), (2, 3), (0, 5)): g[r][c] = 'VH'
+    elif f == "up":                                            # the visor over the front of the top, curving back
+        reach = {1: 2, 2: 3, 3: 4, 4: 4, 5: 4, 6: 3, 7: 2}      # column -> last glass row (row 0 = front)
+        for c, last in reach.items():
+            for r in range(last + 1): g[r][c] = 'VE'
+        g[0][3] = g[0][4] = g[1][4] = 'VH'
+    elif f in ("east", "west"):                                # the ear disc (z -1.5..2.5) over a panel
+        c0 = 2 if f == "east" else 3
+        stamp(g, GUY_EAR if f == "east" else [r[::-1] for r in GUY_EAR], 2, c0)
+        for c in range(c0, c0 + 4):
+            g[6][c] = 'S'; g[7][c] = 'D'
+    return g
+
+
 # ---------- H: Emile's EVA helmet (Halo Reach), on the standard shell ----------
 # v5 (user: "more dynamic and interesting", then "I will let you cook"): the right angles of v4 (a visor cut straight
 # at the head's middle over a level ring) swapped for the reference's sweeps, keeping the shape:
@@ -283,12 +328,6 @@ def i_plate(lower):
     return p
 
 
-def k_bar(f, w, h):
-    g = trim(f, w, h)
-    if f == "north": g = [['W' if y == 0 else 'GR'] for y in range(h)]
-    return g
-
-
 def bar(f, w, h):
     """A steel bar standing in front of the visor."""
     if f == "north": return [['W']] + [['GR']] * (h - 2) + [['G2']]
@@ -380,14 +419,13 @@ DRAFTS = {
         "hJ_shell": shell_with(plain_front),                             # plain below the glass
         "hJ_band": ([-4.75, 42, -4.75], [4.75, 45, 0.5],
                     lambda f, w, h: glass(f, w, h) if f in ("north", "east", "west") else grid(w, h, 'I1'))},
-    "proto_helm_K_split": {
-        "hK_shell": (*SHELL, reuse("helmet_shell")),
-        "hK_brow": ([-3.5, 46, -4.75], [3.5, 47.75, -2.75], reuse("helmet_brow")),
-        "hK_cheek_r": ([3.5, 41, -4.75], [4.75, 46, -2.75], reuse("cheek_r")),
-        "hK_cheek_l": ([-4.75, 41, -4.75], [-3.5, 46, -2.75], reuse("cheek_l")),
-        "hK_visor": ([-3.5, 41, -4.5], [3.5, 46, -4], reuse("visor")),
-        "hK_chin": ([-3.5, 39, -4.75], [3.5, 41, -4], jaw),               # a plain jaw, not the grill
-        "hK_bar": ([-0.5, 41, -4.75], [0.5, 46, -4.5], k_bar)},
+    "proto_helm_K_guy": {
+        "hK_shell": (*SHELL, guy_shell),
+        # the U-frame: a chin bar round the front corners, two side posts on it (sunk 0.1 into it, 0.05 in at the
+        # sides and front: no shared planes; their tops just under the shell's)
+        "hK_chin": ([-4.75, 38.9, -4.75], [4.75, 40.5, -2], guy_plate),
+        "hK_post_r": ([3.75, 40.4, -4.7], [4.7, 47.45, -2], guy_plate),
+        "hK_post_l": ([-4.7, 40.4, -4.7], [-3.75, 47.45, -2], guy_plate)},
     "proto_helm_L_cage": {
         "hL_shell": shell_with(plain_front),
         "hL_brow": ([-3.5, 46, -4.75], [3.5, 47.75, -2.75], reuse("helmet_brow")),
