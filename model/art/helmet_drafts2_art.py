@@ -10,7 +10,9 @@ helmet's UV (same paint), so only the face changes. Hidden groups under `head` n
                painted flat on the shell under it, round the sides too, its lower edge stepping up round the corners;
                a narrower mouthpiece with a ridge (v1 goggles: round lenses + gas-mask
                filter; v2: a raised gold visor, dropped: the visor glows yellow already)
-  H T-visor    a flat faceplate with a T cut in it
+  H eva        (after Emile's EVA helmet in Halo Reach) the visor painted flat over the whole front of the head (front,
+               the front of the sides, the front half of the top); a steel band round the lower half with red ear
+               marks, a mouthpiece (v1: a T-visor faceplate; v2-v3: a tiered dome, dropped: same shape as the others)
   I slit       two face plates with a real 1 px gap between them, glass set back in it; a plain jaw (seam, rivets)
   J wrap       a glass band round the front and both sides, half way back; plain below
   K split      the current helmet with a centre bar: two panes; a plain jaw instead of the grill
@@ -29,7 +31,7 @@ from sm_chest_art import used_mask, pack, grid, plate, C, face_dims
 SRC, OUT = ".scratch/helmets/source2.json", ".scratch/helmets/plan2.json"
 # the suit's steel ramp under the blue keys sm_chest_art paints with; reserved visor-glass colours (they glow)
 STEEL = dict(G='22262e', D='3c424c', S='58606a', B='757c85', M='8a9097', L='9fa4a9', H='cdcfcf', H2='fbf8f0')
-C = dict(C, **STEEL, GM='89939a', VG='262c34', VE='1e232a', VH='46505c')
+C = dict(C, **STEEL, GM='89939a', VG='262c34', VE='1e232a', VH='46505c', RD='c23b22')  # RD: H's red ear marks
 FACES = ("north", "east", "south", "west", "up", "down")
 
 
@@ -92,16 +94,113 @@ def shell_with(front):
 def plain_front(w, h): return shell("north", w, h)
 
 
-def h_face(f, w, h):
-    if f != "north": return trim(f, w, h)
-    g = face_plate(w, h)
-    for x in range(1, w - 1):
-        g[2][x] = 'VH' if x <= 2 else 'VG'; g[3][x] = 'VE'
-    for y in range(4, h - 2):
-        g[y][3] = 'VG'; g[y][4] = 'VE'
-    for y in (6, 7):
-        g[y][1] = 'I0'; g[y][w - 2] = 'I0'
+# ---------- H: Emile's EVA helmet (Halo Reach), on the standard shell ----------
+# v5 (user: "more dynamic and interesting", then "I will let you cook"): the right angles of v4 (a visor cut straight
+# at the head's middle over a level ring) swapped for the reference's sweeps, keeping the shape:
+#   - the visor a bubble: its back edge curves (furthest back at eye level, coming forward towards the top and the
+#     band), its top edge rounds over the forehead; painted, so it steps in pixels like G's
+#   - a dark rim round the glass where it meets the armour (a fitted window, not the head changing colour)
+#   - a reflection streak across the glass (brighter again when lit: the mask's highlight colour)
+#   - the band sweeps: low under the chin (a V where the mouthpiece sits), stepping up twice towards the back of each
+#     side; three short red bars low on the cheeks (the reference's slashes)
+#   - seams on the back half (a centre seam over the top, a plate tuck across the back) for the in-game view
+def face_point(face, f, t, c, r):
+    """World point (x, y, z) at the centre of texel (c, r) of a face whose UV maps 1:1 from its top left (as packed
+    here): north: left = +x; south: left = -x; east: left = back; west: left = front; up: row 0 = front, left = +x."""
+    if face == "north": return t[0] - c - .5, t[1] - r - .5, f[2]
+    if face == "south": return f[0] + c + .5, t[1] - r - .5, t[2]
+    if face == "east": return t[0], t[1] - r - .5, t[2] - c - .5
+    if face == "west": return f[0], t[1] - r - .5, f[2] + c + .5
+    if face == "up": return t[0] - c - .5, t[1], f[2] + r + .5
+    return t[0] - c - .5, f[1], f[2] + r + .5
+
+
+def eva_band_top(x, z):
+    """Top of the band under a point of the shell (the visor starts above it)."""
+    if z < -1: return 40.5 if abs(x) < 1.5 else 41.5
+    return 42.5 if z < 1.5 else 43.5
+
+
+def eva_glass(face, x, y, z):
+    if face == "north": return y > eva_band_top(x, z)
+    if face in ("east", "west"):
+        return y > eva_band_top(x, z) and z < 1.0 - 1.5 * ((y - 44.5) / 3.0) ** 2
+    if face == "up": return z < 1.0 - 1.5 * (x / 4.5) ** 2
+    return False
+
+
+def eva(f, t):
+    """H's shell: the suit's plate (takes the paint) with the visor painted flat in the glow colours."""
+    def p(face, w, h):
+        g = shell(face, w, h)
+        if face == "down": return g
+        pts = [[face_point(face, f, t, c, r) for c in range(w)] for r in range(h)]
+        glass = [[eva_glass(face, *pts[r][c]) for c in range(w)] for r in range(h)]
+        near = lambda r, c: any(0 <= r + dr < h and 0 <= c + dc < w and glass[r + dr][c + dc]
+                                for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+        for r in range(h):
+            for c in range(w):
+                if glass[r][c]: g[r][c] = 'VG'
+                elif near(r, c) and pts[r][c][1] > eva_band_top(pts[r][c][0], pts[r][c][2]): g[r][c] = 'I2'   # rim
+        if face == "north":                                    # the reflection: a diagonal streak, top left
+            for r, c in ((0, 3), (1, 2), (2, 1), (3, 0), (0, 5), (1, 4)):     # a long and a short diagonal
+                if glass[r][c]: g[r][c] = 'VH'
+            for c in range(w):                                 # in the band's shadow: the glass's lowest row
+                rows = [r for r in range(h) if glass[r][c]]
+                if rows: g[rows[-1]][c] = 'VE'
+        if face == "up":                                       # the streak carries over the top, lit edge up front
+            for r, c in ((0, 2), (0, 3), (1, 2)):
+                if glass[r][c]: g[r][c] = 'VH'
+            m = w // 2
+            for r in range(h):                                 # a centre seam over the back half
+                if not glass[r][m] and g[r][m] != 'I2': g[r][m] = 'S'
+        if face == "south":                                    # a plate tuck across the back
+            g[3] = ['S'] * w; g[4] = ['L'] * w
+            g[3][0] = g[4][0] = 'B'
+        return g
+    return p
+
+
+SLASHES = [(0, 0), (1, 0), (0, 2), (1, 2), (0, 4), (1, 4)]     # three red bars, 2 px tall (as "///" read as a checkerboard)
+
+
+def eva_band(f, w, h):
+    """H's band pieces: bare steel trim; the low ring carries red slashes on the cheeks."""
+    return trim(f, w, h)
+
+
+def eva_ring(f, w, h):
+    g = trim(f, w, h)
+    if f in ("east", "west") and h >= 2 and w >= 8:
+        start = 1 if f == "west" else w - 6                    # towards the front: west's first columns, east's last
+        for r, c in SLASHES: g[r][start + c] = 'RD'
     return g
+
+
+def eva_mouth(f, w, h):
+    """H's mouthpiece: a steel block standing out from the band's V, a lit ridge down its middle."""
+    g = trim(f, w, h)
+    if f == "north":
+        m = w // 2
+        for y in range(1, h): g[y][m] = 'W'
+    return g
+
+
+def eva_cubes():
+    """The standard 9 x 9 x 9 shell (back and underside painted here too: the seams) and a band in steps. Band pieces
+    sink 0.1 into the one below and step 0.05 in at the sides / front / back, so no two faces share a plane."""
+    f, t = SHELL
+    out = {"hH_shell": (f, t, lambda face, w, h: (REUSE, "helmet_shell") if face == "down" else eva(f, t)(face, w, h))}
+    out["hH_ring"] = ([-4.75, 38.9, -4.5], [4.75, 40.5, 3.5], eva_ring)            # low ring, front and sides
+    for k, sx in (("r", 1), ("l", -1)):
+        lo, hi = sorted((1.5 * sx, 4.7 * sx))
+        out[f"hH_cheek_{k}"] = ([lo, 40.4, -4.45], [hi, 41.5, 3.45], eva_band)      # up to the visor, beside the V
+        lo, hi = sorted((2 * sx, 4.65 * sx))
+        out[f"hH_step1_{k}"] = ([lo, 41.4, -1], [hi, 42.5, 3.4], eva_band)          # rising behind the eyes
+        lo, hi = sorted((2 * sx, 4.6 * sx))
+        out[f"hH_step2_{k}"] = ([lo, 42.4, 1.5], [hi, 43.5, 3.35], eva_band)        # and again at the back
+    out["hH_mouth"] = ([-1.5, 38.7, -4.75], [1.5, 40.75, -4.5], eva_mouth)
+    return out
 
 
 def i_plate(lower):
@@ -198,9 +297,10 @@ DRAFTS = {
         # v6: the top a 1 px band (y 44.5..45.5); v7: the visor flat, painted on the shell (chief_shell)
         "hG_brow": ([-4.75, 44.5, -4.75], [4.75, 45.5, -2], chief_brow),
         "hG_jaw": ([-2.5, 38.95, -4.75], [2.5, 41.75, -4], chief_jaw)},
-    "proto_helm_H_tvisor": {
-        "hH_shell": shell_with(plain_front),
-        "hH_face": ([-4, 38.95, -4.75], [4, 47.5, -4], h_face)},
+    # v3 (user: Emile's helmet, the Reach EVA, without the skull and for now without the side module): the visor over
+    # the whole front of the head, a steel band round the lower half, a mouthpiece; v4: on the standard shell (a
+    # tiered dome, v2-v3, was dropped: the drafts keep the current helmet's shape)
+    "proto_helm_H_eva": eva_cubes(),
     "proto_helm_I_slit": {
         "hI_shell": shell_with(plain_front),
         "hI_top": ([-4.5, 44.5, -4.75], [4.5, 47.75, -4], i_plate(False)),
