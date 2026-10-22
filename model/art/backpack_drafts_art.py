@@ -50,7 +50,10 @@ TANK = on('iron', south=world(strap)('south'), east=world(strap)('east'), west=w
 PUMP = on('iron', south=['MMMMMM', 'dTGGTd', 'dGbeGd', 'dGabSd', 'dTSSTd', 'KKKKKK'],
           up=['DDDDDD', 'DdGGdD', 'DdGGdD', 'MMMMMM'])
 TANKS = {**pair("pkTA_tank_a", [3, 31.625, 7], [7, 43.625, 10], TANK),   # x 3..7: where the exhausts were, wider
-         **pair("pkTA_tank_b", [3.5, 32.125, 6.5], [6.5, 43.125, 10.5], TANK),
+         # the deep box the same height as the wide one (v1 was 0.5 shorter at both ends: the straps sat half a pixel
+         # lower on the corner faces and the ends were stepped, "the sides don't line up"); 0.05 in at both ends so
+         # their flat tops and bottoms don't share a plane (flicker)
+         **pair("pkTA_tank_b", [3.5, 31.675, 6.5], [6.5, 43.575, 10.5], TANK),
          **pair("pkTA_cap", [3.75, 43.625, 7.25], [6.25, 44.625, 9.75], on('steel')),   # the valve
          "pkTA_pump": ([-3, 31.625, 6], [3, 37.625, 10], PUMP)}
 
