@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": "powerarmor:spartan_template",
+  "base": "powerarmor:suit_helmet",
+  "addition": "minecraft:totem_of_undying",
+  "result": {
+    "id": "powerarmor:suit_helmet",
+    "components": {
+      "powerarmor:helmet_style": "spartan"
+    }
+  }
+}

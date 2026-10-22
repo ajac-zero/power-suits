@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": "powerarmor:protector_template",
+  "base": "powerarmor:suit_helmet",
+  "addition": "minecraft:turtle_helmet",
+  "result": {
+    "id": "powerarmor:suit_helmet",
+    "components": {
+      "powerarmor:helmet_style": "protector"
+    }
+  }
+}

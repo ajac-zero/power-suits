@@ -55,6 +55,16 @@ public class PowerArmor {
             event.accept(ModItems.DRILL);
             event.accept(ModItems.CHAINSAW);
             event.accept(ModItems.SUIT_HELMET);
+            // the styled helmets and their templates (design sec. 4c): in survival these come from structure chests
+            for (var style : dev.ajaczero.powerarmor.item.HelmetStyle.values()) {
+                net.minecraft.world.item.ItemStack helmet = new net.minecraft.world.item.ItemStack(ModItems.SUIT_HELMET.get());
+                helmet.set(dev.ajaczero.powerarmor.registry.ModDataComponents.HELMET_STYLE.get(), style);
+                event.accept(helmet);
+            }
+            event.accept(ModItems.PROTECTOR_TEMPLATE);
+            event.accept(ModItems.SPARTAN_TEMPLATE);
+            event.accept(ModItems.NOBLE_TEMPLATE);
+            event.accept(ModItems.ROBOT_TEMPLATE);
             event.accept(ModItems.SUIT_TORSO);
             event.accept(ModItems.SUIT_ARM);
             event.accept(ModItems.SUIT_LEG);

@@ -1,6 +1,41 @@
 {
   "model": {
-    "type": "minecraft:model",
-    "model": "powerarmor:item/suit_helmet"
+    "type": "minecraft:select",
+    "property": "minecraft:component",
+    "component": "powerarmor:helmet_style",
+    "cases": [
+      {
+        "when": "protector",
+        "model": {
+          "type": "minecraft:model",
+          "model": "powerarmor:item/suit_helmet_protector"
+        }
+      },
+      {
+        "when": "spartan",
+        "model": {
+          "type": "minecraft:model",
+          "model": "powerarmor:item/suit_helmet_spartan"
+        }
+      },
+      {
+        "when": "noble",
+        "model": {
+          "type": "minecraft:model",
+          "model": "powerarmor:item/suit_helmet_noble"
+        }
+      },
+      {
+        "when": "robot",
+        "model": {
+          "type": "minecraft:model",
+          "model": "powerarmor:item/suit_helmet_robot"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "powerarmor:item/suit_helmet"
+    }
   }
 }

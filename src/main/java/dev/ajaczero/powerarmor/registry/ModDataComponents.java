@@ -1,6 +1,7 @@
 package dev.ajaczero.powerarmor.registry;
 
 import dev.ajaczero.powerarmor.PowerArmor;
+import dev.ajaczero.powerarmor.item.HelmetStyle;
 import dev.ajaczero.powerarmor.item.SuitLoadout;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
@@ -20,6 +21,10 @@ public final class ModDataComponents {
      *  item carrying that one counts as a dye itself. */
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<DyeColor>> PAINT =
             COMPONENTS.registerComponentType("paint", b -> b.persistent(DyeColor.CODEC).networkSynchronized(DyeColor.STREAM_CODEC));
+
+    /** A suit helmet's look (design sec. 4c); none = the standard helmet. Set by the smithing recipes' results. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<HelmetStyle>> HELMET_STYLE =
+            COMPONENTS.registerComponentType("helmet_style", b -> b.persistent(HelmetStyle.CODEC).networkSynchronized(HelmetStyle.STREAM_CODEC));
 
     private ModDataComponents() {}
 }

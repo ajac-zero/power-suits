@@ -181,8 +181,23 @@ Each step: GameTests for the logic, an autopilot scene with numbers in a CSV, th
    (`ENGINE_BONES`); glowmasks `tidal` (8 px) + `reactor` (69 px) tinted by `getTidalGlow` / `getReactorGlow`; tidal
    bubbles from the valves only with the backpack under water, reactor aura (translucent violet potion swirls off the
    glass, `ExhaustSmoke`); engine icons drawn lit from the packs (`make-part-icons.py`); `EngineScene` back close-ups
-   `ap_engine_tidal_back_*`, `ap_engine_reactor_back_*`). Not done: own engine sounds (all three share the rumble).
+   `ap_engine_tidal_back_*`, `ap_engine_reactor_back_*`). Engine sounds (DONE 2026-10-21, 7f39113): no loop (user: the
+   constant minecart rumble drove them mad); now and then a faint one-shot per engine (firebox crackle, tidal bubbles
+   under water, reactor hum), `SuitSounds.engineTick`.
 3. Docs, README, export.
+
+## Phase 10: helmet styles (decided + DONE 2026-10-22, see design sec. 4c)
+Built: `HelmetStyle` (protector / spartan / noble / robot), component `powerarmor:helmet_style`, `SuitHelmetItem` (name +
+flavour line), `HelmetTemplateItem` (vanilla's `SmithingTemplateItem` + the flavour line) x4, recipes
+`helmet_<style>.json` (smithing_transform), `helmet_standard.json` (no template, iron block: removes the component with
+`"!powerarmor:helmet_style"`), `<style>_template.json` (copying), loot tables `chests/<style>_template` added by loot
+modifiers (`data/powerarmor/loot_modifiers`, conditions `neoforge:loot_table_id`), the suit's synced HELMET_STYLE, the
+renderer's style bones, rogues (1 in 4 styled), the item model `select` on the component, icons
+(`make-part-icons.py`: `suit_helmet_<style>`; templates: `tools/make-template-icons.py`), paint on the styles' shells,
+bars, band and frame. Tests (111): smithing (each style, keeps the name, restyle, wrong object, not on iron helmets,
+iron takes it off, template copies), synced + saved + packed, loot (400 rolls per chest). Autopilot `StyleScene`
+(`runAutopilotStyles`): `ap_style_*` (each helmet from behind and the front, painted in its colours), `ap_menu_smithing`,
+`run/autopilot_style.csv`.
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint

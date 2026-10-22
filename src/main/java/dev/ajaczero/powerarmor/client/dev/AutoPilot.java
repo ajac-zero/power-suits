@@ -55,6 +55,8 @@ public final class AutoPilot {
     private static final boolean GAIT_ONLY = "gait".equals(System.getProperty("powerarmor.autopilot"));
     /** "paint" mode: only the paint scene (PaintScene: dyes and a wet sponge on a suit), ~20 s. */
     private static final boolean PAINT_ONLY = "paint".equals(System.getProperty("powerarmor.autopilot"));
+    /** "styles" mode: only the helmet styles scene (StyleScene: five helmets, paint, the smithing table), ~30 s. */
+    private static final boolean STYLES_ONLY = "styles".equals(System.getProperty("powerarmor.autopilot"));
     /** "engine" mode: only the engine scene (EngineScene: flooded firebox, tidal engine, star reactor), ~35 s. */
     private static final boolean ENGINE_ONLY = "engine".equals(System.getProperty("powerarmor.autopilot"));
     private static final int MECH_START = 1712;
@@ -116,6 +118,10 @@ public final class AutoPilot {
             }
         } else if (ENGINE_ONLY) {
             if (!EngineScene.step(mc, tick++)) {
+                mc.stop();
+            }
+        } else if (STYLES_ONLY) {
+            if (!StyleScene.step(mc, tick++)) {
                 mc.stop();
             }
         } else {

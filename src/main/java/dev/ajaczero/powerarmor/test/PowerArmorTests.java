@@ -2458,5 +2458,117 @@ public final class PowerArmorTests {
         });
     }
 
+    // ---- helmet styles (design sec. 4c) -----------------------------------------------------------------------------
+
+    private static ItemStack styled(dev.ajaczero.powerarmor.item.HelmetStyle style) {
+        ItemStack helmet = new ItemStack(ModItems.SUIT_HELMET.get());
+        helmet.set(ModDataComponents.HELMET_STYLE.get(), style);
+        return helmet;
+    }
+
+    /** What the smithing table makes of (template, base, addition), or EMPTY when no recipe matches. */
+    private static ItemStack smith(GameTestHelper helper, ItemStack template, ItemStack base, ItemStack addition) {
+        var input = new net.minecraft.world.item.crafting.SmithingRecipeInput(template, base, addition);
+        return helper.getLevel().recipeAccess().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.SMITHING, input, helper.getLevel())
+                .map(r -> r.value().assemble(input)).orElse(ItemStack.EMPTY);
+    }
+
+    /** Each template + a helmet + its style object gives the styled helmet (keeping its name); iron takes a style off. */
+    @SuitTest
+    public static void helmetStylesComeFromTheSmithingTable(GameTestHelper helper) {
+        var objects = java.util.Map.of(
+                dev.ajaczero.powerarmor.item.HelmetStyle.PROTECTOR, new ItemStack(Items.TURTLE_HELMET),
+                dev.ajaczero.powerarmor.item.HelmetStyle.SPARTAN, new ItemStack(Items.TOTEM_OF_UNDYING),
+                dev.ajaczero.powerarmor.item.HelmetStyle.NOBLE, new ItemStack(Items.PHANTOM_MEMBRANE),
+                dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, new ItemStack(Items.MUSIC_DISC_CAT));
+        var templates = java.util.Map.of(
+                dev.ajaczero.powerarmor.item.HelmetStyle.PROTECTOR, ModItems.PROTECTOR_TEMPLATE.get(),
+                dev.ajaczero.powerarmor.item.HelmetStyle.SPARTAN, ModItems.SPARTAN_TEMPLATE.get(),
+                dev.ajaczero.powerarmor.item.HelmetStyle.NOBLE, ModItems.NOBLE_TEMPLATE.get(),
+                dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, ModItems.ROBOT_TEMPLATE.get());
+        ItemStack named = new ItemStack(ModItems.SUIT_HELMET.get());
+        named.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal("Bucket"));
+        for (var style : dev.ajaczero.powerarmor.item.HelmetStyle.values()) {
+            ItemStack out = smith(helper, new ItemStack(templates.get(style)), named, objects.get(style));
+            helper.assertTrue(dev.ajaczero.powerarmor.item.SuitHelmetItem.style(out) == style, style + ": got " + out);
+            helper.assertTrue(out.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME), style + ": the helmet keeps its name");
+            // and a styled helmet can be restyled
+            ItemStack again = smith(helper, new ItemStack(templates.get(style)), styled(dev.ajaczero.powerarmor.item.HelmetStyle.NOBLE), objects.get(style));
+            helper.assertTrue(dev.ajaczero.powerarmor.item.SuitHelmetItem.style(again) == style, style + ": restyling, got " + again);
+            // the template copies like vanilla's trims: 7 diamonds round the template and the style object
+            ItemStack d = new ItemStack(Items.DIAMOND);
+            var grid = net.minecraft.world.item.crafting.CraftingInput.of(3, 3, java.util.List.of(
+                    d, new ItemStack(templates.get(style)), d, d, objects.get(style), d, d, d, d));
+            ItemStack copies = helper.getLevel().recipeAccess().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, grid, helper.getLevel())
+                    .map(r -> r.value().assemble(grid)).orElse(ItemStack.EMPTY);
+            helper.assertTrue(copies.is(templates.get(style)) && copies.getCount() == 2, style + ": copying the template, got " + copies);
+        }
+        helper.assertTrue(named.getHoverName().getString().equals("Bucket"), "an anvil name still wins over the style's");
+        ItemStack spartan = styled(dev.ajaczero.powerarmor.item.HelmetStyle.SPARTAN);
+        helper.assertTrue(spartan.getHoverName().getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents t
+                && t.getKey().equals("item.powerarmor.suit_helmet.spartan"), "a styled helmet is named after its style, got " + spartan.getHoverName());
+        helper.assertTrue(smith(helper, new ItemStack(ModItems.SPARTAN_TEMPLATE.get()), new ItemStack(ModItems.SUIT_HELMET.get()),
+                new ItemStack(Items.TURTLE_HELMET)).isEmpty(), "a template only takes its own style object");
+        helper.assertTrue(smith(helper, new ItemStack(ModItems.SPARTAN_TEMPLATE.get()), new ItemStack(Items.IRON_HELMET),
+                new ItemStack(Items.TOTEM_OF_UNDYING)).isEmpty(), "templates are for the suit's helmet only");
+        ItemStack plain = smith(helper, ItemStack.EMPTY, spartan, new ItemStack(Items.IRON_BLOCK));
+        helper.assertTrue(plain.is(ModItems.SUIT_HELMET.get()) && dev.ajaczero.powerarmor.item.SuitHelmetItem.style(plain) == null,
+                "helmet + iron block (no template) gives the standard helmet back, got " + plain);
+        helper.succeed();
+    }
+
+    /** The suit shows the worn helmet's style (synced), and keeps it through saving and packing up. */
+    @SuitTest(timeoutTicks = 40)
+    public static void helmetStyleShowsOnTheSuitAndSurvivesPacking(GameTestHelper helper) {
+        PowerArmorEntity suit = suitAt(helper, SUIT_POS);
+        helper.assertTrue(suit.hasHelmet() && suit.getHelmetStyle() == null, "the standard helmet has no style");
+        suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, styled(dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT));
+        helper.assertTrue(suit.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, "a styled helmet shows its style");
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        loadTag(helper, loaded, saveTag(helper, suit));
+        helper.assertTrue(loaded.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, "the style survives saving");
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        helper.assertTrue(suit.packUp(player), "the suit packs up");
+        SuitLoadout loadout = packedSuit(player).get(ModDataComponents.LOADOUT.get());
+        helper.assertTrue(loadout != null && dev.ajaczero.powerarmor.item.SuitHelmetItem.style(loadout.helmet()) == dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT,
+                "the packed suit keeps the styled helmet, got " + loadout);
+        PowerArmorEntity deployed = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        deployed.applyLoadout(loadout);
+        helper.assertTrue(deployed.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, "and deploys with it");
+        helper.succeed();
+    }
+
+    /** The templates turn up in the chests of their structures (loot modifiers), about one chest in ten. */
+    @SuitTest
+    public static void helmetTemplatesHideInStructureChests(GameTestHelper helper) {
+        var chests = java.util.Map.of(
+                net.minecraft.world.level.storage.loot.BuiltInLootTables.UNDERWATER_RUIN_SMALL, ModItems.PROTECTOR_TEMPLATE.get(),
+                net.minecraft.world.level.storage.loot.BuiltInLootTables.SHIPWRECK_TREASURE, ModItems.PROTECTOR_TEMPLATE.get(),
+                net.minecraft.world.level.storage.loot.BuiltInLootTables.TRIAL_CHAMBERS_REWARD, ModItems.SPARTAN_TEMPLATE.get(),
+                net.minecraft.world.level.storage.loot.BuiltInLootTables.END_CITY_TREASURE, ModItems.NOBLE_TEMPLATE.get(),
+                net.minecraft.world.level.storage.loot.BuiltInLootTables.ANCIENT_CITY, ModItems.ROBOT_TEMPLATE.get());
+        var params = new net.minecraft.world.level.storage.loot.LootParams.Builder(helper.getLevel())
+                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN, helper.absoluteVec(Vec3.ZERO))
+                .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.CHEST);
+        int rolls = 400;
+        for (var chest : chests.entrySet()) {
+            var table = helper.getLevel().getServer().reloadableRegistries().getLootTable(chest.getKey());
+            int found = 0, others = 0;
+            for (int i = 0; i < rolls; i++) {
+                for (ItemStack stack : table.getRandomItems(params)) {
+                    if (stack.is(chest.getValue())) {
+                        found++;
+                    } else if (stack.getItem() instanceof dev.ajaczero.powerarmor.item.HelmetTemplateItem) {
+                        others++;
+                    }
+                }
+            }
+            // 1 in 10 (1 in 8 in trial vaults): 40-50 expected in 400; 12..100 leaves no room for a fluke
+            helper.assertTrue(found >= 12 && found <= 100, chest.getKey().identifier() + ": " + found + " " + chest.getValue() + " in " + rolls + " chests");
+            helper.assertTrue(others == 0, chest.getKey().identifier() + " holds another style's template");
+        }
+        helper.succeed();
+    }
+
     private PowerArmorTests() {}
 }

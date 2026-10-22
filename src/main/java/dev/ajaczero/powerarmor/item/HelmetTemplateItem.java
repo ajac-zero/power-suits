@@ -1,0 +1,45 @@
+package dev.ajaczero.powerarmor.item;
+
+import java.util.List;
+import java.util.function.Consumer;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SmithingTemplateItem;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+
+/**
+ * A helmet style's smithing template (design sec. 4c): found in chests of the structure its inspiration would come from
+ * (loot modifiers in data/powerarmor/loot_modifiers), used up at a smithing table with a suit helmet and the style's
+ * object (recipes data/powerarmor/recipe/helmet_*.json), copied like vanilla's trim templates (7 diamonds + the object).
+ *
+ * Vanilla's SmithingTemplateItem already draws the tooltip ("Applies to: ... Ingredients: ...") and the smithing
+ * screen's hints for the empty slots; this only adds the style's flavour line under it.
+ */
+public class HelmetTemplateItem extends SmithingTemplateItem {
+    private static final Identifier EMPTY_SLOT_HELMET = Identifier.withDefaultNamespace("container/slot/helmet");
+    private final HelmetStyle style;
+
+    public HelmetTemplateItem(Properties properties, HelmetStyle style) {
+        super(Component.translatable("item.powerarmor.helmet_template.applies_to").withStyle(ChatFormatting.BLUE),
+                Component.translatable("item.powerarmor." + style.getSerializedName() + "_template.ingredients").withStyle(ChatFormatting.BLUE),
+                Component.translatable("item.powerarmor.helmet_template.base_slot_description"),
+                Component.translatable("item.powerarmor." + style.getSerializedName() + "_template.additions_slot_description"),
+                List.of(EMPTY_SLOT_HELMET), List.of(), properties);
+        this.style = style;
+    }
+
+    public HelmetStyle style() {
+        return this.style;
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip,
+            TooltipFlag flag) {
+        super.appendHoverText(stack, context, display, tooltip, flag);
+        tooltip.accept(Component.translatable("item.powerarmor.suit_helmet." + this.style.getSerializedName() + ".flavour")
+                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+    }
+}

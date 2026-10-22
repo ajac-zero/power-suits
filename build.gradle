@@ -88,6 +88,13 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'paint'
         }
 
+        // Dev tool: only the helmet styles scene (five helmets from behind and the front, painted red, the smithing table;
+        // ap_style_*.png, ap_menu_smithing.png, run/autopilot_style.csv), ~30 s.
+        autopilotStyles {
+            client()
+            systemProperty 'powerarmor.autopilot', 'styles'
+        }
+
         // Dev tool: only the engine scene (flooded firebox, tidal engine in and out of water, star reactor; ap_engine_*.png,
         // run/autopilot_engine.csv), ~35 s.
         autopilotEngine {

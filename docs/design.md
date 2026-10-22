@@ -176,6 +176,34 @@ exhausts; the other two are their own models (simple boxes, detail in the textur
   Gauge: flame (firebox and tidal on land), endless while running free.
 - The machine mind: firebox suits keep out of water; a tidal suit's mind only runs while it has power.
 
+## 4c. Helmet styles (decided + built 2026-10-22, user)
+Alternate looks for the helmet, as **Easter eggs** after famous armoured helmets (first meant to come with the dyes;
+user: make them widely available, and the smithing table's templates make them feel like a find). Names and lines
+**allude** to the originals, never name them (other studios' trademarks).
+- **One helmet item, its style a data component** (`powerarmor:helmet_style`; none = the standard helmet). Purely
+  cosmetic: every style seals the suit and carries its mind the same way. The name follows the style ("Spartan
+  Helmet", an anvil name still wins) and the tooltip adds an italic flavour line; the icon follows it too.
+- **Smithing table**: template + Power Armor Helmet + the style's object = the styled helmet (template and object used
+  up, like vanilla's trims; other components kept). A styled helmet can be restyled. **Helmet + iron block, no
+  template** = the standard helmet back. Templates **copy** like vanilla's: 7 diamonds round the template and the
+  style's object = 2 templates.
+
+  | Style (draft) | After | Template found in (about 1 chest in 10) | Object | Flavour line |
+  |---|---|---|---|---|
+  | Protector (F) | Subject Delta, BioShock 2 | ocean ruins (small + big), shipwreck treasure | turtle shell | "Would you kindly keep her safe?" |
+  | Spartan (G) | the Master Chief, Halo | trial chamber vaults, ominous too (1 in 8) | totem of undying | "Wake me when you need me." |
+  | Noble (H) | Emile's EVA helmet, Halo: Reach | end city treasure | phantom membrane | "I'm ready! How 'bout you?" |
+  | Robot (K) | Guy-Manuel's helmet, Daft Punk | ancient city | any music disc (`#c:music_discs`) | "One more time." |
+
+- Templates are named "<Style> Helmet Design" (vanilla's template tooltip: applies to the helmet, ingredient the object)
+  and carry the flavour line too. Loot comes from NeoForge loot modifiers (`neoforge:add_table`).
+- The model: each style is a whole helmet of its own under the head bone (`helm_protector`, `helm_spartan`,
+  `helm_noble`, `helm_robot`; drafted as hidden `proto_helm_*`, still hidden in Blockbench); the renderer draws the
+  worn one instead of `helmet`. Their visors glow like the standard one; their shells take the paint, with the
+  protector's window bars, the spartan's top band and the robot's frame (brown = brass, yellow = gold).
+- Rogues: one in four wears a random style (only a look; their helmet is never loot).
+- Left for later (user): an orange helmet after Samus, a black one (Death Trooper?).
+
 ## 5. Suit menu (built in Phase 1)
 - **Sneak + right-click a parked suit** (decided 2026-10-12, the horse/llama convention). Tools and fuel can
   only be changed there: the pilot has to get out, which makes the loadout a decision. Closes if

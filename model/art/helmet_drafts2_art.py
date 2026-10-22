@@ -3,7 +3,10 @@
 (Round 1, five sketches of other sizes, was dropped by the user on 2026-10-21; the helpers it shared live here now.)
 Every draft is the current helmet's envelope: the shell 9 x 9 x 9 (x +-4.5, y 38.95..47.5, z -4..5) and front pieces
 inside the current band's reach (z -4.75, x +-4.75, top 47.75). The shell's sides, back and top reuse the current
-helmet's UV (same paint) where a draft leaves them alone. Hidden groups under `head` named proto_helm_* (export-model.mjs leaves proto_* out).
+helmet's UV (same paint) where a draft leaves them alone. Drafted as hidden groups under `head` named proto_helm_*; since
+2026-10-22 the four kept ones are the helmet styles (design sec. 4c), bones helm_protector (F), helm_spartan (G),
+helm_noble (H) and helm_robot (K), still hidden in Blockbench (GeckoLib draws them anyway: the renderer shows the one the
+helmet's style asks for).
 
   F delta      (after Subject Delta, BioShock 2) a glowing visor painted flat in a riveted frame, three half-pixel
                bars raised in front of it, riveted seams, a side port and a hatch on top (v1: a raised porthole; v2:
@@ -23,7 +26,7 @@ git history at 5b0a5fa).
 
     uv run --with pillow python3 model/art/helmet_drafts2_art.py   (reads .scratch/helmets/source2.json, a fresh
     snapshot of the live project; writes .scratch/helmets/plan2.json; apply: .scratch/helmets/apply.js {plan})
-    ... helmet_drafts2_art.py _G_   rebuilds only the drafts whose group name contains _G_ (the others stay as they are)
+    ... helmet_drafts2_art.py spartan   rebuilds only the drafts whose group name contains spartan (the others stay as they are)
 """
 import json, base64, io, math, sys
 from PIL import Image
@@ -338,14 +341,14 @@ def reuse(name): return lambda f, w, h: (REUSE, name)
 
 
 DRAFTS = {
-    "proto_helm_F_delta": {
+    "helm_protector": {
         "hF_shell": (*SHELL, delta),
         # the window bars, 0.75 out from the flat visor; v4 (user): three, centred over columns 2, 4, 6
         **{f"hF_bar_{k}": ([x - 0.5 * DELTA_BAR_W, 41, -4.75], [x + 0.5 * DELTA_BAR_W, 47, -4], delta_bar)
            for k, x in (("r", 2), ("m", 0), ("l", -2))}},
     # v2 (user: rework the green one, "more of a master chief reference look"): a forehead plate coming forward over
     # one wide gold visor that wraps round the corners, a narrower mouthpiece under it with a ridge and two vents
-    "proto_helm_G_chief": {
+    "helm_spartan": {
         "hG_shell": (*SHELL, chief_shell),
         # v3 (user): no raised gold visor; the top wraps round the front and sides, the glowing visor under it
         # v6: the top a 1 px band (y 44.5..45.5); v7: the visor flat, painted on the shell (chief_shell)
@@ -354,8 +357,8 @@ DRAFTS = {
     # v3 (user: Emile's helmet, the Reach EVA, without the skull and for now without the side module): the visor over
     # the whole front of the head, a steel band round the lower half, a mouthpiece; v4: on the standard shell (a
     # tiered dome, v2-v3, was dropped: the drafts keep the current helmet's shape)
-    "proto_helm_H_eva": eva_cubes(),
-    "proto_helm_K_guy": {
+    "helm_noble": eva_cubes(),
+    "helm_robot": {
         "hK_shell": (*SHELL, guy_shell),
         # the U-frame: a chin bar round the front corners, two side posts on it (sunk 0.1 into it, 0.05 in at the
         # sides and front: no shared planes; their tops just under the shell's)

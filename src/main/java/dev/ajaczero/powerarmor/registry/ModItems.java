@@ -8,7 +8,10 @@ import dev.ajaczero.powerarmor.item.ChainsawItem;
 import dev.ajaczero.powerarmor.item.DrillItem;
 import dev.ajaczero.powerarmor.item.EmProjectorItem;
 import dev.ajaczero.powerarmor.item.EngineItem;
+import dev.ajaczero.powerarmor.item.HelmetStyle;
+import dev.ajaczero.powerarmor.item.HelmetTemplateItem;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import dev.ajaczero.powerarmor.item.SuitHelmetItem;
 import dev.ajaczero.powerarmor.item.SuitPartItem;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
@@ -57,8 +60,14 @@ public final class ModItems {
             props -> new SuitPartItem(props, "item.powerarmor.suit_part.tooltip"), props -> props.stacksTo(1));
     public static final DeferredItem<SuitPartItem> SUIT_LEG = ITEMS.registerItem("suit_leg",
             props -> new SuitPartItem(props, "item.powerarmor.suit_part.tooltip"), props -> props.stacksTo(1));
-    public static final DeferredItem<SuitPartItem> SUIT_HELMET = ITEMS.registerItem("suit_helmet",
-            props -> new SuitPartItem(props, "item.powerarmor.suit_helmet.tooltip"), props -> props.stacksTo(1));
+    /** The helmet: its look (design sec. 4c) is a data component, set at a smithing table (SuitHelmetItem). */
+    public static final DeferredItem<SuitHelmetItem> SUIT_HELMET = ITEMS.registerItem("suit_helmet", SuitHelmetItem::new, props -> props.stacksTo(1));
+
+    // The helmet styles' smithing templates (design sec. 4c, 2026-10-22): Easter eggs found in structure chests.
+    public static final DeferredItem<HelmetTemplateItem> PROTECTOR_TEMPLATE = template(HelmetStyle.PROTECTOR);
+    public static final DeferredItem<HelmetTemplateItem> SPARTAN_TEMPLATE = template(HelmetStyle.SPARTAN);
+    public static final DeferredItem<HelmetTemplateItem> NOBLE_TEMPLATE = template(HelmetStyle.NOBLE);
+    public static final DeferredItem<HelmetTemplateItem> ROBOT_TEMPLATE = template(HelmetStyle.ROBOT);
 
     // The engines (design sec. 4b, 2026-10-21): the suit's backpack, swapped in the menu's engine slot. Every suit comes
     // with a firebox; the other two are crafted.
@@ -68,6 +77,11 @@ public final class ModItems {
             props -> new EngineItem(props, SuitEngine.TIDAL), props -> props.stacksTo(1).rarity(Rarity.RARE));
     public static final DeferredItem<EngineItem> STAR_REACTOR = ITEMS.registerItem("star_reactor",
             props -> new EngineItem(props, SuitEngine.REACTOR), props -> props.stacksTo(1).rarity(Rarity.EPIC));
+
+    private static DeferredItem<HelmetTemplateItem> template(HelmetStyle style) {
+        return ITEMS.registerItem(style.getSerializedName() + "_template", props -> new HelmetTemplateItem(props, style),
+                props -> props.rarity(Rarity.RARE));
+    }
 
     private ModItems() {}
 }

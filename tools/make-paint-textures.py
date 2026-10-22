@@ -11,7 +11,9 @@ repaints every dye with it.
 Which parts are plates (user, 2026-10-20: "two-tone"): the shoulder pads, upper arms, chest + breastplate, hip hoods
 and thighs (PLATES, cube names in the .bbmodel), and since the helmet sketches (same day, user: the helmets, the collar
 and the abdomen plate "should carry their colours as well") the helmet's shell, the collar ring with the breastplate's
-rim under it (gorget_lip) and the abdomen plate. The visor's band, glass and grill, the gauntlets, shins + boots (they
+rim under it (gorget_lip) and the abdomen plate; since 2026-10-22 the helmet styles' shells too (hF/hG/hH/hK_shell, design sec. 4c) with the protector's window bars,
+the spartan's top band and the robot's frame (paint them brown for brass, yellow for gold; the spartan's mouthpiece and
+the noble's band stay steel). The visor's band, glass and grill, the gauntlets, shins + boots (they
 read as one piece with the feet), backpack and the ribbed waist stay steel. Their texels are found through each cube's faces, so the
 layout follows the model.
 
@@ -38,7 +40,7 @@ hexs = lambda c: '%02x%02x%02x' % c
 #           deep      seam      shade     main      mid       lit       rim       mark
 STEEL    = ['22262e', '3c424c', '58606a', '757c85', '8a9097', '9fa4a9', 'cdcfcf', 'fbf8f0']
 OLD_BLUE = ['122f66', '1b4895', '2358b2', '2d6bcc', '3a7bd6', '4588e0', '62a3ef', '8ccaff']
-PLATES = re.compile(r'^(pad_|upper_core|chest$|bp_|hood_|thigh_|cap_|helmet_shell$|collar_|neck_guard$|gorget_lip$|abd_plate$)')
+PLATES = re.compile(r'^(pad_|upper_core|chest$|bp_|hood_|thigh_|cap_|helmet_shell$|h[FGHK]_shell$|hF_bar_|hG_brow$|hK_chin$|hK_post_|collar_|neck_guard$|gorget_lip$|abd_plate$)')
 
 # dye -> (main colour, lightness range): vanilla's dye colours, tuned to read as paint next to the steel
 DYES = {

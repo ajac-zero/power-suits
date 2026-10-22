@@ -51,6 +51,7 @@ Mojang's names are official since 26.1 (no Parchment). Porting primers: `neoforg
 | `./gradlew runAutopilotPose` | ~30 s pose check (`client/dev/PoseScene`): side shots looking level / down 40 / up 30 / tool raised, top shots with the view at yaw +40 (gold block) / -40 (redstone): looking down must lean forward, the torso and raised tool must face the shot's block (`ap_pose_*.png`, `run/autopilot_pose.csv`) |
 | `./gradlew runAutopilotGait` | ~45 s foot-slip drive (`client/dev/GaitScene`): walk, back up, strafe, diagonal, turn on the spot, look around, sprint + turn; per-tick `run/autopilot_gait.csv`, summarize with `python3 tools/gait-report.py` (slip = how fast a planted foot slides, moon = moonwalk ticks) |
 | `./gradlew runAutopilotPaint` | ~30 s paint check (`client/dev/PaintScene`, also at the end of `runAutopilotMech`): all 16 dyes + a wet sponge on a suit, `ap_paint_*` (in-game back view + front), `run/autopilot_paint.csv` (server and client paint must agree a tick later) |
+| `./gradlew runAutopilotStyles` | ~30 s helmet styles check (`client/dev/StyleScene`): five no-AI suits in a row (standard + 4 styles) from the in-game back view and the front, each painted in its inspiration's colours, the smithing table making a Spartan helmet (`ap_style_*`, `ap_menu_smithing`, `run/autopilot_style.csv`: server vs client style) |
 | `./gradlew runAutopilotEngine` | ~35 s engine check (`client/dev/EngineScene`, also at the end of `runAutopilotMech`): a firebox floods in a glass pool (no pack-up), a tidal engine runs under water, dies on the dry stairs, drinks a water bucket, a star reactor sprints for free, the menu's engine slot (`ap_engine_*`, `ap_menu_engine`, `run/autopilot_engine.csv`) |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
@@ -364,11 +365,20 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 `entity/ai/` the machine mind's goals (`SuitMind` friendly/rogue); `menu/` the suit menu logic, `client/PowerArmorScreen` + `FuelGauge` its picture and the HUD;
 `client/` holds rendering + camera; `PilotProtection.java` redirects damage; `registry/` registers things.
 Comment the "why" for anything non-obvious; the user reads the code to learn.
-- **Design drafts live in the .bbmodel as hidden groups named `proto_*`** (the helmet drafts under `head`, 2026-10-20:
-  `proto_helm_F_delta`, `G_chief`, `H_eva`, `K_guy`, same size as the real helmet; `model/art/helmet_drafts2_art.py`). `export-model.mjs` and
-  `make-part-icons.py` leave them out (GeckoLib would draw them, hidden or not), but their painted texels stay in the
-  exported texture: the drafts' visor glass is in the reserved glow colours, so `make-glowmasks.py` refuses the next
-  export (visor count) until EXPECTED is raised or the drafts are deleted. Keep them hidden when saving.
+- **Design drafts live in the .bbmodel as hidden groups named `proto_*`**. `export-model.mjs` and `make-part-icons.py`
+  leave them out (GeckoLib would draw them, hidden or not), but their painted texels stay in the exported texture (draft
+  glass in the reserved glow colours raises `make-glowmasks.py`'s counts). A picked draft becomes a game part by
+  renaming its group (the engine packs, then the helmet styles: `proto_helm_F_delta` / `G_chief` / `H_eva` / `K_guy` are
+  `helm_protector` / `helm_spartan` / `helm_noble` / `helm_robot` since 2026-10-22, still hidden in Blockbench, design
+  sec. 4c): the renderer then shows one of a set of bones (`ENGINE_BONES`, `HelmetStyle.bone()`). Keep them hidden when saving.
+- **Variants of an item are a data component, not new items** (the helmet styles): recipes set it in their result
+  (`"components": {"powerarmor:helmet_style": "spartan"}`) and remove it with `"!powerarmor:helmet_style": {}`; a
+  smithing_transform's template is optional in 26.3 (`helmet_standard.json` has none); the item model picks the icon
+  with `minecraft:select` on `minecraft:component`.
+- *(26.3)* **Loot conditions are keyed `"type"`** (`{"type": "neoforge:loot_table_id", ...}`, `minecraft:any_of` too):
+  with the old `"condition"` key NeoForge logs "Couldn't parse data file" and skips the loot modifier, nothing else
+  fails. Loot modifiers live in `data/<mod>/loot_modifiers/` (no global list); a GameTest rolling the chest's table
+  (`helmetTemplatesHideInStructureChests`) caught it.
 - **The suit is bare steel and paint is a texture swap** (2026-10-20): the armour is drawn in the 8 shades of the steel
   ramp (`model/art/steel_art.py`, `STEEL` in `tools/make-paint-textures.py`); the dye textures swap those shades on the
   plate cubes (`PLATES`) for each dye's ramp. So: repaint armour only in those 8 steel shades (another grey on a plate

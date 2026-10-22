@@ -16,6 +16,8 @@ final class SuitRenderData {
     static final DataTicket<String> TOOL_BONE = DataTicket.create("powerarmor_tool_bone", String.class);
     /** The helmet is on (else its bone isn't drawn). */
     static final DataTicket<Boolean> HELMET = DataTicket.create("powerarmor_helmet", Boolean.class);
+    /** The worn helmet's style (HelmetStyle ordinal, -1 = standard): which helmet bone is drawn. */
+    static final DataTicket<Integer> HELMET_STYLE = DataTicket.create("powerarmor_helmet_style", Integer.class);
     /** The installed engine (SuitEngine ordinal, -1 = none): which backpack bone is drawn. */
     static final DataTicket<Integer> ENGINE = DataTicket.create("powerarmor_engine", Integer.class);
     /** The plates' paint: a dye id 0..15, or -1 for bare steel (PowerArmorModel picks the texture by it). */

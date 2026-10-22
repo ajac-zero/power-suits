@@ -28,13 +28,16 @@ spec.loader.exec_module(icons)
 
 # icon: (root bones, bones left out with everything below them, view)
 # view = (spin about Y, tilt about X, roll about Z) in degrees; the model faces -Z, so spin 180 shows its front.
+STYLES = ('helm_protector', 'helm_spartan', 'helm_noble', 'helm_robot')  # the helmet styles' bones
 PARTS = {
     'torso': (['body', 'hips'], {'head', 'right_arm', 'left_arm', 'pack_tidal', 'pack_reactor'}, (205, 12, 0)),  # with its firebox
     'arm': (['right_arm'], set(), (210, 10, 0)),
     'leg': (['right_leg'], set(), (210, 10, 0)),
-    'helmet': (['head'], {'pilot_head'}, (205, 12, 0)),  # the shell + the face cube on the head bone, not the pilot
+    'helmet': (['head'], {'pilot_head', *STYLES}, (205, 12, 0)),  # the standard helmet: not the pilot, not the styles
+    # the helmet styles (design sec. 4c): each a whole helmet of its own under the head bone (suit_helmet_<style>.png)
+    **{b.replace('helm_', 'helmet_'): ([b], set(), (205, 12, 0)) for b in STYLES},
     # the whole suit (the Power Armor item): no pilot, empty socket (the tools come separately)
-    'power_armor': (['marine'], {'pilot_head', 'chaingun', 'em_projector', 'drill', 'chainsaw', 'pack_tidal', 'pack_reactor'}, (205, 10, 0)),
+    'power_armor': (['marine'], {'pilot_head', 'chaingun', 'em_projector', 'drill', 'chainsaw', 'pack_tidal', 'pack_reactor', *STYLES}, (205, 10, 0)),
     # the engines (design sec. 4b): each one's backpack, seen from behind
     'firebox': (['backpack_parts'], set(), (25, 12, 0)),
     'tidal_engine': (['pack_tidal'], set(), (25, 12, 0)),

@@ -5,6 +5,7 @@ import com.geckolib.renderer.base.BoneSnapshots;
 import com.geckolib.renderer.base.GeoRenderState;
 import com.geckolib.renderer.base.RenderPassInfo;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.HelmetStyle;
 import dev.ajaczero.powerarmor.item.PowerTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -42,6 +43,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         state.addGeckolibData(SuitRenderData.COCKPIT, isCockpitView(suit));
         state.addGeckolibData(SuitRenderData.TOOL_BONE, suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.suitBone() : "");
         state.addGeckolibData(SuitRenderData.HELMET, suit.hasHelmet());
+        state.addGeckolibData(SuitRenderData.HELMET_STYLE, suit.getHelmetStyle() == null ? -1 : suit.getHelmetStyle().ordinal());
         state.addGeckolibData(SuitRenderData.ENGINE, suit.getEngine() == null ? -1 : suit.getEngine().ordinal());
         state.addGeckolibData(SuitRenderData.PAINT, suit.getPaint() == null ? -1 : suit.getPaint().getId());
         state.addGeckolibData(SuitRenderData.STEP_OFFSET, (float) suit.getStepOffset(partialTick));
@@ -91,8 +93,15 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         bones.ifPresent("socket", bone -> bone.skipRender(socketHidden));
         // Helmet slot: no helmet, no helmet bone (shell, visor, brow, cheeks, chin; the visor glow goes with it). The pilot's
         // own head shows in the collar instead (PilotHeadLayer; the rest of the pilot stays hidden inside, PilotView).
+        // Each helmet style (design sec. 4c) is a whole helmet of its own under the head bone: draw only the worn one.
         boolean helmet = info.getOrDefaultGeckolibData(SuitRenderData.HELMET, true);
-        bones.ifPresent("helmet", bone -> bone.skipRender(!helmet).skipChildrenRender(!helmet));
+        int style = info.getOrDefaultGeckolibData(SuitRenderData.HELMET_STYLE, -1);
+        boolean standard = helmet && style < 0;
+        bones.ifPresent("helmet", bone -> bone.skipRender(!standard).skipChildrenRender(!standard));
+        for (HelmetStyle each : HelmetStyle.values()) {
+            boolean show = helmet && style == each.ordinal();
+            bones.ifPresent(each.bone(), bone -> bone.skipRender(!show).skipChildrenRender(!show));
+        }
         // Engine slot: the installed engine's backpack only (the glowmasks follow: a hidden bone isn't drawn again).
         int engine = info.getOrDefaultGeckolibData(SuitRenderData.ENGINE, 0);
         for (int i = 0; i < ENGINE_BONES.length; i++) {

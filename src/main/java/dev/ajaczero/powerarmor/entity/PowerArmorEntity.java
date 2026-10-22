@@ -48,6 +48,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
+import dev.ajaczero.powerarmor.item.HelmetStyle;
+import dev.ajaczero.powerarmor.item.SuitHelmetItem;
 import com.geckolib.animatable.GeoEntity;
 import com.geckolib.animatable.instance.AnimatableInstanceCache;
 import com.geckolib.animatable.manager.AnimatableManager;
@@ -210,6 +212,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Is a helmet in its slot: clients draw it (or not) and know whether the suit is sealed. */
     private static final EntityDataAccessor<Boolean> HELMET =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
+    /** The worn helmet's style (HelmetStyle ordinal, -1 = the standard helmet or none): clients draw its bone. */
+    private static final EntityDataAccessor<Byte> HELMET_STYLE =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BYTE);
     /** The plates' paint: a dye's id (DyeColor.getId, 0..15), or -1 for bare steel. Synced: clients pick the texture by it. */
     private static final EntityDataAccessor<Byte> PAINT =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BYTE);
@@ -374,6 +379,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(TOOL_SHOTS, 0);
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
         builder.define(HELMET, false);
+        builder.define(HELMET_STYLE, (byte) -1);
         builder.define(STUNNED, false);
         builder.define(MIND, (byte) SuitMind.FRIENDLY.ordinal());
         builder.define(NUGGETS, 0);
@@ -708,7 +714,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (this.isRogue() && this.inventory.getItem(HELMET_SLOT).isEmpty()) {
             // Rogues always wear one (/summon, or a rogue from before the helmet existed): its mind lives in it. A
             // defeated rogue still drops only its tool; one rebooted by lightning keeps it.
-            this.inventory.setItem(HELMET_SLOT, new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
+            ItemStack helmet = new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get());
+            if (this.random.nextInt(4) == 0) {
+                // one rogue in four wears a styled helmet (design sec. 4c): only a look, and not loot (rogues drop their tool only)
+                HelmetStyle[] styles = HelmetStyle.values();
+                helmet.set(dev.ajaczero.powerarmor.registry.ModDataComponents.HELMET_STYLE.get(), styles[this.random.nextInt(styles.length)]);
+            }
+            this.inventory.setItem(HELMET_SLOT, helmet);
         }
         SuitEngine engine = this.getEngine();
         if (this.engineSeen && engine != this.lastEngine) {
@@ -928,6 +940,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.entityData.set(FUEL_ITEM, this.inventory.getItem(FUEL_SLOT).copy());
             this.entityData.set(SOCKET_ITEM, this.inventory.getItem(SOCKET_SLOT).copy());
             this.entityData.set(HELMET, !this.inventory.getItem(HELMET_SLOT).isEmpty());
+            HelmetStyle style = SuitHelmetItem.style(this.inventory.getItem(HELMET_SLOT));
+            this.entityData.set(HELMET_STYLE, (byte) (style == null ? -1 : style.ordinal()));
             SuitEngine engine = SuitEngine.of(this.inventory.getItem(ENGINE_SLOT));
             this.entityData.set(ENGINE, (byte) (engine == null ? -1 : engine.ordinal()));
         }
@@ -941,6 +955,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Both sides: a helmet sits in the helmet slot. */
     public boolean hasHelmet() {
         return this.entityData.get(HELMET);
+    }
+
+    /** Both sides: the worn helmet's style (design sec. 4c), null for the standard one (or no helmet). */
+    public @Nullable HelmetStyle getHelmetStyle() {
+        return HelmetStyle.byId(this.entityData.get(HELMET_STYLE));
     }
 
     /** Both sides: running with its helmet on, so fire, frost, harmful effects and water are kept out (SuitSeal). */
