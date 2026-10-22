@@ -195,8 +195,9 @@ exhausts; the other two are their own models (simple boxes, detail in the textur
   the hotbar. Phase 2 may add the tool's name/cooldown.
 - **Lights** (built 2026-10-13): firebox glow (load, low fuel, embers after shutdown) and visor state colours,
   see section 0.
-- Sounds (built, Phase 6): engine loop while piloted + powered, pitch/volume by load; drill and chainsaw loops while
-  running; power-down/up, shots, EM hum and grinding one-shots. All in `sounds.json` (re-pitched vanilla for now).
+- Sounds (built, Phase 6; engine reworked 2026-10-21): no engine loop (user: a constant rumble drives you mad); a
+  powered suit's backpack makes a faint sound every ~7 s at rest, ~3 s flat out (firebox crackle, tidal bubbles only
+  under water, reactor hum); drill, chainsaw and chaingun loops while running; power-down/up, shots, EM hum and grinding one-shots. All in `sounds.json` (re-pitched vanilla for now).
 
 ## 7. Balance knobs (built, Phase 6: `config/powerarmor-common.toml`, in-game config screen)
 Fuel energy per item, drain per state, jump cost, low-fuel threshold, tool costs, chaingun intervals, spin-up, damage, overheat, EM range + slam

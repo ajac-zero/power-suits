@@ -1,12 +1,34 @@
 {
-  "suit.engine": {
-    "subtitle": "subtitles.powerarmor.suit.engine",
+  "suit.engine.firebox": {
+    "subtitle": "subtitles.powerarmor.suit.engine.firebox",
     "sounds": [
       {
-        "name": "minecraft:entity.minecart.inside",
+        "name": "minecraft:block.furnace.fire_crackle",
+        "type": "event",
+        "pitch": 0.8,
+        "volume": 0.3
+      }
+    ]
+  },
+  "suit.engine.tidal": {
+    "subtitle": "subtitles.powerarmor.suit.engine.tidal",
+    "sounds": [
+      {
+        "name": "minecraft:block.bubble_column.upwards_ambient",
+        "type": "event",
+        "pitch": 0.8,
+        "volume": 0.25
+      }
+    ]
+  },
+  "suit.engine.reactor": {
+    "subtitle": "subtitles.powerarmor.suit.engine.reactor",
+    "sounds": [
+      {
+        "name": "minecraft:block.beacon.ambient",
         "type": "event",
         "pitch": 0.6,
-        "volume": 0.6
+        "volume": 0.12
       }
     ]
   },

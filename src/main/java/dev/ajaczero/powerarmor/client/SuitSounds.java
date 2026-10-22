@@ -12,26 +12,35 @@ import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
- * Looping sounds, played on each client: the engine (while a suit is piloted and powered; pitch and volume
- * rise with the load) and the running tool (drill whir, chainsaw buzz, chaingun motor whine).
+ * The suit's running sounds, played on each client: the engine's faint, occasional sounds while powered and the
+ * running tool's loop (drill whir, chainsaw buzz, chaingun motor whine).
  *
- * Why client side: a looping sound has to be started, moved along with the suit and faded out every frame.
- * The server only knows *that* something should sound (synced data: powered, piloted, TOOL_RUNNING); each
- * client turns that into a "tickable" sound instance that updates itself every tick. One-shot sounds (shots,
- * power up/down) are still played from the server with {@code playSound}.
+ * The engine has no loop any more (user: the old one, a re-pitched minecart rumble, played as long as the suit was on
+ * and "drove me mad"). A powered suit is quiet; now and then its backpack makes a soft sound it can explain: the
+ * firebox's fire crackles (vanilla's furnace), the tidal pump bubbles while it's under water, the star reactor hums
+ * like a beacon. Working hard (walking, sprinting, a tool running) makes them a little more frequent and louder. The
+ * sounds themselves (and their base volume) are picked in sounds.json.
+ *
+ * Why client side: the server only knows *that* something should sound (synced data: powered, engine, TOOL_RUNNING);
+ * each client turns that into sounds. A looping tool sound has to be started, moved along with the suit and faded out
+ * every tick (a "tickable" sound instance); the engine's one-shots are just played at the suit's position. One-shot
+ * sounds of actions (shots, power up/down) are still played from the server with {@code playSound}.
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class SuitSounds {
     /** Suits further away than this don't get loops started (they'd be inaudible anyway). */
     private static final double RANGE = 32;
-    private static final Map<Integer, Loop> ENGINES = new HashMap<>();
     private static final Map<Integer, Loop> TOOLS = new HashMap<>();
+    private static final RandomSource RANDOM = RandomSource.create();
+    /** Dev log: engine sounds played since the game started. */
+    private static int enginePlayed;
 
     @SubscribeEvent
     public static void tick(ClientTickEvent.Post event) {
@@ -39,12 +48,9 @@ public final class SuitSounds {
         if (mc.level == null || mc.player == null || mc.isPaused()) {
             return;
         }
-        ENGINES.values().removeIf(Loop::isStopped);
         TOOLS.values().removeIf(Loop::isStopped);
         for (PowerArmorEntity suit : mc.level.getEntitiesOfClass(PowerArmorEntity.class, mc.player.getBoundingBox().inflate(RANGE))) {
-            if (engineOn(suit) && !ENGINES.containsKey(suit.getId())) {
-                start(mc, ENGINES, suit, new Loop(ModSounds.ENGINE.get(), suit, SuitSounds::engineOn, SuitSounds::engineVolume, SuitSounds::enginePitch));
-            }
+            engineTick(mc, suit);
             SoundEvent toolSound = toolSound(suit);
             if (toolSound != null && !TOOLS.containsKey(suit.getId())) {
                 start(mc, TOOLS, suit, new Loop(toolSound, suit, s -> toolSound(s) == toolSound, SuitSounds::toolVolume, SuitSounds::toolPitch));
@@ -57,17 +63,39 @@ public final class SuitSounds {
         mc.getSoundManager().play(loop);
     }
 
-    private static boolean engineOn(PowerArmorEntity suit) {
-        return suit.isAlive() && suit.isPowered(); // a powered suit always runs: piloted or driven by its mind
+    /**
+     * Now and then a soft sound from the engine. The chance per tick gives the average gap: about 7 s at rest, 3 s
+     * flat out (Minecraft's own ambient block sounds, like the furnace's crackle, are rolled the same way, so they never
+     * fall into a rhythm).
+     */
+    private static void engineTick(Minecraft mc, PowerArmorEntity suit) {
+        SoundEvent sound = engineSound(suit);
+        if (sound == null) {
+            return;
+        }
+        float load = Math.min(1F, suit.engineLoad()); // 0 standing .. 1 sprinting
+        float chance = 1F / Mth.lerp(load, 140F, 60F);
+        if (RANDOM.nextFloat() >= chance) {
+            return;
+        }
+        float volume = 0.6F + 0.4F * load; // times the volume in sounds.json
+        float pitch = 0.9F + 0.2F * RANDOM.nextFloat();
+        // From the backpack (2.5 blocks up). distanceDelay false: no speed-of-sound delay for something this close.
+        mc.level.playLocalSound(suit.getX(), suit.getY() + 2.5, suit.getZ(), sound, SoundSource.NEUTRAL, volume, pitch, false);
+        enginePlayed++;
     }
 
-    // Load 0 (idle) .. ~1.3 (sprinting with a tool running): the engine gets louder and higher.
-    private static float engineVolume(PowerArmorEntity suit) {
-        return 0.35F + 0.5F * suit.engineLoad();
-    }
-
-    private static float enginePitch(PowerArmorEntity suit) {
-        return 0.85F + 0.45F * suit.engineLoad();
+    /** The installed engine's sound, or null while it's silent (off, flooded, or a tidal engine out of the water). */
+    private static SoundEvent engineSound(PowerArmorEntity suit) {
+        if (!suit.isAlive() || !suit.isPowered() || suit.getEngine() == null) {
+            return null; // a powered suit always runs: piloted or driven by its mind
+        }
+        return switch (suit.getEngine()) {
+            case FIREBOX -> ModSounds.FIREBOX.get();
+            // Bubbles need water round the pump; running on rain or buckets it has nothing to bubble through.
+            case TIDAL -> suit.isEngineUnderWater() ? ModSounds.TIDAL.get() : null;
+            case REACTOR -> ModSounds.REACTOR.get();
+        };
     }
 
     private static float toolVolume(PowerArmorEntity suit) {
@@ -126,9 +154,9 @@ public final class SuitSounds {
         }
     }
 
-    /** Dev logs: how many engine / tool loops are playing. */
+    /** Dev logs: engine sounds played so far / tool loops playing. */
     public static String activeLoops() {
-        return ENGINES.size() + "/" + TOOLS.size();
+        return enginePlayed + "/" + TOOLS.size();
     }
 
     private SuitSounds() {}

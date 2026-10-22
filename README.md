@@ -81,8 +81,9 @@ balance pass), with what one piece of coal (1600) buys:
 Coal and charcoal 1600, lava bucket 3200, blaze rod 4800. Hover over any of them for its walking time.
 
 ### Sounds
-The engine rumbles while a suit is powered (piloted or driven by its mind), louder and higher as it works harder (walking,
-sprinting, a tool running); the drill whirs and the chainsaw buzzes while they run (subtitles included).
+A powered suit is quiet: no engine loop. Now and then its backpack makes a soft sound (the firebox crackles, the tidal
+pump bubbles under water, the star reactor hums), a little more often and louder as it works harder (walking, sprinting,
+a tool running). The drill whirs, the chainsaw buzzes and the chaingun's motor whines while they run (subtitles included).
 They are vanilla sounds re-pitched in `assets/powerarmor/sounds.json`: swap in your own `.ogg` files there.
 
 Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It burns whenever
@@ -227,7 +228,7 @@ src/main/java/dev/ajaczero/powerarmor/
   entity/SuitSmash.java      breaking leaves/panes/glass/ice while walking/sprinting (block tags suit_smashes_*)
   PilotHands.java            hand needs power, +1.5 reach, +4 melee damage
   PowerArmorConfig.java      balance knobs (config/powerarmor-common.toml)
-  registry/ModSounds.java    engine + tool loop sound events (audio picked in assets/powerarmor/sounds.json)
+  registry/ModSounds.java    engine + tool sound events (audio picked in assets/powerarmor/sounds.json)
   client/                    rendering only (never loaded on servers)
     PowerArmorModel.java     points GeckoLib at the asset files
     PowerArmorRenderer.java  copies the suit's state for the frame (SuitRenderData), aims the torso/head, raises the tool
@@ -245,7 +246,7 @@ src/main/java/dev/ajaczero/powerarmor/
     ChaingunParts.java       turns the chaingun's barrels with the synced spin (suit + cockpit viewmodel)
     ClientSetup.java         registers the renderer
     PowerArmorClient.java    client-only @Mod entry: the in-game config screen
-    SuitSounds.java          engine + tool loops (tickable sounds that follow the suit)
+    SuitSounds.java          engine sounds now and then + tool loops (tickable sounds that follow the suit)
     FuelTooltip.java         "Power Armor fuel: 1:20 of walking" on coal, lava, blaze rods
     dev/AutoPilot.java       scripted screenshot test drive (only with -Dpowerarmor.autopilot)
   test/PowerArmorTests.java  GameTests (@SuitTest methods, registered by test/SuitTests.java)

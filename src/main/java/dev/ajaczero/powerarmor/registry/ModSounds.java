@@ -16,8 +16,14 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class ModSounds {
     public static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT, PowerArmor.MODID);
 
-    /** Engine loop while piloted and powered; pitch and volume follow the load (client: SuitSounds). */
-    public static final DeferredHolder<SoundEvent, SoundEvent> ENGINE = register("suit.engine");
+    /**
+     * The engines' faint, occasional sounds while powered (client: SuitSounds): no loop (user: the old minecart rumble
+     * that played all the time "drove me mad"). Each engine gets a sound its backpack can explain: the firebox's fire
+     * crackles, the tidal pump bubbles (only under water), the star reactor hums now and then.
+     */
+    public static final DeferredHolder<SoundEvent, SoundEvent> FIREBOX = register("suit.engine.firebox");
+    public static final DeferredHolder<SoundEvent, SoundEvent> TIDAL = register("suit.engine.tidal");
+    public static final DeferredHolder<SoundEvent, SoundEvent> REACTOR = register("suit.engine.reactor");
     /** Tool loops while the tool runs. */
     public static final DeferredHolder<SoundEvent, SoundEvent> DRILL = register("tool.drill");
     public static final DeferredHolder<SoundEvent, SoundEvent> CHAINSAW = register("tool.chainsaw");
