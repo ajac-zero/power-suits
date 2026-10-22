@@ -211,7 +211,7 @@ public final class PowerArmorTests {
         int blaze = SuitFuel.energyOf(new ItemStack(Items.BLAZE_ROD));
         helper.assertTrue(coal > 0 && coal < lava && lava < blaze, "expected coal < lava < blaze rod, got " + coal + " " + lava + " " + blaze);
         helper.assertTrue(SuitFuel.energyOf(new ItemStack(Items.CHARCOAL)) == coal, "charcoal should match coal");
-        helper.assertTrue(!SuitFuel.isFuel(new ItemStack(Items.OAK_PLANKS)), "planks are furnace fuel but not suit fuel");
+        helper.assertTrue(!SuitFuel.isFuel(dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX, new ItemStack(Items.OAK_PLANKS)), "planks are furnace fuel but not suit fuel");
         helper.succeed();
     }
 
@@ -359,13 +359,13 @@ public final class PowerArmorTests {
         helper.assertTrue(!menu.getSlot(0).mayPlace(new ItemStack(Items.COAL)), "socket only takes power tools");
         helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(ModItems.CHAINGUN.get())), "socket takes the chaingun");
         player.getInventory().setItem(10, new ItemStack(ModItems.CHAINGUN.get()));
-        menu.quickMoveStack(player, 4); // menu slot 4 = player inventory slot 10 (menu: socket, fuel, helmet, then the player's)
+        menu.quickMoveStack(player, 5); // menu slot 5 = player inventory slot 10 (menu: socket, fuel, helmet, engine, then the player's)
         helper.assertTrue(menu.getSlot(0).getItem().is(ModItems.CHAINGUN.get()), "shift-click should install the chaingun");
         helper.assertTrue(menu.getSlot(1).getItem().getCount() == 4, "menu shows the suit's fuel");
 
         // Shift-click coal from the player's inventory: it joins the coal in the fuel slot.
         player.getInventory().setItem(9, new ItemStack(Items.COAL, 10));
-        menu.quickMoveStack(player, 3); // menu slot 3 = player inventory slot 9
+        menu.quickMoveStack(player, 4); // menu slot 4 = player inventory slot 9
         helper.assertTrue(menu.getSlot(1).getItem().getCount() == 14, "shift-click should move coal into the fuel slot, got " + menu.getSlot(1).getItem());
 
         // The helmet slot (2026-10-19) takes only the suit's helmet, one; shift-click puts a helmet there.
@@ -374,7 +374,7 @@ public final class PowerArmorTests {
         menu.getSlot(2).set(ItemStack.EMPTY);
         helper.assertTrue(!suit.hasHelmet(), "taking it out of the menu takes it off the suit");
         player.getInventory().setItem(11, new ItemStack(ModItems.SUIT_HELMET.get()));
-        menu.quickMoveStack(player, 5); // menu slot 5 = player inventory slot 11
+        menu.quickMoveStack(player, 6); // menu slot 6 = player inventory slot 11
         helper.assertTrue(menu.getSlot(2).getItem().is(ModItems.SUIT_HELMET.get()) && suit.hasHelmet(), "shift-click should put the helmet on");
 
         Player pilot = boardedPilot(helper, suit);
@@ -2209,6 +2209,253 @@ public final class PowerArmorTests {
     private static void checkCraft(GameTestHelper helper, int w, int h, List<ItemStack> grid, net.minecraft.world.item.Item expected) {
         ItemStack out = craft(helper, w, h, grid);
         helper.assertTrue(out.is(expected), "expected " + expected + " from " + grid + ", got " + out);
+    }
+
+    // =========================================================================================
+    // Engines (Phase 9, design sec. 4b): firebox, tidal engine, star reactor
+    // =========================================================================================
+
+    /** A stone-walled pool on the pad, water from y=2 to y=6 inside x/z 2..6 (as in suitSinksAndDoesNotDrown); with
+     *  {@code water} false only the walls (an empty pool, ready to be filled). */
+    private static void pool(GameTestHelper helper, boolean water) {
+        for (int x = 1; x <= 7; x++) {
+            for (int z = 1; z <= 7; z++) {
+                for (int y = 2; y <= 6; y++) {
+                    boolean wall = x == 1 || x == 7 || z == 1 || z == 7;
+                    helper.setBlock(new BlockPos(x, y, z), wall ? Blocks.STONE : water ? Blocks.WATER : Blocks.AIR);
+                }
+            }
+        }
+    }
+
+    private static PowerArmorEntity suitWithEngine(GameTestHelper helper, BlockPos pos, ItemStack engine, ItemStack fuel) {
+        PowerArmorEntity suit = suitAt(helper, pos);
+        suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, engine);
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, fuel);
+        return suit;
+    }
+
+    /** Every suit comes with a firebox; taking the engine out kills the power and the half-burnt item goes with it. */
+    @SuitTest(timeoutTicks = 60)
+    public static void engineSlotPowersTheSuit(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.ENGINE_SLOT).is(ModItems.FIREBOX.get()), "a new suit has a firebox");
+        helper.runAfterDelay(3, () -> {
+            helper.assertTrue(suit.isPowered() && suit.getBurnLeftExact() > 0, "the firebox burns its coal");
+            suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, ItemStack.EMPTY);
+        });
+        helper.runAfterDelay(6, () -> {
+            helper.assertTrue(!suit.isPowered() && suit.getEngine() == null, "no engine, no power");
+            helper.assertTrue(suit.getBurnLeftExact() == 0, "the half-burnt coal went out with the engine, " + suit.getBurnLeftExact());
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 3, "the coal in the slot stays");
+            suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.FIREBOX.get()));
+        });
+        helper.runAfterDelay(9, () -> {
+            helper.assertTrue(suit.isPowered(), "a firebox back in powers it again");
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 2, "lighting the next coal");
+            helper.succeed();
+        });
+    }
+
+    /** The menu: the engine slot takes engines only; the fuel slot takes any engine's fuel, like a furnace's. */
+    @SuitTest
+    public static void engineAndFuelSlotsInTheMenu(GameTestHelper helper) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.snapTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
+        PowerArmorMenu menu = new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit);
+        helper.assertTrue(menu.getSlot(3).getItem().is(ModItems.FIREBOX.get()), "menu slot 3 shows the engine");
+        helper.assertTrue(menu.getSlot(3).mayPlace(new ItemStack(ModItems.TIDAL_ENGINE.get())), "engine slot takes a tidal engine");
+        helper.assertTrue(!menu.getSlot(3).mayPlace(new ItemStack(Items.FURNACE)), "engine slot refuses a furnace");
+        for (ItemStack fuel : List.of(new ItemStack(Items.COAL), new ItemStack(Items.WATER_BUCKET), new ItemStack(Items.NETHER_STAR),
+                net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION, net.minecraft.world.item.alchemy.Potions.WATER),
+                new ItemStack(Items.BUCKET), new ItemStack(Items.GLASS_BOTTLE))) {
+            helper.assertTrue(menu.getSlot(1).mayPlace(fuel), "fuel slot should take " + fuel);
+        }
+        helper.assertTrue(!menu.getSlot(1).mayPlace(new ItemStack(Items.HEART_OF_THE_SEA)), "the heart goes into the recipe, not the slot");
+        menu.getSlot(3).set(ItemStack.EMPTY);
+        player.getInventory().setItem(9, new ItemStack(ModItems.STAR_REACTOR.get()));
+        player.getInventory().setItem(10, new ItemStack(Items.NETHER_STAR));
+        menu.quickMoveStack(player, 4); // menu slot 4 = player inventory slot 9
+        menu.quickMoveStack(player, 5);
+        helper.assertTrue(menu.getSlot(3).getItem().is(ModItems.STAR_REACTOR.get()), "shift-click installs the engine");
+        helper.assertTrue(menu.getSlot(1).getItem().is(Items.NETHER_STAR), "shift-click puts the star in the fuel slot");
+        helper.succeed();
+    }
+
+    /** Water over the backpack puts a firebox out: power and the half-burnt item are lost, it won't relight or pack up
+     *  under water, and it lights its next item once the water is gone. */
+    @SuitTest(timeoutTicks = 80)
+    public static void fireboxFloodsUnderWater(GameTestHelper helper) {
+        pool(helper, false);
+        PowerArmorEntity suit = suitWithEngine(helper, SUIT_POS, new ItemStack(ModItems.FIREBOX.get()), new ItemStack(Items.COAL, 4));
+        helper.runAfterDelay(3, () -> {
+            helper.assertTrue(suit.isPowered() && !suit.isFlooded(), "a dry firebox runs");
+            pool(helper, true);
+        });
+        helper.runAfterDelay(6, () -> {
+            helper.assertTrue(suit.isEngineUnderWater() && suit.isFlooded(), "5 blocks of water cover the backpack");
+            helper.assertTrue(!suit.isPowered(), "a flooded firebox shuts the suit down");
+            helper.assertTrue(suit.getBurnLeftExact() == 0, "the burning coal is lost, " + suit.getBurnLeftExact());
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 3, "the coal in the slot can't light under water");
+            Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+            helper.assertTrue(!suit.packUp(player) && !suit.isRemoved() && packedSuit(player).isEmpty(), "no pack-up while flooded");
+            helper.assertTrue(!suit.hasEnergyFor(1), "no energy for tools either");
+            pool(helper, false); // drain it
+        });
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(!suit.isFlooded() && suit.isPowered(), "drained, the firebox lights again");
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 2, "with its next coal");
+            helper.succeed();
+        });
+    }
+
+    /** Wading is fine: water below the backpack (2 deep on the 2.95-high suit) doesn't flood it. */
+    @SuitTest(timeoutTicks = 40)
+    public static void fireboxWadesThroughShallowWater(GameTestHelper helper) {
+        pool(helper, false);
+        for (int x = 2; x <= 6; x++) {
+            for (int z = 2; z <= 6; z++) {
+                for (int y = 2; y <= 3; y++) {
+                    helper.setBlock(new BlockPos(x, y, z), Blocks.WATER);
+                }
+            }
+        }
+        PowerArmorEntity suit = suitWithEngine(helper, SUIT_POS, new ItemStack(ModItems.FIREBOX.get()), new ItemStack(Items.COAL, 4));
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(suit.isInWater() && !suit.isEngineUnderWater(), "the suit stands in the water, its backpack above it");
+            helper.assertTrue(suit.isPowered(), "a firebox above the water keeps running");
+            helper.succeed();
+        });
+    }
+
+    /** The tidal engine: free power while wet, a short grace on leaving the water, then water from the slot, then off. */
+    @SuitTest(timeoutTicks = 160)
+    public static void tidalEngineRunsWhileWet(GameTestHelper helper) {
+        pool(helper, true);
+        PowerArmorEntity suit = suitWithEngine(helper, SUIT_POS, new ItemStack(ModItems.TIDAL_ENGINE.get()), ItemStack.EMPTY);
+        int grace = PowerArmorConfig.TIDAL_DRY_GRACE.get();
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(suit.isPowered() && suit.hasFreePower(), "under water the tidal engine runs on nothing");
+            helper.assertTrue(suit.getBurnLeftExact() == 0 && suit.hasEnergyFor(100_000), "and pays for anything");
+            pool(helper, false);
+        });
+        helper.runAfterDelay(30 + grace / 2, () -> helper.assertTrue(suit.isPowered(), "a short grace out of the water"));
+        helper.runAfterDelay(30 + grace + 5, () -> {
+            helper.assertTrue(!suit.isPowered() && !suit.hasFreePower(), "dry and nothing to drink: off");
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.WATER_BUCKET));
+        });
+        helper.runAfterDelay(30 + grace + 8, () -> {
+            helper.assertTrue(suit.isPowered(), "a water bucket runs it on land");
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.BUCKET), "the empty bucket stays");
+            float left = suit.getBurnLeftExact();
+            helper.assertTrue(left > PowerArmorConfig.WATER_BUCKET_ENERGY.get() - 10 && left < PowerArmorConfig.WATER_BUCKET_ENERGY.get(),
+                    "it drinks the bucket's energy, " + left);
+            helper.succeed();
+        });
+    }
+
+    /** A water bottle is a smaller drink, and leaves its glass. A firebox can't use water, and a tidal engine no coal. */
+    @SuitTest(timeoutTicks = 40)
+    public static void eachEngineBurnsOnlyItsOwnFuel(GameTestHelper helper) {
+        ItemStack bottle = net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION, net.minecraft.world.item.alchemy.Potions.WATER);
+        PowerArmorEntity tidal = suitWithEngine(helper, new BlockPos(2, 2, 4), new ItemStack(ModItems.TIDAL_ENGINE.get()), bottle);
+        PowerArmorEntity fire = suitWithEngine(helper, new BlockPos(6, 2, 4), new ItemStack(ModItems.FIREBOX.get()), new ItemStack(Items.WATER_BUCKET));
+        helper.runAfterDelay(3, () -> {
+            helper.assertTrue(tidal.isPowered() && tidal.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.GLASS_BOTTLE),
+                    "the tidal engine drinks the bottle and leaves the glass");
+            helper.assertTrue(tidal.getBurnTotal() == PowerArmorConfig.WATER_BOTTLE_ENERGY.get(), "a bottle's worth, " + tidal.getBurnTotal());
+            helper.assertTrue(!fire.isPowered() && fire.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.WATER_BUCKET),
+                    "a firebox can't burn water: it just sits in the slot");
+            tidal.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL));
+            tidal.setBurn(0, 0);
+        });
+        helper.runAfterDelay(6, () -> {
+            helper.assertTrue(!tidal.isPowered() && tidal.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.COAL),
+                    "a dry tidal engine can't burn coal");
+            helper.succeed();
+        });
+    }
+
+    /** The star reactor: a Nether Star in the fuel slot runs everything for free, forever (it's never used up). */
+    @SuitTest(timeoutTicks = 60)
+    public static void starReactorRunsForever(GameTestHelper helper) {
+        PowerArmorEntity suit = suitWithEngine(helper, SUIT_POS, new ItemStack(ModItems.STAR_REACTOR.get()), new ItemStack(Items.NETHER_STAR));
+        Player pilot = boardedPilot(helper, suit);
+        pilot.zza = 1;
+        pilot.setSprinting(true);
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(suit.isPowered() && suit.hasFreePower(), "the reactor runs");
+            helper.assertTrue(suit.getBurnLeftExact() == 0 && suit.tryUseEnergy(100_000), "it burns nothing and pays for any tool");
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.NETHER_STAR), "the star stays");
+            helper.assertTrue(!suit.isLowOnFuel(), "it never runs low");
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 4));
+        });
+        helper.runAfterDelay(33, () -> {
+            helper.assertTrue(!suit.isPowered(), "without its star the reactor is dead (it doesn't burn coal)");
+            helper.succeed();
+        });
+    }
+
+    /** Engines survive saving and packing; suits and packed items from before the engines get their firebox. */
+    @SuitTest
+    public static void enginesSurviveSavesAndPacking(GameTestHelper helper) {
+        PowerArmorEntity suit = suitWithEngine(helper, SUIT_POS, new ItemStack(ModItems.TIDAL_ENGINE.get()), new ItemStack(Items.WATER_BUCKET));
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        loadTag(helper, loaded, saveTag(helper, suit));
+        helper.assertTrue(loaded.getEngine() == dev.ajaczero.powerarmor.entity.SuitEngine.TIDAL, "the engine survives saving");
+
+        suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, ItemStack.EMPTY);
+        CompoundTag taken = saveTag(helper, suit);
+        PowerArmorEntity emptied = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        loadTag(helper, emptied, taken);
+        helper.assertTrue(emptied.getEngine() == null, "an engine taken out stays out after loading");
+        taken.remove("HasEngineSlot"); // as saved before the engines
+        PowerArmorEntity old = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        loadTag(helper, old, taken);
+        helper.assertTrue(old.getEngine() == dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX, "a suit from before the engines has its firebox");
+
+        suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.STAR_REACTOR.get()));
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        helper.assertTrue(suit.packUp(player), "a dry suit packs up");
+        SuitLoadout loadout = packedSuit(player).get(ModDataComponents.LOADOUT.get());
+        helper.assertTrue(loadout != null && loadout.engine().isPresent() && loadout.engine().get().is(ModItems.STAR_REACTOR.get()),
+                "the packed item carries its engine, got " + loadout);
+        // A loadout's codec must keep "taken out" (an empty stack) apart from "from before the engines" (no field).
+        var ops = helper.getLevel().registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
+        SuitLoadout noEngine = new SuitLoadout(ItemStack.EMPTY, ItemStack.EMPTY, 0, 0, 0, ItemStack.EMPTY, java.util.Optional.of(ItemStack.EMPTY));
+        SuitLoadout back = SuitLoadout.CODEC.parse(ops, SuitLoadout.CODEC.encodeStart(ops, noEngine).getOrThrow()).getOrThrow();
+        helper.assertTrue(back.engine().isPresent() && back.engine().get().isEmpty(), "an empty engine slot survives the codec, got " + back);
+        SuitLoadout before = SuitLoadout.CODEC.parse(ops, SuitLoadout.CODEC.encodeStart(ops, SuitLoadout.EMPTY).getOrThrow()).getOrThrow();
+        helper.assertTrue(before.engine().isEmpty(), "no field stays no field");
+        PowerArmorEntity deployed = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        deployed.applyLoadout(SuitLoadout.EMPTY);
+        helper.assertTrue(deployed.getEngine() == dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX, "a suit item from before the engines deploys with a firebox");
+        deployed.applyLoadout(noEngine);
+        helper.assertTrue(deployed.getEngine() == null, "one packed without an engine deploys without one");
+        helper.succeed();
+    }
+
+    /** Rain counts as wet for the tidal engine; a firebox doesn't mind rain. Own batch: it sets the weather. */
+    @SuitTest(timeoutTicks = 200, batch = "rain")
+    public static void tidalEngineRunsInTheRain(GameTestHelper helper) {
+        // Tests are placed at random spots of a world with real biomes: it doesn't rain in a desert (or snows in the
+        // cold). Make the pad plains, as /fillbiome would.
+        var plains = helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.BIOME)
+                .getOrThrow(net.minecraft.world.level.biome.Biomes.PLAINS);
+        net.minecraft.server.commands.FillBiomeCommand.fill(helper.getLevel(), helper.absolutePos(new BlockPos(0, 0, 0)),
+                helper.absolutePos(new BlockPos(8, 10, 8)), plains);
+        PowerArmorEntity tidal = suitWithEngine(helper, new BlockPos(2, 2, 4), new ItemStack(ModItems.TIDAL_ENGINE.get()), ItemStack.EMPTY);
+        PowerArmorEntity fire = suitWithEngine(helper, new BlockPos(6, 2, 4), new ItemStack(ModItems.FIREBOX.get()), new ItemStack(Items.COAL, 2));
+        // The rain fades in over a few seconds (the level's rain strength must pass 0.2 before it counts).
+        helper.succeedWhen(() -> {
+            helper.assertTrue(helper.getLevel().isRaining(), "waiting for rain");
+            BlockPos top = BlockPos.containing(tidal.getX(), tidal.getBoundingBox().maxY, tidal.getZ());
+            helper.assertTrue(tidal.isPowered() && tidal.hasFreePower(), "the tidal engine runs in the rain (rain level "
+                    + helper.getLevel().getRainLevel(1F) + ", sky " + helper.getLevel().canSeeSky(top) + ", raining at its top "
+                    + helper.getLevel().isRainingAt(top) + ", biome " + helper.getLevel().getBiome(top).getRegisteredName() + ")");
+            helper.assertTrue(fire.isPowered(), "a firebox runs in the rain too");
+        });
     }
 
     private PowerArmorTests() {}

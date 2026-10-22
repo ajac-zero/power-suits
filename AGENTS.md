@@ -51,6 +51,7 @@ Mojang's names are official since 26.1 (no Parchment). Porting primers: `neoforg
 | `./gradlew runAutopilotPose` | ~30 s pose check (`client/dev/PoseScene`): side shots looking level / down 40 / up 30 / tool raised, top shots with the view at yaw +40 (gold block) / -40 (redstone): looking down must lean forward, the torso and raised tool must face the shot's block (`ap_pose_*.png`, `run/autopilot_pose.csv`) |
 | `./gradlew runAutopilotGait` | ~45 s foot-slip drive (`client/dev/GaitScene`): walk, back up, strafe, diagonal, turn on the spot, look around, sprint + turn; per-tick `run/autopilot_gait.csv`, summarize with `python3 tools/gait-report.py` (slip = how fast a planted foot slides, moon = moonwalk ticks) |
 | `./gradlew runAutopilotPaint` | ~30 s paint check (`client/dev/PaintScene`, also at the end of `runAutopilotMech`): all 16 dyes + a wet sponge on a suit, `ap_paint_*` (in-game back view + front), `run/autopilot_paint.csv` (server and client paint must agree a tick later) |
+| `./gradlew runAutopilotEngine` | ~35 s engine check (`client/dev/EngineScene`, also at the end of `runAutopilotMech`): a firebox floods in a glass pool (no pack-up), a tidal engine runs under water, dies on the dry stairs, drinks a water bucket, a star reactor sprints for free, the menu's engine slot (`ap_engine_*`, `ap_menu_engine`, `run/autopilot_engine.csv`) |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
@@ -345,6 +346,13 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   torso swung side to side). Judge facing from the client: the mind CSV logs clientHead/clientBody/twist/aimErr.
 - **A ternary of double and int inside String.format can box as Integer** (javac boxed each branch): `cond ? d : -1`
   crashed `%f` the first time the branch ran (the mech log, with no pilot). Write `-1D`.
+- **Engines (2026-10-21): every suit comes with a firebox, and a firebox floods in deep water** (water over the backpack,
+  2.2 blocks up: 3+ deep): scenes or tests that put a fuelled suit in deep water need a tidal engine (+ a water bucket to
+  climb out) or a reactor. Swapping the engine drops the half-burnt item one tick later (`tickFuel` notices the swap),
+  so set burn values after a swap has been seen, not in the same tick.
+- **GameTests run at random spots of a world with real biomes**: a weather test landed in a desert (no rain). The "rain"
+  batch sets the weather, opens the sky (`TestData.skyAccess`: the default barrier ceiling keeps rain off) and paints
+  the pad plains (`FillBiomeCommand.fill`).
 - **The helmet (2026-10-19) seals the suit and lets the mind run**: anything that needs the seal or the mind (tests,
   autopilot scenes) must put a `SUIT_HELMET` in `HELMET_SLOT` next to the fuel (GameTests' `suitAt` does).
 - Blockbench animation work: follow the skill's `SKILL.md` + `ANIMATION.md` (its "Gait iteration" section is the method

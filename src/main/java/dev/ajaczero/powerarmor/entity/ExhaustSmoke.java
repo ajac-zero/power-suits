@@ -19,8 +19,8 @@ final class ExhaustSmoke {
 
     /** Called every client tick. Smoke only while someone is driving: a parked suit's engine is off. */
     static void tick(PowerArmorEntity suit) {
-        if (!suit.isAlive() || !suit.isVehicle() || !suit.canOperate()) {
-            return;
+        if (!suit.isAlive() || !suit.isVehicle() || !suit.canOperate() || suit.getEngine() != SuitEngine.FIREBOX) {
+            return; // only the firebox has exhausts (design sec. 4b)
         }
         RandomSource random = suit.getRandom();
         boolean sprinting = suit.getControllingPassenger() instanceof Player pilot && pilot.isSprinting() && suit.getVisualSpeed() > 0.3;
@@ -45,6 +45,9 @@ final class ExhaustSmoke {
 
     /** A thick black cough when the engine starts. */
     static void startupBurst(PowerArmorEntity suit) {
+        if (suit.getEngine() != SuitEngine.FIREBOX) {
+            return;
+        }
         puff(suit, ParticleTypes.LARGE_SMOKE, 6, 0.15);
         puff(suit, ParticleTypes.SMOKE, 6, 0.2);
     }

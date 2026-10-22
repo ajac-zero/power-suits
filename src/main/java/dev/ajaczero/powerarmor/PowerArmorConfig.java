@@ -25,6 +25,15 @@ public final class PowerArmorConfig {
     public static final ModConfigSpec.IntValue BLAZE_ENERGY = B
             .comment("Energy per blaze rod.").translation(key("blaze_energy"))
             .defineInRange("blaze_energy", 4800, 1, 1_000_000);
+    public static final ModConfigSpec.IntValue WATER_BUCKET_ENERGY = B
+            .comment("Tidal engine: energy per water bucket, used only out of the water (300 = 15 s of walking; the bucket stays).").translation(key("water_bucket_energy"))
+            .defineInRange("water_bucket_energy", 300, 1, 1_000_000);
+    public static final ModConfigSpec.IntValue WATER_BOTTLE_ENERGY = B
+            .comment("Tidal engine: energy per water bottle (the glass bottle stays).").translation(key("water_bottle_energy"))
+            .defineInRange("water_bottle_energy", 100, 1, 1_000_000);
+    public static final ModConfigSpec.IntValue TIDAL_DRY_GRACE = B
+            .comment("Tidal engine: ticks it keeps running free after leaving the water (a shoreline mustn't flicker it).").translation(key("tidal_dry_grace"))
+            .defineInRange("tidal_dry_grace", 20, 0, 1200);
     public static final ModConfigSpec.DoubleValue DRAIN_IDLE = B
             .comment("Energy per tick while piloted and standing still.").translation(key("drain_idle"))
             .defineInRange("drain_idle", 0.25, 0, 100);

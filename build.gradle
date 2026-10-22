@@ -88,6 +88,13 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'paint'
         }
 
+        // Dev tool: only the engine scene (flooded firebox, tidal engine in and out of water, star reactor; ap_engine_*.png,
+        // run/autopilot_engine.csv), ~35 s.
+        autopilotEngine {
+            client()
+            systemProperty 'powerarmor.autopilot', 'engine'
+        }
+
         // Dev tool: live-tunes the cockpit viewmodel (see AutoPilot.viewTuner); stays open until closed.
         autopilotView {
             client()

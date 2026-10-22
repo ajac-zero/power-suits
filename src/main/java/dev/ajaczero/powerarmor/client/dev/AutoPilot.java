@@ -55,6 +55,8 @@ public final class AutoPilot {
     private static final boolean GAIT_ONLY = "gait".equals(System.getProperty("powerarmor.autopilot"));
     /** "paint" mode: only the paint scene (PaintScene: dyes and a wet sponge on a suit), ~20 s. */
     private static final boolean PAINT_ONLY = "paint".equals(System.getProperty("powerarmor.autopilot"));
+    /** "engine" mode: only the engine scene (EngineScene: flooded firebox, tidal engine, star reactor), ~35 s. */
+    private static final boolean ENGINE_ONLY = "engine".equals(System.getProperty("powerarmor.autopilot"));
     private static final int MECH_START = 1712;
     /** A file run/cleanzap: no fire from the lightning scene's bolt, so the knock-out animation can be seen. */
     private static final boolean CLEAN_ZAP = Files.exists(Path.of("cleanzap"));
@@ -110,6 +112,10 @@ public final class AutoPilot {
             }
         } else if (PAINT_ONLY) {
             if (!PaintScene.step(mc, tick++)) {
+                mc.stop();
+            }
+        } else if (ENGINE_ONLY) {
+            if (!EngineScene.step(mc, tick++)) {
                 mc.stop();
             }
         } else {
@@ -168,7 +174,10 @@ public final class AutoPilot {
             case 450, 470 -> shot(mc, "water_fp_" + t);
             case 480 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
             case 500, 520, 540, 560, 590 -> shot(mc, "water_tp_" + t);
-            case 640 -> { releaseAll(); closeWaterLog(); survival(mc, false); }
+            case 640 -> { releaseAll(); closeWaterLog(); survival(mc, false);
+                          onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) { // the firebox back in (see buildPool)
+                              s.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get()));
+                              s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 16)); } }); }
             // ---- fuel: nearly empty tank, walk until the engine dies, refuel through the menu
             case 650 -> { DevUtil.hideGui(mc, false); o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 0; pitch = 15; fuelScenarioSetup(mc); }
             case 660 -> { openFuelLog(mc); hold(o.keyUp, true); }
@@ -349,7 +358,7 @@ public final class AutoPilot {
     private static void openWaterLog(Minecraft mc) {
         try {
             waterCsv = java.nio.file.Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_water.csv"));
-            waterCsv.write("tick,dz,y,speed,vy,onGround,inWater,eyeInWater,air,health,anim,suitHealth\n");
+            waterCsv.write("tick,dz,y,speed,vy,onGround,inWater,eyeInWater,air,health,anim,suitHealth,powered,engine\n");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -365,10 +374,10 @@ public final class AutoPilot {
             waterStartZ = suit.getZ();
         }
         try {
-            waterCsv.write(String.format(java.util.Locale.ROOT, "%d,%.2f,%.3f,%.2f,%.2f,%b,%b,%b,%d,%.1f,%s,%.1f%n", t, suit.getZ() - waterStartZ,
+            waterCsv.write(String.format(java.util.Locale.ROOT, "%d,%.2f,%.3f,%.2f,%.2f,%b,%b,%b,%d,%.1f,%s,%.1f,%b,%s%n", t, suit.getZ() - waterStartZ,
                     suit.getY(), Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20, (suit.getY() - suit.yo) * 20,
                     suit.onGround(), suit.isInWater(), mc.player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER),
-                    mc.player.getAirSupply(), mc.player.getHealth(), suit.getMovementAnimationName(), suit.getHealth()));
+                    mc.player.getAirSupply(), mc.player.getHealth(), suit.getMovementAnimationName(), suit.getHealth(), suit.isPowered(), suit.getEngine()));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] water csv", e);
         }
@@ -815,6 +824,11 @@ public final class AutoPilot {
                 return;
             }
             player.setGameMode(GameType.SURVIVAL);
+            // Since the engines (2026-10-21) a firebox floods in water this deep: this scene is about moving through
+            // water, so it drives a tidal engine (free under water) with a water bucket to climb the stairs out on.
+            // The firebox goes back in at the end of the scene (engineBack).
+            suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.TIDAL_ENGINE.get()));
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));
             var level = player.level();
             BlockPos base = suit.blockPosition(); // g = base.y (the suit stands on top of base.y - 1)
             int g = base.getY();
@@ -1250,7 +1264,11 @@ public final class AutoPilot {
             helmetRunning = false;
             paintStart = m + 1;
         }
-        if (!helmetRunning && m >= paintStart && !PaintScene.step(mc, m - paintStart)) {
+        if (!helmetRunning && paintRunning && m >= paintStart && !PaintScene.step(mc, m - paintStart)) {
+            paintRunning = false;
+            engineStart = m + 1;
+        }
+        if (!paintRunning && m >= engineStart && !EngineScene.step(mc, m - engineStart)) {
             mc.stop();
         }
         if (m >= 10 && m < 420) {
@@ -1269,6 +1287,8 @@ public final class AutoPilot {
     private static int helmetStart = Integer.MAX_VALUE;
     private static boolean helmetRunning = true;
     private static int paintStart = Integer.MAX_VALUE;
+    private static boolean paintRunning = true;
+    private static int engineStart = Integer.MAX_VALUE;
     private static PowerArmorEntity mindSuit;
     // Filled on the server thread, read by the client thread (logMind): a copy-on-write list (an ArrayList threw mid-iteration).
     private static final java.util.List<net.minecraft.world.entity.Mob> mindMobs = new java.util.concurrent.CopyOnWriteArrayList<>();

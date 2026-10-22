@@ -75,7 +75,7 @@ from fire, hot metal, redstone and sparks, never from futuristic energy.
 | Stomp (2026-10-13) | Landing from >= 3.5 blocks: everything alive within 2-3.5 blocks (grows with the drop) except the suit and its pilot takes 2/block (max 30, half at the edge), credited to the pilot (`powerarmor:stomp`), thrown outward + up; mace ground-smash dust + sound. Every heavy landing kicks up a dust ring. |
 | Smashing (2026-10-13) | While piloted, powered and steering: blocks in `powerarmor:suit_smashes_walking` (leaves, panes, cobweb, snow layer, berry bush, azalea, dripleaf, bamboo) break in the hitbox + 0.6 ahead + under the feet; sprinting adds `suit_smashes_sprinting` (glass, ice) 1.1 ahead. No drops, BreakEvent via ToolMining. Config switch. |
 | Lightning (2026-10-13) | A weakness: a strike on a suit with fuel knocks it out for 100 ticks (electrified once + shutdown slump, sparks), no seal meanwhile, then startup. No boost. The bolt itself doesn't ignite a running suit; the fire it leaves at the suit's feet catches the knocked-out one. A suit that is off (empty, knocked out, standing up) doesn't flinch when hit (`reactsToHits`): the hit animation would cut into the convulsion, slump and startup. |
-| Water | Fallout-style: sinks (~2.5 blocks/s), walks the bottom at half speed, suit never drowns, ignores currents. Powered: the pilot breathes the suit's air; unpowered: their air drains once their head is under. Lava: same bottom-walking at 35% speed (vanilla lava swimming crawled at 0.4 blocks/s). |
+| Water | Fallout-style: sinks (~2.5 blocks/s), walks the bottom at half speed, suit never drowns, ignores currents. Since the engines (sec. 4b) a firebox floods once water covers its backpack (2.2 blocks up): only a tidal engine or a star reactor runs under deeper water. Powered: the pilot breathes the suit's air; unpowered: their air drains once their head is under. Lava: same bottom-walking at 35% speed (vanilla lava swimming crawled at 0.4 blocks/s). |
 | Animations | Final legs (2026-10-15, legs v10): a solid lower leg down to the boot's sole strip, the ankle hinged at the lower leg's front bottom edge, the boot's hidden heel shaped around that hinge so the lower leg rocks over it without a gap. Walk v6: a slow heavy stride (1.0 s cycle, 22 px stance, 2.22 blocks/s authored), a knee dip and a footfall jolt at each heel strike. Run v8: a driving run (0.7 s stride, foot planted 32% of it, 6.25 blocks/s): the suit sinks into each planted leg and shoves off with the trailing leg thrown back; both arms pump a short heavy swing (the tool arm too: its third-person pose never aims). Rejected on the way: short quick steps, a bounding run ("hopping"), a knee-style ankle band. Every other leg animation still has keys from the earlier legs and needs re-baking before export. idle, walk, run, jump_charge, jump, fall, land, hit, death, shutdown, powered_off, startup, electrified (lightning), tool_recoil, hold_item/use_item, drill_run, chainsaw_run (+ unused: attack, idle_fidget; throw, stim and sneakwalk removed 2026-10-18). |
 | Old saves | Suits loaded from older versions get current base stats (`readAdditionalSaveData`). |
 
@@ -141,6 +141,35 @@ from fire, hot metal, redstone and sparks, never from futuristic energy.
 - **Low fuel (< 600 energy = 30 s of walking, counting the slot):** gauge flashes, beep every 2 s, dark
   sputtering smoke.
 - Hoppers into the fuel slot: nice-to-have, not built.
+- Since the engines (section 4b) this section describes the **firebox**, the standard engine.
+
+## 4b. Engines (decided 2026-10-21, user; mechanics built 2026-10-21, backpack art pending)
+Why: a furnace that keeps burning under water made no sense. The backpack becomes the suit's **engine**, and
+engines can be swapped. Each engine is a full redesign of the backpack: only the firebox has the firebox and the
+exhausts; the other two are their own models (simple boxes, detail in the texture, as the user prefers).
+- **Engine slot**: a fourth slot in the suit menu. Engine items: **Firebox**, **Tidal engine**, **Star reactor**.
+  A new suit comes with a firebox (the torso recipe keeps its furnace); suits saved before the engines load with
+  one. No engine = no power (slumped, like a suit without fuel). A packed suit keeps its engine; a wreck drops it.
+- **The fuel slot holds what the engine runs on.** Like a furnace's, it takes any engine's fuel; what the installed
+  engine can't use just sits there. Swapping the engine is allowed any time; the half-burnt item is lost with it.
+
+  | Engine | Recipe (2026-10-21; "somewhat expensive") | Fuel slot | Runs | Costs |
+  |---|---|---|---|---|
+  | Firebox (standard, most common; the torso's furnace is one) | 4 iron blocks, 4 iron ingots, a blast furnace | furnace fuels (section 4) | anywhere, rain too; **floods** when water covers it | as section 4 |
+  | Tidal engine | 4 iron blocks, 4 dark prismarine, the **Heart of the Sea** | water: bucket (the bucket stays) or bottle, a short run each, to get back into the water | **free while wet**: its backpack under water, or standing in rain; on land it drinks the water in the slot | nothing while wet |
+  | Star reactor (endgame, like an arc reactor) | 4 iron blocks, 4 diamonds, an end crystal | 1 **Nether Star** (never used up) | forever, anywhere | nothing: movement and tools are free; the chaingun still needs iron nuggets |
+
+- **Under water** means the engine is covered: the backpack's middle (2.2 blocks above the suit's feet) is below the
+  surface. Wading through shallower water changes nothing.
+- **Flooded firebox**: the fire dies (hiss, steam), the half-burnt item is lost, the suit shuts down (slump) and
+  loses its seal (the pilot's air drains). Fuel in the slot can't relight it while the backpack is under water.
+  **No pack-up while flooded.** Rescues: drain the water (sponges, blocks) or swap in a tidal engine under water.
+- A tidal engine leaving the water keeps running for a moment (1 s grace) before it drinks from the slot or stops,
+  so a shoreline doesn't flicker it on and off.
+- Lightning still knocks out every engine (the suit keeps its one weakness). Rogues run on nothing and never flood.
+- Feedback per engine: firebox = orange glow, smoke, flame gauge; tidal = its own glow, bubbles, a water gauge
+  (endless while wet); reactor = its own pulse, no smoke, an endless gauge.
+- The machine mind: firebox suits keep out of water; a tidal suit's mind only runs while it has power.
 
 ## 5. Suit menu (built in Phase 1)
 - **Sneak + right-click a parked suit** (decided 2026-10-12, the horse/llama convention). Tools and fuel can

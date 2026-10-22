@@ -99,7 +99,16 @@ public class PowerArmorItem extends Item {
         }
         SuitLoadout loadout = stack.get(ModDataComponents.LOADOUT.get());
         if (loadout != null) {
-            int energy = loadout.burnLeft() + loadout.fuel().getCount() * SuitFuel.energyOf(loadout.fuel());
+            // No engine field = a suit from before the engines: its firebox.
+            ItemStack engineStack = loadout.engine().orElse(null);
+            dev.ajaczero.powerarmor.entity.SuitEngine engine = engineStack == null ? dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX
+                    : dev.ajaczero.powerarmor.entity.SuitEngine.of(engineStack);
+            if (engineStack != null) {
+                tooltip.accept(engineStack.isEmpty()
+                        ? Component.translatable("item.powerarmor.power_armor.no_engine").withStyle(ChatFormatting.RED)
+                        : Component.translatable("item.powerarmor.power_armor.engine", engineStack.getHoverName()).withStyle(ChatFormatting.GRAY));
+            }
+            int energy = loadout.burnLeft() + loadout.fuel().getCount() * SuitFuel.energyOf(engine, loadout.fuel());
             if (!loadout.fuel().isEmpty()) {
                 tooltip.accept(Component.translatable("item.powerarmor.power_armor.fuel", loadout.fuel().getCount(), loadout.fuel().getHoverName())
                         .withStyle(ChatFormatting.GOLD));

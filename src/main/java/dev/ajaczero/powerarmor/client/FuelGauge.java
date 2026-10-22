@@ -41,9 +41,12 @@ public final class FuelGauge {
         boolean low = suit.isLowOnFuel();
         boolean blink = low && (suit.tickCount / 5) % 2 == 0;
 
-        // Grey (unlit) flame from our menu texture, then the lit part on top.
-        graphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND, x, y, 73F, 35F, 14, 14, 256, 256);
-        if (suit.getBurnLeft() > 0 && suit.getBurnTotal() > 0 && !blink) {
+        // Grey (unlit) flame from our menu texture (where the menu draws it), then the lit part on top: full while the
+        // engine runs free (a wet tidal engine, a star reactor).
+        graphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND, x, y, 109F, 55F, 14, 14, 256, 256);
+        if (suit.hasFreePower() && suit.isPowered()) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, LIT_PROGRESS, 14, 14, 0, 0, x, y, 14, 14);
+        } else if (suit.getBurnLeft() > 0 && suit.getBurnTotal() > 0 && !blink) {
             int h = Mth.ceil(Mth.clamp(suit.getBurnLeft() / (float) suit.getBurnTotal(), 0F, 1F) * 13F) + 1;
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, LIT_PROGRESS, 14, 14, 0, 14 - h, x, y + 14 - h, 14, h);
         }
@@ -53,9 +56,13 @@ public final class FuelGauge {
             graphics.itemDecorations(mc.font, fuel, x + 16, y - 1);
         }
         int energy = suit.getTotalEnergy();
-        Component text = energy > 0 ? Component.literal(PowerArmorItem.formatWalkTime(energy))
+        boolean free = suit.hasFreePower() && suit.isPowered();
+        Component text = free ? Component.literal("\u221e") // endless
+                : suit.getEngine() == null ? Component.translatable("gui.powerarmor.no_engine")
+                : suit.isFlooded() ? Component.translatable("gui.powerarmor.flooded")
+                : energy > 0 ? Component.literal(PowerArmorItem.formatWalkTime(energy))
                 : Component.translatable("gui.powerarmor.no_fuel");
-        int colour = energy == 0 ? 0xFFFF5555 : low ? (blink ? 0xFFFF5555 : 0xFFFFB13B) : 0xFFFFFFFF;
+        int colour = free ? 0xFFFFFFFF : energy == 0 || suit.isFlooded() ? 0xFFFF5555 : low ? (blink ? 0xFFFF5555 : 0xFFFFB13B) : 0xFFFFFFFF;
         graphics.text(mc.font, text, x + 36, y + 3, colour, true);
         if (suit.getSocketStack().getItem() instanceof ChaingunItem) {
             // Bullets left (iron nuggets carried), just above the fuel: red when there are none.

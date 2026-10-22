@@ -5,16 +5,20 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import java.util.Optional;
 import net.minecraft.world.item.ItemStack;
 
 /**
  * What a packed-up suit carries: its fuel slot, its socket tool, the half-burnt fuel item, the nuggets in its
- * hidden ammo store and its helmet (2026-10-19; items packed before load without one).
+ * hidden ammo store, its helmet (2026-10-19; items packed before load without one) and its engine (2026-10-21).
+ * The engine is optional on purpose: "no field" (items packed or crafted before the engines, or a fresh suit) means
+ * the built-in firebox, while a present but empty stack means the engine was taken out.
  * Stored on the item stack as a "data component" (1.21's replacement for item NBT). A component
  * needs a Codec (how to save it to disk) and a StreamCodec (how to send it over the network).
  */
-public record SuitLoadout(ItemStack fuel, ItemStack socket, int burnLeft, int burnTotal, int nuggets, ItemStack helmet) {
-    public static final SuitLoadout EMPTY = new SuitLoadout(ItemStack.EMPTY, ItemStack.EMPTY, 0, 0, 0, ItemStack.EMPTY);
+public record SuitLoadout(ItemStack fuel, ItemStack socket, int burnLeft, int burnTotal, int nuggets, ItemStack helmet,
+        Optional<ItemStack> engine) {
+    public static final SuitLoadout EMPTY = new SuitLoadout(ItemStack.EMPTY, ItemStack.EMPTY, 0, 0, 0, ItemStack.EMPTY, Optional.empty());
 
     public static final Codec<SuitLoadout> CODEC = RecordCodecBuilder.create(i -> i.group(
             ItemStack.OPTIONAL_CODEC.optionalFieldOf("fuel", ItemStack.EMPTY).forGetter(SuitLoadout::fuel),
@@ -22,7 +26,9 @@ public record SuitLoadout(ItemStack fuel, ItemStack socket, int burnLeft, int bu
             Codec.INT.optionalFieldOf("burn_left", 0).forGetter(SuitLoadout::burnLeft),
             Codec.INT.optionalFieldOf("burn_total", 0).forGetter(SuitLoadout::burnTotal),
             Codec.INT.optionalFieldOf("nuggets", 0).forGetter(SuitLoadout::nuggets), // optional: items packed before it load as 0
-            ItemStack.OPTIONAL_CODEC.optionalFieldOf("helmet", ItemStack.EMPTY).forGetter(SuitLoadout::helmet)
+            ItemStack.OPTIONAL_CODEC.optionalFieldOf("helmet", ItemStack.EMPTY).forGetter(SuitLoadout::helmet),
+            // an empty stack saves as {} (so it stays "taken out"); a missing field loads as Optional.empty()
+            ItemStack.OPTIONAL_CODEC.optionalFieldOf("engine").forGetter(SuitLoadout::engine)
     ).apply(i, SuitLoadout::new));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SuitLoadout> STREAM_CODEC = StreamCodec.composite(
@@ -32,6 +38,7 @@ public record SuitLoadout(ItemStack fuel, ItemStack socket, int burnLeft, int bu
             ByteBufCodecs.VAR_INT, SuitLoadout::burnTotal,
             ByteBufCodecs.VAR_INT, SuitLoadout::nuggets,
             ItemStack.OPTIONAL_STREAM_CODEC, SuitLoadout::helmet,
+            ByteBufCodecs.optional(ItemStack.OPTIONAL_STREAM_CODEC), SuitLoadout::engine,
             SuitLoadout::new);
 
     // ItemStack has no equals(), but components are compared to decide whether two stacks are the same.
@@ -39,12 +46,14 @@ public record SuitLoadout(ItemStack fuel, ItemStack socket, int burnLeft, int bu
     public boolean equals(Object o) {
         return o instanceof SuitLoadout other && ItemStack.matches(this.fuel, other.fuel)
                 && ItemStack.matches(this.socket, other.socket) && this.burnLeft == other.burnLeft && this.burnTotal == other.burnTotal
-                && this.nuggets == other.nuggets && ItemStack.matches(this.helmet, other.helmet);
+                && this.nuggets == other.nuggets && ItemStack.matches(this.helmet, other.helmet)
+                && this.engine.isPresent() == other.engine.isPresent()
+                && (this.engine.isEmpty() || ItemStack.matches(this.engine.get(), other.engine.get()));
     }
 
     @Override
     public int hashCode() {
         return 31 * (31 * ItemStack.hashItemAndComponents(this.fuel) + ItemStack.hashItemAndComponents(this.socket)) + this.burnLeft + 17 * this.nuggets
-                + 7 * ItemStack.hashItemAndComponents(this.helmet);
+                + 7 * ItemStack.hashItemAndComponents(this.helmet) + 3 * this.engine.map(ItemStack::hashItemAndComponents).orElse(-1);
     }
 }

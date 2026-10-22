@@ -155,6 +155,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** The suit's slots. The helmet (2026-10-19) seals the suit and lets its machine mind run: without one the suit
      *  still runs with a pilot inside, unsealed, and an empty one stands powered down. */
     public static final int FUEL_SLOT = 0, SOCKET_SLOT = 1, HELMET_SLOT = 2;
+    /** The engine (the backpack, design sec. 4b, 2026-10-21): what powers the suit and what the fuel slot burns. */
+    public static final int ENGINE_SLOT = 3;
+    /** Height above the suit's feet and distance behind its middle of the backpack's centre (backpack box y 31.6-38.6 px,
+     *  z 6-11 px): water above that point covers the engine. */
+    private static final double ENGINE_UP = 2.2, ENGINE_BACK = 0.53;
     // Drain per tick (idle / walking / sprinting), energy per jump and the low-fuel warning level are balance
     // knobs in PowerArmorConfig. Walking = 1 per tick, so SuitFuel values read as ticks of walking.
     /** Length of the startup animation (1.4 s): the suit can't move until it has stood up. */
@@ -208,9 +213,18 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** The plates' paint: a dye's id (DyeColor.getId, 0..15), or -1 for bare steel. Synced: clients pick the texture by it. */
     private static final EntityDataAccessor<Byte> PAINT =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BYTE);
+    /** The installed engine (SuitEngine ordinal, -1 = none): clients draw its backpack, smoke and gauge. */
+    private static final EntityDataAccessor<Byte> ENGINE =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BYTE);
+    /** Water covers the engine (a firebox is flooded, a tidal engine runs). */
+    private static final EntityDataAccessor<Boolean> ENGINE_UNDER_WATER =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
+    /** The engine runs without burning anything right now (a wet tidal engine, a star reactor): the gauge shows it. */
+    private static final EntityDataAccessor<Boolean> FREE_POWER =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
 
-    /** The suit's own slots: fuel, the left-arm socket and the helmet. Real contents only exist on the server. */
-    private final SimpleContainer inventory = new SimpleContainer(3) {
+    /** The suit's own slots: fuel, the left-arm socket, the helmet and the engine. Real contents only exist on the server. */
+    private final SimpleContainer inventory = new SimpleContainer(4) {
         @Override
         public void setChanged() {
             super.setChanged();
@@ -221,6 +235,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Server: energy left in the burning item (fractional, idle drains 0.25 per tick). */
     private float burnLeft;
     private int burnTotal;
+    /** Server: the engine seen last tick, to notice a swap (the half-burnt item goes with the old engine). */
+    @Nullable
+    private SuitEngine lastEngine;
+    private boolean engineSeen;
+    /** Server: ticks since a tidal engine was last wet (it runs free for a short grace after leaving the water). */
+    private int dryTicks = Integer.MAX_VALUE / 2;
     /** Both sides: power transitions seen, for animations, sounds and smoke. */
     private boolean seenPower;
     private boolean lastPowered;
@@ -332,6 +352,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     public PowerArmorEntity(EntityType<? extends PowerArmorEntity> type, Level level) {
         super(type, level);
+        // Every suit comes with a firebox (the torso's furnace), however it was made: crafted, /summon, a test.
+        this.inventory.setItem(ENGINE_SLOT, new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get()));
     }
 
     @Override
@@ -355,6 +377,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(NUGGETS, 0);
         builder.define(FIELD_HELD, false);
         builder.define(PAINT, (byte) -1);
+        builder.define(ENGINE, (byte) SuitEngine.FIREBOX.ordinal());
+        builder.define(ENGINE_UNDER_WATER, false);
+        builder.define(FREE_POWER, false);
     }
 
     /** The machine mind's goals (see SuitGoals). Vanilla calls this once, from Mob's constructor. */
@@ -397,6 +422,14 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         // Since 1.21.6 entities save through ValueInput/ValueOutput (a view on the NBT) instead of raw CompoundTags.
         // Same layout as before, so suits saved by the 1.21.1 version still load.
         ContainerHelper.loadAllItems(tag.childOrEmpty("Inventory"), this.inventory.getItems());
+        if (!tag.getBooleanOr("HasEngineSlot", false) && this.inventory.getItem(ENGINE_SLOT).isEmpty()) {
+            // Saved before the engines (2026-10-21): it was running on its built-in firebox all along.
+            this.inventory.setItem(ENGINE_SLOT, new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get()));
+        }
+        this.dryTicks = tag.getIntOr("TidalDry", Integer.MAX_VALUE / 2);
+        this.entityData.set(ENGINE_UNDER_WATER, tag.getBooleanOr("EngineUnderWater", false));
+        this.lastEngine = SuitEngine.of(this.inventory.getItem(ENGINE_SLOT));
+        this.engineSeen = true; // loading isn't a swap: keep the half-burnt item
         this.burnLeft = tag.getFloatOr("BurnLeft", 0F);
         this.burnTotal = tag.getIntOr("BurnTotal", 0);
         this.setMind(SuitMind.byName(tag.getStringOr("Mind", ""))); // suits from before the AI: "" -> friendly
@@ -415,6 +448,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         super.addAdditionalSaveData(tag);
         // Slot numbers are saved with each item, so an empty fuel slot doesn't shift the socket tool into it.
         ContainerHelper.saveAllItems(tag.child("Inventory"), this.inventory.getItems());
+        tag.putBoolean("HasEngineSlot", true); // an empty engine slot is then really empty (taken out), not an old save
+        tag.putInt("TidalDry", this.dryTicks);
+        tag.putBoolean("EngineUnderWater", this.isEngineUnderWater());
         tag.putFloat("BurnLeft", this.burnLeft);
         tag.putInt("BurnTotal", this.burnTotal);
         tag.putString("Mind", this.getMind().name());
@@ -672,7 +708,28 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             // defeated rogue still drops only its tool; one rebooted by lightning keeps it.
             this.inventory.setItem(HELMET_SLOT, new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
         }
-        if (this.stunTicks == 0 && !this.isRogue() && this.shouldRun(pilot)) { // a knocked-out engine burns nothing
+        SuitEngine engine = this.getEngine();
+        if (this.engineSeen && engine != this.lastEngine) {
+            // Engine swapped: the half-burnt item went out with the old one (design sec. 4b).
+            this.burnLeft = 0;
+            this.burnTotal = 0;
+        }
+        if (engine != this.lastEngine || !this.engineSeen) {
+            // The mind's paths: a firebox would drown in deep water, so its suit keeps out of water altogether (vanilla's
+            // default cost for water is 8: walkable, avoided when there's a dry way round).
+            this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER, engine == SuitEngine.FIREBOX ? -1F : 8F);
+        }
+        this.lastEngine = engine;
+        this.engineSeen = true;
+        boolean underWater = this.engineCoveredByWater();
+        this.entityData.set(ENGINE_UNDER_WATER, underWater);
+        this.dryTicks = underWater || this.isEngineInRain() ? 0 : Math.min(this.dryTicks + 1, Integer.MAX_VALUE / 2);
+        if (engine == SuitEngine.FIREBOX && underWater && !this.isRogue()) {
+            this.floodFirebox();
+        }
+        boolean free = this.runsFree();
+        this.entityData.set(FREE_POWER, free);
+        if (this.stunTicks == 0 && !this.isRogue() && !free && this.shouldRun(pilot)) { // a knocked-out engine burns nothing
             if (this.burnLeft <= 0) {
                 this.igniteNextItem();
             }
@@ -689,6 +746,71 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         this.setPowered(this.shouldRun(pilot) && this.stunTicks == 0);
         this.syncBurn();
+    }
+
+    // ---- Engines (design sec. 4b) ------------------------------------------------------------------------
+
+    /** Both sides: the installed engine, or null (the engine slot is empty: no power). */
+    public @Nullable SuitEngine getEngine() {
+        return SuitEngine.byId(this.entityData.get(ENGINE));
+    }
+
+    /** Both sides: water covers the engine (the backpack's middle is under the surface). */
+    public boolean isEngineUnderWater() {
+        return this.entityData.get(ENGINE_UNDER_WATER);
+    }
+
+    /** Both sides: a firebox under water: it can't burn, and the suit can't be packed up. */
+    public boolean isFlooded() {
+        return this.getEngine() == SuitEngine.FIREBOX && this.isEngineUnderWater() && !this.isRogue();
+    }
+
+    /** Both sides: the engine runs without burning anything right now (wet tidal engine, star reactor). */
+    public boolean hasFreePower() {
+        return this.entityData.get(FREE_POWER);
+    }
+
+    /** Server: where the engine sits in the world: the backpack's middle, behind the body. */
+    private Vec3 enginePosition() {
+        float yaw = this.yBodyRot * Mth.DEG_TO_RAD;
+        // Minecraft's forward for a yaw is (-sin, cos); the backpack is the other way.
+        return this.position().add(Mth.sin(yaw) * ENGINE_BACK, ENGINE_UP, -Mth.cos(yaw) * ENGINE_BACK);
+    }
+
+    /** Server: is that point below a water surface? (A fluid's height inside its block: a full source is 8/9 high.) */
+    private boolean engineCoveredByWater() {
+        Vec3 p = this.enginePosition();
+        BlockPos pos = BlockPos.containing(p);
+        var fluid = this.level().getFluidState(pos);
+        return fluid.is(net.minecraft.tags.FluidTags.WATER) && p.y < pos.getY() + fluid.getHeight(this.level(), pos);
+    }
+
+    /** Server: rain reaches the suit's top (vanilla's own rain test for entities, which is private). */
+    private boolean isEngineInRain() {
+        return this.level().isRainingAt(BlockPos.containing(this.getX(), this.getBoundingBox().maxY, this.getZ()));
+    }
+
+    /** Server: does the engine run without burning anything right now? A tidal engine while wet (and for a short grace
+     *  after leaving the water), a reactor with its Nether Star. */
+    private boolean runsFree() {
+        SuitEngine engine = this.getEngine();
+        if (engine == SuitEngine.TIDAL) {
+            return this.dryTicks <= PowerArmorConfig.TIDAL_DRY_GRACE.get();
+        }
+        return SuitFuel.powersForever(engine, this.inventory.getItem(FUEL_SLOT));
+    }
+
+    /** Server: water got into the firebox: the fire dies with a hiss and a puff of steam, and the half-burnt item is
+     *  lost. Fuel in the slot can't light while the backpack is under water ({@link #hasEnergy}). */
+    private void floodFirebox() {
+        if ((this.burnLeft > 0 || this.isPowered()) && this.level() instanceof ServerLevel level) {
+            this.playSound(SoundEvents.GENERIC_EXTINGUISH_FIRE, 1.0F, 0.6F);
+            Vec3 p = this.enginePosition();
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.BUBBLE_COLUMN_UP, p.x, p.y, p.z, 30, 0.3, 0.3, 0.3, 0.1);
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.CLOUD, p.x, p.y + 0.4, p.z, 12, 0.3, 0.3, 0.3, 0.05);
+        }
+        this.burnLeft = 0;
+        this.burnTotal = 0;
     }
 
     /** Should the engine run: energy on board and someone to drive, the pilot or the mind (which needs the helmet). */
@@ -739,16 +861,19 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return (blocksPerSecond > RUN_THRESHOLD ? PowerArmorConfig.DRAIN_SPRINT : PowerArmorConfig.DRAIN_WALK).get().floatValue();
     }
 
-    /** Takes one item from the fuel slot and starts burning it. Lava leaves its bucket behind. */
+    /** Takes one item from the fuel slot and starts burning it. Lava and water leave their bucket behind, water bottles
+     *  their glass bottle. */
     private void igniteNextItem() {
         ItemStack stack = this.inventory.getItem(FUEL_SLOT);
-        int energy = SuitFuel.energyOf(stack);
-        if (energy <= 0) {
+        int energy = SuitFuel.energyOf(this.getEngine(), stack);
+        if (energy <= 0 || this.isFlooded()) {
             return;
         }
-        // What's left of a burnt item (the bucket of a lava bucket), like a furnace.
+        // What's left of a burnt item (the bucket of a lava bucket), like a furnace. A potion has no crafting remainder
+        // (drinking one leaves the bottle by other means), so the water bottle's glass is named here.
         var template = stack.getCraftingRemainder();
-        ItemStack remainder = template == null ? ItemStack.EMPTY : template.create();
+        ItemStack remainder = SuitFuel.isWaterBottle(stack) ? new ItemStack(Items.GLASS_BOTTLE)
+                : template == null ? ItemStack.EMPTY : template.create();
         stack.shrink(1);
         if (stack.isEmpty()) {
             this.inventory.setItem(FUEL_SLOT, remainder);
@@ -765,7 +890,14 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Energy available right now: the burning item, or an item waiting in the slot. */
     private boolean hasEnergy() {
         // A rogue runs on nothing (design sec. 8: unlimited fuel and ammo, it never sits slumped waiting to be looted).
-        return this.isRogue() || this.burnLeft > 0 || SuitFuel.isFuel(this.inventory.getItem(FUEL_SLOT));
+        if (this.isRogue()) {
+            return true;
+        }
+        SuitEngine engine = this.getEngine();
+        if (engine == null || this.isFlooded()) {
+            return false; // no engine, or a firebox under water: nothing can burn
+        }
+        return this.runsFree() || this.burnLeft > 0 || SuitFuel.isFuel(engine, this.inventory.getItem(FUEL_SLOT));
     }
 
     private void setPowered(boolean powered) {
@@ -780,8 +912,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.playSound(SoundEvents.BEACON_DEACTIVATE, 1.0F, 0.6F);
             this.playSound(SoundEvents.IRON_GOLEM_DAMAGE, 0.6F, 0.5F);
             if (this.getControllingPassenger() instanceof Player pilot) {
-                pilot.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
-                        this.stunTicks > 0 ? "message.powerarmor.lightning" : "message.powerarmor.out_of_fuel"));
+                pilot.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(this.stunTicks > 0 ? "message.powerarmor.lightning"
+                        : this.getEngine() == null ? "message.powerarmor.no_engine"
+                        : this.isFlooded() ? "message.powerarmor.flooded"
+                        : this.getEngine() == SuitEngine.TIDAL ? "message.powerarmor.tidal_dry"
+                        : "message.powerarmor.out_of_fuel"));
             }
         }
     }
@@ -791,6 +926,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.entityData.set(FUEL_ITEM, this.inventory.getItem(FUEL_SLOT).copy());
             this.entityData.set(SOCKET_ITEM, this.inventory.getItem(SOCKET_SLOT).copy());
             this.entityData.set(HELMET, !this.inventory.getItem(HELMET_SLOT).isEmpty());
+            SuitEngine engine = SuitEngine.of(this.inventory.getItem(ENGINE_SLOT));
+            this.entityData.set(ENGINE, (byte) (engine == null ? -1 : engine.ordinal()));
         }
     }
 
@@ -835,11 +972,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Both sides: all energy on board, burning item + everything in the fuel slot. */
     public int getTotalEnergy() {
         ItemStack fuel = this.getFuelStack();
-        return this.getBurnLeft() + fuel.getCount() * SuitFuel.energyOf(fuel);
+        return this.getBurnLeft() + fuel.getCount() * SuitFuel.energyOf(this.getEngine(), fuel);
     }
 
     public boolean isLowOnFuel() {
-        return this.getTotalEnergy() < PowerArmorConfig.LOW_FUEL.get();
+        // A wet tidal engine or a reactor isn't burning anything, so it can't run low (a tidal engine on land can).
+        return !this.hasFreePower() && this.getTotalEnergy() < PowerArmorConfig.LOW_FUEL.get();
     }
 
     // ---- Socket tool ---------------------------------------------------------------------------
@@ -976,19 +1114,22 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** Server: is there this much energy on board (burning item + fuel slot)? */
     public boolean hasEnergyFor(int amount) {
-        if (this.isRogue()) {
-            return true;
+        if (this.isRogue() || (this.runsFree() && this.hasEnergy())) {
+            return true; // a wet tidal engine or a star reactor pays for everything
+        }
+        if (this.isFlooded()) {
+            return false;
         }
         ItemStack fuel = this.inventory.getItem(FUEL_SLOT);
-        return this.burnLeft + (float) fuel.getCount() * SuitFuel.energyOf(fuel) >= amount;
+        return this.burnLeft + (float) fuel.getCount() * SuitFuel.energyOf(this.getEngine(), fuel) >= amount;
     }
 
     /** Server: take energy, lighting more fuel items if the burning one hasn't got enough left. */
     private void consumeEnergy(int amount) {
-        if (this.isRogue()) {
+        if (this.isRogue() || this.runsFree()) {
             return;
         }
-        while (this.burnLeft < amount && SuitFuel.isFuel(this.inventory.getItem(FUEL_SLOT))) {
+        while (this.burnLeft < amount && SuitFuel.isFuel(this.getEngine(), this.inventory.getItem(FUEL_SLOT)) && !this.isFlooded()) {
             this.igniteNextItem();
         }
         this.burnLeft = Math.max(0, this.burnLeft - amount);
@@ -1022,13 +1163,19 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** What a packed suit item keeps: its slots, the half-burnt item and the ammo. */
     public SuitLoadout getLoadout() {
         return new SuitLoadout(this.inventory.getItem(FUEL_SLOT).copy(), this.inventory.getItem(SOCKET_SLOT).copy(),
-                Mth.ceil(this.burnLeft), this.burnTotal, this.getStoredNuggets(), this.inventory.getItem(HELMET_SLOT).copy());
+                Mth.ceil(this.burnLeft), this.burnTotal, this.getStoredNuggets(), this.inventory.getItem(HELMET_SLOT).copy(),
+                java.util.Optional.of(this.inventory.getItem(ENGINE_SLOT).copy()));
     }
 
     public void applyLoadout(SuitLoadout loadout) {
         this.inventory.setItem(FUEL_SLOT, loadout.fuel().copy());
         this.inventory.setItem(SOCKET_SLOT, loadout.socket().copy());
         this.inventory.setItem(HELMET_SLOT, loadout.helmet().copy());
+        // Items packed (or crafted) before the engines carry none: they had their firebox built in.
+        this.inventory.setItem(ENGINE_SLOT, loadout.engine().map(ItemStack::copy)
+                .orElseGet(() -> new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get())));
+        this.lastEngine = SuitEngine.of(this.inventory.getItem(ENGINE_SLOT));
+        this.engineSeen = true; // not a swap: keep the half-burnt item
         this.burnLeft = loadout.burnLeft();
         this.burnTotal = loadout.burnTotal();
         this.setStoredNuggets(loadout.nuggets());
@@ -1036,8 +1183,14 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.entityData.set(POWERED, this.shouldRun(null));
     }
 
-    /** Server: turn this parked suit back into an item (with its fuel and tool) for the player. */
-    public void packUp(Player player) {
+    /** Server: turn this parked suit back into an item (with its fuel and tool) for the player. Refused while its
+     *  firebox is flooded (design sec. 4b): drain the water or swap the engine first. Returns whether it packed. */
+    public boolean packUp(Player player) {
+        if (this.isFlooded()) {
+            player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.flooded_pack"));
+            this.playSound(SoundEvents.IRON_DOOR_CLOSE, 0.6F, 0.5F);
+            return false;
+        }
         ItemStack stack = PowerArmorItem.fromSuit(this);
         this.inventory.clearContent(); // they're inside the item now; don't drop them too
         if (!player.addItem(stack) && this.level() instanceof ServerLevel level) {
@@ -1045,6 +1198,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         this.playSound(SoundEvents.ARMOR_EQUIP_IRON.value(), 1.0F, 0.8F);
         this.discard();
+        return true;
     }
 
     /** Both sides: watch the synced power flag change, to start the slump / stand-up animations. */
@@ -1619,7 +1773,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     @Override
     public void handleStartJump(int jumpPower) {
         this.entityData.set(JUMP_COUNTER, this.entityData.get(JUMP_COUNTER) + 1);
-        this.burnLeft = Math.max(0, this.burnLeft - PowerArmorConfig.JUMP_ENERGY.get());
+        this.consumeEnergy(PowerArmorConfig.JUMP_ENERGY.get()); // nothing for a wet tidal engine or a reactor
     }
 
     /** Client: the local pilot's jump bar charge (0 = not charging). */
@@ -1785,7 +1939,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         this.spawnAtLocation(level, new ItemStack(Items.IRON_INGOT, 4 + this.random.nextInt(5)));
         for (ItemStack stack : this.inventory.removeAllItems()) {
-            this.spawnAtLocation(level, stack); // the fuel and the socket tool survive the wreck
+            this.spawnAtLocation(level, stack); // the fuel, socket tool, helmet and engine survive the wreck
         }
         for (int left = this.getStoredNuggets(); left > 0; left -= 64) {
             this.spawnAtLocation(level, new ItemStack(Items.IRON_NUGGET, Math.min(64, left))); // and so does the ammo

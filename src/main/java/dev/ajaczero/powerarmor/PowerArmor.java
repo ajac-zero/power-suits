@@ -58,6 +58,9 @@ public class PowerArmor {
             event.accept(ModItems.SUIT_TORSO);
             event.accept(ModItems.SUIT_ARM);
             event.accept(ModItems.SUIT_LEG);
+            event.accept(ModItems.FIREBOX);
+            event.accept(ModItems.TIDAL_ENGINE);
+            event.accept(ModItems.STAR_REACTOR);
         }
     }
 }

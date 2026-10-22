@@ -2,10 +2,12 @@ package dev.ajaczero.powerarmor.registry;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.SuitEngine;
 import dev.ajaczero.powerarmor.item.ChaingunItem;
 import dev.ajaczero.powerarmor.item.ChainsawItem;
 import dev.ajaczero.powerarmor.item.DrillItem;
 import dev.ajaczero.powerarmor.item.EmProjectorItem;
+import dev.ajaczero.powerarmor.item.EngineItem;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
 import dev.ajaczero.powerarmor.item.SuitPartItem;
 import net.minecraft.resources.Identifier;
@@ -57,6 +59,15 @@ public final class ModItems {
             props -> new SuitPartItem(props, "item.powerarmor.suit_part.tooltip"), props -> props.stacksTo(1));
     public static final DeferredItem<SuitPartItem> SUIT_HELMET = ITEMS.registerItem("suit_helmet",
             props -> new SuitPartItem(props, "item.powerarmor.suit_helmet.tooltip"), props -> props.stacksTo(1));
+
+    // The engines (design sec. 4b, 2026-10-21): the suit's backpack, swapped in the menu's engine slot. Every suit comes
+    // with a firebox; the other two are crafted.
+    public static final DeferredItem<EngineItem> FIREBOX = ITEMS.registerItem("firebox",
+            props -> new EngineItem(props, SuitEngine.FIREBOX), props -> props.stacksTo(1));
+    public static final DeferredItem<EngineItem> TIDAL_ENGINE = ITEMS.registerItem("tidal_engine",
+            props -> new EngineItem(props, SuitEngine.TIDAL), props -> props.stacksTo(1).rarity(Rarity.RARE));
+    public static final DeferredItem<EngineItem> STAR_REACTOR = ITEMS.registerItem("star_reactor",
+            props -> new EngineItem(props, SuitEngine.REACTOR), props -> props.stacksTo(1).rarity(Rarity.EPIC));
 
     private ModItems() {}
 }

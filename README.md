@@ -12,13 +12,14 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Get the suit | Creative tab *Tools & Utilities*, or craft it from its parts (see *Crafting the suit* below) |
 | Deploy | Right-click the ground with the item (needs a 3-block-tall space) |
 | Climb in | Right-click the suit |
-| Suit menu | Sneak + right-click an empty suit: helmet slot, tool socket, fuel slot, status, **Pack up** |
+| Suit menu | Sneak + right-click an empty suit: helmet slot, tool socket, engine slot, fuel slot, status, **Pack up** |
 | Helmet | Right-click a suit with a Power Armor Helmet (or use the menu's helmet slot) to put it on. It seals the suit, and the machine mind only runs with it: without one the suit still runs with you inside (unsealed: fire, poison and water reach you, and you can eat), and an empty one stands powered down. Taking the helmet off is the easy way to park a suit. Rogues always wear one |
-| Fuel | Put coal/charcoal (1:20 of walking each), lava buckets (2:40, the bucket stays) or blaze rods (4:00) in the fuel slot |
+| Fuel | Put coal/charcoal (1:20 of walking each), lava buckets (2:40, the bucket stays) or blaze rods (4:00) in the fuel slot (for the standard Firebox engine; see *Engines* below) |
+| Engines | The backpack is the suit's engine, swapped in the menu's engine slot. **Firebox** (every suit comes with one): burns fuel, floods and dies when water covers it (no pack-up while flooded: drain the water or swap the engine). **Tidal Engine** (crafted with a Heart of the Sea): free while wet (its backpack under water, or in rain); on land it drinks water buckets (0:15) or bottles (0:05) from the fuel slot, so carry some to climb out of the water. **Star Reactor** (diamonds + an end crystal): a Nether Star in the fuel slot runs everything, tools included, forever (bullets still take iron nuggets) |
 | Walk / run | WASD (3.0 blocks/s walk; S backs up at half speed) / sprint (6.25 blocks/s; double-tap W or tap Ctrl once, it keeps going while W is held) |
 | Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
-| Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel and tool) |
+| Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel, tool, helmet and engine) |
 | Install a tool | Put a power tool (Chaingun, EM Projector, Mining Drill, Chainsaw) in the menu's socket slot; it appears on the suit's left arm |
 | Your hand | Works as normal while piloting: the suit's right hand holds your selected item; left click punches, fights and mines, right click places, opens doors, throws potions... 1.5 blocks extra reach. No eating or drinking (you're sealed in): food in your hand counts as nothing to do, so right click goes to the tool |
 | Use the tool | Right-click when your hand has nothing to do (empty hand, a sword, aiming at the air with blocks...), like a shield in the off hand; hold it as long as you need. The tool arm raises while in use |
@@ -52,6 +53,14 @@ Each part is crafted on its own, then torso, arms and legs are assembled like a 
 The helmet isn't part of the assembly: put it on the finished suit (see *Helmet* above). A whole suit with its helmet
 takes 12 iron blocks, 9 lapis blocks, 4 pistons, a furnace and glass. It comes out bare polished steel; paint it with dyes
 (blue gives back the suit's old lapis blue).
+
+The engines (swapped in the menu's engine slot; every suit comes with a firebox):
+
+| Engine | Recipe |
+|---|---|
+| Firebox | iron blocks in the corners, iron ingots on the edges, a blast furnace in the middle |
+| Tidal Engine | iron blocks in the corners, dark prismarine on the edges, a Heart of the Sea in the middle |
+| Star Reactor | iron blocks in the corners, diamonds on the edges, an end crystal in the middle (its Nether Star goes in the fuel slot) |
 
 ### Balance and config
 Everything that costs fuel, plus damage, ranges and speeds, is in `config/powerarmor-common.toml` (in the
@@ -189,10 +198,11 @@ src/main/java/dev/ajaczero/powerarmor/
   registry/ModItems.java     the item
   registry/ModMenus.java     the suit menu type; ModDataComponents.java: the loadout stored on a packed item
   entity/PowerArmorEntity.java  the suit: riding, movement, fuel/power, damage, death, animation choice
-  entity/SuitFuel.java       which items burn and for how long
+  entity/SuitFuel.java       which items burn and for how long, per engine
+  entity/SuitEngine.java     the engines (firebox / tidal / reactor); item/EngineItem.java: their items
   entity/ExhaustSmoke.java   client-side smoke from the back pipes
-  menu/PowerArmorMenu.java   menu logic: fuel + socket slots, shift-click, Pack up button
-  item/SuitLoadout.java      fuel/tool/half-burnt item carried by a packed suit item
+  menu/PowerArmorMenu.java   menu logic: socket, fuel, helmet + engine slots, shift-click, Pack up button
+  item/SuitLoadout.java      fuel/tool/helmet/engine/half-burnt item carried by a packed suit item
   item/PowerTool.java        what a socket tool is: fuel per use, cooldown, model bone, use(); worked by an operator
                              (the pilot, or the suit itself while its mind drives: aim, ammo, credit)
   entity/SuitMind.java       friendly / rogue (synced: the visor colour)

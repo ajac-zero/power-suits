@@ -158,6 +158,27 @@ Each step: GameTests for the logic, an autopilot scene with numbers in a CSV, th
    iron golem, ravager, warden). Autopilot `ap_rogue_heavy_*`: the player's suit walking at an EM rogue
    crawled at 1.75 blocks/s while held (5 free); tests `emGrabRules`, `heavyThingsFightTheField` (93).
 
+## Phase 9: engines (decided 2026-10-21, see design sec. 4b; step 1 done 2026-10-21)
+1. (DONE 2026-10-21) Built: `SuitEngine` + `EngineItem` (firebox, tidal_engine, star_reactor; recipes), `ENGINE_SLOT` (3)
+   in the suit and the menu (engine slot left of the fuel slot, `make-gui.py`), `SuitFuel` per engine (water bucket 300 /
+   bottle 100 on land, leaving bucket / glass; the star powers forever), entity: synced ENGINE / ENGINE_UNDER_WATER /
+   FREE_POWER, `engineCoveredByWater` (backpack centre 2.2 up, 0.53 back), `floodFirebox` (hiss + steam, burn lost),
+   tidal rain + 20-tick dry grace (`tidal_dry_grace`), free power skips every drain and pays tools/seal/jumps, swap = burn
+   lost, `packUp` refused while flooded, firebox minds avoid water (path malus), saves (`HasEngineSlot`) and loadouts
+   (optional engine: none = firebox) from before the engines get a firebox, menu/gauge/tooltips per engine, exhaust
+   smoke only on the firebox; the HUD gauge's grey flame was read from a stale spot of the menu texture since the helmet
+   slot (fixed). Placeholder engine icons (the firebox tinted, `make-part-icons.py`). Tests (108): engine slot, menu
+   slots, flooding + no pack-up + relight, wading, tidal wet/grace/bucket, own fuels only, reactor, saves/packing, rain
+   (own batch: weather + sky access + plains biome). Autopilot `EngineScene` (`runAutopilotEngine`, also ends
+   `runAutopilotMech`): `ap_engine_*`, `ap_menu_engine`, `run/autopilot_engine.csv`. The main autopilot's pool scene
+   now drives a tidal engine (a firebox would flood there).
+   Seen: a tidal suit walking out of a 4-deep pool surfaces its backpack on the 2nd step and dies on the 3rd after
+   the 1 s grace: without water in the slot it can't climb out (by the rules: carry a bucket).
+2. Art: tidal + reactor backpacks as hidden `proto_*` drafts for the user to pick; then one bone group per engine
+   (renderer shows the installed one; the firebox and exhausts only on the firebox), glow colours + masks, smoke /
+   bubbles per engine, sounds, item icons.
+3. Docs, README, export.
+
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint
 before every change, save it with every mod commit that changes the art (user's rule), re-export with `node tools/export-model.mjs`.

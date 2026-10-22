@@ -40,8 +40,10 @@ fill(7, 14, 169, 80, PANEL)                 # clear the furnace parts (keep the 
 inset(7, 17, 54, 54, (0, 0, 0, 255))        # suit preview window
 inset(71, 17, 18, 18, SLOT)                 # helmet slot (item at 72,18)
 inset(71, 35, 18, 18, SLOT)                 # socket slot (item at 72,36)
-inset(71, 53, 18, 18, SLOT)                 # fuel slot (item at 72,54)
-img.paste(flame_bg, (91, 55))               # flame beside the fuel slot (the Pack up button starts at x 108)
+inset(71, 53, 18, 18, SLOT)                 # engine slot (item at 72,54), the backpack (2026-10-21)
+inset(89, 53, 18, 18, SLOT)                 # fuel slot (item at 90,54), next to its engine
+img.paste(flame_bg, (109, 55))              # flame beside the fuel slot (the Pack up button starts at x 126);
+                                            # the HUD gauge (FuelGauge) copies its grey flame from here too
 inset(94, 17, 76, 35, (24, 26, 24, 255))    # status display (4 lines: hull, fuel, power, ammo)
 img.save('src/main/resources/assets/powerarmor/textures/gui/power_armor.png')
 print('wrote textures/gui/power_armor.png')

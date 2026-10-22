@@ -51,10 +51,16 @@ public final class SuitTests {
             SuitTest spec = method.getAnnotation(SuitTest.class);
             String batch = spec.batch().isEmpty() ? "default" : spec.batch();
             // One environment per batch: tests are batched by environment.
+            // The "rain" batch (the tidal engine runs in rain) sets the weather and leaves the pad open to the sky: by
+            // default the framework puts a barrier ceiling over each test, which keeps rain off.
+            boolean rain = batch.equals("rain");
             Holder<TestEnvironmentDefinition<?>> environment = environments.computeIfAbsent(batch, b -> event.registerEnvironment(
-                    Identifier.fromNamespaceAndPath(PowerArmor.MODID, b), new TestEnvironmentDefinition.AllOf(java.util.List.of())));
-            event.registerTest(function.identifier(), new FunctionGameTestInstance(function,
-                    new TestData<>(environment, PAD, spec.timeoutTicks(), 0, true)));
+                    Identifier.fromNamespaceAndPath(PowerArmor.MODID, b), rain
+                            ? new TestEnvironmentDefinition.Weather(TestEnvironmentDefinition.Weather.Type.RAIN)
+                            : new TestEnvironmentDefinition.AllOf(java.util.List.of())));
+            event.registerTest(function.identifier(), new FunctionGameTestInstance(function, new TestData<>(environment,
+                    net.minecraft.world.level.Level.OVERWORLD, PAD, spec.timeoutTicks(), 0, true, net.minecraft.world.level.block.Rotation.NONE,
+                    false, 1, 1, rain, 0)));
         });
     }
 

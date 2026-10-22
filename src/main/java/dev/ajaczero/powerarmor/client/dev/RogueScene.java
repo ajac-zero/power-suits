@@ -99,14 +99,12 @@ final class RogueScene {
             case 530 -> AutoPilot.hold(mc.options.keyUp, true); // walk at it
             case 540, 555, 570, 590 -> AutoPilot.shot(mc, "rogue_heavy_" + s);
             case 600 -> AutoPilot.releaseAll();
-            case 610 -> { close(); return false; }
+            case 610 -> { close(); AutoPilot.aimTarget = null; return false; } // (cleared here: the check below never ran on 610, and
+                                                                            // the later scenes kept aiming at the dead EM rogue)
             default -> {}
         }
         if (s >= 318 && s < 610 && emRogue != null) {
             AutoPilot.aimTarget = emRogue.position().add(0, 2, 0); // keep facing the EM rogue
-        }
-        if (s >= 610) {
-            AutoPilot.aimTarget = null;
         }
         if (s >= 5 && s < 610) {
             log(mc, s);

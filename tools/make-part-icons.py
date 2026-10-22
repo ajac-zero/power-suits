@@ -35,8 +35,13 @@ PARTS = {
     'helmet': (['head'], {'pilot_head'}, (205, 12, 0)),  # the shell + the face cube on the head bone, not the pilot
     # the whole suit (the Power Armor item): no pilot, empty socket (the tools come separately)
     'power_armor': (['marine'], {'pilot_head', 'chaingun', 'em_projector', 'drill', 'chainsaw'}, (205, 10, 0)),
+    # the engine (backpack + exhausts), seen from behind
+    'firebox': (['backpack_parts'], set(), (25, 12, 0)),
 }
-FILES = {'power_armor': 'power_armor'}  # icon -> texture name (the rest: suit_<part>)
+FILES = {'power_armor': 'power_armor', 'firebox': 'firebox'}  # icon -> texture name (the rest: suit_<part>)
+# PLACEHOLDERS until the tidal engine and star reactor have their own backpacks (design sec. 4b, Phase 9 step 2): the
+# firebox icon tinted (multiplier per RGB channel on its greys).
+TINTED = {'tidal_engine': ('firebox', (0.55, 1.0, 1.15)), 'star_reactor': ('firebox', (1.05, 0.7, 1.25))}
 
 
 def euler(r):
@@ -118,6 +123,11 @@ def main():
         path = out_dir / f"{FILES.get(part, 'suit_' + part)}.png"
         img.save(path)
         print('wrote', path, len(cubes), 'cubes')
+    for name, (base, mult) in TINTED.items():
+        img = Image.open(out_dir / f'{base}.png').convert('RGBA')
+        img.putdata([(min(255, int(r * mult[0])), min(255, int(g * mult[1])), min(255, int(b * mult[2])), a) for r, g, b, a in img.get_flattened_data()])
+        img.save(out_dir / f'{name}.png')
+        print('wrote', out_dir / f'{name}.png', '(placeholder tint of', base + ')')
 
 
 if __name__ == '__main__':
