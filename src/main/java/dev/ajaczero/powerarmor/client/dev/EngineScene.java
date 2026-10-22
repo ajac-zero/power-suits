@@ -57,6 +57,9 @@ final class EngineScene {
             case 108 -> AutoPilot.onServer(mc, p -> { if (suit != null) { packRefused = !suit.packUp(p); } });
             case 112 -> AutoPilot.shot(mc, "engine_fire_pack_refused");
             case 115 -> { phase = "tidal_wet"; engine(mc, ModItems.TIDAL_ENGINE.get(), null); }
+            case 140 -> backCamera(mc, true);
+            case 144, 147 -> AutoPilot.shot(mc, "engine_tidal_back_" + s);        // the pack under water, bubbling
+            case 148 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); }
             case 150 -> AutoPilot.shot(mc, "engine_tidal_fp");
             case 152 -> sideCamera(mc);
             case 156 -> AutoPilot.shot(mc, "engine_tidal_side");
@@ -75,6 +78,9 @@ final class EngineScene {
             case 450 -> AutoPilot.shot(mc, "engine_tidal_bucket_walk");
             case 470 -> AutoPilot.releaseAll();
             case 475 -> { phase = "reactor"; engine(mc, ModItems.STAR_REACTOR.get(), new ItemStack(Items.NETHER_STAR)); }
+            case 500 -> backCamera(mc, false);
+            case 503, 506 -> AutoPilot.shot(mc, "engine_reactor_back_" + s);      // the pack, running (sparks + wisps)
+            case 508 -> { mc.setCameraEntity(mc.player); DevUtil.hideGui(mc, false); }
             case 510 -> { o.setCameraType(CameraType.FIRST_PERSON); }
             case 512 -> AutoPilot.shot(mc, "engine_reactor_fp");
             case 515 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); AutoPilot.hold(o.keyUp, true); AutoPilot.hold(o.keySprint, true); }
@@ -185,6 +191,22 @@ final class EngineScene {
         Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         Vec3 at = c.position().add(0, 2.0, 0);
         AutoPilot.lookCamera(mc, at.add(6, 1.2, 3).subtract(drop), at.subtract(drop));
+    }
+
+    /** A still camera 3.5 blocks behind the suit at backpack height, looking at the pack (only while it stands still).
+     *  high: from above the water instead (in the pool, the entry steps fill the space behind the suit). */
+    private static void backCamera(Minecraft mc, boolean high) {
+        if (!(mc.level != null && suit != null && mc.level.getEntity(suit.getId()) instanceof PowerArmorEntity c)) {
+            return;
+        }
+        mc.options.setCameraType(CameraType.FIRST_PERSON);
+        DevUtil.hideGui(mc, true);
+        Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        float yaw = c.yBodyRot * net.minecraft.util.Mth.DEG_TO_RAD;
+        Vec3 back = new Vec3(net.minecraft.util.Mth.sin(yaw), 0, -net.minecraft.util.Mth.cos(yaw)); // forward is (-sin, cos)
+        Vec3 at = c.position().add(0, 2.3, 0);
+        Vec3 from = high ? at.add(back.scale(2.5)).add(0, 3.6, 0) : at.add(back.scale(3.5)).add(0, 0.8, 0);
+        AutoPilot.lookCamera(mc, from.subtract(drop), at.subtract(drop));
     }
 
     private static void open() {

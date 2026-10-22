@@ -278,6 +278,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private float fireGlow, visorLevel;
     /** Client: the EM projector's redstone, 0..1: the lens + vents (core) and the prong tips (arc). */
     private float emCoreGlow, emArcGlow;
+    /** Client: the tidal engine's / star reactor's glass, 0 (dark) .. 1 (running), eased like the fire. */
+    private float engineGlow;
     private final float[] visorColor = {1F, 0.68F, 0.22F};
     /** Server: the machine mind's owner (the last pilot, or who deployed it) and home (where the pilot got out). Not
      *  synced: only the server-side AI uses them. */
@@ -1570,6 +1572,26 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         float arcTarget = holding ? 1F : 0F;
         this.emCoreGlow += (coreTarget - this.emCoreGlow) * (coreTarget > this.emCoreGlow ? 0.35F : 0.1F);
         this.emArcGlow += (arcTarget - this.emArcGlow) * (arcTarget > this.emArcGlow ? 0.5F : 0.15F);
+        // The tidal engine's and the reactor's glass light up while they run (the firebox has its fire above).
+        float engineTarget = powered && this.getEngine() != SuitEngine.FIREBOX ? 1F : 0F;
+        this.engineGlow += (engineTarget - this.engineGlow) * (engineTarget > this.engineGlow ? 0.15F : 0.05F);
+    }
+
+    /** Client: the Heart of the Sea in the tidal engine's porthole: a slow shimmer, like light through water. */
+    public float getTidalGlow(float time) {
+        if (this.getEngine() != SuitEngine.TIDAL) {
+            return 0F;
+        }
+        return this.engineGlow * (0.82F + 0.1F * Mth.sin(time * 0.21F + this.getId()) + 0.08F * Mth.sin(time * 0.57F));
+    }
+
+    /** Client: the star reactor's energy: a slow, deep pulse that never quite goes out. */
+    public float getReactorGlow(float time) {
+        if (this.getEngine() != SuitEngine.REACTOR) {
+            return 0F;
+        }
+        float pulse = Mth.sin(time * 0.12F + this.getId());
+        return this.engineGlow * (0.78F + 0.22F * pulse * pulse);
     }
 
     /** Client: the EM projector's lens and vents at this moment, 0..1: a slow breathing pulse, and a fast uneven

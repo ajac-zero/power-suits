@@ -177,8 +177,11 @@ Each step: GameTests for the logic, an autopilot scene with numbers in a CSV, th
 2. Art: tidal + reactor backpacks as hidden `proto_*` drafts for the user to pick (DONE 2026-10-21: tidal A tanks,
    reactor J canisters, saved in the .bbmodel as `proto_pack_tidal_A_tanks` / `proto_pack_reactor_J_canisters`, built by
    `model/art/backpack_drafts_art.py` + `backpack_kit.py`; the reactor took three rounds and an inspiration board); then one bone group per engine
-   (renderer shows the installed one; the firebox and exhausts only on the firebox), glow colours + masks, smoke /
-   bubbles per engine, sounds, item icons.
+   (DONE 2026-10-21: bones `backpack_parts` / `pack_tidal` / `pack_reactor`, the renderer draws the installed engine's
+   (`ENGINE_BONES`); glowmasks `tidal` (8 px) + `reactor` (69 px) tinted by `getTidalGlow` / `getReactorGlow`; tidal
+   bubbles from the valves only with the backpack under water, reactor aura (translucent violet potion swirls off the
+   glass, `ExhaustSmoke`); engine icons drawn lit from the packs (`make-part-icons.py`); `EngineScene` back close-ups
+   `ap_engine_tidal_back_*`, `ap_engine_reactor_back_*`). Not done: own engine sounds (all three share the rumble).
 3. Docs, README, export.
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)

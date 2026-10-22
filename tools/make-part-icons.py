@@ -29,19 +29,20 @@ spec.loader.exec_module(icons)
 # icon: (root bones, bones left out with everything below them, view)
 # view = (spin about Y, tilt about X, roll about Z) in degrees; the model faces -Z, so spin 180 shows its front.
 PARTS = {
-    'torso': (['body', 'hips'], {'head', 'right_arm', 'left_arm'}, (205, 12, 0)),
+    'torso': (['body', 'hips'], {'head', 'right_arm', 'left_arm', 'pack_tidal', 'pack_reactor'}, (205, 12, 0)),  # with its firebox
     'arm': (['right_arm'], set(), (210, 10, 0)),
     'leg': (['right_leg'], set(), (210, 10, 0)),
     'helmet': (['head'], {'pilot_head'}, (205, 12, 0)),  # the shell + the face cube on the head bone, not the pilot
     # the whole suit (the Power Armor item): no pilot, empty socket (the tools come separately)
-    'power_armor': (['marine'], {'pilot_head', 'chaingun', 'em_projector', 'drill', 'chainsaw'}, (205, 10, 0)),
-    # the engine (backpack + exhausts), seen from behind
+    'power_armor': (['marine'], {'pilot_head', 'chaingun', 'em_projector', 'drill', 'chainsaw', 'pack_tidal', 'pack_reactor'}, (205, 10, 0)),
+    # the engines (design sec. 4b): each one's backpack, seen from behind
     'firebox': (['backpack_parts'], set(), (25, 12, 0)),
+    'tidal_engine': (['pack_tidal'], set(), (25, 12, 0)),
+    'star_reactor': (['pack_reactor'], set(), (25, 12, 0)),
 }
-FILES = {'power_armor': 'power_armor', 'firebox': 'firebox'}  # icon -> texture name (the rest: suit_<part>)
-# PLACEHOLDERS until the tidal engine and star reactor have their own backpacks (design sec. 4b, Phase 9 step 2): the
-# firebox icon tinted (multiplier per RGB channel on its greys).
-TINTED = {'tidal_engine': ('firebox', (0.55, 1.0, 1.15)), 'star_reactor': ('firebox', (1.05, 0.7, 1.25))}
+# drawn running: the glowmasks (tools/make-glowmasks.py) added on top, as SuitGlowLayer does in game
+LIT = {'firebox', 'tidal_engine', 'star_reactor'}
+FILES = {'power_armor': 'power_armor', 'firebox': 'firebox', 'tidal_engine': 'tidal_engine', 'star_reactor': 'star_reactor'}  # icon -> texture name (the rest: suit_<part>)
 
 
 def euler(r):
@@ -116,18 +117,22 @@ def quads(cubes):
 def main():
     out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else icons.ASSETS / 'textures/item'
     outliner, groups, els, tex = load()
+    lit = tex.copy()
+    for mask in sorted((ROOT / 'src/main/resources/assets/powerarmor/textures/entity').glob('power_armor_glow_*.png')):
+        m = Image.open(mask).convert('RGBA').resize(tex.size, Image.NEAREST)
+        px, mp = lit.load(), m.load()
+        for y in range(tex.height):
+            for x in range(tex.width):
+                if mp[x, y][3]:
+                    r, g, b, a = px[x, y]
+                    px[x, y] = (min(255, r + mp[x, y][0]), min(255, g + mp[x, y][1]), min(255, b + mp[x, y][2]), a)
     for part, (roots, skip, (spin, tilt, roll)) in PARTS.items():
         cubes = cubes_of(outliner, groups, els, set(roots), skip)
         view = icons.mul(icons.rot_z(math.radians(roll)), icons.mul(icons.rot_x(math.radians(tilt)), icons.rot_y(math.radians(spin))))
-        img = icons.render_quads(quads(cubes), view, tex)
+        img = icons.render_quads(quads(cubes), view, lit if part in LIT else tex)
         path = out_dir / f"{FILES.get(part, 'suit_' + part)}.png"
         img.save(path)
         print('wrote', path, len(cubes), 'cubes')
-    for name, (base, mult) in TINTED.items():
-        img = Image.open(out_dir / f'{base}.png').convert('RGBA')
-        img.putdata([(min(255, int(r * mult[0])), min(255, int(g * mult[1])), min(255, int(b * mult[2])), a) for r, g, b, a in img.get_flattened_data()])
-        img.save(out_dir / f'{name}.png')
-        print('wrote', out_dir / f'{name}.png', '(placeholder tint of', base + ')')
 
 
 if __name__ == '__main__':

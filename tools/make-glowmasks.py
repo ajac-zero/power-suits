@@ -14,6 +14,8 @@ which adds nothing (SuitGlowLayer draws the masks full-bright and additively, ti
                               the pilot sees: from the cockpit the front collar hides the tips.
   power_armor_glow_em_core.png  the EM projector's redstone lens and the vent slits round its housing
   power_armor_glow_em_arc.png   the EM projector's redstone prong tips (they spark while the beam holds something)
+  power_armor_glow_tidal.png    the tidal engine's Heart of the Sea in the pump's porthole (teal)
+  power_armor_glow_reactor.png  the star reactor's core and the energy in its canisters' glass strips (violet -> white)
 The script refuses to run if a reserved colour turns up outside the expected amount (someone painted with it).
 """
 from pathlib import Path
@@ -44,11 +46,17 @@ GLOW = {
     H('3a0e0c'): ('em_core', H('7a0600')), H('4b1310'): ('em_core', H('b81206')),
     H('5c1813'): ('em_core', H('f0200c')), H('701f17'): ('em_core', H('ff6a4a')),
     H('4e1411'): ('em_arc', H('c01206')), H('621a14'): ('em_arc', H('ff2a14')),
+    # engine backpacks (2026-10-21, model/art/backpack_kit.py GLOW_LIT): the tidal engine's Heart of the Sea in the
+    # pump's porthole (teal), the star reactor's core and the energy in its canisters' glass (violet -> white)
+    H('173a40'): ('tidal', H('1f8fa8')), H('1d4a50'): ('tidal', H('5fd3e6')), H('275c63'): ('tidal', H('d8fcff')),
+    H('2b2238'): ('reactor', H('7a4fd0')), H('362a47'): ('reactor', H('c39bff')), H('433556'): ('reactor', H('fff6ff')),
 }
-EXPECTED = {'fire': 12, 'visor': 540, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20}  # pixels per mask (fire: the backpack's painted firebox, 4 coals x 3 rows (backpack v3, 2026-10-20: the old firebox cube and its 8 vent slits are gone); the visor cube: 7x5 glass front + 59 on its
+EXPECTED = {'fire': 12, 'visor': 498, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20, 'tidal': 8, 'reactor': 69}  # pixels per mask (fire: the backpack's painted firebox, 4 coals x 3 rows (backpack v3, 2026-10-20: the old firebox cube and its 8 vent slits are gone); the visor cube: 7x5 glass front + 59 on its
 # other faces, plus 150 left in the texture from the old visor that no cube uses (2026-10-19 export: harmless, never drawn);
 # 2026-10-21 export: 540 = 236 of those + 304 on the hidden helmet drafts' faces (proto_helm_*: their visors are glass
-# too; the drafts aren't exported, so never drawn; 8 old leftovers were painted over by the drafts);
+# too; the drafts aren't exported, so never drawn; 8 old leftovers were painted over by the drafts); 2026-10-21 engine
+# packs: 498 (the packs' faces were packed over 42 of the never-drawn leftovers; the 398 under cubes are unchanged);
+# tidal: the 2x2 porthole x 2 faces' worth (8); reactor: the core's ring + the canisters' glass strips (69);
 # 4 barrel sides x 2x2 tips; 4 barrel sides x 2x3 behind them + the front collar's 6x1x6 net, 96;
 # em_core: the 3x1x3 lens's faces 30 (the housing and its vent slits went with the shared forearm, 2026-10-18); em_arc: the shared prong net's
 # tip, 2x2 end + 4 sides x 2x2)

@@ -23,13 +23,16 @@ import org.jspecify.annotations.Nullable;
 public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, LivingEntityRenderState> {
     /** Every tool's bone in the suit model (PowerTool.suitBone). Add new tools here. */
     private static final String[] TOOL_BONES = {"chaingun", "em_projector", "drill", "chainsaw"};
+    /** Each engine's backpack (design sec. 4b), in SuitEngine order: the firebox (with its exhausts), the tidal engine's
+     *  tanks, the star reactor's canisters. Only the installed engine's is drawn; none without an engine. */
+    private static final String[] ENGINE_BONES = {"backpack_parts", "pack_tidal", "pack_reactor"};
 
     public PowerArmorRenderer(EntityRendererProvider.Context context) {
         super(context, new PowerArmorModel());
         this.shadowRadius = 0.9F;
         this.withRenderLayer(new HeldItemLayer(context, this)); // the pilot's selected item in the right hand
         this.withRenderLayer(new PilotHeadLayer(context, this)); // no helmet: the pilot's own head in the collar
-        this.withRenderLayer(new SuitGlowLayer(this));         // firebox + visor lights
+        this.withRenderLayer(new SuitGlowLayer(this));         // engine + visor + tool lights
     }
 
     // ---- extract: entity -> render state ------------------------------------------------------------------------
@@ -39,6 +42,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         state.addGeckolibData(SuitRenderData.COCKPIT, isCockpitView(suit));
         state.addGeckolibData(SuitRenderData.TOOL_BONE, suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.suitBone() : "");
         state.addGeckolibData(SuitRenderData.HELMET, suit.hasHelmet());
+        state.addGeckolibData(SuitRenderData.ENGINE, suit.getEngine() == null ? -1 : suit.getEngine().ordinal());
         state.addGeckolibData(SuitRenderData.PAINT, suit.getPaint() == null ? -1 : suit.getPaint().getId());
         state.addGeckolibData(SuitRenderData.STEP_OFFSET, (float) suit.getStepOffset(partialTick));
         state.addGeckolibData(SuitRenderData.AIMING, suit.isDriven() && !suit.isDeadOrDying());
@@ -89,6 +93,12 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         // own head shows in the collar instead (PilotHeadLayer; the rest of the pilot stays hidden inside, PilotView).
         boolean helmet = info.getOrDefaultGeckolibData(SuitRenderData.HELMET, true);
         bones.ifPresent("helmet", bone -> bone.skipRender(!helmet).skipChildrenRender(!helmet));
+        // Engine slot: the installed engine's backpack only (the glowmasks follow: a hidden bone isn't drawn again).
+        int engine = info.getOrDefaultGeckolibData(SuitRenderData.ENGINE, 0);
+        for (int i = 0; i < ENGINE_BONES.length; i++) {
+            boolean hide = i != engine;
+            bones.ifPresent(ENGINE_BONES[i], bone -> bone.skipRender(hide).skipChildrenRender(hide));
+        }
         ChaingunParts.pose(bones, info.getOrDefaultGeckolibData(SuitRenderData.BARREL_ANGLE, 0F)); // turn (and coast) always
         aim(info, bones);
     }

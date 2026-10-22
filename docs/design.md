@@ -143,7 +143,7 @@ from fire, hot metal, redstone and sparks, never from futuristic energy.
 - Hoppers into the fuel slot: nice-to-have, not built.
 - Since the engines (section 4b) this section describes the **firebox**, the standard engine.
 
-## 4b. Engines (decided 2026-10-21, user; mechanics built 2026-10-21, backpack art pending)
+## 4b. Engines (decided 2026-10-21, user; built 2026-10-21: mechanics, then the backpacks)
 Why: a furnace that keeps burning under water made no sense. The backpack becomes the suit's **engine**, and
 engines can be swapped. Each engine is a full redesign of the backpack: only the firebox has the firebox and the
 exhausts; the other two are their own models (simple boxes, detail in the texture, as the user prefers).
@@ -167,8 +167,13 @@ exhausts; the other two are their own models (simple boxes, detail in the textur
 - A tidal engine leaving the water keeps running for a moment (1 s grace) before it drinks from the slot or stops,
   so a shoreline doesn't flicker it on and off.
 - Lightning still knocks out every engine (the suit keeps its one weakness). Rogues run on nothing and never flood.
-- Feedback per engine: firebox = orange glow, smoke, flame gauge; tidal = its own glow, bubbles, a water gauge
-  (endless while wet); reactor = its own pulse, no smoke, an endless gauge.
+- **Each engine is its own backpack** (2026-10-21, user's picks after drafts; only the installed one is drawn):
+  firebox = today's pack (painted firebox, two exhausts: orange glow, smoke); tidal = twin dark iron diving tanks with
+  steel straps and valves, a pump between them with the Heart of the Sea glowing teal in a porthole, **bubbles** from
+  the valves while it runs with its backpack under water (not in rain); star reactor = a netherite housing (vent grille,
+  a round glowing core) between two energy canisters with glass strips showing the energy (violet -> white, slow
+  pulse) and a **faint aura** (now and then a translucent violet wisp off the glass; trails of sparks were too much).
+  Gauge: flame (firebox and tidal on land), endless while running free.
 - The machine mind: firebox suits keep out of water; a tidal suit's mind only runs while it has power.
 
 ## 5. Suit menu (built in Phase 1)

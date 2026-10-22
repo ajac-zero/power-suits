@@ -1,7 +1,7 @@
 """Engine backpacks (2026-10-21, Phase 9 step 2; design sec. 4b): each engine gets its own backpack. The firebox keeps
-today's pack (firebox + two exhausts); the tidal engine and the star reactor get full redesigns, built here as hidden
-groups under torso_armor named proto_pack_* (export-model.mjs leaves proto_* out) until the renderer shows the
-installed engine's pack. User's rules for packs: a simple Minecraft look, few boxes, the detail painted.
+today's pack (backpack_parts: firebox + two exhausts); the tidal engine and the star reactor get full redesigns, built
+here as the bones pack_tidal and pack_reactor under torso_armor (drafted as hidden proto_pack_* groups); the renderer
+shows the installed engine's pack only. User's rules for packs: a simple Minecraft look, few boxes, the detail painted.
 
   tidal A tanks        (picked from 3: B turbine drum, C conduit cage) twin dark iron diving tanks where the exhausts
                        were, steel straps and a valve on top, a pump between them with the Heart of the Sea glowing in a
@@ -102,10 +102,12 @@ CANISTERS = {"pkRJ_housing": HOUSING, "pkRJ_dome": DOME,
              **pair("pkRJ_lid", [2.25, 42.625, 6.5], [7.25, 43.625, 11.5], LID),
              **pair("pkRJ_foot", [2.25, 35.625, 6.5], [7.25, 36.625, 11.5], on('steel'))}
 
-DRAFTS = {"proto_pack_tidal_A_tanks": TANKS, "proto_pack_reactor_J_canisters": CANISTERS}
+# bone names: drafted as hidden proto_pack_tidal_A_tanks / proto_pack_reactor_J_canisters, bones since they were wired
+# into the game (the renderer shows the installed engine's pack: backpack_parts = the firebox)
+DRAFTS = {"pack_tidal": TANKS, "pack_reactor": CANISTERS}
 
 if __name__ == "__main__":
     only = {g: c for g, c in DRAFTS.items() if not sys.argv[1:] or any(k in g for k in sys.argv[1:])}
-    plan = build(SRC, only, "torso_armor", TORSO, ("before backpack drafts: " + ", ".join(g.replace("proto_pack_", "") for g in only))[:120])
+    plan = build(SRC, only, "torso_armor", TORSO, ("before engine packs: " + ", ".join(only))[:120])
     json.dump(plan, open(OUT, "w"))
     print("drafts", list(only), "cubes", sum(len(c) for c in only.values()), "pixels", len(plan["pixels"]), "lit", len(plan["lit"]))

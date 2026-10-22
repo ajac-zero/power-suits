@@ -18,7 +18,7 @@ import net.minecraft.util.Mth;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The suit's lights: the firebox fire, the visor, the chaingun's hot barrels and the EM projector's redstone, drawn on top of the model at full brightness so they glow
+ * The suit's lights: the engine (firebox fire, tidal Heart of the Sea, reactor energy), the visor, the chaingun's hot barrels and the EM projector's redstone, drawn on top of the model at full brightness so they glow
  * in the dark. Like GeckoLib's AutoGlowingGeoLayer, the whole model is drawn again with a glowmask texture (black
  * everywhere except the glowing pixels, made by tools/make-glowmasks.py) in vanilla's "eyes" render type (the one
  * spider and enderman eyes use): it ignores light and adds its colour on top. Unlike AutoGlowingGeoLayer, each mask
@@ -32,8 +32,11 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
     /** The EM projector's redstone: lens + vents, and the prong tips. */
     static final Identifier EM_CORE = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_em_core.png");
     static final Identifier EM_ARC = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_em_arc.png");
+    /** The engine backpacks' glass (design sec. 4b): the tidal engine's Heart of the Sea, the star reactor's core + canisters. */
+    static final Identifier TIDAL = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_tidal.png");
+    static final Identifier REACTOR = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_reactor.png");
     /** The masks, in the order of the tints in SuitRenderData.GLOW. */
-    private static final Identifier[] MASKS = {FIRE, VISOR, HEAT, HEAT_BARREL, EM_CORE, EM_ARC};
+    private static final Identifier[] MASKS = {FIRE, VISOR, HEAT, HEAT_BARREL, EM_CORE, EM_ARC, TIDAL, REACTOR};
 
     public SuitGlowLayer(GeoRenderer<PowerArmorEntity, Void, LivingEntityRenderState> renderer) {
         super(renderer);
@@ -54,7 +57,9 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
                 tint(heatGlow(heat), 1F, 1F, 1F),
                 tint(barrelGlow(heat), 1F, 1F, 1F),
                 tint(suit.getEmCoreGlow(time), 1F, 1F, 1F),
-                tint(suit.getEmArcGlow(time), 1F, 1F, 1F)});
+                tint(suit.getEmArcGlow(time), 1F, 1F, 1F),
+                tint(suit.getTidalGlow(time), 1F, 1F, 1F),
+                tint(suit.getReactorGlow(time), 1F, 1F, 1F)});
     }
 
     /** Render: draw the model once per lit mask, after (on top of) the suit itself. */

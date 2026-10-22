@@ -173,6 +173,9 @@ Known gaps with no tool (use `risky_eval`): delete an animation, save the projec
 - **New bones get empty animators in every animation** (Blockbench adds them on preview): ignore animators without keys
   when diffing animations.
 - **Hide everything else to focus** (`scripts/isolate.mjs on|off`), and restore before saving: visibility is saved.
+- **A generated plan must be fresh before it's applied**: `art.py | tail` from codemode returned exit code 0 for a
+  failing script, and the apply step re-applied the previous plan (it brought back drafts just removed). Delete the plan
+  file before building it and check the build's own exit code (no pipe) before applying.
 - **Faces nobody should see still show as slivers**: where a slope meets a block, the block's top or the slope's
   underside peeks through at grazing angles. Paint such faces in the armour colour, not dark iron.
 
