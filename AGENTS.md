@@ -30,7 +30,10 @@ replace older advice. The how-to for this kind of work (setup, GeckoLib, riding,
 - `model/` the Blockbench source: `power_armor.bbmodel`, `anim/` procedural animation specs (bake with
   `.agents/skills/blockbench-mcp/scripts/run.mjs`, see `model/anim/README.md`), `art/` one-off texture/part scripts.
 - `.pi/mcp.json` connects pi to Blockbench's MCP server (`localhost:3000/bb-mcp`): start sessions here.
-- `.agents/skills/`: `minecraft-modding` (this mod's how-to) and `blockbench-mcp` (Blockbench work).
+- `marketing/` key art rendered in Blender from the model (`blender/` scene scripts, `out/` finished pictures; see its
+  README). How we make them: `.agents/skills/key-art/SKILL.md`.
+- `.agents/skills/`: `minecraft-modding` (this mod's how-to), `blockbench-mcp` (Blockbench work) and `key-art`
+  (marketing pictures).
 
 ## Setup
 Java 25 from Homebrew (`brew install openjdk@25`) is keg-only. Every shell needs:

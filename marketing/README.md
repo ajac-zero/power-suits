@@ -22,7 +22,12 @@ Key art rendered in Blender from the mod's own model, so it always matches the g
    /Applications/Blender.app/Contents/MacOS/Blender -b -P marketing/blender/man_of_tomorrow.py -- --out marketing/out/man_of_tomorrow_raw.png
    uv run --with pillow --with numpy python3 marketing/post.py marketing/out/man_of_tomorrow_raw.png marketing/out/man_of_tomorrow.png
    ```
-   `--cpu` renders on the CPU (if Metal crashes). `--views` renders orthographic front/side/back/top checks of a pose instead.
+   `--bg far|near|blur|clean` picks the backdrop. `--cpu` renders on the CPU (if Metal crashes). `--views` renders orthographic front/side/back/top checks of a pose instead.
+
+   Skin casting sheet (numbered heads, or `--body` for whole players):
+   `/Applications/Blender.app/Contents/MacOS/Blender -b -P marketing/blender/skin_lineup.py -- sheet.png skin1.png skin2.png ...`
+
+The creative process and staging rules are in `.agents/skills/key-art/SKILL.md`.
 
 ## Pictures
 - `man_of_tomorrow`: homage to the "Man of Tomorrow" cover (Superman vs Lex Luthor's warsuit), mirrored and staged
