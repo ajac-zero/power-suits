@@ -174,7 +174,9 @@ Each step: GameTests for the logic, an autopilot scene with numbers in a CSV, th
    now drives a tidal engine (a firebox would flood there).
    Seen: a tidal suit walking out of a 4-deep pool surfaces its backpack on the 2nd step and dies on the 3rd after
    the 1 s grace: without water in the slot it can't climb out (by the rules: carry a bucket).
-2. Art: tidal + reactor backpacks as hidden `proto_*` drafts for the user to pick; then one bone group per engine
+2. Art: tidal + reactor backpacks as hidden `proto_*` drafts for the user to pick (DONE 2026-10-21: tidal A tanks,
+   reactor J canisters, saved in the .bbmodel as `proto_pack_tidal_A_tanks` / `proto_pack_reactor_J_canisters`, built by
+   `model/art/backpack_drafts_art.py` + `backpack_kit.py`; the reactor took three rounds and an inspiration board); then one bone group per engine
    (renderer shows the installed one; the firebox and exhausts only on the firebox), glow colours + masks, smoke /
    bubbles per engine, sounds, item icons.
 3. Docs, README, export.
