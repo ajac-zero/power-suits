@@ -42,3 +42,8 @@ repo/
 
 ### Python ###
 __pycache__/
+
+### Marketing (key art): finished pictures are kept, the unprocessed renders are rebuilt by the scripts ###
+!marketing/out/
+marketing/out/*_raw.png
+marketing/out/*.tiles/
