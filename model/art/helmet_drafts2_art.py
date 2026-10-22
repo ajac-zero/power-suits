@@ -337,6 +337,161 @@ def chief_jaw(f, w, h):
     return g
 
 
+# ---------- U: Samus's helmet as in Smash Bros. Ultimate, on the standard shell (2026-10-22) ----------
+# (A first round after the Metroid Prime replicas, S, had the visor's bottom rising to a point over the snout and a
+# red-orange option; user: steel like the others, redesigned after Ultimate's render, .scratch/helmets/ref/ssbu_helmet.jpg.)
+# What makes Ultimate's helmet at 9 px:
+#   - the visor a shield pointing down: wide at the top, its lower edge sloping down to a point in the middle, where a
+#     narrow silver ribbed mouth grille hangs under it (a 2 px cube 0.75 out)
+#   - a hooded brow: the dome's front edge comes down over the visor like a cap (A painted: a lit lip and the glass's
+#     top row in shadow; B: a real lip standing 0.5 out over the visor), a seam down the middle of the dome
+#   - cheek plates framing the visor and meeting in a V on the grille: a shadow rim along the visor's sloping edges
+#     (v1: stepped dark seams, they zig-zagged like teeth)
+#   - the visor wrapping round the sides (v3, like the spartan's), silver ribbed hoses from the grille's sides round the
+#     jaw (v3: 3D; v2 painted them down the sides from a bulge, both gone)
+# Plates in the steel shades (they take the paint: red dye gives Ultimate's red helmet); grille and hoses in the trim's
+# silver (W / GR / G2: paint leaves them alone, as her silver grille and hoses).
+# v4 (user: "the visor is broken, not continuous" - the front's outer columns stayed plate, cutting the glass at the
+# corners - "and the details like the pipe are too basic: look at the EVA and Delta helmets"):
+#   - one visor: the shield across the front and round both sides without a break (the corner columns carry the same
+#     rows as the sides' first columns), a dark rim where it meets the armour, two reflection streaks, its top row in
+#     the brow's shadow
+#   - the brow a real lip wrapping the sides (0.5 out at the front, 0.2 at the sides) over the visor
+#   - a half-pixel crest down the forehead and over the dome to the back, forehead panel lines either side
+#   - corrugated hoses: a tube with raised rings leaving the grille, drooping along the jaw (12 deg) to a coupling at
+#     each corner, climbing back along the side (25 deg) into a round port behind the visor
+#   - a plate tuck across the back (the in-game view), the crest over it
+# Front, 9 x 9 (row r = y 47.5-r, column c = x 4.5-c). '.' = plate; g/h/e glass (glows), r = rim (darkest plate);
+# row 1 is under the lip.
+SAMUS_FRONT = (".........",
+               "SSSSSSSSS",
+               "eeeeeeeee",
+               "ghhgghggg",
+               "rghhggggr",
+               "LrghggerL",
+               ".LrrrrrL.",
+               ".........",
+               ".........")
+# the sides' first columns from the front: glass rows (2 = in the brow's shadow), then the rim under them
+SAMUS_WRAP = ((2, 3), (2, 3), (2,), (2,))   # v4b: one column shorter, clear of the port
+SAMUS_PORT = (".HL.", "H0MD", "LMSD", ".DD.")         # the port the hose plugs into: a raised ring lit top left, a hole
+#   (v4a: a dark iron ring round a 2 px hole, a black blot next to the rim)
+HOSE_FRONT_TILT, HOSE_SIDE_RISE = 12, 25               # degrees
+
+
+def samus(lip):
+    # the rim in the armour's darkest shade (it takes the paint: dark red on red; v4a's dark iron made black blots)
+    k = {'h': 'VH', 'g': 'VG', 'e': 'VE', 'r': 'D', '0': 'I0'}
+
+    def pat(rows):
+        return [[None if ch == '.' else k.get(ch, ch) for ch in r] for r in rows]
+
+    def shell_(f, w, h):
+        if f == "down": return (REUSE, "helmet_shell")
+        if f == "up": g = plate(w, h, top='H', left='L', right='S', bottom='S', base='B', n=0)
+        else:
+            lit = f in ("east", "north")
+            g = plate(w, h, top='H', left='L' if lit else 'B', right='B' if lit else 'S', bottom='S', base='B', n=0)
+        if f == "north":
+            stamp(g, pat(SAMUS_FRONT), 0, 0)
+            if not lip: g[1] = ['L'] + ['H'] * (w - 2) + ['L']  # A: the brow painted, a lit lip
+        elif f == "up":                                        # row 0 = front, column 0 = +x
+            # forehead panel lines: from the brow's corners towards the crest, then straight back beside it
+            for r, c in ((0, 1), (1, 2), (2, 3), (3, 3), (4, 3), (5, 3), (6, 3), (7, 3), (8, 3)):
+                g[r][c] = 'D'; g[r][w - 1 - c] = 'D'
+            for r in range(0, 3):                              # the panel between them a shade lighter
+                for c in range(r + 2, w - r - 2): g[r][c] = 'L'
+        elif f == "south":                                     # a plate tuck across the back, the crest over it
+            g[4] = ['S'] * w; g[5] = ['L'] * w
+            g[4][0] = g[5][0] = 'B'
+        elif f in ("east", "west"):
+            front = (lambda i: w - 1 - i) if f == "east" else (lambda i: i)   # column i from the front edge
+            for i, rows in enumerate(SAMUS_WRAP):
+                g[1][front(i)] = 'S' if lip else 'H'           # under the lip (B) / the painted lip (A)
+                for r in rows:
+                    g[r][front(i)] = 'VE' if r == 2 else 'VG'
+                g[rows[-1] + 1][front(i)] = 'D' if i == 0 else 'S'   # the rim, rising as the visor goes back (softer
+            g[2][front(len(SAMUS_WRAP))] = 'S'                 # than the front's: v4a's ran into the port), closing it
+            g[3][front(1)] = 'VH'                              # the streak carries round the corner
+            port = pat(SAMUS_PORT)
+            for r, row in enumerate(port):                     # rows 3-6, 5-8 from the front (z 1..5): where the
+                for i, key in enumerate(row):                  # climbing hose arrives (z ~2.3, y ~43.4)
+                    if key: g[3 + r][front(5 + i) if f == "west" else front(8 - i)] = key
+        return g
+
+    def grille(f, w, h):
+        """The silver mouth grille: ribs (lit rows between dark slots), shaded sides."""
+        if f == "up": return grid(w, h, 'W')
+        if f == "down": return grid(w, h, 'G2')
+        if f != "north": return [['GR' if r % 2 == 0 else 'G2'] * w for r in range(h)]
+        return [['W'] * w if r % 2 == 0 else ['I1'] * w for r in range(h)]
+
+    def tube(f, w, h):
+        """A hose's core: dark corrugation between the rings, shaded round."""
+        if f == "up": return grid(w, h, 'G2')
+        if f == "down": return grid(w, h, 'I1')
+        return grid(w, h, 'I2')
+
+    def ring(f, w, h):
+        """A hose's raised ring: silver, lit on top."""
+        if f == "up": return grid(w, h, 'W')
+        if f == "down": return grid(w, h, 'G2')
+        return [['W'] * w] + [['GR'] * w for _ in range(h - 1)]
+
+    def coupling(f, w, h):
+        """The silver joint at the jaw's corners: lit top and front edge."""
+        if f == "up": return grid(w, h, 'W')
+        if f == "down": return grid(w, h, 'G2')
+        return [['W'] * w] + [['GR'] * (w - 1) + ['G2'] for _ in range(h - 1)]
+
+    def brow(f, w, h):
+        """The lip over the visor: plate, lit edge, its underside dark over the glass."""
+        if f == "up": return grid(w, h, 'H')
+        if f == "down": return grid(w, h, 'D')
+        if f in ("north", "east", "west"): return [['L'] + ['H'] * (w - 2) + ['L']] + [['B'] * w for _ in range(h - 1)]
+        return grid(w, h, 'S')
+
+    def crest(f, w, h):
+        """The half-pixel ridge: lit top, shaded flank."""
+        if f == "up": return grid(w, h, 'H2')
+        if f == "down": return grid(w, h, 'S')
+        if f == "east": return grid(w, h, 'L')
+        return grid(w, h, 'M' if f in ("north", "south") else 'S')
+
+    tag = "B" if lip else "A"
+    n = lambda part: f"hU{tag}_{part}"
+    out = {n("shell"): (*SHELL, shell_),
+           n("grille"): ([-1, 38.95, -4.75], [1, 41.5, -4], grille),
+           # the crest: over the dome (0.25 up) and down the forehead to the lip (0.25 out; 0.05 narrower and lower
+           # at the top than the dome's piece, which it runs into: no shared planes)
+           n("crest_top"): ([-0.25, 47.5, -4.25], [0.25, 47.75, 4.5], crest),
+           n("crest_front"): ([-0.2, 46.5, -4.25], [0.2, 47.7, -4], crest)}
+    if lip:   # the lip wraps the sides back over the visor's wrap (0.2 proud of the sides, 0.5 of the front)
+        out[n("brow")] = ([-4.7, 45.5, -4.5], [4.7, 46.5, 0.5], brow)
+    import math
+    for side, sx in (("r", 1), ("l", -1)):
+        # along the jaw: from the grille's side to the corner, drooping; a core 0.7 thick with 0.9 rings every 0.8
+        o = [1 * sx, 41.0, -4.3]
+        rot = {"rotation": [0, 0, -HOSE_FRONT_TILT * sx], "origin": o}
+        lo, hi = sorted((1 * sx, 4.45 * sx))
+        out[n(f"hose_jaw_{side}")] = ([lo, 40.65, -4.65], [hi, 41.35, -3.95], tube, rot)
+        for j, x in enumerate((1.25, 2.05, 2.85, 3.65)):
+            lo, hi = sorted((x * sx, (x + 0.3) * sx))
+            out[n(f"hose_jaw_{side}_ring{j}")] = ([lo, 40.55, -4.75], [hi, 41.45, -3.95], ring, rot)
+        # the coupling at the corner, where the drooping run ends (x 4.4, y 40.3)
+        lo, hi = sorted((3.95 * sx, 4.75 * sx))
+        out[n(f"hose_joint_{side}")] = ([lo, 39.85, -4.75], [hi, 40.8, -3.95], coupling)
+        # along the side: from the coupling up and back into the port (z 2.5, y 43.0 at its end)
+        length = math.hypot(6.8, 2.7)
+        o = [4.375 * sx, 40.35, -4.3]
+        rot = {"rotation": [-HOSE_SIDE_RISE, 0, 0], "origin": o}
+        lo, hi = sorted((4.05 * sx, 4.7 * sx))
+        out[n(f"hose_side_{side}")] = ([lo, 40.0, -4.3], [hi, 40.7, -4.3 + length], tube, rot)
+        lo, hi = sorted((3.95 * sx, 4.75 * sx))
+        for j, z in enumerate((-3.4, -2.4, -1.4, -0.4, 0.6, 1.6)):
+            out[n(f"hose_side_{side}_ring{j}")] = ([lo, 39.9, z], [hi, 40.8, z + 0.3], ring, rot)
+    return out
+
 def reuse(name): return lambda f, w, h: (REUSE, name)
 
 
@@ -358,6 +513,9 @@ DRAFTS = {
     # the whole front of the head, a steel band round the lower half, a mouthpiece; v4: on the standard shell (a
     # tiered dome, v2-v3, was dropped: the drafts keep the current helmet's shape)
     "helm_noble": eva_cubes(),
+    # U: Samus as in Smash Bros. Ultimate, 2026-10-22: the user picked A (the brow painted) over B (samus(True): a real
+    # lip wrapping the sides over the visor)
+    "proto_helm_U_samus_A": samus(False),
     "helm_robot": {
         "hK_shell": (*SHELL, guy_shell),
         # the U-frame: a chin bar round the front corners, two side posts on it (sunk 0.1 into it, 0.05 in at the
@@ -384,8 +542,9 @@ def main():
     faces, rects = {}, []
     for group, cubes in drafts.items():
         plan["groups"][group] = {}
-        for name, (f, t, paint) in cubes.items():
+        for name, (f, t, paint, *more) in cubes.items():
             spec = plan["groups"][group][name] = {"from": f, "to": t, "faces": {}}
+            if more: spec.update(more[0])                     # a rotated cube: {"rotation": [x, y, z], "origin": [...]}
             for face in FACES:
                 fw, fh = face_dims(f, t, face)
                 pw, ph = max(1, math.ceil(fw - 1e-6)), max(1, math.ceil(fh - 1e-6))
