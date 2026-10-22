@@ -51,7 +51,7 @@ Mojang's names are official since 26.1 (no Parchment). Porting primers: `neoforg
 | `./gradlew runAutopilotPose` | ~30 s pose check (`client/dev/PoseScene`): side shots looking level / down 40 / up 30 / tool raised, top shots with the view at yaw +40 (gold block) / -40 (redstone): looking down must lean forward, the torso and raised tool must face the shot's block (`ap_pose_*.png`, `run/autopilot_pose.csv`) |
 | `./gradlew runAutopilotGait` | ~45 s foot-slip drive (`client/dev/GaitScene`): walk, back up, strafe, diagonal, turn on the spot, look around, sprint + turn; per-tick `run/autopilot_gait.csv`, summarize with `python3 tools/gait-report.py` (slip = how fast a planted foot slides, moon = moonwalk ticks) |
 | `./gradlew runAutopilotPaint` | ~30 s paint check (`client/dev/PaintScene`, also at the end of `runAutopilotMech`): all 16 dyes + a wet sponge on a suit, `ap_paint_*` (in-game back view + front), `run/autopilot_paint.csv` (server and client paint must agree a tick later) |
-| `./gradlew runAutopilotStyles` | ~30 s helmet styles check (`client/dev/StyleScene`): five no-AI suits in a row (standard + 4 styles) from the in-game back view and the front, each painted in its inspiration's colours, the smithing table making a Spartan helmet (`ap_style_*`, `ap_menu_smithing`, `run/autopilot_style.csv`: server vs client style) |
+| `./gradlew runAutopilotStyles` | ~30 s helmet styles check (`client/dev/StyleScene`): six no-AI suits in a row (standard + 5 styles) from the in-game back view and the front, each painted in its inspiration's colours, the smithing table making a Spartan helmet (`ap_style_*`, `ap_menu_smithing`, `run/autopilot_style.csv`: server vs client style) |
 | `./gradlew runAutopilotEngine` | ~35 s engine check (`client/dev/EngineScene`, also at the end of `runAutopilotMech`): a firebox floods in a glass pool (no pack-up), a tidal engine runs under water, dies on the dry stairs, drinks a water bucket, a star reactor sprints for free, the menu's engine slot (`ap_engine_*`, `ap_menu_engine`, `run/autopilot_engine.csv`) |
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
@@ -255,6 +255,8 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **A scripted camera entity freezes the player on the server**: the client only sends the player's position while the
   player is the camera entity (`LocalPlayer.isControlledCamera`). A scene that moves the player (an EM rogue lifting
   them) must use the player's own (third-person) camera, or the server never sees them move.
+- **A scene's first shots can come out unlit** (black ground, dark suits: the fresh chunks' light not computed yet, seen
+  once in `runAutopilotStyles` 100 blocks out); a rerun was fine. Check the shots before judging the art.
 - **Autopilot worlds are peaceful** (`AutoPilot` creates them so): monsters spawned by a scene vanish the same tick. Set
   the difficulty in the scene (the mind scene sets NORMAL before its zombies).
 - **`AABB.clip` misses a segment that starts inside the box**: line-of-fire checks also test `box.contains(start)`.
@@ -369,7 +371,7 @@ Comment the "why" for anything non-obvious; the user reads the code to learn.
   leave them out (GeckoLib would draw them, hidden or not), but their painted texels stay in the exported texture (draft
   glass in the reserved glow colours raises `make-glowmasks.py`'s counts). A picked draft becomes a game part by
   renaming its group (the engine packs, then the helmet styles: `proto_helm_F_delta` / `G_chief` / `H_eva` / `K_guy` are
-  `helm_protector` / `helm_spartan` / `helm_noble` / `helm_robot` since 2026-10-22, still hidden in Blockbench, design
+  `helm_protector` / `helm_spartan` / `helm_noble` / `helm_robot` since 2026-10-22, plus `helm_hunter` (Samus) the same day, still hidden in Blockbench, design
   sec. 4c): the renderer then shows one of a set of bones (`ENGINE_BONES`, `HelmetStyle.bone()`). Keep them hidden when saving.
 - **Variants of an item are a data component, not new items** (the helmet styles): recipes set it in their result
   (`"components": {"powerarmor:helmet_style": "spartan"}`) and remove it with `"!powerarmor:helmet_style": {}`; a

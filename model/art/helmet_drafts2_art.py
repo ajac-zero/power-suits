@@ -5,7 +5,7 @@ Every draft is the current helmet's envelope: the shell 9 x 9 x 9 (x +-4.5, y 38
 inside the current band's reach (z -4.75, x +-4.75, top 47.75). The shell's sides, back and top reuse the current
 helmet's UV (same paint) where a draft leaves them alone. Drafted as hidden groups under `head` named proto_helm_*; since
 2026-10-22 the four kept ones are the helmet styles (design sec. 4c), bones helm_protector (F), helm_spartan (G),
-helm_noble (H) and helm_robot (K), still hidden in Blockbench (GeckoLib draws them anyway: the renderer shows the one the
+helm_noble (H), helm_robot (K) and helm_hunter (U, 2026-10-22), still hidden in Blockbench (GeckoLib draws them anyway: the renderer shows the one the
 helmet's style asks for).
 
   F delta      (after Subject Delta, BioShock 2) a glowing visor painted flat in a riveted frame, three half-pixel
@@ -517,8 +517,8 @@ DRAFTS = {
     # tiered dome, v2-v3, was dropped: the drafts keep the current helmet's shape)
     "helm_noble": eva_cubes(),
     # U: Samus as in Smash Bros. Ultimate, 2026-10-22: the user picked A (the brow painted) over B (samus(True): a real
-    # lip wrapping the sides over the visor)
-    "proto_helm_U_samus_A": samus(False),
+    # lip wrapping the sides over the visor); drafted as proto_helm_U_samus_A, the Hunter style since (design sec. 4c)
+    "helm_hunter": samus(False),
     "helm_robot": {
         "hK_shell": (*SHELL, guy_shell),
         # the U-frame: a chin bar round the front corners, two side posts on it (sunk 0.1 into it, 0.05 in at the

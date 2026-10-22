@@ -36,6 +36,7 @@ SLABS = {
     'spartan': ('2a3220', '4c5a35', '7d8f58'),    # olive drab
     'noble': ('262b30', '4a535b', '7f8a93'),      # grey EVA steel
     'robot': ('3a2f12', '7a6224', 'c9a648'),      # gold
+    'hunter': ('4a140c', '9a3418', 'd8662c'),     # the Varia suit's red-orange
 }
 OUTLINE = (24, 22, 26, 255)
 

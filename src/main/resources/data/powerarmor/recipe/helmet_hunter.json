@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": "powerarmor:hunter_template",
+  "base": "powerarmor:suit_helmet",
+  "addition": "minecraft:slime_ball",
+  "result": {
+    "id": "powerarmor:suit_helmet",
+    "components": {
+      "powerarmor:helmet_style": "hunter"
+    }
+  }
+}

@@ -24,7 +24,11 @@ public enum HelmetStyle implements StringRepresentable {
     /** After Emile's EVA helmet (Halo: Reach): a visor over the whole front, a steel band, red ear marks. */
     NOBLE("noble"),
     /** After Guy-Manuel's helmet (Daft Punk): one big dark visor in a gold frame, ear discs. */
-    ROBOT("robot");
+    ROBOT("robot"),
+    /** After Samus's helmet as in Smash Bros. Ultimate (2026-10-22): a shield visor wrapping the sides, a crest, a
+     *  silver mouth grille with corrugated hoses round the jaw into ports on the sides. Last: the synced ordinal of
+     *  the others mustn't move. */
+    HUNTER("hunter");
 
     /** Saved as its name ("spartan"): the item component in saves and in the recipes' JSON. */
     public static final Codec<HelmetStyle> CODEC = StringRepresentable.fromEnum(HelmetStyle::values);

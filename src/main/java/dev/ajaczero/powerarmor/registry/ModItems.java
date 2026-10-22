@@ -68,6 +68,7 @@ public final class ModItems {
     public static final DeferredItem<HelmetTemplateItem> SPARTAN_TEMPLATE = template(HelmetStyle.SPARTAN);
     public static final DeferredItem<HelmetTemplateItem> NOBLE_TEMPLATE = template(HelmetStyle.NOBLE);
     public static final DeferredItem<HelmetTemplateItem> ROBOT_TEMPLATE = template(HelmetStyle.ROBOT);
+    public static final DeferredItem<HelmetTemplateItem> HUNTER_TEMPLATE = template(HelmetStyle.HUNTER);
 
     // The engines (design sec. 4b, 2026-10-21): the suit's backpack, swapped in the menu's engine slot. Every suit comes
     // with a firebox; the other two are crafted.

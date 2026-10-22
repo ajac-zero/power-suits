@@ -198,6 +198,10 @@ bars, band and frame. Tests (111): smithing (each style, keeps the name, restyle
 iron takes it off, template copies), synced + saved + packed, loot (400 rolls per chest). Autopilot `StyleScene`
 (`runAutopilotStyles`): `ap_style_*` (each helmet from behind and the front, painted in its colours), `ap_menu_smithing`,
 `run/autopilot_style.csv`.
+Hunter style (DONE 2026-10-22, branch `helmet-samus`): drafted as `proto_helm_U_samus_A` (model/art/helmet_drafts2_art.py
+`samus()`; drafts can carry cube rotations now, unused since the hoses went straight), bone `helm_hunter`, `HelmetStyle.HUNTER`
+(last: synced ordinals of the others unchanged), template in desert pyramids + jungle temples, slime ball; glowmask
+visor 498 -> 527 (its glass); the scene films six suits.
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint

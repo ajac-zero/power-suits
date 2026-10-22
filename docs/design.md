@@ -194,15 +194,20 @@ user: make them widely available, and the smithing table's templates make them f
   | Spartan (G) | the Master Chief, Halo | trial chamber vaults, ominous too (1 in 8) | totem of undying | "Wake me when you need me." |
   | Noble (H) | Emile's EVA helmet, Halo: Reach | end city treasure | phantom membrane | "I'm ready! How 'bout you?" |
   | Robot (K) | Guy-Manuel's helmet, Daft Punk | ancient city | any music disc (`#c:music_discs`) | "One more time." |
+  | Hunter (U, 2026-10-22) | Samus's helmet as in Smash Bros. Ultimate | desert pyramids, jungle temples (the "Chozo ruins") | slime ball (a Metroid) | "See you next mission." |
 
 - Templates are named "<Style> Helmet Design" (vanilla's template tooltip: applies to the helmet, ingredient the object)
   and carry the flavour line too. Loot comes from NeoForge loot modifiers (`neoforge:add_table`).
 - The model: each style is a whole helmet of its own under the head bone (`helm_protector`, `helm_spartan`,
-  `helm_noble`, `helm_robot`; drafted as hidden `proto_helm_*`, still hidden in Blockbench); the renderer draws the
+  `helm_noble`, `helm_robot`, `helm_hunter`; drafted as hidden `proto_helm_*`, still hidden in Blockbench); the renderer draws the
   worn one instead of `helmet`. Their visors glow like the standard one; their shells take the paint, with the
   protector's window bars, the spartan's top band and the robot's frame (brown = brass, yellow = gold).
 - Rogues: one in four wears a random style (only a look; their helmet is never loot).
-- Left for later (user): an orange helmet after Samus, a black one (Death Trooper?).
+- The Hunter (2026-10-22, user, after rounds on a Metroid Prime version and a red-orange one: steel like the others, after
+  Ultimate): one shield visor wrapping the sides, a crest, a silver grille, corrugated silver hoses in straight runs
+  (jaw, side, up into a port: angled or stepped hoses were "too much" / "too jagged"). Its shell and crest take the paint
+  (red dye = Samus), grille and hoses stay silver.
+- Left for later (user): a black one (Death Trooper?).
 
 ## 5. Suit menu (built in Phase 1)
 - **Sneak + right-click a parked suit** (decided 2026-10-12, the horse/llama convention). Tools and fuel can

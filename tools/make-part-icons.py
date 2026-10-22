@@ -28,7 +28,7 @@ spec.loader.exec_module(icons)
 
 # icon: (root bones, bones left out with everything below them, view)
 # view = (spin about Y, tilt about X, roll about Z) in degrees; the model faces -Z, so spin 180 shows its front.
-STYLES = ('helm_protector', 'helm_spartan', 'helm_noble', 'helm_robot')  # the helmet styles' bones
+STYLES = ('helm_protector', 'helm_spartan', 'helm_noble', 'helm_robot', 'helm_hunter')  # the helmet styles' bones
 PARTS = {
     'torso': (['body', 'hips'], {'head', 'right_arm', 'left_arm', 'pack_tidal', 'pack_reactor'}, (205, 12, 0)),  # with its firebox
     'arm': (['right_arm'], set(), (210, 10, 0)),

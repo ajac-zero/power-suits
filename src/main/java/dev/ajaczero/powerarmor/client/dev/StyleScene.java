@@ -23,8 +23,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Autopilot scene for the helmet styles (design sec. 4c, 2026-10-22): five running suits in a row (no AI: statues) (the standard helmet,
- * then protector, spartan, noble, robot), each filmed from the in-game third-person view behind it and from the front
+ * Autopilot scene for the helmet styles (design sec. 4c, 2026-10-22): six running suits in a row (no AI: statues) (the standard helmet,
+ * then protector, spartan, noble, robot, hunter), each filmed from the in-game third-person view behind it and from the front
  * ({@code ap_style_<n>_<style>_back/front.png}), the whole row ({@code ap_style_row_front/back}), then each painted
  * in its inspiration's colours (shells, frames and bars take paint: {@code ap_style_<n>_<style>_painted}), and the smithing table making a Spartan helmet
  * (template + helmet + totem: {@code ap_menu_smithing.png}). Log run/autopilot_style.csv: each suit's style on the
@@ -32,7 +32,7 @@ import net.minecraft.world.phys.Vec3;
  * runAutopilotStyles (~30 s).
  */
 final class StyleScene {
-    private static final String[] NAMES = {"standard", "protector", "spartan", "noble", "robot"};
+    private static final String[] NAMES = {"standard", "protector", "spartan", "noble", "robot", "hunter"};
     private static final double SPACING = 4.5;
     private static final int SETUP = 30, EACH = 14;
     private static volatile BlockPos base;
@@ -66,12 +66,29 @@ final class StyleScene {
             case 6 -> row(mc, true);
             case 11 -> AutoPilot.shot(mc, "style_row_back");
             case 12 -> { phase = "painted"; paintAll(mc); }
-            case 13, 21, 29, 37, 45 -> front(mc, (r - 13) / 8);
-            case 19, 27, 35, 43, 51 -> AutoPilot.shot(mc, String.format(Locale.ROOT, "style_%d_%s_painted", (r - 19) / 8, NAMES[(r - 19) / 8]));
-            case 53 -> { phase = "smithing"; smithing(mc); }
-            case 67 -> AutoPilot.shot(mc, "menu_smithing");
-            case 69 -> { mc.player.closeContainer(); close(); mc.setCameraEntity(mc.player); return false; }
             default -> {}
+        }
+        // the painted close-ups: 8 ticks per suit after the paint (camera, then the shot 6 ticks later)
+        int p = r - 13;
+        if (p >= 0 && p < NAMES.length * 8) {
+            int i = p / 8;
+            if (p % 8 == 0) {
+                front(mc, i);
+            } else if (p % 8 == 6) {
+                AutoPilot.shot(mc, String.format(Locale.ROOT, "style_%d_%s_painted", i, NAMES[i]));
+            }
+        }
+        int m = r - 13 - NAMES.length * 8; // then the smithing table
+        if (m == 0) {
+            phase = "smithing";
+            smithing(mc);
+        } else if (m == 14) {
+            AutoPilot.shot(mc, "menu_smithing");
+        } else if (m == 16) {
+            mc.player.closeContainer();
+            close();
+            mc.setCameraEntity(mc.player);
+            return false;
         }
         if (s >= 2) {
             log(mc, s);
@@ -89,7 +106,7 @@ final class StyleScene {
             int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
             base = new BlockPos(x, y, z);
             player.setGameMode(GameType.SURVIVAL);
-            player.teleportTo(x + 0.5 + SPACING * 2, y, z - 40.5); // out of the pictures
+            player.teleportTo(x + 0.5 + SPACING * (NAMES.length - 1) / 2, y, z - 40.5); // out of the pictures
             for (int i = 0; i < NAMES.length; i++) {
                 PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
                 ItemStack helmet = new ItemStack(ModItems.SUIT_HELMET.get());
@@ -110,7 +127,7 @@ final class StyleScene {
     }
 
     /** Each suit's paint in the last shots: its inspiration's colours (the frames and bars take paint too). */
-    private static final DyeColor[] PAINTS = {DyeColor.RED, DyeColor.BROWN, DyeColor.GREEN, DyeColor.LIGHT_GRAY, DyeColor.YELLOW};
+    private static final DyeColor[] PAINTS = {DyeColor.BLUE, DyeColor.BROWN, DyeColor.GREEN, DyeColor.LIGHT_GRAY, DyeColor.YELLOW, DyeColor.RED};
 
     /** Right-click every suit with its dye, as a player would. */
     private static void paintAll(Minecraft mc) {
@@ -165,8 +182,8 @@ final class StyleScene {
 
     /** The whole row from the front or from behind. */
     private static void row(Minecraft mc, boolean behind) {
-        double mid = SPACING * 2;
-        camera(mc, new Vec3(mid, 3.2, behind ? 15 : -15), new Vec3(mid, 1.6, 0));
+        double mid = SPACING * (NAMES.length - 1) / 2;
+        camera(mc, new Vec3(mid, 3.2, behind ? 18 : -18), new Vec3(mid, 1.6, 0));
     }
 
     private static void camera(Minecraft mc, Vec3 from, Vec3 to) {

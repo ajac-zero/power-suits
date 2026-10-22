@@ -31,6 +31,13 @@
           "type": "minecraft:model",
           "model": "powerarmor:item/suit_helmet_robot"
         }
+      },
+      {
+        "when": "hunter",
+        "model": {
+          "type": "minecraft:model",
+          "model": "powerarmor:item/suit_helmet_hunter"
+        }
       }
     ],
     "fallback": {

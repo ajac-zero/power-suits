@@ -65,6 +65,7 @@ public class PowerArmor {
             event.accept(ModItems.SPARTAN_TEMPLATE);
             event.accept(ModItems.NOBLE_TEMPLATE);
             event.accept(ModItems.ROBOT_TEMPLATE);
+            event.accept(ModItems.HUNTER_TEMPLATE);
             event.accept(ModItems.SUIT_TORSO);
             event.accept(ModItems.SUIT_ARM);
             event.accept(ModItems.SUIT_LEG);

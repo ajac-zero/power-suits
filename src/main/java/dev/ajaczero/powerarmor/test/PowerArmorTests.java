@@ -2480,12 +2480,14 @@ public final class PowerArmorTests {
                 dev.ajaczero.powerarmor.item.HelmetStyle.PROTECTOR, new ItemStack(Items.TURTLE_HELMET),
                 dev.ajaczero.powerarmor.item.HelmetStyle.SPARTAN, new ItemStack(Items.TOTEM_OF_UNDYING),
                 dev.ajaczero.powerarmor.item.HelmetStyle.NOBLE, new ItemStack(Items.PHANTOM_MEMBRANE),
-                dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, new ItemStack(Items.MUSIC_DISC_CAT));
+                dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, new ItemStack(Items.MUSIC_DISC_CAT),
+                dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER, new ItemStack(Items.SLIME_BALL));
         var templates = java.util.Map.of(
                 dev.ajaczero.powerarmor.item.HelmetStyle.PROTECTOR, ModItems.PROTECTOR_TEMPLATE.get(),
                 dev.ajaczero.powerarmor.item.HelmetStyle.SPARTAN, ModItems.SPARTAN_TEMPLATE.get(),
                 dev.ajaczero.powerarmor.item.HelmetStyle.NOBLE, ModItems.NOBLE_TEMPLATE.get(),
-                dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, ModItems.ROBOT_TEMPLATE.get());
+                dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, ModItems.ROBOT_TEMPLATE.get(),
+                dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER, ModItems.HUNTER_TEMPLATE.get());
         ItemStack named = new ItemStack(ModItems.SUIT_HELMET.get());
         named.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal("Bucket"));
         for (var style : dev.ajaczero.powerarmor.item.HelmetStyle.values()) {
@@ -2522,19 +2524,19 @@ public final class PowerArmorTests {
     public static void helmetStyleShowsOnTheSuitAndSurvivesPacking(GameTestHelper helper) {
         PowerArmorEntity suit = suitAt(helper, SUIT_POS);
         helper.assertTrue(suit.hasHelmet() && suit.getHelmetStyle() == null, "the standard helmet has no style");
-        suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, styled(dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT));
-        helper.assertTrue(suit.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, "a styled helmet shows its style");
+        suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, styled(dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER));
+        helper.assertTrue(suit.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER, "a styled helmet shows its style");
         PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
         loadTag(helper, loaded, saveTag(helper, suit));
-        helper.assertTrue(loaded.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, "the style survives saving");
+        helper.assertTrue(loaded.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER, "the style survives saving");
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         helper.assertTrue(suit.packUp(player), "the suit packs up");
         SuitLoadout loadout = packedSuit(player).get(ModDataComponents.LOADOUT.get());
-        helper.assertTrue(loadout != null && dev.ajaczero.powerarmor.item.SuitHelmetItem.style(loadout.helmet()) == dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT,
+        helper.assertTrue(loadout != null && dev.ajaczero.powerarmor.item.SuitHelmetItem.style(loadout.helmet()) == dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER,
                 "the packed suit keeps the styled helmet, got " + loadout);
         PowerArmorEntity deployed = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
         deployed.applyLoadout(loadout);
-        helper.assertTrue(deployed.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, "and deploys with it");
+        helper.assertTrue(deployed.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER, "and deploys with it");
         helper.succeed();
     }
 
@@ -2546,7 +2548,9 @@ public final class PowerArmorTests {
                 net.minecraft.world.level.storage.loot.BuiltInLootTables.SHIPWRECK_TREASURE, ModItems.PROTECTOR_TEMPLATE.get(),
                 net.minecraft.world.level.storage.loot.BuiltInLootTables.TRIAL_CHAMBERS_REWARD, ModItems.SPARTAN_TEMPLATE.get(),
                 net.minecraft.world.level.storage.loot.BuiltInLootTables.END_CITY_TREASURE, ModItems.NOBLE_TEMPLATE.get(),
-                net.minecraft.world.level.storage.loot.BuiltInLootTables.ANCIENT_CITY, ModItems.ROBOT_TEMPLATE.get());
+                net.minecraft.world.level.storage.loot.BuiltInLootTables.ANCIENT_CITY, ModItems.ROBOT_TEMPLATE.get(),
+                net.minecraft.world.level.storage.loot.BuiltInLootTables.DESERT_PYRAMID, ModItems.HUNTER_TEMPLATE.get(),
+                net.minecraft.world.level.storage.loot.BuiltInLootTables.JUNGLE_TEMPLE, ModItems.HUNTER_TEMPLATE.get());
         var params = new net.minecraft.world.level.storage.loot.LootParams.Builder(helper.getLevel())
                 .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN, helper.absoluteVec(Vec3.ZERO))
                 .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.CHEST);
