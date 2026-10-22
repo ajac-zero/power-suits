@@ -358,8 +358,9 @@ def chief_jaw(f, w, h):
 #     the brow's shadow
 #   - the brow a real lip wrapping the sides (0.5 out at the front, 0.2 at the sides) over the visor
 #   - a half-pixel crest down the forehead and over the dome to the back, forehead panel lines either side
-#   - corrugated hoses: a tube with raised rings leaving the grille, drooping along the jaw (12 deg) to a coupling at
-#     each corner, climbing back along the side (25 deg) into a round port behind the visor
+#   - corrugated hoses: a tube with raised rings leaving the grille, drooping along the jaw to a coupling at each
+#     corner, back along the side and up into a round port behind the visor (v4 angled cubes, 12 and 25 deg;
+#     v5 steps along the pixel axes; v6 straight runs at right angles, user)
 #   - a plate tuck across the back (the in-game view), the crest over it
 # Front, 9 x 9 (row r = y 47.5-r, column c = x 4.5-c). '.' = plate; g/h/e glass (glows), r = rim (darkest plate);
 # row 1 is under the lip.
@@ -376,7 +377,6 @@ SAMUS_FRONT = (".........",
 SAMUS_WRAP = ((2, 3), (2, 3), (2,), (2,))   # v4b: one column shorter, clear of the port
 SAMUS_PORT = (".HL.", "H0MD", "LMSD", ".DD.")         # the port the hose plugs into: a raised ring lit top left, a hole
 #   (v4a: a dark iron ring round a 2 px hole, a black blot next to the rim)
-HOSE_FRONT_TILT, HOSE_SIDE_RISE = 12, 25               # degrees
 
 
 def samus(lip):
@@ -416,7 +416,7 @@ def samus(lip):
             port = pat(SAMUS_PORT)
             for r, row in enumerate(port):                     # rows 3-6, 5-8 from the front (z 1..5): where the
                 for i, key in enumerate(row):                  # climbing hose arrives (z ~2.3, y ~43.4)
-                    if key: g[3 + r][front(5 + i) if f == "west" else front(8 - i)] = key
+                    if key: g[3 + r][front(5 + i)] = key          # (by distance from the front: same spot both sides)
         return g
 
     def grille(f, w, h):
@@ -468,28 +468,31 @@ def samus(lip):
            n("crest_front"): ([-0.2, 46.5, -4.25], [0.2, 47.7, -4], crest)}
     if lip:   # the lip wraps the sides back over the visor's wrap (0.2 proud of the sides, 0.5 of the front)
         out[n("brow")] = ([-4.7, 45.5, -4.5], [4.7, 46.5, 0.5], brow)
-    import math
+    # v6 (user: v4's angled cubes "went too far", v5's pixel steps were "too jagged": straight lines): each hose is
+    # straight runs at right angles: along the jaw, the coupling at the corner, back along the side at the same
+    # height, a silver elbow, straight up into the port. Raised silver rings spaced along the runs (the corrugation).
+    # Rings overlap their run; runs end inside the couplings: no two faces share a plane.
+    def run(name, lo, hi, axis, rings):
+        out[n(name)] = (lo, hi, tube)
+        for j, at in enumerate(rings):
+            rlo = [a - 0.1 for a in lo]; rhi = [b + 0.1 for b in hi]
+            rlo[axis], rhi[axis] = at - 0.15, at + 0.15
+            rlo[0], rhi[0] = max(rlo[0], -4.75), min(rhi[0], 4.75)   # never past the helmet's reach
+            rlo[2] = max(rlo[2], -4.75)
+            out[n(f"{name}_ring{j}")] = (rlo, rhi, ring)
+
     for side, sx in (("r", 1), ("l", -1)):
-        # along the jaw: from the grille's side to the corner, drooping; a core 0.7 thick with 0.9 rings every 0.8
-        o = [1 * sx, 41.0, -4.3]
-        rot = {"rotation": [0, 0, -HOSE_FRONT_TILT * sx], "origin": o}
-        lo, hi = sorted((1 * sx, 4.45 * sx))
-        out[n(f"hose_jaw_{side}")] = ([lo, 40.65, -4.65], [hi, 41.35, -3.95], tube, rot)
-        for j, x in enumerate((1.25, 2.05, 2.85, 3.65)):
-            lo, hi = sorted((x * sx, (x + 0.3) * sx))
-            out[n(f"hose_jaw_{side}_ring{j}")] = ([lo, 40.55, -4.75], [hi, 41.45, -3.95], ring, rot)
-        # the coupling at the corner, where the drooping run ends (x 4.4, y 40.3)
-        lo, hi = sorted((3.95 * sx, 4.75 * sx))
-        out[n(f"hose_joint_{side}")] = ([lo, 39.85, -4.75], [hi, 40.8, -3.95], coupling)
-        # along the side: from the coupling up and back into the port (z 2.5, y 43.0 at its end)
-        length = math.hypot(6.8, 2.7)
-        o = [4.375 * sx, 40.35, -4.3]
-        rot = {"rotation": [-HOSE_SIDE_RISE, 0, 0], "origin": o}
-        lo, hi = sorted((4.05 * sx, 4.7 * sx))
-        out[n(f"hose_side_{side}")] = ([lo, 40.0, -4.3], [hi, 40.7, -4.3 + length], tube, rot)
-        lo, hi = sorted((3.95 * sx, 4.75 * sx))
-        for j, z in enumerate((-3.4, -2.4, -1.4, -0.4, 0.6, 1.6)):
-            out[n(f"hose_side_{side}_ring{j}")] = ([lo, 39.9, z], [hi, 40.8, z + 0.3], ring, rot)
+        xs = lambda a, b: sorted((a * sx, b * sx))
+        x0, x1 = xs(1, 4.1)                                    # along the jaw, from the grille's side
+        run(f"hose_jaw_{side}", [x0, 40.65, -4.65], [x1, 41.35, -3.95], 0, [1.9 * sx, 3.1 * sx])
+        x0, x1 = xs(3.95, 4.75)                                # the coupling at the corner
+        out[n(f"hose_joint_{side}")] = ([x0, 40.4, -4.75], [x1, 41.6, -3.95], coupling)
+        x0, x1 = xs(4.05, 4.7)                                 # back along the side
+        run(f"hose_side_{side}", [x0, 40.65, -4.1], [x1, 41.35, 2.3], 2, [-2.6, -1.0, 0.6])
+        x0, x1 = xs(3.95, 4.75)                                # the elbow under the port
+        out[n(f"hose_elbow_{side}")] = ([x0, 40.4, 2.05], [x1, 41.6, 2.95], coupling)
+        x0, x1 = xs(4.05, 4.7)                                 # up into the port's hole (z 2..3, y 42.5..43.5)
+        run(f"hose_rise_{side}", [x0, 41.5, 2.15], [x1, 43.2, 2.85], 1, [42.35])
     return out
 
 def reuse(name): return lambda f, w, h: (REUSE, name)
