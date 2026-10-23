@@ -538,3 +538,70 @@ def debug_views(prefix, center, dist=9):
         cam.data.ortho_scale = 4.2
         render(f'{prefix}_{tag}.png')
     sc.camera = keep
+
+
+# ---------------------------------------------------------------- clipping check (from big_daddy.py)
+
+def meshes(bone, skip=()):
+    """The mesh objects of a bone and its children, leaving out the sub-trees named in skip."""
+    out = []
+    for o in [bone] + list(bone.children):
+        if o.name in skip:
+            continue
+        if o is bone:
+            if o.type == 'MESH':
+                out.append(o)
+        else:
+            out += meshes(o, skip)
+    return out
+
+
+def bvh(objs, shrink=0.2 * PX):
+    """(BVH of the objects' faces in world space, owner name per face), each cube shrunk by `shrink` on every side so
+    faces that only touch (seams) don't count as clipping."""
+    from mathutils.bvhtree import BVHTree
+    update()
+    verts, polys, owner = [], [], []
+    for o in objs:
+        owner += [o.name] * len(o.data.polygons)
+        b = len(verts)
+        c = sum((v.co for v in o.data.vertices), Vector()) / max(1, len(o.data.vertices))
+        verts += [o.matrix_world @ Vector([x - shrink * ((x > m) - (x < m)) for x, m in zip(v.co, c)])
+                  for v in o.data.vertices]
+        polys += [[b + i for i in p.vertices] for p in o.data.polygons]
+    return BVHTree.FromPolygons(verts, polys), owner
+
+
+class ClipCheck:
+    """Counts the face pairs of two part sets that overlap in the current pose but not at rest. Build it at rest
+    (before posing), call report() after. a, b: functions returning mesh lists (the parts move with the pose)."""
+
+    def __init__(self, label, a, b, shrink=0.2 * PX):
+        self.label, self.a, self.b, self.shrink = label, a, b, shrink
+        self.rest = self._pairs()[0]
+
+    def _pairs(self):
+        ta, oa = bvh(self.a(), self.shrink)
+        tb, ob = bvh(self.b(), self.shrink)
+        return set(ta.overlap(tb)), oa, ob
+
+    def report(self):
+        from collections import Counter
+        pairs, oa, ob = self._pairs()
+        new = pairs - self.rest
+        print(f'clip: {len(new)} new face pairs, {self.label}',
+              Counter((oa[i], ob[j]) for i, j in new).most_common(6))
+        return len(new)
+
+
+def suit_clip_checks(S):
+    """The checks big_daddy.py runs, for any suit pose: upper body vs hips/thighs, hoods vs thighs, arms vs chest+helmet."""
+    legs = lambda: [o for o in S['left_leg'].children if o.type == 'MESH'] + [o for o in S['right_leg'].children if o.type == 'MESH']  # noqa: E731
+    return [
+        ClipCheck('upper body vs hips/thighs', lambda: meshes(S['torso'], skip=('left_arm', 'right_arm', 'head')),
+                  lambda: meshes(S['pelvis']) + meshes(S['hips']) + legs()),
+        ClipCheck('hoods/pelvis vs thighs', lambda: [o for o in meshes(S['pelvis']) + meshes(S['hips'])
+                                                     if not o.name.startswith('hip_axle')], legs),
+        ClipCheck('arms vs chest/helmet (> 0.5 px)', lambda: meshes(S['left_arm']) + meshes(S['right_arm']),
+                  lambda: meshes(S['torso'], skip=('left_arm', 'right_arm')), shrink=0.5 * PX),
+    ]

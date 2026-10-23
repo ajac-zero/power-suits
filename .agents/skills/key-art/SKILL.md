@@ -55,9 +55,19 @@ comic cover. Lex Luthor in a lime suit fights Superman high above the clouds. Th
   horizontal, cleanly). Reach by swinging forward and bending the elbow (Big Daddy, 2026-10-22).
 - **Hunch from the hips, never the torso alone.** The abdomen sits in the hip hoods, which hang from their own root
   bone (`hips`): bending `torso` or `body` alone pushed the abdomen into them (the user spotted it). Tip the whole root
-  forward (legs make up for it) and pose `body` and `hips` together. `big_daddy.py`'s clip check (BVH overlap of the
-  parts, each cube shrunk 0.2 px so touching seams don't count, minus the rest pose's overlaps) catches it before a
-  render; reuse it for any new pose.
+  forward (legs make up for it) and pose `body` and `hips` together. The clip check (BVH overlap of the parts, each
+  cube shrunk 0.2 px so touching seams don't count, minus the rest pose's overlaps; `mclib.suit_clip_checks(S)`, built
+  before posing, `.report()` after) catches it before a render. The game's own torso twist (yaw on `torso`) pushes the
+  abdomen's corners slightly into the hood tops (~14 face pairs at 20 degrees): check that spot in a crop render.
+- **The helmet only shows from the front half, and not from the ground** (Suppressing Fire, 2026-10-22). It sits low
+  between the pads: from the side the near pad hides it completely, and from a camera on the ground the chest hides
+  most of the rest (23 % of its lens-facing surface showed at 0.3 blocks up, ~40 % at hip height, 66 % at helmet
+  height). So a "low side view" can't show whose helmet it is: keep the camera within ~30 degrees of the suit's front
+  and at hip height or above, and measure with `suppressing_fire.py --score` (ray casts from the lens) instead of
+  rendering guesses. A gun fired sideways across the frame then needs the torso twisted toward the target
+  (`torso` yaw, as the game does) plus the forearm turned out; fired straight ahead, a short stream leaves the frame.
+- **The far-side tool arm is the clean one**: with the camera on the fist side, the tool fires away from the body;
+  from the tool side its line of fire crosses the chest and helmet.
 - **Aim the head at the lens**, don't guess its pitch: from a low camera the head must tip down ~20 degrees to meet it,
   and a "head down" by eye came out looking up at the distance. `M.aim(head, marker 20 px ahead, camera)`.
 - **Centre the body, not the outline**: arms reaching to both sides pull a bounding box off-centre; `big_daddy.py`

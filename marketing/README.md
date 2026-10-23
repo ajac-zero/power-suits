@@ -46,6 +46,15 @@ The creative process and staging rules are in `.agents/skills/key-art/SKILL.md`.
   pack, as they do under water in the game, and sunlight comes down in shafts through holes in a hidden roof at the
   surface. The script checks the pose for clipping on every run (`--check` poses only). BioShock is 2K's: gallery or
   social fan art.
+- `suppressing_fire`: a Halo nod. The suit painted green, with the Spartan helmet (Master Chief's), the firebox and the
+  chaingun, holds its ground at night in a burning battlefield: a ruined village house, a watchtower stump, rubble,
+  dry grass, embers and smoke, under a plain dark sky with Minecraft's square full moon (no stars: they made the sky
+  too busy). It fires a level burst at an enemy off the right edge and looks down the gun; the tracers are the game's
+  (white-yellow core in an orange sheath), drawn closer together than the game's 8 blocks so three fit in the frame,
+  with a pixel muzzle flash and the barrels' heat glow. The camera stands at hip height in front of the suit, a little
+  to its right, looking up: lower, the chest and pads hide the helmet (`--score` measures how much of it shows and how
+  many tracers are in the frame, without rendering). Its angles are flags (`--cz`, `--camangle`, `--twist`, `--aimout`,
+  `--headcam`...). Master Chief is Microsoft's: gallery or social fan art.
 
 ## Credits
 Skins from minecraftskins.com:
