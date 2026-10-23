@@ -272,21 +272,24 @@ public final class ShowcaseScene {
         if (k == 84) done = true;
     }
 
-    /** The drill into a rock face, from outside: behind it to its tool side, from the side, then from further back and up. */
+    /**
+     * The drill into a rock face: first from the cockpit (survival HUD, the drill's viewmodel, the face cracking), then
+     * from outside: behind it to its tool side, from the side, from further back and up.
+     */
     private static void mine(Minecraft mc, int k) {
         var o = mc.options;
-        if (k == -SETTLE) { o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, true); aim = target; }
-        // the aim goes to the server with the player's moves, which stop while a scripted camera is in use: aim first
-        // press the trigger while the player is still the camera: the click goes to what the camera looks at, and a
-        // scripted camera looking at the suit made it a click on the suit (the chainsaw never started)
-        if (k == -6) fire = true;
-        if (k == 0) toolCamera(mc, -3.5, 3.2, 2.9);
-        if (k >= 6 && k <= 30 && k % 3 == 0) shot(mc, "mine_back", k);
-        if (k == 32) toolCamera(mc, -0.5, 5.0, 2.5);
-        if (k >= 36 && k <= 60 && k % 3 == 0) shot(mc, "mine_side", k);
-        if (k == 62) toolCamera(mc, -7.0, 3.5, 5.0, 1.2);
-        if (k >= 66 && k <= 84 && k % 3 == 0) shot(mc, "mine_wide", k);
-        if (k == 86) { fire = false; aim = null; done = true; }
+        if (k == -SETTLE) { o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); aim = target; }
+        if (k == 0) fire = true;
+        if (k >= 3 && k <= 39 && k % 3 == 0) shot(mc, "mine_cockpit", k);
+        // the aim goes to the server with the player's moves, which stop while a scripted camera is in use: it was
+        // set while the player was the camera, as was the trigger (a click from a scripted camera goes to what it sees)
+        if (k == 42) toolCamera(mc, -3.5, 3.2, 2.9);
+        if (k >= 48 && k <= 72 && k % 3 == 0) shot(mc, "mine_back", k);
+        if (k == 74) toolCamera(mc, -0.5, 5.0, 2.5);
+        if (k >= 78 && k <= 96 && k % 3 == 0) shot(mc, "mine_side", k);
+        if (k == 98) toolCamera(mc, -7.0, 3.5, 5.0, 1.2);
+        if (k >= 102 && k <= 120 && k % 3 == 0) shot(mc, "mine_wide", k);
+        if (k == 122) { fire = false; aim = null; done = true; }
     }
 
     /** The chainsaw on a tree, from outside: from its tool side and a little ahead (helmet and saw in view), the tree as it comes down. */
