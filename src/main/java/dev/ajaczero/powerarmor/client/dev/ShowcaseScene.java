@@ -172,7 +172,7 @@ public final class ShowcaseScene {
                 // set with a null spot to search (findSpot), then copy the place from run/showcase.csv.
                 // a sunflower-plains hilltop: a mountain and the sea on the left, a village ahead
                 case 0 -> moveTo(mc, "walk", Biomes.SUNFLOWER_PLAINS, 6000, pin(739, 116, -659, 0),
-                        new Loadout(DyeColor.BLUE, ModItems.FIREBOX.get(), ModItems.CHAINGUN.get()));
+                        new Loadout(DyeColor.BLUE, ModItems.FIREBOX.get(), ModItems.DRILL.get()));
                 // plains below a village, looking west into the sunset (yaw 90 looks -X)
                 case 1 -> moveTo(mc, "dusk", Biomes.PLAINS, DUSK, pin(595, 70, -812, 90),
                         new Loadout(DyeColor.RED, ModItems.FIREBOX.get(), ModItems.CHAINGUN.get()));
