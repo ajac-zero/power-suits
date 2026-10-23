@@ -212,6 +212,10 @@ if PREVIEW:
     M.bpy.context.scene.render.resolution_percentage = 50
 cam = M.camera(CAM_LOC, CAM_AT, lens=num('--lens', 40.0 if BG == 'white' else 33.0))  # from above: Lex's head reads
 # (on white the lens is longer: with nothing behind them the fighters fill more of the frame)
+if BG == 'white':  # centre the pair in the frame (lens shift: the perspective stays as it was); measured from the
+    # render's alpha, Lex's side had 424 px of white and Superman's 88
+    cam.data.shift_x = num('--shiftx', 0.07)
+    cam.data.shift_y = num('--shifty', 0.032)
 if BG in ('sky', 'city'):
     cam.data.clip_end = 100000  # the default 1000 cut the city off a kilometre out (it looked like an island)
 M.depth_of_field(cam, CLASH, fstop=FSTOP)
