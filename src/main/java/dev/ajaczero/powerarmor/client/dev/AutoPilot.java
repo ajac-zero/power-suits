@@ -1118,7 +1118,9 @@ public final class AutoPilot {
     /** Server-side suit of this scene, and the scene's origin (the suit starts here facing +Z). */
     private static PowerArmorEntity mechSuit;
     private static volatile BlockPos mechBase;
-    private static final java.util.List<net.minecraft.world.entity.LivingEntity> mechMobs = new java.util.ArrayList<>();
+    /** Filled on the server thread (the scene spawns them), read every tick by logMech on the client thread: a plain
+     *  ArrayList threw ConcurrentModificationException now and then (crashes 10-13, 10-19, 10-23). */
+    private static final java.util.List<net.minecraft.world.entity.LivingEntity> mechMobs = new java.util.concurrent.CopyOnWriteArrayList<>();
     private static java.io.BufferedWriter mechCsv;
     private static String mechPhase = "-";
 
