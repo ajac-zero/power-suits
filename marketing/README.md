@@ -82,3 +82,16 @@ The creative process and staging rules are in `.agents/skills/key-art/SKILL.md`.
 Skins from minecraftskins.com:
 - `skins/superman.png`: https://www.minecraftskins.com/skin/23386722/superman---superman--2025-/
 - `skins/lex_luthor.png`: https://www.minecraftskins.com/skin/23403417/lex-luthor/
+
+## Gameplay gallery (`gallery/`)
+Real in-game screenshots for the Modrinth gallery (vanilla look, no shaders), next to the rendered key art above. They
+come from `./gradlew runShowcase` (`client/dev/ShowcaseScene`): a fresh world from a fixed seed (never the user's),
+pinned places, one painted suit per set, 1920x1080 frames in `run/screenshots/showcase_*.png`. The picks:
+1. `1_walk_front`: blue suit walking up to a still camera on a sunflower-plains hilltop.
+2. `2_dusk_cockpit`: the cockpit at sunset, survival HUD, the chaingun on helmeted zombies by a village (red suit).
+3. `3_mine_cockpit`: the cockpit, the drill opening a 3x3 tunnel in a stone ravine (orange, Protector helmet).
+4. `4_tree_side`: from outside, the chainsaw felling an oak by a river (green, Spartan helmet).
+5. `5_reef_back`: under water on a coral reef, the tidal engine bubbling (yellow).
+6. `6_em_front`: from outside, the EM projector holding a creeper in the sky (purple, Hunter helmet, star reactor).
+
+Frames differ a little from run to run (particles, tracers, mob steps): after a model change, re-run and pick again.
