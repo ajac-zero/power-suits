@@ -2,6 +2,9 @@ package dev.ajaczero.powerarmor.client.dev;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.ChainsawItem;
+import dev.ajaczero.powerarmor.item.HelmetStyle;
+import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import java.io.BufferedWriter;
@@ -113,13 +116,35 @@ public final class ShowcaseScene {
         if (!sprint && mc.player.isSprinting()) {
             mc.player.setSprinting(false); // vanilla keeps sprinting after the key is released
         }
+        Vec3 target = aim;
+        if (target != null) {
+            Vec3 to = target.subtract(mc.player.getEyePosition());
+            yaw = (float) (Mth.atan2(-to.x, to.z) * Mth.RAD_TO_DEG);
+            pitch = (float) (-Mth.atan2(to.y, to.horizontalDistance()) * Mth.RAD_TO_DEG);
+        }
         mc.player.setYRot(yaw);
         mc.player.setXRot(pitch);
         mc.player.yRotO = yaw;
         mc.player.xRotO = pitch;
     }
 
-    /** Set being shot: 0 = walk, 1 = chaingun at dusk, 2 = coral reef. */
+    /** A file run/showcase-only with set numbers ("3 4"): shoot only those (quicker iterations on new sets). */
+    private static final java.util.Set<Integer> ONLY = readOnly();
+
+    private static java.util.Set<Integer> readOnly() {
+        Path file = Path.of("showcase-only");
+        try {
+            return Files.exists(file) ? java.util.Arrays.stream(Files.readString(file).trim().split("[\\s,]+"))
+                    .map(Integer::parseInt).collect(java.util.stream.Collectors.toSet()) : null;
+        } catch (IOException | NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /** Where the pilot aims (set by the server when a set starts; the view turns to it every tick), or null. */
+    private static volatile Vec3 aim;
+
+    /** Set being shot: 0 = walk, 1 = chaingun at dusk, 2 = coral reef, 3 = drill into rock, 4 = chainsaw on a tree. */
     private static int set = -1;
     /** Client tick at which the current set's place was ready (-1: the server is still looking). */
     private static int setStart = -1;
@@ -138,18 +163,28 @@ public final class ShowcaseScene {
             ready = false;
             walk = sprint = fire = false;
             mc.setCameraEntity(mc.player);
+            aim = null;
+            while (ONLY != null && set < 10 && !ONLY.contains(set)) {
+                set++; // (iterating on a few sets: run/showcase-only)
+            }
             switch (set) {
                 // Places are pinned once a run found a good one (the seed is fixed, so they stay the same): run a new
                 // set with a null spot to search (findSpot), then copy the place from run/showcase.csv.
                 // a sunflower-plains hilltop: a mountain and the sea on the left, a village ahead
-                case 0 -> moveTo(mc, "walk", Biomes.SUNFLOWER_PLAINS, 6000, new Spot(new BlockPos(739, 116, -659), 0, 0),
+                case 0 -> moveTo(mc, "walk", Biomes.SUNFLOWER_PLAINS, 6000, pin(739, 116, -659, 0),
                         new Loadout(DyeColor.BLUE, ModItems.FIREBOX.get(), ModItems.CHAINGUN.get()));
                 // plains below a village, looking west into the sunset (yaw 90 looks -X)
-                case 1 -> moveTo(mc, "dusk", Biomes.PLAINS, DUSK, new Spot(new BlockPos(595, 70, -812), 90, 0),
+                case 1 -> moveTo(mc, "dusk", Biomes.PLAINS, DUSK, pin(595, 70, -812, 90),
                         new Loadout(DyeColor.RED, ModItems.FIREBOX.get(), ModItems.CHAINGUN.get()));
                 // a coral reef: the tidal engine runs free under water
-                case 2 -> moveTo(mc, "reef", Biomes.WARM_OCEAN, 6000, new Spot(new BlockPos(1618, 52, -236), 90, 0),
+                case 2 -> moveTo(mc, "reef", Biomes.WARM_OCEAN, 6000, pin(1618, 52, -236, 90),
                         new Loadout(DyeColor.YELLOW, ModItems.TIDAL_ENGINE.get(), ModItems.DRILL.get()));
+                // the drill into a rock face, filmed from outside (a mountain near the walk's hilltop)
+                case 3 -> moveTo(mc, "mine", Biomes.PLAINS, 6000, pin(531, 40, -667, 270, new BlockPos(533, 41, -667)), // a stone ravine (found by findWall)
+                        new Loadout(DyeColor.ORANGE, ModItems.FIREBOX.get(), ModItems.DRILL.get(), HelmetStyle.PROTECTOR));
+                // the chainsaw felling a tree in a forest, filmed from outside
+                case 4 -> moveTo(mc, "tree", Biomes.PLAINS, 6000, l -> findTree(l, Biomes.PLAINS, new BlockPos(739, 80, -659)),
+                        new Loadout(DyeColor.GREEN, ModItems.FIREBOX.get(), ModItems.CHAINSAW.get(), HelmetStyle.SPARTAN));
                 default -> { return false; }
             }
             return true;
@@ -166,6 +201,8 @@ public final class ShowcaseScene {
             case 0 -> walk(mc, k);
             case 1 -> dusk(mc, k);
             case 2 -> reef(mc, k);
+            case 3 -> mine(mc, k);
+            case 4 -> tree(mc, k);
             default -> {}
         }
         return true;
@@ -235,8 +272,263 @@ public final class ShowcaseScene {
         if (k == 84) done = true;
     }
 
+    /** The drill into a rock face, from outside: behind it to its tool side, from the side, then from further back and up. */
+    private static void mine(Minecraft mc, int k) {
+        var o = mc.options;
+        if (k == -SETTLE) { o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, true); aim = target; }
+        // the aim goes to the server with the player's moves, which stop while a scripted camera is in use: aim first
+        // press the trigger while the player is still the camera: the click goes to what the camera looks at, and a
+        // scripted camera looking at the suit made it a click on the suit (the chainsaw never started)
+        if (k == -6) fire = true;
+        if (k == 0) toolCamera(mc, -3.5, 3.2, 2.9);
+        if (k >= 6 && k <= 30 && k % 3 == 0) shot(mc, "mine_back", k);
+        if (k == 32) toolCamera(mc, -0.5, 5.0, 2.5);
+        if (k >= 36 && k <= 60 && k % 3 == 0) shot(mc, "mine_side", k);
+        if (k == 62) toolCamera(mc, -7.0, 3.5, 5.0, 1.2);
+        if (k >= 66 && k <= 84 && k % 3 == 0) shot(mc, "mine_wide", k);
+        if (k == 86) { fire = false; aim = null; done = true; }
+    }
+
+    /** The chainsaw on a tree, from outside: from its tool side and a little ahead (helmet and saw in view), the tree as it comes down. */
+    private static void tree(Minecraft mc, int k) {
+        var o = mc.options;
+        if (k == -SETTLE) { o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, true); aim = target; }
+        if (k == -6) fire = true; // (before the scripted camera: see mine())
+        if (k == 0) toolCamera(mc, TREE_CAM[0], TREE_CAM[1], TREE_CAM[2], 2.6);
+        if (k >= 2 && k <= 40 && k % 2 == 0) shot(mc, "tree_side", k);
+        if (k == 62) { fire = false; aim = null; done = true; }
+    }
+
+    /**
+     * A still camera {@code back} blocks along the suit's facing (negative: behind) and {@code side} to its tool side
+     * (its left; negative: right), {@code up} blocks up, looking at the point between the suit and its target at
+     * {@code lookUp} blocks up.
+     */
+    private static void toolCamera(Minecraft mc, double along, double side, double up, double lookUp) {
+        Vec3 forward = forward(), left = new Vec3(forward.z, 0, -forward.x);
+        Vec3 t = target != null ? target : setPos.add(forward.scale(3));
+        Vec3 mid = setPos.add(t).scale(0.5);
+        camera(mc, setPos.add(forward.scale(along)).add(left.scale(side)).add(0, up, 0), new Vec3(mid.x, setPos.y + lookUp, mid.z));
+    }
+
+    private static void toolCamera(Minecraft mc, double along, double side, double up) {
+        toolCamera(mc, along, side, up, 1.8);
+    }
+
+    /**
+     * Real (generated) chunks on an 8-block grid round {@code origin}: a rock face for the drill. Flat dry ground
+     * where the suit stands and 8 blocks behind it, a face of stone 2-3 blocks ahead at least 4 blocks high (3 wide,
+     * mostly stone), open ground to the suit's tool side for the camera. Score: the face's stone + ore count.
+     */
+    private static Spot findWall(ServerLevel level, BlockPos origin) {
+        Heights h = new Heights(level);
+        java.util.List<Spot> rough = new java.util.ArrayList<>();
+        for (int gx = -256; gx <= 256; gx += 4) {
+            for (int gz = -256; gz <= 256; gz += 4) {
+                int x = origin.getX() + gx, z = origin.getZ() + gz;
+                int h0 = h.surface(x, z);
+                for (int i = 0; i < 8; i++) {
+                    float yaw = i * 45F;
+                    double dx = -Mth.sin(yaw * Mth.DEG_TO_RAD), dz = Mth.cos(yaw * Mth.DEG_TO_RAD);
+                    int face = Math.max(h.surface(x + (int) Math.round(dx * 3), z + (int) Math.round(dz * 3)),
+                            h.surface(x + (int) Math.round(dx * 4), z + (int) Math.round(dz * 4)));
+                    if (face - h0 < 4 || h.wet(x, z)) {
+                        continue;
+                    }
+                    boolean flat = true;
+                    for (int d = -3; d <= 1 && flat; d += 1) {
+                        int px = x + (int) Math.round(dx * d), pz = z + (int) Math.round(dz * d);
+                        flat = Math.abs(h.surface(px, pz) - h0) <= 1 && !h.wet(px, pz);
+                    }
+                    if (flat) {
+                        rough.add(new Spot(new BlockPos(x, h0, z), yaw, face - h0));
+                    }
+                }
+            }
+        }
+        rough.sort(Comparator.comparingDouble(s -> -s.score()));
+        Spot best = null;
+        for (int i = 0; i < Math.min(150, rough.size()); i++) {
+            Spot s = checkWall(level, rough.get(i));
+            if (s != null && (best == null || s.score() > best.score())) {
+                best = s;
+            }
+        }
+        PowerArmor.LOGGER.info("[showcase] wall: {} rough candidates, picked {} (rejected: ground {}, camera {}, not rock {}, no face {})",
+                rough.size(), best, REJECT[0], REJECT[1], REJECT[2], REJECT[3]);
+        return best != null ? best : new Spot(origin, 0, 0);
+    }
+
+    private static final int[] REJECT = new int[4];
+
+    private static Spot checkWall(ServerLevel level, Spot rough) {
+        double dx = -Mth.sin(rough.yaw() * Mth.DEG_TO_RAD), dz = Mth.cos(rough.yaw() * Mth.DEG_TO_RAD);
+        int x0 = rough.at().getX(), z0 = rough.at().getZ();
+        level.getChunk(x0 >> 4, z0 >> 4);
+        int g = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x0, z0);
+        for (int d = -3; d <= 1; d++) {
+            for (int w = -1; w <= 1; w++) {
+                int x = x0 + (int) Math.round(dx * d - dz * w), z = z0 + (int) Math.round(dz * d + dx * w);
+                level.getChunk(x >> 4, z >> 4);
+                if (Math.abs(level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - g) > 1
+                        || !level.getFluidState(new BlockPos(x, g - 1, z)).isEmpty()) {
+                    REJECT[0]++;
+                    return null; // the suit stands on level dry ground
+                }
+            }
+        }
+        // the cameras (see mine()) and a block round them must be in the open
+        double[][] cams = {{-3.5, 3.2, 2.9}, {-0.5, 5.0, 2.5}};
+        for (double[] c : cams) {
+            for (int ox = -1; ox <= 1; ox++) {
+                for (int oz = -1; oz <= 1; oz++) {
+                    // the tool side is the suit's left: (dz, -dx) for a facing (dx, dz)
+                    int x = (int) Math.floor(x0 + 0.5 + dx * c[0] + dz * c[1]) + ox, z = (int) Math.floor(z0 + 0.5 + dz * c[0] - dx * c[1]) + oz;
+                    level.getChunk(x >> 4, z >> 4);
+                    if (level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) > g + c[2] - 0.5) {
+                        REJECT[1]++;
+                        return null;
+                    }
+                }
+            }
+        }
+        // the face: the first solid block along the view at chest height, 2-4 blocks ahead
+        for (int d = 2; d <= 4; d++) {
+            int stone = 0, ore = 0;
+            boolean solid = true;
+            for (int w = -1; w <= 1 && solid; w++) {
+                for (int y = 0; y < 4 && solid; y++) {
+                    BlockPos p = new BlockPos(x0 + (int) Math.round(dx * d - dz * w), g + y, z0 + (int) Math.round(dz * d + dx * w));
+                    var state = level.getBlockState(p);
+                    solid = !state.isAir() && state.getFluidState().isEmpty();
+                    stone += state.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD) ? 1 : 0;
+                    ore += state.is(net.minecraft.tags.BlockTags.ORES) ? 1 : 0;
+                }
+            }
+            if (!solid) {
+                continue;
+            }
+            if (stone + ore < 8) {
+                REJECT[2]++;
+                return null; // dirt or gravel, not a rock face
+            }
+            BlockPos target = new BlockPos(x0 + (int) Math.round(dx * d), g + 1, z0 + (int) Math.round(dz * d));
+            return new Spot(rough.at().atY(g), rough.yaw(), stone + 3 * ore, target);
+        }
+        REJECT[3]++;
+        return null;
+    }
+
+    /**
+     * Real chunks round the nearest {@code biome}: a lone tree for the chainsaw. Every trunk within 96 blocks, the suit
+     * 3 blocks from it on one of 8 sides: level dry ground with no trunks from 4 behind the suit to the tree, an open
+     * stretch 4-7 blocks to its tool side for the camera, no other tree within 10 blocks. Score: the tree's size.
+     */
+    private static Spot findTree(ServerLevel level, ResourceKey<Biome> biome, BlockPos origin) {
+        var found = level.findClosestBiome3d(hb -> hb.is(biome), origin, 6000, 32, 64);
+        BlockPos centre = found == null ? origin : found.getFirst();
+        Spot best = null;
+        int trunks = 0;
+        for (int gx = -160; gx <= 160; gx++) {
+            for (int gz = -160; gz <= 160; gz++) {
+                int x = centre.getX() + gx, z = centre.getZ() + gz;
+                level.getChunk(x >> 4, z >> 4);
+                int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+                BlockPos p = new BlockPos(x, top, z);
+                if (!level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS)) {
+                    continue;
+                }
+                while (level.getBlockState(p.below()).is(net.minecraft.tags.BlockTags.LOGS)) {
+                    p = p.below();
+                }
+                if (!level.getBlockState(p.below()).is(net.minecraft.tags.BlockTags.DIRT)) {
+                    continue; // a branch, not the trunk's foot
+                }
+                trunks++;
+                for (int i = 0; i < 8; i++) {
+                    float yaw = i * 45F;
+                    double dx = -Mth.sin(yaw * Mth.DEG_TO_RAD), dz = Mth.cos(yaw * Mth.DEG_TO_RAD);
+                    // 4 blocks back: an oak's canopy hangs 2-3 blocks out and hid the suit's helmet at 3
+                    int x0 = p.getX() - (int) Math.round(dx * 4), z0 = p.getZ() - (int) Math.round(dz * 4);
+                    int g = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x0, z0);
+                    if (Math.abs(g - p.getY()) > 1) {
+                        continue;
+                    }
+                    Spot s = checkTree(level, x0, z0, g, yaw, dx, dz, p);
+                    if (s != null && (best == null || s.score() > best.score())) {
+                        best = s;
+                    }
+                }
+            }
+        }
+        PowerArmor.LOGGER.info("[showcase] tree: {} trunks, picked {}", trunks, best);
+        return best != null ? best : new Spot(centre, 0, 0);
+    }
+
+    private static Spot checkTree(ServerLevel level, int x0, int z0, int g, float yaw, double dx, double dz, BlockPos trunk) {
+        // level dry ground with no trunks from 4 behind the suit to the tree (2 either side; canopies may hang over),
+        // and the camera's stretch 4-9 blocks to the tool side clear of trunks and low leaves
+        for (int dd = -4; dd <= 2; dd++) {
+            for (int w = -2; w <= 7; w++) {
+                boolean cam = w >= 4;
+                if (!cam && w > 2 || cam && dd < -1) {
+                    continue;
+                }
+                int x = x0 + (int) Math.round(dx * dd + dz * w), z = z0 + (int) Math.round(dz * dd - dx * w); // w: to the suit's left (tool side)
+                level.getChunk(x >> 4, z >> 4);
+                int ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                boolean isTrunk = x == trunk.getX() && z == trunk.getZ();
+                if (!isTrunk && (Math.abs(ground - g) > (cam ? 2 : 1) || !level.getFluidState(new BlockPos(x, ground - 1, z)).isEmpty()
+                        || cam && level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) > g + 3)) {
+                    return null;
+                }
+            }
+        }
+        java.util.List<BlockPos> logs = ChainsawItem.treeAbove(level, trunk);
+        if (logs.size() < 4) {
+            return null; // not a natural tree (or a stump)
+        }
+        // a lone tree: no other trunk within 10 blocks (the tree reads on its own, nothing between it and the camera)
+        java.util.Set<BlockPos> own = new java.util.HashSet<>(logs);
+        own.add(trunk);
+        for (BlockPos p : BlockPos.betweenClosed(trunk.offset(-10, 0, -10), trunk.offset(10, 2, 10))) {
+            if (!own.contains(p) && level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS)) {
+                return null;
+            }
+        }
+        // nothing over the suit's head (the canopy hid the helmet)
+        for (BlockPos p : BlockPos.betweenClosed(x0 - 1, g, z0 - 1, x0 + 1, g + 4, z0 + 1)) {
+            if (!level.getBlockState(p).isAir() && !level.getBlockState(p).canBeReplaced()) {
+                return null;
+            }
+        }
+        // the camera's line of sight (see tree()): air all the way from it to the suit and the tree (tall grass hid both)
+        Vec3 suit = new Vec3(x0 + 0.5, g, z0 + 0.5), forward = new Vec3(dx, 0, dz), left = new Vec3(dz, 0, -dx);
+        Vec3 eye = suit.add(forward.scale(TREE_CAM[0])).add(left.scale(TREE_CAM[1])).add(0, TREE_CAM[2], 0);
+        for (Vec3 to : new Vec3[] {suit.add(0, 1.0, 0), suit.add(0, 2.4, 0), Vec3.atBottomCenterOf(trunk).add(0, 1.0, 0)}) {
+            for (int i = 0; i <= 10; i++) {
+                BlockPos p = BlockPos.containing(eye.lerp(to, i / 10.0 * 0.85));
+                if (!level.getBlockState(p).isAir() && !own.contains(p)) {
+                    return null;
+                }
+            }
+        }
+        // aim at the second log: a ray at the foot of the trunk hits the tall grass first (plants have an outline)
+        return new Spot(new BlockPos(x0, g, z0), yaw, logs.size(), trunk.above());
+    }
+
+    /** The tree camera: along the suit's facing, to its tool side, up (see toolCamera). */
+    private static final double[] TREE_CAM = {3.0, 5.0, 2.4};
+
     /** A place for a set: where the suit stands and which way it looks (yaw 0 looks +Z). */
-    private record Spot(BlockPos at, float yaw, double score) {}
+    private record Spot(BlockPos at, float yaw, double score, @org.jetbrains.annotations.Nullable BlockPos target) {
+        Spot(BlockPos at, float yaw, double score) {
+            this(at, yaw, score, null);
+        }
+    }
+
+    /** The block a set's tool works on (the rock face, the trunk), or null. */
+    private static volatile Vec3 target;
 
     /**
      * Server: go to the pinned place, or find one in {@code biome} near spawn (open ground: a walkable dry stretch ahead, no trees between the
@@ -244,15 +536,27 @@ public final class ShowcaseScene {
      * (firebox + coal, helmet, chaingun, nuggets, a lived-in hotbar). Sets {@code ready} when done.
      */
     /** What a set's suit wears: its paint, engine and tool. */
-    private record Loadout(DyeColor paint, Item engine, Item tool) {}
+    private record Loadout(DyeColor paint, Item engine, Item tool, @org.jetbrains.annotations.Nullable HelmetStyle helmet) {
+        Loadout(DyeColor paint, Item engine, Item tool) {
+            this(paint, engine, tool, null);
+        }
+    }
 
-    private static void moveTo(Minecraft mc, String name, ResourceKey<Biome> biome, long time, @org.jetbrains.annotations.Nullable Spot pinned, Loadout loadout) {
+    private static java.util.function.Function<ServerLevel, Spot> pin(int x, int y, int z, float yaw) {
+        return level -> new Spot(new BlockPos(x, y, z), yaw, 0);
+    }
+
+    private static java.util.function.Function<ServerLevel, Spot> pin(int x, int y, int z, float yaw, BlockPos target) {
+        return level -> new Spot(new BlockPos(x, y, z), yaw, 0, target);
+    }
+
+    private static void moveTo(Minecraft mc, String name, ResourceKey<Biome> biome, long time, java.util.function.Function<ServerLevel, Spot> where, Loadout loadout) {
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
             DevUtil.setTime(level, time);
             level.getServer().setDifficulty(Difficulty.NORMAL, true);
             boolean water = biome.identifier().getPath().contains("ocean");
-            Spot spot = pinned != null ? pinned : water ? findReef(level, player.blockPosition().atY(50)) : findSpot(level, biome, player.blockPosition().atY(80), 0, 360);
+            Spot spot = where.apply(level);
             BlockPos at = spot.at();
             float yaw = spot.yaw();
             if (player.getVehicle() instanceof PowerArmorEntity old) {
@@ -268,7 +572,11 @@ public final class ShowcaseScene {
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.COMMAND);
             suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(loadout.engine()));
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 48));
-            suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
+            ItemStack helmet = new ItemStack(ModItems.SUIT_HELMET.get());
+            if (loadout.helmet() != null) {
+                helmet.set(ModDataComponents.HELMET_STYLE.get(), loadout.helmet());
+            }
+            suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, helmet);
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(loadout.tool()));
             suit.setPaint(loadout.paint());
             suit.setStoredNuggets(128);
@@ -290,6 +598,10 @@ public final class ShowcaseScene {
             inv.setItem(8, new ItemStack(Items.BREAD, 9));
             setPos = pos;
             setYaw = yaw;
+            // aim a little off the block's centre: looking diagonally at the centre the ray hits the block's edge, the
+            // face it hits flips from tick to tick and the saw starts over every time (the tree never fell)
+            Vec3 side = new Vec3(Mth.cos(yaw * Mth.DEG_TO_RAD), 0, Mth.sin(yaw * Mth.DEG_TO_RAD)).scale(0.3);
+            target = spot.target() == null ? null : Vec3.atCenterOf(spot.target()).add(side);
             String biomeName = level.getBiome(BlockPos.containing(pos)).unwrapKey().map(k -> k.identifier().getPath()).orElse("?");
             log(String.format(Locale.ROOT, "%s,%s,%.1f,%.1f,%.1f,%.0f,%.1f", name, biomeName, pos.x, pos.y, pos.z, yaw, spot.score()));
             ready = true;
