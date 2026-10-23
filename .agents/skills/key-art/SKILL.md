@@ -50,6 +50,20 @@ comic cover. Lex Luthor in a lime suit fights Superman high above the clouds. Th
   30-40 degrees from the camera toward the other.
 - **Show the suit's features:** tool raised so its length shows (a blade pointing at the camera reads as a box), glowing engines
   with their glowmask (`import_suit(glow='reactor')`), paint via `paint='lime'`.
+- **The suit's shoulders barely move sideways.** The pads are rigid on the upper arms and sit against the collar:
+  more than about 10 degrees out to the side and a pad goes into the collar (an upper arm can swing forward, even past
+  horizontal, cleanly). Reach by swinging forward and bending the elbow (Big Daddy, 2026-10-22).
+- **Hunch from the hips, never the torso alone.** The abdomen sits in the hip hoods, which hang from their own root
+  bone (`hips`): bending `torso` or `body` alone pushed the abdomen into them (the user spotted it). Tip the whole root
+  forward (legs make up for it) and pose `body` and `hips` together. `big_daddy.py`'s clip check (BVH overlap of the
+  parts, each cube shrunk 0.2 px so touching seams don't count, minus the rest pose's overlaps) catches it before a
+  render; reuse it for any new pose.
+- **Aim the head at the lens**, don't guess its pitch: from a low camera the head must tip down ~20 degrees to meet it,
+  and a "head down" by eye came out looking up at the distance. `M.aim(head, marker 20 px ahead, camera)`.
+- **Centre the body, not the outline**: arms reaching to both sides pull a bounding box off-centre; `big_daddy.py`
+  turns the camera until the helmet-to-feet midpoint is at x = 0.5.
+- **A tool pointed straight at the lens reads as a box with a disc in it**: aim it a block or so beside the lens and
+  keep it clear of the helmet (the drill at chest height, the user's pick).
 - **Backgrounds stay quiet**: big near clouds behind the fighters distract the eye. Clouds far below (small blocks) keep
   the Minecraft feel; depth of field barely blurs them at these distances.
 
@@ -69,10 +83,20 @@ comic cover. Lex Luthor in a lime suit fights Superman high above the clouds. Th
 - **World sky**: Generated coordinates on a world are the view direction, so the gradient is keyed on Z (sin of
   elevation). The camera sees the sky at full strength while the lighting uses a lower strength (Light Path mix),
   so the sky can stay bright without washing out the characters.
+- **Glowmasks take a tint** like the game's `SuitGlowLayer`: `glow=[('visor', M.VISOR_AMBER), 'tidal']` (the visor mask is
+  grey, the game colours it amber / green / red; untinted it rendered white). Keep glow strength ~2: higher, AgX
+  bleaches the colour to white.
+- **Under water**: one Principled Volume box from below the floor up to the surface (dark scatter colour, deep
+  blue-green absorption, anisotropy ~0.55). Light shafts need contrast: a hidden roof at the surface (shadow only,
+  `visible_camera = False`) with a few square holes placed where beams should fall, a strong sun (40) and almost no
+  world light; the suit gets its own spot from under the surface (a spot's bright tip shows in the water, so hang it
+  out of frame). Volume above the roof glowed and washed everything out.
+- **Vanilla scenery**: `mcblocks.py` (`texture('sea_lantern')` takes frame 0 of animated strips). An area light's shadow
+  falling toward the camera made planted feet look like they float: check what casts the shadow before moving feet.
 - **Skins**: minecraftskins.com pages sit behind Cloudflare. Scrape the page's HTML with firecrawl (`formats:
   ['rawHtml']`, an `objective` is required) to find `uploads/skins/...png`, then `curl` that file directly (not blocked).
 
 ## Ideas queued (from the first session)
-Helmet lineup, the 16 paint colours, the tidal engine underwater, a rogue suit at night in a lightning storm, and
+Helmet lineup, the 16 paint colours, a rogue suit at night in a lightning storm, and
 in-game screenshots (an autopilot photo scene) for the gallery.
 DC characters are fine for gallery/social fan art, not for the mod's icon or banner.

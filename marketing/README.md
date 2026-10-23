@@ -15,6 +15,10 @@ Key art rendered in Blender from the mod's own model, so it always matches the g
    - backdrop: blocky clouds and the square sun
    - lights and Cycles settings
 
+   `mcblocks.py` builds Minecraft scenery (blocks with only their visible faces, crossed-quad plants, particle sprites)
+   with the game's own textures, read from the Minecraft client jar in the Gradle cache. They're cached in
+   `marketing/.cache/` (git-ignored: Mojang's files stay out of the repo).
+
    Each picture is one script.
 3. **Render** (Blender 5.2, Cycles on Metal):
    ```sh
@@ -35,6 +39,13 @@ The creative process and staging rules are in `.agents/skills/key-art/SKILL.md`.
   the game draws a helmetless pilot. He has the chainsaw raised overhead and the Nether Star reactor
   on his back, with its glowmask lit. The camera looks down from above so his head reads. Superman and Lex are DC characters, so use this as
   gallery or social fan art, not as the mod's icon or banner.
+- `big_daddy`: a BioShock homage. The suit painted brown, with the Protector helmet (Subject Delta's riveted visor,
+  lit amber as with a pilot inside: Big Daddies' portholes are yellow too), the tidal engine and the drill. It comes
+  at the viewer on the sea floor in front of an ocean monument, after the BioShock (2007) cover's pose (mirrored), with
+  the drill levelled at us instead of the fist. The camera sits at the sand, close and wide. Bubbles rise from the tidal
+  pack, as they do under water in the game, and sunlight comes down in shafts through holes in a hidden roof at the
+  surface. The script checks the pose for clipping on every run (`--check` poses only). BioShock is 2K's: gallery or
+  social fan art.
 
 ## Credits
 Skins from minecraftskins.com:

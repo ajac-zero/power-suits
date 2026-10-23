@@ -47,3 +47,4 @@ __pycache__/
 !marketing/out/
 marketing/out/*_raw.png
 marketing/out/*.tiles/
+marketing/.cache/

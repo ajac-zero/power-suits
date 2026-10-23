@@ -21,6 +21,8 @@ TEXTURES = os.path.join(ROOT, 'src/main/resources/assets/powerarmor/textures/ent
 TOOL_BONES = ['chaingun', 'em_projector', 'drill', 'chainsaw']
 HELMET_BONES = ['helmet', 'helm_protector', 'helm_spartan', 'helm_noble', 'helm_robot', 'helm_hunter']
 ENGINE_BONES = ['backpack_parts', 'pack_tidal', 'pack_reactor']
+# The visor's colours (PowerArmorEntity): amber with a pilot, green for a friendly mind, red for a rogue.
+VISOR_AMBER, VISOR_GREEN, VISOR_RED = (1.0, 0.68, 0.22), (0.35, 1.0, 0.45), (1.0, 0.12, 0.08)
 
 
 def reset():
@@ -98,7 +100,23 @@ def import_suit(name='suit', paint=None, tool='chaingun', helmet=None, engine='b
     img = load_image(tex_path)
     # glow: a glowmask texture name (e.g. 'reactor' for power_armor_glow_reactor.png), drawn as emission the way the
     # game's SuitGlowLayer adds it at full brightness. Masks are black/transparent except on the lit pixels.
-    em = load_image(os.path.join(TEXTURES, f'power_armor_glow_{glow}.png')) if glow else None
+    # Several masks (a list: e.g. [('visor', VISOR_AMBER), 'tidal']) are added together into one image, as the game
+    # draws one additive layer each, every mask multiplied by its tint (SuitGlowLayer: the visor's grey mask takes the
+    # suit's visor colour; the other masks are already coloured and use white).
+    em = None
+    for g in ([glow] if isinstance(glow, str) else glow or []):
+        g, tint = (g, (1, 1, 1)) if isinstance(g, str) else g
+        m = load_image(os.path.join(TEXTURES, f'power_armor_glow_{g}.png'))
+        px = [v * tint[i % 4] if i % 4 < 3 else v for i, v in enumerate(m.pixels)]
+        if em is None:
+            em = m.copy()
+            em.name = f'{name}_glow'
+            acc = px
+        else:
+            acc = [min(1.0, a + b) for a, b in zip(acc, px)]
+    if em is not None:
+        em.pixels = acc
+        em.pack()
     mat = pixel_material(f'{name}_armor', img, roughness=0.42, specular=0.5, emission_image=em, emission_strength=glow_strength)
     for o in bones.values():
         if o.type == 'MESH':
