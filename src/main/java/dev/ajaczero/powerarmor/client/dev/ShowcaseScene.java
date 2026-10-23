@@ -26,6 +26,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -71,6 +72,7 @@ public final class ShowcaseScene {
     private static volatile float setYaw;
     private static BufferedWriter csv;
     private static int renderDistance = -1;
+    private static int fov = 70;
 
     public static boolean enabled() {
         return ENABLED;
@@ -94,6 +96,7 @@ public final class ShowcaseScene {
             if (mc.player.tickCount > 40) {
                 tick = 0;
                 renderDistance = mc.options.renderDistance().get();
+                fov = mc.options.fov().get();
                 mc.options.renderDistance().set(16); // further vistas (put back at the end: options.txt is shared)
                 open(mc);
             }
@@ -116,7 +119,7 @@ public final class ShowcaseScene {
         mc.player.xRotO = pitch;
     }
 
-    /** Set being shot: 0 = walk, 1 = chaingun at dusk. */
+    /** Set being shot: 0 = walk, 1 = chaingun at dusk, 2 = coral reef. */
     private static int set = -1;
     /** Client tick at which the current set's place was ready (-1: the server is still looking). */
     private static int setStart = -1;
@@ -139,9 +142,14 @@ public final class ShowcaseScene {
                 // Places are pinned once a run found a good one (the seed is fixed, so they stay the same): run a new
                 // set with a null spot to search (findSpot), then copy the place from run/showcase.csv.
                 // a sunflower-plains hilltop: a mountain and the sea on the left, a village ahead
-                case 0 -> moveTo(mc, "walk", Biomes.SUNFLOWER_PLAINS, 6000, new Spot(new BlockPos(739, 116, -659), 0, 0));
+                case 0 -> moveTo(mc, "walk", Biomes.SUNFLOWER_PLAINS, 6000, new Spot(new BlockPos(739, 116, -659), 0, 0),
+                        new Loadout(DyeColor.BLUE, ModItems.FIREBOX.get(), ModItems.CHAINGUN.get()));
                 // plains below a village, looking west into the sunset (yaw 90 looks -X)
-                case 1 -> moveTo(mc, "dusk", Biomes.PLAINS, DUSK, new Spot(new BlockPos(595, 70, -812), 90, 0));
+                case 1 -> moveTo(mc, "dusk", Biomes.PLAINS, DUSK, new Spot(new BlockPos(595, 70, -812), 90, 0),
+                        new Loadout(DyeColor.RED, ModItems.FIREBOX.get(), ModItems.CHAINGUN.get()));
+                // a coral reef: the tidal engine runs free under water
+                case 2 -> moveTo(mc, "reef", Biomes.WARM_OCEAN, 6000, new Spot(new BlockPos(1618, 52, -236), 90, 0),
+                        new Loadout(DyeColor.YELLOW, ModItems.TIDAL_ENGINE.get(), ModItems.DRILL.get()));
                 default -> { return false; }
             }
             return true;
@@ -152,10 +160,12 @@ public final class ShowcaseScene {
             }
             setStart = t; // and on: this tick is the set's k = -SETTLE (its camera and view are set up now)
         }
-        int k = t - setStart - SETTLE; // ticks since the set's first shot could be taken
+        int settle = set == 2 ? WATER_SETTLE : SETTLE;
+        int k = t - setStart - settle; // ticks since the set's first shot could be taken
         switch (set) {
             case 0 -> walk(mc, k);
             case 1 -> dusk(mc, k);
+            case 2 -> reef(mc, k);
             default -> {}
         }
         return true;
@@ -163,18 +173,22 @@ public final class ShowcaseScene {
 
     private static boolean done;
 
-    /** A walk: the cockpit with the survival HUD (fuel gauge, ammo), then the in-game view from behind. */
+    /** A walk: the game's front view (F5 twice) coming at us, the cockpit with the survival HUD (fuel gauge, ammo), then the in-game view from behind. */
     private static void walk(Minecraft mc, int k) {
         var o = mc.options;
-        if (k == -SETTLE) { DevUtil.hideGui(mc, false); o.setCameraType(CameraType.FIRST_PERSON); yaw = setYaw - 25; pitch = 3; } // the mountain and the sea
-        if (k == 41) yaw = setYaw;
+        // F5's front view turns the pilot's view round: looking up puts its camera higher, looking down at the suit
+        if (k == -SETTLE) { o.setCameraType(CameraType.THIRD_PERSON_FRONT); DevUtil.hideGui(mc, true); yaw = setYaw; pitch = -15; }
         if (k == 0) walk = true;
-        if (k >= 20 && k <= 40 && k % 5 == 0) shot(mc, "cockpit", k);
-        if (k == 42) { o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, true); pitch = 12; }
-        if (k >= 50 && k <= 86 && k % 4 == 0) shot(mc, "back_walk", k);
-        if (k == 88) sprint = true;
-        if (k >= 100 && k <= 116 && k % 2 == 0) shot(mc, "back_sprint", k);
-        if (k == 118) done = true;
+        if (k >= 8 && k <= 28 && k % 4 == 0) shot(mc, "front_walk", k);
+        // a still camera standing in the suit's path, as a friend would: the suit walks up to it. (A scripted camera
+        // stops the client sending the pilot's moves to the server; the client still walks the suit, for a few seconds.)
+        if (k == 30) pathCamera(mc, 8.0, 2.3);
+        if (k >= 34 && k <= 50 && k % 4 == 0) shot(mc, "front_close", k);
+        if (k == 52) { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); yaw = setYaw - 25; pitch = 3; } // the mountain and the sea
+        if (k >= 62 && k <= 78 && k % 4 == 0) shot(mc, "cockpit", k);
+        if (k == 80) { yaw = setYaw; o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, true); pitch = 12; }
+        if (k >= 86 && k <= 114 && k % 4 == 0) shot(mc, "back_walk", k);
+        if (k == 116) done = true;
     }
 
     /** Sunset (the sun on the horizon at ~12000; vanilla nights are near black in pictures). Zombies wear helmets: they'd burn now. */
@@ -189,11 +203,36 @@ public final class ShowcaseScene {
         if (k >= 8 && k <= 24 && k % 2 == 0) shot(mc, "dusk_shoulder", k);
         if (k == 26) sideCamera(mc);
         if (k >= 28 && k <= 42 && k % 2 == 0) shot(mc, "dusk_side", k);
-        if (k == 44) { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, true); pitch = 6; }
-        if (k >= 48 && k <= 56 && k % 2 == 0) shot(mc, "dusk_back", k);
-        if (k == 58) { o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); pitch = 2; }
-        if (k >= 62 && k <= 72 && k % 2 == 0) shot(mc, "dusk_cockpit", k);
-        if (k == 74) done = true;
+        if (k == 44) frontCamera(mc);
+        if (k >= 46 && k <= 60 && k % 2 == 0) shot(mc, "dusk_front", k);
+        if (k == 62) { o.fov().set(fov); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, true); pitch = 6; }
+        if (k >= 66 && k <= 74 && k % 2 == 0) shot(mc, "dusk_back", k);
+        if (k == 76) { o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); pitch = 2; }
+        if (k >= 80 && k <= 90 && k % 2 == 0) shot(mc, "dusk_cockpit", k);
+        if (k == 92) done = true;
+    }
+
+    /**
+     * Ticks on the reef before the first shot: vanilla clears the underwater fog over the 30 s after the eyes go under
+     * (LocalPlayer's water vision), so the shots wait for the view a player has after half a minute down there.
+     */
+    private static final int WATER_SETTLE = 640;
+
+    /** A walk over the reef: the game's front view, the in-game view from behind (the tidal pack bubbling), the cockpit. */
+    private static void reef(Minecraft mc, int k) {
+        var o = mc.options;
+        if (k == -WATER_SETTLE) { o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, true); yaw = setYaw; pitch = 8; }
+        if (k == -20) reseat(mc); // the suit drifts a little while the view clears (runs differed): back to the pinned spot
+        // F5's front view (a still camera in the coral hid the suit or froze it against a block)
+        if (k == -2) o.setCameraType(CameraType.THIRD_PERSON_FRONT);
+        if (k == 0) walk = true;
+        if (k >= 6 && k <= 26 && k % 4 == 0) shot(mc, "reef_front", k);
+        if (k == 30) o.setCameraType(CameraType.THIRD_PERSON_BACK);
+        if (k >= 36 && k <= 56 && k % 4 == 0) shot(mc, "reef_back", k);
+        // then stop and look back the way it came (the coral it walked into fills the view ahead)
+        if (k == 58) { walk = false; o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); yaw = setYaw + 150; pitch = 5; }
+        if (k >= 70 && k <= 82 && k % 4 == 0) shot(mc, "reef_cockpit", k);
+        if (k == 84) done = true;
     }
 
     /** A place for a set: where the suit stands and which way it looks (yaw 0 looks +Z). */
@@ -204,12 +243,16 @@ public final class ShowcaseScene {
      * third-person camera and 32 blocks ahead, landscape rising on the horizon) and put the player in a fresh suit there
      * (firebox + coal, helmet, chaingun, nuggets, a lived-in hotbar). Sets {@code ready} when done.
      */
-    private static void moveTo(Minecraft mc, String name, ResourceKey<Biome> biome, long time, @org.jetbrains.annotations.Nullable Spot pinned) {
+    /** What a set's suit wears: its paint, engine and tool. */
+    private record Loadout(DyeColor paint, Item engine, Item tool) {}
+
+    private static void moveTo(Minecraft mc, String name, ResourceKey<Biome> biome, long time, @org.jetbrains.annotations.Nullable Spot pinned, Loadout loadout) {
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
             DevUtil.setTime(level, time);
             level.getServer().setDifficulty(Difficulty.NORMAL, true);
-            Spot spot = pinned != null ? pinned : findSpot(level, biome, player.blockPosition().atY(80), 0, 360);
+            boolean water = biome.identifier().getPath().contains("ocean");
+            Spot spot = pinned != null ? pinned : water ? findReef(level, player.blockPosition().atY(50)) : findSpot(level, biome, player.blockPosition().atY(80), 0, 360);
             BlockPos at = spot.at();
             float yaw = spot.yaw();
             if (player.getVehicle() instanceof PowerArmorEntity old) {
@@ -217,15 +260,17 @@ public final class ShowcaseScene {
                 old.discard();
             }
             level.getChunk(at.getX() >> 4, at.getZ() >> 4); // generate it now: an unloaded chunk's height reads as the world's bottom
-            int ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.getX(), at.getZ());
+            // (the sea floor under water: the other heightmaps stop at the water's surface)
+            int ground = level.getHeight(water ? Heightmap.Types.OCEAN_FLOOR : Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.getX(), at.getZ());
             Vec3 pos = new Vec3(at.getX() + 0.5, ground, at.getZ() + 0.5);
             player.setGameMode(GameType.SURVIVAL);
             player.teleportTo(pos.x, pos.y, pos.z);
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.COMMAND);
-            DevUtil.firebox(suit);
+            suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(loadout.engine()));
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 48));
             suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
-            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
+            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(loadout.tool()));
+            suit.setPaint(loadout.paint());
             suit.setStoredNuggets(128);
             suit.snapTo(pos.x, pos.y, pos.z, yaw, 0);
             suit.setYBodyRot(yaw);
@@ -249,6 +294,68 @@ public final class ShowcaseScene {
             log(String.format(Locale.ROOT, "%s,%s,%.1f,%.1f,%.1f,%.0f,%.1f", name, biomeName, pos.x, pos.y, pos.z, yaw, spot.score()));
             ready = true;
         });
+    }
+
+    /**
+     * A coral reef in a warm ocean: on a grid of real (generated) columns round the biome's nearest spot, the sea floor
+     * 6-12 blocks deep with the most coral within 6 blocks, looking along the flattest stretch of floor with the most
+     * coral ahead (the suit walks there; its eye and the cameras must stay under water).
+     */
+    private static Spot findReef(ServerLevel level, BlockPos origin) {
+        var found = level.findClosestBiome3d(h -> h.is(Biomes.WARM_OCEAN), origin, 6000, 32, 64);
+        BlockPos centre = found == null ? origin : found.getFirst();
+        Spot best = null;
+        for (int gx = -64; gx <= 64; gx += 8) {
+            for (int gz = -64; gz <= 64; gz += 8) {
+                int x = centre.getX() + gx, z = centre.getZ() + gz;
+                int depth = depth(level, x, z);
+                if (depth < 6 || depth > 12) {
+                    continue;
+                }
+                int floor = floor(level, x, z);
+                for (int i = 0; i < 8; i++) {
+                    float yaw = i * 45F;
+                    double dx = -Mth.sin(yaw * Mth.DEG_TO_RAD), dz = Mth.cos(yaw * Mth.DEG_TO_RAD);
+                    boolean flat = true;
+                    for (int d = -7; d <= 12 && flat; d++) {
+                        int px = x + (int) Math.round(dx * d), pz = z + (int) Math.round(dz * d);
+                        flat = Math.abs(floor(level, px, pz) - floor) <= 2 && depth(level, px, pz) >= 5;
+                    }
+                    if (!flat) {
+                        continue;
+                    }
+                    int coral = coral(level, new BlockPos(x + (int) Math.round(dx * 8), floor, z + (int) Math.round(dz * 8)), 7);
+                    if (best == null || coral > best.score()) {
+                        best = new Spot(new BlockPos(x, floor, z), yaw, coral);
+                    }
+                }
+            }
+        }
+        PowerArmor.LOGGER.info("[showcase] reef: picked {}", best);
+        return best != null ? best : new Spot(centre, 0, 0);
+    }
+
+    private static int floor(ServerLevel level, int x, int z) {
+        level.getChunk(x >> 4, z >> 4);
+        return level.getHeight(Heightmap.Types.OCEAN_FLOOR, x, z);
+    }
+
+    /** Water depth over the sea floor (0 on land). */
+    private static int depth(ServerLevel level, int x, int z) {
+        int floor = floor(level, x, z);
+        return level.getFluidState(new BlockPos(x, floor, z)).isEmpty() ? 0 : level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - floor;
+    }
+
+    /** Coral blocks and plants within {@code r} blocks (and 4 up) of {@code at}. */
+    private static int coral(ServerLevel level, BlockPos at, int r) {
+        int n = 0;
+        for (BlockPos p : BlockPos.betweenClosed(at.offset(-r, -1, -r), at.offset(r, 4, r))) {
+            var state = level.getBlockState(p);
+            if (state.is(net.minecraft.tags.BlockTags.CORAL_BLOCKS) || state.is(net.minecraft.tags.BlockTags.CORALS)) {
+                n++;
+            }
+        }
+        return n;
     }
 
     /**
@@ -437,6 +544,40 @@ public final class ShowcaseScene {
         camera(mc, setPos.add(forward.scale(-4.5)).add(left.scale(2.6)).add(0, 3.4, 0), setPos.add(forward.scale(9)).add(0, 1.2, 0));
     }
 
+    /**
+     * The monsters' view: behind their line, looking back at the suit through them with a long lens (FOV 40: the suit
+     * stays big 17 blocks away), the tracers coming at us. Put back to the player's FOV after the shots.
+     */
+    private static void frontCamera(Minecraft mc) {
+        Vec3 forward = forward(), left = new Vec3(forward.z, 0, -forward.x);
+        mc.options.fov().set(40);
+        camera(mc, setPos.add(forward.scale(17)).add(left.scale(1.5)).add(0, 2.4, 0), setPos.add(0, 1.8, 0));
+    }
+
+    /** Server: climb out, put the suit back on the set's spot and climb in again. */
+    private static void reseat(Minecraft mc) {
+        AutoPilot.onServer(mc, player -> {
+            if (player.getVehicle() instanceof PowerArmorEntity suit) {
+                player.stopRiding();
+                suit.snapTo(setPos.x, setPos.y, setPos.z, setYaw, 0);
+                suit.setYBodyRot(setYaw);
+                suit.setYHeadRot(setYaw);
+                suit.setDeltaMovement(Vec3.ZERO);
+                player.startRiding(suit, true, true);
+            }
+        });
+    }
+
+    /** A still camera {@code ahead} blocks in front of where the suit is now (the client's copy), a little to its tool side, {@code up} blocks up. */
+    private static void pathCamera(Minecraft mc, double ahead, double up) {
+        if (!(mc.player.getVehicle() instanceof PowerArmorEntity suit)) {
+            return;
+        }
+        Vec3 forward = forward(), left = new Vec3(forward.z, 0, -forward.x);
+        Vec3 at = suit.position();
+        camera(mc, at.add(forward.scale(ahead)).add(left.scale(1.2)).add(0, up, 0), at.add(forward.scale(ahead * 0.45)).add(0, 1.7, 0));
+    }
+
     /** From the side (the suit's right), far enough out to have the suit on the left and the monsters on the right. */
     private static void sideCamera(Minecraft mc) {
         Vec3 forward = forward(), right = new Vec3(-forward.z, 0, forward.x);
@@ -513,6 +654,7 @@ public final class ShowcaseScene {
         if (renderDistance > 0) {
             o.renderDistance().set(renderDistance);
         }
+        o.fov().set(fov);
         try {
             if (csv != null) {
                 csv.close();
