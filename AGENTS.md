@@ -59,7 +59,7 @@ Mojang's names are official since 26.1 (no Parchment). Porting primers: `neoforg
 | `./gradlew runAutopilotTerrain` | drives over real terrain in a fresh copy of `New World`, logs `run/autopilot_terrain.csv` + per-render-frame `run/autopilot_terrain_frames.csv`; summarize with `python3 tools/terrain-report.py` (its `cockpit:` line must say OK: the model may not move against the camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py <prefix> out.png [cols] [width]` | tile screenshots (`fp`, `tp`, `side`, `water`, `terrain`) |
 | `tools/view-tuner.sh start\|shoot\|stop` | live-tune the cockpit viewmodel (`CockpitHands`): the game stays in the cockpit and re-shoots `ap_view_*.png` with `run/view/tuning.json`; `stop` always (quits the game, stops the Gradle daemons) |
-| `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000); then `extract-tool-geo.py`, `extract-view-geo.py`, `uv run --with pillow python3 tools/make-glowmasks.py`, `tools/make-item-icons.py` (the tool items' icons), `tools/make-part-icons.py` and `tools/make-paint-textures.py` (one painted texture per dye) |
+| `node tools/export-model.mjs` | re-export geo/animations/texture from the open Blockbench project (MCP at localhost:3000); then `extract-view-geo.py`, `uv run --with pillow python3 tools/make-glowmasks.py` and `tools/make-paint-textures.py` (one painted texture per dye). Item icons are hand-made 16 px pixel art (`model/art/item_icons_art.py`), not redrawn on export |
 macOS has no `timeout`; run game tasks in the background and poll the log for completion.
 Extend the autopilot scripts (`client/dev/AutoPilot.java`, `TerrainPilot.java`) with a scenario for each
 new feature and log numbers to CSV: measuring beat guessing every time in this project.
@@ -122,7 +122,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **GeckoLib won't restart a triggered animation that is still playing**: per-use animations must be shorter
   than the tool's cooldown (`tool_recoil` 0.5 s vs the EM push's cooldown); rapid fire (the chaingun) kicks in code from a synced shot counter instead.
 - **Tool items are flat, like vanilla tools** (user decision): `models/item/<tool>.json` is `item/handheld` with an
-  icon drawn from the tool's geo by `tools/make-item-icons.py`; the 3D tools exist only on the suit and in the cockpit
+  hand-drawn 16 px icon (`model/art/item_icons_art.py`; until 2026-10-23 rendered from the tool's geo); the 3D tools exist only on the suit and in the cockpit
   viewmodel. (A 3D GeckoLib item needs a `GeoItemRenderer` registered in `RegisterClientExtensionsEvent` and a
   `builtin/entity` model; GeckoLib doesn't hook items up on NeoForge. The tools were 3D until 2026-10-13.)
 - **Server and client tick independently in the autopilot**: a server-side event can show up a few client
@@ -221,7 +221,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   keys, left/right names swapped), which keeps every animation consistent; swapping only the arm keys would have
   put the arm swing in phase with the wrong leg and doubled the torso sway on the stabilised tool arm. The specs
   in `model/anim/` still describe the old rig (`kit.json` mirrors them on bake), so their `right_*`
-  is today's `left_*`. Hand-held tool items are mirrored back in `extract-tool-geo.py`.
+  is today's `left_*`.
 - **GeckoLib `thenPlay` uses the JSON's loop setting**: `thenPlay("electrified")` (a `"loop": true` animation) convulsed
   forever and never reached the chained slump. Chain after a looping animation with `then(name, LoopType.PLAY_ONCE)`.
 - **The pilot's head pokes out of the suit's hitbox** (eye 0.55 forward, player width 0.6): pressed against a wall, vanilla
@@ -371,8 +371,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 `entity/ai/` the machine mind's goals (`SuitMind` friendly/rogue); `menu/` the suit menu logic, `client/PowerArmorScreen` + `FuelGauge` its picture and the HUD;
 `client/` holds rendering + camera; `PilotProtection.java` redirects damage; `registry/` registers things.
 Comment the "why" for anything non-obvious; the user reads the code to learn.
-- **Design drafts live in the .bbmodel as hidden groups named `proto_*`**. `export-model.mjs` and `make-part-icons.py`
-  leave them out (GeckoLib would draw them, hidden or not), but their painted texels stay in the exported texture (draft
+- **Design drafts live in the .bbmodel as hidden groups named `proto_*`**. `export-model.mjs` leaves them out (GeckoLib would draw them, hidden or not), but their painted texels stay in the exported texture (draft
   glass in the reserved glow colours raises `make-glowmasks.py`'s counts). A picked draft becomes a game part by
   renaming its group (the engine packs, then the helmet styles: `proto_helm_F_delta` / `G_chief` / `H_eva` / `K_guy` are
   `helm_protector` / `helm_spartan` / `helm_noble` / `helm_robot` since 2026-10-22, plus `helm_hunter` (Samus) the same day, still hidden in Blockbench, design

@@ -2,7 +2,7 @@
 
 Built for the Power Armor plasma cannon, then rivet gun, now its chaingun. Files: `item/PowerTool.java`,
 `item/ChaingunItem.java`, `entity/Bullet.java`, `network/ToolTriggerPayload.java`, `client/ToolInput.java`,
-`client/BulletRenderer.java`, `PowerArmorEntity.tickTool`, `tools/extract-tool-geo.py`. (The rivet gun's sticking
+`client/BulletRenderer.java`, `PowerArmorEntity.tickTool`. (The rivet gun's sticking
 projectile is in git history, commit 299d91b.)
 
 ## Hold-to-use input from a vehicle
@@ -79,8 +79,9 @@ projectile is in git history, commit 299d91b.)
   Model JSON: `"parent": "builtin/entity"` + `display` transforms. Flat icon in slots only (3D in hand), wrap it:
   `"loader": "neoforge:separate_transforms"`, `"base"`: the builtin/entity model, `"perspectives"`: `gui`/`ground`/`fixed` ->
   `{"parent": "minecraft:item/generated", "loader": "neoforge:item_layers", "textures": {"layer0": ...}}`.
-- **This mod's tools are flat now** (user's choice, like vanilla tools): `item/handheld` + an icon drawn from the cut-out
-  geo by `tools/make-item-icons.py` (tiny box-UV software renderer, 8x supersampled, 32 px + outline); no GeoItem.
+- **This mod's tools are flat now** (user's choice, like vanilla tools): `item/handheld` + a 16 px icon. Icons rendered
+  from the 3D model (a box-UV software renderer, 32 px) were replaced by hand-made pixel art (user: "actual 2D
+  assets"); draw them from primitives in a script (`model/art/item_icons_art.py`) so tweaks are numbers. No GeoItem.
 - Display rotations are applied X·Y·Z (Z first on the vector). Solve them instead of guessing: choose where the
   barrel and the top should point, build the rotation matrix, brute-force Euler angles in 5° steps
   (numpy). In hand / first person, -Z is forward; in GUI the camera looks along -Z. Verify with autopilot

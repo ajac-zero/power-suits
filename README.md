@@ -181,10 +181,7 @@ upgrades a world the first time it's opened and there's no way back: let it make
 | `./gradlew runAutopilotTerrain` | Dev tool: drives a suit over real terrain in a **copy** of `run/saves/New World`, logs `run/autopilot_terrain.csv` (speed, height, ground contact, animation, camera) |
 | `uv run --with pillow python3 tools/contact-sheet.py fp out.png` | Tiles autopilot screenshots (prefix `fp`, `tp`, `side`, `water`, `fuel`, `menu`) |
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
-| `python3 tools/extract-tool-geo.py` | Rebuilds the tool item models from the suit model (run after `export-model.mjs`) |
-| `uv run --with pillow python3 tools/make-item-icons.py` | Redraws the tool items' icons from those tool models (run after `extract-tool-geo.py`) |
-| `uv run --with pillow python3 tools/make-part-icons.py` | Redraws the suit parts' icons (torso, arm, leg, helmet + its styles, engines) straight from `model/power_armor.bbmodel` |
-| `uv run --with pillow python3 tools/make-template-icons.py` | Redraws the helmet styles' smithing template icons (a tinted slab with the style's helmet, from the `.bbmodel`) |
+| `uv run --with pillow python3 model/art/item_icons_art.py [--sheet out.png]` | Draws every item icon: hand-made 16 px pixel art (vanilla style), not rendered from the model; `--sheet` writes a review sheet |
 | `python3 tools/extract-view-geo.py` | Rebuilds the cockpit viewmodel (`geckolib/models/view`) from the suit model (run after `export-model.mjs`) |
 | `uv run --with pillow python3 tools/make-glowmasks.py` | Rebuilds the glowmasks (`power_armor_glow_{fire,visor,heat,heat_barrel,em_core,em_arc}.png`) from the texture's reserved colours (run after `export-model.mjs`) |
 | `uv run --with pillow python3 tools/make-paint-textures.py` | Rebuilds the painted textures (`textures/entity/paint/power_armor_<dye>.png`, one per dye) from the steel texture (run after `export-model.mjs`) |
@@ -258,12 +255,10 @@ src/main/java/dev/ajaczero/powerarmor/
 src/main/resources/
   assets/powerarmor/geckolib/models|animations/entity/, textures/entity/   exported from Blockbench
   assets/powerarmor/textures/gui/power_armor.png      suit menu background (tools/make-gui.py)
-  assets/powerarmor/geckolib/models/item/<tool>.geo.json  chaingun, EM projector, drill, chainsaw: cut out of the suit model, source of the item icons (tools/extract-tool-geo.py)
   assets/powerarmor/geckolib/models/view/power_armor_view.geo.json  cockpit viewmodel: tools + gauntlet cut out of the suit model (tools/extract-view-geo.py)
   assets/powerarmor/models/item/chaingun.json         a flat hand-held item, like a vanilla tool (item/handheld)
   assets/powerarmor/items/<item>.json                 which model each item shows (needed since 1.21.4)
-  assets/powerarmor/textures/item/<tool>.png          the tools' item icons, rendered from their 3D models (tools/make-item-icons.py)
-  assets/powerarmor/textures/item/suit_<part>.png     the suit parts' icons, rendered from the .bbmodel (tools/make-part-icons.py)
+  assets/powerarmor/textures/item/*.png               every item icon, 16 px pixel art drawn by model/art/item_icons_art.py
   data/powerarmor/damage_type/bullet.json             "shredded" damage type (+ minecraft is_projectile, no_knockback, bypasses_cooldown tags)
   data/powerarmor/damage_type/em_slam.json            "slammed into a wall" (EM throws)
   data/powerarmor/recipe/*.json                       crafting recipes (suit parts, suit + 4 tools)
@@ -307,6 +302,5 @@ src/main/resources/
 - Arms swapped (2026-10-13): the hand used to be on the left and the tools on the right. The swap mirrored the
   whole model across x = 0 in Blockbench (geometry, rest poses, every keyframe, left/right names), so every
   animation stayed consistent (the gait now leads with the other foot). The specs in `model/anim/` are
-  still written for the old rig; its `kit.json` makes the bake tools mirror them onto the new one. Hand-held tool
-  items are mirrored back to the right-arm shape by `tools/extract-tool-geo.py` (you hold them in your right hand).
+  still written for the old rig; its `kit.json` makes the bake tools mirror them onto the new one.
 - Unused animations so far: attack (3-round burst), idle_fidget (throw, stim and sneakwalk were removed 2026-10-18).
