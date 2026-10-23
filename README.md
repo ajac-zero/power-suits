@@ -45,21 +45,21 @@ Each part is crafted on its own, then torso, arms and legs are assembled like a 
 
 | Item | Recipe |
 |---|---|
-| Power Armor Helmet | top row: iron block, lapis block, iron block; middle row: iron block, glass, iron block |
-| Power Armor Torso | iron blocks in the corners, lapis blocks on the edges, a furnace in the middle (the firebox) |
-| Power Armor Arm (x2) | a row: lapis block, piston, iron block (either way round) |
-| Power Armor Leg (x2) | a column: lapis block, piston, iron block (top to bottom) |
+| Power Armor Helmet | top row: iron block, redstone block, iron block; middle row: iron block, glass, iron block |
+| Power Armor Torso | iron blocks in the corners, copper blocks on the edges, a redstone block in the middle |
+| Power Armor Arm (x2) | a row: copper block, piston, iron block (either way round) |
+| Power Armor Leg (x2) | a column: copper block, piston, iron block (top to bottom) |
 | Power Armor | arm, torso, arm across the top row; legs in the corners below |
 
 The helmet isn't part of the assembly: put it on the finished suit (see *Helmet* above). A whole suit with its helmet
-takes 12 iron blocks, 9 lapis blocks, 4 pistons, a furnace and glass. It comes out bare polished steel; paint it with dyes
+takes 12 iron blocks, 8 copper blocks, 2 redstone blocks, 4 pistons and glass (no lapis or furnaces since 2026-10-23). It comes out bare polished steel; paint it with dyes
 (blue gives back the suit's old lapis blue).
 
 The engines (swapped in the menu's engine slot; a new suit has none, so craft one before you fuel it):
 
 | Engine | Recipe |
 |---|---|
-| Firebox | iron blocks in the corners, iron ingots on the edges, a blast furnace in the middle |
+| Firebox | iron blocks in the corners, iron ingots on the edges, a campfire in the middle |
 | Tidal Engine | iron blocks in the corners, dark prismarine on the edges, a Heart of the Sea in the middle |
 | Star Reactor | iron blocks in the corners, diamonds on the edges, an end crystal in the middle (its Nether Star goes in the fuel slot) |
 

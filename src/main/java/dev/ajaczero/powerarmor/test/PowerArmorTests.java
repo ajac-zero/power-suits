@@ -2069,19 +2069,25 @@ public final class PowerArmorTests {
     }
 
     /**
-     * The suit is crafted from parts (2026-10-19): helmet, torso, arm and leg from iron blocks, lapis blocks and vanilla
-     * parts; torso, arms and legs are assembled like a body (the helmet goes in the suit's slot). Crafts every step through the server's real recipe list (the JSON files), so
+     * The suit is crafted from parts (2026-10-19): helmet, torso, arm and leg from iron blocks, copper blocks (lapis
+     * until 2026-10-23), redstone blocks and vanilla parts, no furnace; torso, arms and legs are assembled like a body (the helmet goes in the suit's slot). Crafts every step through the server's real recipe list (the JSON files), so
      * a typo in a recipe or an arm pattern that also matches the leg fails here.
      */
     @SuitTest
     public static void partsAssembleIntoTheSuit(GameTestHelper helper) {
-        ItemStack i = new ItemStack(Items.IRON_BLOCK), l = new ItemStack(Items.LAPIS_BLOCK), p = new ItemStack(Items.PISTON);
-        ItemStack e = ItemStack.EMPTY;
-        checkCraft(helper, 3, 3, List.of(i, l, i, l, new ItemStack(Items.FURNACE), l, i, l, i), ModItems.SUIT_TORSO.get());
-        checkCraft(helper, 3, 2, List.of(i, l, i, i, new ItemStack(Items.GLASS), i), ModItems.SUIT_HELMET.get());
-        checkCraft(helper, 3, 1, List.of(l, p, i), ModItems.SUIT_ARM.get());
-        checkCraft(helper, 3, 1, List.of(i, p, l), ModItems.SUIT_ARM.get()); // mirrored: the other arm
-        checkCraft(helper, 1, 3, List.of(l, p, i), ModItems.SUIT_LEG.get());
+        ItemStack i = new ItemStack(Items.IRON_BLOCK), c = new ItemStack(Items.COPPER_BLOCK.weathering().unaffected()), p = new ItemStack(Items.PISTON);
+        ItemStack r = new ItemStack(Items.REDSTONE_BLOCK), e = ItemStack.EMPTY;
+        checkCraft(helper, 3, 3, List.of(i, c, i, c, r, c, i, c, i), ModItems.SUIT_TORSO.get());
+        checkCraft(helper, 3, 2, List.of(i, r, i, i, new ItemStack(Items.GLASS), i), ModItems.SUIT_HELMET.get());
+        checkCraft(helper, 3, 1, List.of(c, p, i), ModItems.SUIT_ARM.get());
+        checkCraft(helper, 3, 1, List.of(i, p, c), ModItems.SUIT_ARM.get()); // mirrored: the other arm
+        checkCraft(helper, 1, 3, List.of(c, p, i), ModItems.SUIT_LEG.get());
+        ItemStack b = new ItemStack(Items.IRON_BLOCK), n = new ItemStack(Items.IRON_INGOT);
+        checkCraft(helper, 3, 3, List.of(b, n, b, n, new ItemStack(Items.CAMPFIRE), n, b, n, b), ModItems.FIREBOX.get());
+        // no lapis or furnaces any more (2026-10-23)
+        ItemStack l = new ItemStack(Items.LAPIS_BLOCK);
+        helper.assertTrue(craft(helper, 3, 3, List.of(i, l, i, l, new ItemStack(Items.FURNACE), l, i, l, i)).isEmpty(), "the old lapis torso is gone");
+        helper.assertTrue(craft(helper, 3, 3, List.of(b, n, b, n, new ItemStack(Items.BLAST_FURNACE), n, b, n, b)).isEmpty(), "the old blast-furnace firebox is gone");
         ItemStack h = new ItemStack(ModItems.SUIT_HELMET.get()), t = new ItemStack(ModItems.SUIT_TORSO.get());
         ItemStack a = new ItemStack(ModItems.SUIT_ARM.get()), g = new ItemStack(ModItems.SUIT_LEG.get());
         checkCraft(helper, 3, 2, List.of(a, t, a, g, e, g), ModItems.POWER_ARMOR.get()); // the helmet goes on afterwards

@@ -2,12 +2,12 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "pattern": [
-    "L",
+    "C",
     "P",
     "I"
   ],
   "key": {
-    "L": "minecraft:lapis_block",
+    "C": "minecraft:copper_block",
     "P": "minecraft:piston",
     "I": "minecraft:iron_block"
   },
