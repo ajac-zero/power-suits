@@ -55,6 +55,16 @@ The creative process and staging rules are in `.agents/skills/key-art/SKILL.md`.
   to its right, looking up: lower, the chest and pads hide the helmet (`--score` measures how much of it shows and how
   many tracers are in the frame, without rendering). Its angles are flags (`--cz`, `--camangle`, `--twist`, `--aimout`,
   `--headcam`...). Master Chief is Microsoft's: gallery or social fan art.
+- `containment`: a Metroid nod. The suit painted orange, with the Hunter helmet (Samus's, visor lit green), the star
+  reactor and the EM projector, hauls an escaped big slime (size 4, the Hunter recipe's "Metroid") through the cargo
+  bay of a spaceship: deepslate deck plates, oxidized copper walls, sea-lantern light strips, the broken glass tank it
+  came from (hazard stripes, red alarm lamps) and a blocky Minecraft world turning below the window. The slime is the
+  game's own model and texture (inner cube with the face, thinned see-through jelly), turned to look at the lens and
+  tumbling a little; the beam is the game's (`EmBeamEffects`: two twisting strands of redstone dust, older twists
+  fading round the newest, sparks at the prongs, dust swirling round the slime). Wide frame, camera at head height a
+  little right of the suit's front. `--frame` prints where the head, feet, tip and slime land in the frame without
+  rendering; `--visor amber`, `--portrait` and the slime/camera numbers are flags. Samus is Nintendo's: gallery or
+  social fan art.
 
 ## Credits
 Skins from minecraftskins.com:

@@ -106,6 +106,19 @@ comic cover. Lex Luthor in a lime suit fights Superman high above the clouds. Th
 - **Skins**: minecraftskins.com pages sit behind Cloudflare. Scrape the page's HTML with firecrawl (`formats:
   ['rawHtml']`, an `objective` is required) to find `uploads/skins/...png`, then `curl` that file directly (not blocked).
 
+## Two subjects in one frame (Containment, 2026-10-23)
+- **A held mob sets the frame, not the suit**: a size-4 slime 3 blocks out from the projector spans feet-to-slime-top
+  ~5.5 blocks, so the suit fills only ~40 % of the height (portrait didn't help). The user called that "perfect": with a
+  second subject and a scene worth showing, a smaller suit is fine. Raise the camera to head height (2.0) and turn the
+  head 60 % toward the lens so the visor still reads.
+- **Search framing by numbers**: `containment.py --frame` prints where head, feet, tip and slime land (0..1) without
+  rendering; settle the layout there before previews.
+- **Mobs from vanilla models**: copy the model's boxes in Minecraft model space (y down, front -z) and map them
+  (x -> -x, front -> +Y, up = 24 - y). Turn a mob's face to the lens with `to_track_quat('Y', 'Z')`. Wide entity
+  textures (slime.png 64x32) aren't animation strips (`mcblocks.texture` handles it).
+- **Particles like the game's**: tinted `generic_N` sprites with low emission (1-1.6). Strong emission bleaches to pink
+  under AgX. A beam the game respawns every tick reads best as the newest helix plus a few older, sparser twists.
+
 ## Ideas queued (from the first session)
 Helmet lineup, the 16 paint colours, a rogue suit at night in a lightning storm, and
 in-game screenshots (an autopilot photo scene) for the gallery.

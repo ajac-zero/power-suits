@@ -37,7 +37,7 @@ def texture(name, kind='block'):
                 f.write(z.read(f'assets/minecraft/textures/{kind}/{name}.png'))
     src = bpy.data.images.load(path, check_existing=True)
     w, h = src.size
-    if h == w:
+    if h <= w:  # square, or a wide entity texture (slime.png is 64x32): not an animation strip
         src.name = key
         return src
     # Animated strip: frame 0 is at the top of the PNG, which is the END of Blender's bottom-up pixel array.
