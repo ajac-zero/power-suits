@@ -90,7 +90,7 @@ final class HelmetScene {
             player.setGameMode(GameType.SURVIVAL);
             player.teleportTo(x + 0.5, y, z - 3.5);
             PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4)); // fuel, but no helmet
+            DevUtil.firebox(s); s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4)); // fuel, but no helmet
             s.snapTo(x + 0.5, y, z + 0.5, 180, 0); // facing north, toward the player and the camera
             s.setYBodyRot(180);
             s.setYHeadRot(180);

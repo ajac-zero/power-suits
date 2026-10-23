@@ -205,7 +205,7 @@ public final class TerrainPilot {
             level.getGameRules().set(GameRules.SPAWN_MOBS, false, server);
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             // A full stack of blaze rods (~4 hours of walking): enough for any scripted drive.
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
+            DevUtil.firebox(suit); suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             suit.snapTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 0);
             level.addFreshEntity(suit);
             player.startRiding(suit);
@@ -221,7 +221,7 @@ public final class TerrainPilot {
         server.execute(() -> {
             ServerPlayer player = server.getPlayerList().getPlayer(uuid);
             if (player != null && player.getVehicle() instanceof PowerArmorEntity suit) {
-                suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
+                DevUtil.firebox(suit); suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             }
         });
     }

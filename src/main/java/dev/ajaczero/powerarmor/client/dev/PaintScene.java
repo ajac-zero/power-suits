@@ -79,7 +79,7 @@ final class PaintScene {
             player.setGameMode(GameType.SURVIVAL);
             player.teleportTo(x + 0.5, y, z - 4.5); // north of the suit: it looks at the player, its back to the camera
             PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
+            DevUtil.firebox(s); s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
             s.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
             s.snapTo(x + 0.5, y, z + 0.5, 180, 0);
             s.setYBodyRot(180);

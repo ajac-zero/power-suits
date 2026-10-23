@@ -183,7 +183,7 @@ public final class AutoPilot {
             case 640 -> { releaseAll(); closeWaterLog(); survival(mc, false);
                           onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) { // the firebox back in (see buildPool)
                               s.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get()));
-                              s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 16)); } }); }
+                              DevUtil.firebox(s); s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 16)); } }); }
             // ---- fuel: nearly empty tank, walk until the engine dies, refuel through the menu
             case 650 -> { DevUtil.hideGui(mc, false); o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 0; pitch = 15; fuelScenarioSetup(mc); }
             case 660 -> { openFuelLog(mc); hold(o.keyUp, true); }
@@ -431,7 +431,7 @@ public final class AutoPilot {
     private static void refuel(Minecraft mc) {
         onServer(mc, player -> {
             if (fuelSuit != null) {
-                fuelSuit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 16));
+                DevUtil.firebox(fuelSuit); fuelSuit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 16));
             }
         });
     }
@@ -608,7 +608,7 @@ public final class AutoPilot {
             int x = player.getBlockX() + 60, z = player.getBlockZ();
             Vec3 pos = new Vec3(x + 0.5, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z), z + 0.5);
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 8)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
+            DevUtil.firebox(suit); suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 8)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get()));
             suit.snapTo(pos.x, pos.y, pos.z, 0, 0);
             suit.setYBodyRot(0);
@@ -834,7 +834,7 @@ public final class AutoPilot {
             // water, so it drives a tidal engine (free under water) with a water bucket to climb the stairs out on.
             // The firebox goes back in at the end of the scene (engineBack).
             suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.TIDAL_ENGINE.get()));
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));
+            DevUtil.firebox(suit); suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));
             var level = player.level();
             BlockPos base = suit.blockPosition(); // g = base.y (the suit stands on top of base.y - 1)
             int g = base.getY();
@@ -1084,7 +1084,7 @@ public final class AutoPilot {
             level.getGameRules().set(GameRules.SPAWN_MOBS, false, server);
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             // A full stack of blaze rods (~4 hours of walking): enough for any scripted drive.
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
+            DevUtil.firebox(suit); suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get()));
             suit.snapTo(player.getX() + 0.5, player.getY(), player.getZ() + 0.5, 0, 0);
             level.addFreshEntity(suit);
@@ -1322,7 +1322,7 @@ public final class AutoPilot {
                 }
             }
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 16)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
+            DevUtil.firebox(suit); suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 16)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.DRILL.get()));
             suit.snapTo(x + 0.5, y, z + 0.5, 0, 0);
             suit.setYBodyRot(0);
@@ -1472,7 +1472,7 @@ public final class AutoPilot {
             BlockPos base = new BlockPos(x, y, z);
             mechBase = base;
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 32)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
+            DevUtil.firebox(suit); suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 32)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             suit.snapTo(x + 0.5, y, z + 0.5, 0, 0);
             suit.setYBodyRot(0);
             level.addFreshEntity(suit);

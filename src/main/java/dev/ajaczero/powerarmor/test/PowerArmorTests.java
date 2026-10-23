@@ -51,10 +51,11 @@ public final class PowerArmorTests {
         return suitAt(helper, SUIT_POS);
     }
 
-    /** A suit as it's normally used: with its helmet on (it seals the suit and lets the mind run). The helmet tests
-     *  take it off. */
+    /** A suit as it's normally used: with a firebox (suits come without an engine) and its helmet on (it seals the
+     *  suit and lets the mind run). The helmet and engine tests take them off. */
     private static PowerArmorEntity suitAt(GameTestHelper helper, BlockPos pos) {
         PowerArmorEntity suit = helper.spawn(ModEntities.POWER_ARMOR.get(), pos);
+        suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.FIREBOX.get()));
         suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
         return suit;
     }
@@ -2246,13 +2247,19 @@ public final class PowerArmorTests {
         return suit;
     }
 
-    /** Every suit comes with a firebox; taking the engine out kills the power and the half-burnt item goes with it. */
+    /** A new suit has no engine (nothing burns until one goes in); taking the engine out kills the power and the
+     *  half-burnt item goes with it. */
     @SuitTest(timeoutTicks = 60)
     public static void engineSlotPowersTheSuit(GameTestHelper helper) {
+        PowerArmorEntity bare = helper.spawn(ModEntities.POWER_ARMOR.get(), new BlockPos(1, 2, 7));
+        bare.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
+        bare.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 4));
+        helper.assertTrue(bare.getInventory().getItem(PowerArmorEntity.ENGINE_SLOT).isEmpty(), "a new suit has no engine");
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
-        helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.ENGINE_SLOT).is(ModItems.FIREBOX.get()), "a new suit has a firebox");
         helper.runAfterDelay(3, () -> {
             helper.assertTrue(suit.isPowered() && suit.getBurnLeftExact() > 0, "the firebox burns its coal");
+            helper.assertTrue(!bare.isPowered() && bare.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 4,
+                    "no engine: the coal just sits there");
             suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, ItemStack.EMPTY);
         });
         helper.runAfterDelay(6, () -> {

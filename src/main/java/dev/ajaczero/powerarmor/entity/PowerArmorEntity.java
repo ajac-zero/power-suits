@@ -363,8 +363,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     public PowerArmorEntity(EntityType<? extends PowerArmorEntity> type, Level level) {
         super(type, level);
-        // Every suit comes with a firebox (the torso's furnace), however it was made: crafted, /summon, a test.
-        this.inventory.setItem(ENGINE_SLOT, new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get()));
+        // A new suit comes without an engine (2026-10-23, user): craft one and put it in the engine slot. Suits from
+        // before the engines still get the firebox they had built in (readAdditionalSaveData, applyLoadout).
     }
 
     @Override
@@ -390,7 +390,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(NUGGETS, 0);
         builder.define(FIELD_HELD, false);
         builder.define(PAINT, (byte) -1);
-        builder.define(ENGINE, (byte) SuitEngine.FIREBOX.ordinal());
+        builder.define(ENGINE, (byte) -1);
         builder.define(ENGINE_UNDER_WATER, false);
         builder.define(FREE_POWER, false);
     }
@@ -726,6 +726,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 helmet.set(dev.ajaczero.powerarmor.registry.ModDataComponents.HELMET_STYLE.get(), styles[this.random.nextInt(styles.length)]);
             }
             this.inventory.setItem(HELMET_SLOT, helmet);
+        }
+        if (this.isRogue() && this.inventory.getItem(ENGINE_SLOT).isEmpty()) {
+            // Suits come without an engine now, and a rogue needs a backpack to look the part (it runs on nothing
+            // anyway). Not loot either (a defeated rogue drops its tool only), but one rebooted by lightning keeps it,
+            // so its coal can burn.
+            this.inventory.setItem(ENGINE_SLOT, new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get()));
         }
         SuitEngine engine = this.getEngine();
         if (this.engineSeen && engine != this.lastEngine) {

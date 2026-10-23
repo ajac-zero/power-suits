@@ -55,7 +55,7 @@ The helmet isn't part of the assembly: put it on the finished suit (see *Helmet*
 takes 12 iron blocks, 9 lapis blocks, 4 pistons, a furnace and glass. It comes out bare polished steel; paint it with dyes
 (blue gives back the suit's old lapis blue).
 
-The engines (swapped in the menu's engine slot; every suit comes with a firebox):
+The engines (swapped in the menu's engine slot; a new suit has none, so craft one before you fuel it):
 
 | Engine | Recipe |
 |---|---|

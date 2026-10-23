@@ -150,14 +150,15 @@ Why: a furnace that keeps burning under water made no sense. The backpack become
 engines can be swapped. Each engine is a full redesign of the backpack: only the firebox has the firebox and the
 exhausts; the other two are their own models (simple boxes, detail in the texture, as the user prefers).
 - **Engine slot**: a fourth slot in the suit menu. Engine items: **Firebox**, **Tidal engine**, **Star reactor**.
-  A new suit comes with a firebox (the torso recipe keeps its furnace); suits saved before the engines load with
-  one. No engine = no power (slumped, like a suit without fuel). A packed suit keeps its engine; a wreck drops it.
+  **A new suit comes without an engine** (2026-10-23, user; until then it came with a firebox): craft one and put it
+  in. Suits saved (or packed) before the engines load with the firebox they had built in; rogues get a firebox (not
+  loot, kept after a lightning reboot). No engine = no power (slumped, like a suit without fuel). A packed suit keeps its engine; a wreck drops it.
 - **The fuel slot holds what the engine runs on.** Like a furnace's, it takes any engine's fuel; what the installed
   engine can't use just sits there. Swapping the engine is allowed any time; the half-burnt item is lost with it.
 
   | Engine | Recipe (2026-10-21; "somewhat expensive") | Fuel slot | Runs | Costs |
   |---|---|---|---|---|
-  | Firebox (standard, most common; the torso's furnace is one) | 4 iron blocks, 4 iron ingots, a blast furnace | furnace fuels (section 4) | anywhere, rain too; **floods** when water covers it | as section 4 |
+  | Firebox (standard, most common) | 4 iron blocks, 4 iron ingots, a blast furnace | furnace fuels (section 4) | anywhere, rain too; **floods** when water covers it | as section 4 |
   | Tidal engine | 4 iron blocks, 4 dark prismarine, the **Heart of the Sea** | water: bucket (the bucket stays) or bottle, a short run each, to get back into the water | **free while wet**: its backpack under water, or standing in rain; on land it drinks the water in the slot | nothing while wet |
   | Star reactor (endgame, like an arc reactor) | 4 iron blocks, 4 diamonds, an end crystal | 1 **Nether Star** (never used up) | forever, anywhere | nothing: movement and tools are free; the chaingun still needs iron nuggets |
 

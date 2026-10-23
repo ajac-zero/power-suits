@@ -113,7 +113,7 @@ final class StyleScene {
                 if (i > 0) {
                     helmet.set(ModDataComponents.HELMET_STYLE.get(), HelmetStyle.values()[i - 1]);
                 }
-                s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
+                DevUtil.firebox(s); s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
                 s.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, helmet);
                 s.snapTo(x + 0.5 + SPACING * i, y, z + 0.5, 180, 0);
                 s.setYBodyRot(180);

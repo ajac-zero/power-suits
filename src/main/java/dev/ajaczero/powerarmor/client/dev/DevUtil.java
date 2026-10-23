@@ -17,5 +17,13 @@ final class DevUtil {
         level.dimensionType().defaultClock().ifPresent(clock -> level.clockManager().setTotalTicks(clock, ticks));
     }
 
+    /** Suits come without an engine: give a scene's suit a firebox (if it has no engine yet) before fuelling it. */
+    static void firebox(dev.ajaczero.powerarmor.entity.PowerArmorEntity suit) {
+        if (suit.getInventory().getItem(dev.ajaczero.powerarmor.entity.PowerArmorEntity.ENGINE_SLOT).isEmpty()) {
+            suit.getInventory().setItem(dev.ajaczero.powerarmor.entity.PowerArmorEntity.ENGINE_SLOT,
+                    new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get()));
+        }
+    }
+
     private DevUtil() {}
 }

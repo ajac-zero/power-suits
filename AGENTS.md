@@ -352,7 +352,8 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   torso swung side to side). Judge facing from the client: the mind CSV logs clientHead/clientBody/twist/aimErr.
 - **A ternary of double and int inside String.format can box as Integer** (javac boxed each branch): `cond ? d : -1`
   crashed `%f` the first time the branch ran (the mech log, with no pilot). Write `-1D`.
-- **Engines (2026-10-21): every suit comes with a firebox, and a firebox floods in deep water** (water over the backpack,
+- **Engines (2026-10-21): a suit comes without an engine (since 2026-10-23; scenes call `DevUtil.firebox`, GameTests'
+  `suitAt` installs one), and a firebox floods in deep water** (water over the backpack,
   2.2 blocks up: 3+ deep): scenes or tests that put a fuelled suit in deep water need a tidal engine (+ a water bucket to
   climb out) or a reactor. Swapping the engine drops the half-burnt item one tick later (`tickFuel` notices the swap),
   so set burn values after a swap has been seen, not in the same tick.
