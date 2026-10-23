@@ -128,9 +128,11 @@ from fire, hot metal, redstone and sparks, never from futuristic energy.
 ## 4. Fuel and shutdown (built in Phase 1)
 - **Decided 2026-10-12: works like a furnace**, no big tank. The fuel slot holds a stack; the engine burns
   one item at a time and takes the next when it's used up. Better fuel = longer per item.
-- **Fuels (energy per item; walking burns 1 per tick, so 1600 = 80 s):** coal / charcoal 1600 (1:20),
-  lava bucket 3200 (2:40, the empty bucket stays in the slot), blaze rod 4800 (4:00). Nothing else
-  (planks, coal blocks...) burns, so blaze rods stay the best fuel. Table: `SuitFuel`.
+- **Fuels (energy per item; walking burns 1 per tick, so 1600 = 80 s):** since 2026-10-23 the firebox burns
+  **whatever a furnace burns, for as many ticks as a furnace burns it**: coal / charcoal 1600 (1:20), blaze rod 2400
+  (2:00), lava bucket 20000 (16:40, the empty bucket stays in the slot), coal block 16000, planks 300, sticks 100...
+  Asked of a real (never placed) furnace block entity (`FireboxFuel`), so data packs and mods that change furnace
+  fuels change the suit's. Until then it had its own table (coal 1600, lava 3200, blaze 4800, nothing else).
 - **Drain per tick:** idle 0.25, moving 1.0, sprinting 2.0, +20 per jump, plus tool costs
   per use (Phase 2+). Also in creative mode. **Since the machine mind (sec. 8, 2026-10-13) a powered suit always
   runs**, piloted or not (the mind's load is judged from how fast it moves); to park a suit, take the fuel out.

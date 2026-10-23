@@ -14,7 +14,7 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Climb in | Right-click the suit |
 | Suit menu | Sneak + right-click an empty suit: helmet slot, tool socket, engine slot, fuel slot, status, **Pack up** |
 | Helmet | Right-click a suit with a Power Armor Helmet (or use the menu's helmet slot) to put it on. It seals the suit, and the machine mind only runs with it: without one the suit still runs with you inside (unsealed: fire, poison and water reach you, and you can eat), and an empty one stands powered down. Taking the helmet off is the easy way to park a suit. Rogues always wear one |
-| Fuel | Put coal/charcoal (1:20 of walking each), lava buckets (2:40, the bucket stays) or blaze rods (4:00) in the fuel slot (for the standard Firebox engine; see *Engines* below) |
+| Fuel | Put anything a furnace burns in the fuel slot; it lasts as many ticks as in a furnace (coal 1:20 of walking, blaze rod 2:00, lava bucket 16:40 and the bucket stays, planks 0:15) (for the standard Firebox engine; see *Engines* below) |
 | Engines | The backpack is the suit's engine, swapped in the menu's engine slot. **Firebox** (every suit comes with one): burns fuel, floods and dies when water covers it (no pack-up while flooded: drain the water or swap the engine). **Tidal Engine** (crafted with a Heart of the Sea; twin diving tanks that bubble under water): free while wet (its backpack under water, or in rain); on land it drinks water buckets (0:15) or bottles (0:05) from the fuel slot, so carry some to climb out of the water. **Star Reactor** (diamonds + an end crystal; glowing energy canisters with a faint violet aura): a Nether Star in the fuel slot runs everything, tools included, forever (bullets still take iron nuggets). Each engine is its own backpack on the suit |
 | Walk / run | WASD (3.0 blocks/s walk; S backs up at half speed) / sprint (6.25 blocks/s; double-tap W or tap Ctrl once, it keeps going while W is held) |
 | Jump | Hold Space to charge (the suit crouches), release |
@@ -79,7 +79,7 @@ balance pass), with what one piece of coal (1600) buys:
 | Chainsaw | 15 per log | ~20 oaks (5 logs each) |
 | Sealing | 20 per point of fire/frost damage kept out, 100 per harmful effect, +0.5 per tick of air under water | 80 s of burning |
 
-Coal and charcoal 1600, lava bucket 3200, blaze rod 4800. Hover over any of them for its walking time.
+The firebox burns what a furnace burns, as long as a furnace burns it: coal and charcoal 1600, blaze rod 2400, lava bucket 20000, coal block 16000, planks 300. Hover over any fuel for its walking time.
 
 ### Sounds
 A powered suit is quiet: no engine loop. Now and then its backpack makes a soft sound (the firebox crackles, the tidal
@@ -203,6 +203,7 @@ src/main/java/dev/ajaczero/powerarmor/
   registry/ModMenus.java     the suit menu type; ModDataComponents.java: the loadout stored on a packed item
   entity/PowerArmorEntity.java  the suit: riding, movement, fuel/power, damage, death, animation choice
   entity/SuitFuel.java       which items burn and for how long, per engine
+  entity/FireboxFuel.java    asks a never-placed furnace how long it burns an item (the firebox's table)
   entity/SuitEngine.java     the engines (firebox / tidal / reactor); item/EngineItem.java: their items
   entity/ExhaustSmoke.java   client-side smoke from the back pipes
   menu/PowerArmorMenu.java   menu logic: socket, fuel, helmet + engine slots, shift-click, Pack up button
@@ -251,7 +252,7 @@ src/main/java/dev/ajaczero/powerarmor/
     ClientSetup.java         registers the renderer
     PowerArmorClient.java    client-only @Mod entry: the in-game config screen
     SuitSounds.java          engine sounds now and then + tool loops (tickable sounds that follow the suit)
-    FuelTooltip.java         "Power Armor fuel: 1:20 of walking" on coal, lava, blaze rods
+    FuelTooltip.java         "Power Armor fuel: 1:20 of walking" on every fuel
     dev/AutoPilot.java       scripted screenshot test drive (only with -Dpowerarmor.autopilot)
   test/PowerArmorTests.java  GameTests (@SuitTest methods, registered by test/SuitTests.java)
 src/main/resources/

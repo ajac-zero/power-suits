@@ -16,16 +16,8 @@ public final class PowerArmorConfig {
     private static final ModConfigSpec.Builder B = new ModConfigSpec.Builder();
 
     // ---- fuel ----------------------------------------------------------------------------------
-    public static final ModConfigSpec.IntValue COAL_ENERGY = B.comment("What the suit burns and how fast. 1 energy per tick = walking.").translation(key("fuel")).push("fuel")
-            .comment("Energy per coal or charcoal (1600 = 1:20 of walking).").translation(key("coal_energy"))
-            .defineInRange("coal_energy", 1600, 1, 1_000_000);
-    public static final ModConfigSpec.IntValue LAVA_ENERGY = B
-            .comment("Energy per lava bucket (the empty bucket stays in the fuel slot).").translation(key("lava_energy"))
-            .defineInRange("lava_energy", 3200, 1, 1_000_000);
-    public static final ModConfigSpec.IntValue BLAZE_ENERGY = B
-            .comment("Energy per blaze rod.").translation(key("blaze_energy"))
-            .defineInRange("blaze_energy", 4800, 1, 1_000_000);
-    public static final ModConfigSpec.IntValue WATER_BUCKET_ENERGY = B
+    // The firebox has no table here: it burns what a furnace burns, for as long as a furnace does (SuitFuel).
+    public static final ModConfigSpec.IntValue WATER_BUCKET_ENERGY = B.comment("What the suit burns and how fast. 1 energy per tick = walking.").translation(key("fuel")).push("fuel")
             .comment("Tidal engine: energy per water bucket, used only out of the water (300 = 15 s of walking; the bucket stays).").translation(key("water_bucket_energy"))
             .defineInRange("water_bucket_energy", 300, 1, 1_000_000);
     public static final ModConfigSpec.IntValue WATER_BOTTLE_ENERGY = B

@@ -204,15 +204,26 @@ public final class PowerArmorTests {
         return suit;
     }
 
+    /** The firebox burns like a furnace: what a furnace takes, for as many ticks as a furnace burns it. */
     @SuitTest
-    public static void fuelTiersCoalShortestBlazeRodLongest(GameTestHelper helper) {
-        int coal = SuitFuel.energyOf(new ItemStack(Items.COAL));
-        int lava = SuitFuel.energyOf(new ItemStack(Items.LAVA_BUCKET));
-        int blaze = SuitFuel.energyOf(new ItemStack(Items.BLAZE_ROD));
-        helper.assertTrue(coal > 0 && coal < lava && lava < blaze, "expected coal < lava < blaze rod, got " + coal + " " + lava + " " + blaze);
-        helper.assertTrue(SuitFuel.energyOf(new ItemStack(Items.CHARCOAL)) == coal, "charcoal should match coal");
-        helper.assertTrue(!SuitFuel.isFuel(dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX, new ItemStack(Items.OAK_PLANKS)), "planks are furnace fuel but not suit fuel");
+    public static void fireboxBurnsWhatAFurnaceBurns(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var firebox = dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX;
+        int[] expected = {1600, 1600, 20000, 2400, 300, 100, 16000};
+        net.minecraft.world.item.Item[] items = {Items.COAL, Items.CHARCOAL, Items.LAVA_BUCKET, Items.BLAZE_ROD, Items.OAK_PLANKS,
+                Items.STICK, Items.COAL_BLOCK};
+        for (int i = 0; i < items.length; i++) {
+            int energy = SuitFuel.energyOf(firebox, new ItemStack(items[i]), level);
+            helper.assertTrue(energy == expected[i], items[i] + " should burn " + expected[i] + " like in a furnace, got " + energy);
+            helper.assertTrue(SuitFuel.isFuel(firebox, new ItemStack(items[i])), items[i] + " should fit the fuel slot");
+        }
+        helper.assertTrue(!SuitFuel.isFuel(firebox, new ItemStack(Items.IRON_INGOT)), "iron isn't fuel");
+        helper.assertTrue(SuitFuel.energyOf(firebox, new ItemStack(Items.IRON_INGOT), level) == 0, "iron burns for 0");
         helper.succeed();
+    }
+
+    private static int fireboxEnergy(GameTestHelper helper, net.minecraft.world.item.Item item) {
+        return SuitFuel.energyOf(dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX, new ItemStack(item), helper.getLevel());
     }
 
     /** Within 10% (+-1): tick timing in tests is a tick or so off either way. */
@@ -227,7 +238,7 @@ public final class PowerArmorTests {
         Player pilot = boardedPilot(helper, suit);
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 2, "one coal should be burning, two waiting");
-            float idle = PowerArmorConfig.COAL_ENERGY.get() - suit.getBurnLeftExact();
+            float idle = fireboxEnergy(helper, Items.COAL) - suit.getBurnLeftExact();
             helper.assertTrue(near(idle, 20 * PowerArmorConfig.DRAIN_IDLE.get()), "idle should burn ~0.25/tick (5 in 20 ticks), burnt " + idle);
             float before = suit.getBurnLeftExact();
             pilot.zza = 1; // holding W
@@ -252,7 +263,7 @@ public final class PowerArmorTests {
         boardedPilot(helper, suit);
         helper.runAfterDelay(2, () -> {
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.BUCKET), "an empty bucket should stay in the fuel slot");
-            helper.assertTrue(suit.getBurnLeftExact() > PowerArmorConfig.LAVA_ENERGY.get() - 10, "lava should give its energy, got " + suit.getBurnLeftExact());
+            helper.assertTrue(suit.getBurnLeftExact() > fireboxEnergy(helper, Items.LAVA_BUCKET) - 10, "lava should give its energy, got " + suit.getBurnLeftExact());
             helper.succeed();
         });
     }
@@ -417,7 +428,7 @@ public final class PowerArmorTests {
     /** A tap fires one heavy shot at once: one nugget, one bullet's fuel plus a tick of spin. */
     @SuitTest(timeoutTicks = 40)
     public static void chaingunTapFiresOneHeavyShot(GameTestHelper helper) {
-        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2)); // 9600 energy
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2)); // 4800 energy
         Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
         helper.runAfterDelay(2, () -> suit.setTriggerHeld(pilot, true));
@@ -425,7 +436,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(suit.getToolUses() == 1, "a tap fires exactly one shot, got " + suit.getToolUses());
             helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 63, "one nugget used");
-            int used = 2 * PowerArmorConfig.BLAZE_ENERGY.get() - suit.getTotalEnergy(), shot = PowerArmorConfig.CHAINGUN_ENERGY.get();
+            int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit.getTotalEnergy(), shot = PowerArmorConfig.CHAINGUN_ENERGY.get();
             helper.assertTrue(used >= shot && used < shot + 10, "one bullet costs " + shot + " energy (+ spin, idle), used " + used);
             helper.succeed();
         });
@@ -463,7 +474,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(60, () -> {
             helper.assertTrue(suit.getToolUses() == 3, "three nuggets, three bullets, got " + suit.getToolUses());
             helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 0, "all nuggets used");
-            int used = 2 * PowerArmorConfig.BLAZE_ENERGY.get() - suit.getTotalEnergy();
+            int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit.getTotalEnergy();
             int most = 3 * PowerArmorConfig.CHAINGUN_ENERGY.get() + 61 * PowerArmorConfig.CHAINGUN_SPIN_ENERGY.get() + 20;
             helper.assertTrue(used <= most, "only three bullets (+ spin, idle) cost fuel: at most " + most + ", used " + used);
             helper.succeed();

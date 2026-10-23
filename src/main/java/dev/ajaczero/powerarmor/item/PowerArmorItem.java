@@ -108,7 +108,7 @@ public class PowerArmorItem extends Item {
                         ? Component.translatable("item.powerarmor.power_armor.no_engine").withStyle(ChatFormatting.RED)
                         : Component.translatable("item.powerarmor.power_armor.engine", engineStack.getHoverName()).withStyle(ChatFormatting.GRAY));
             }
-            int energy = loadout.burnLeft() + loadout.fuel().getCount() * SuitFuel.energyOf(engine, loadout.fuel());
+            int energy = loadout.burnLeft() + loadout.fuel().getCount() * SuitFuel.energyOf(engine, loadout.fuel(), context.level());
             if (!loadout.fuel().isEmpty()) {
                 tooltip.accept(Component.translatable("item.powerarmor.power_armor.fuel", loadout.fuel().getCount(), loadout.fuel().getHoverName())
                         .withStyle(ChatFormatting.GOLD));

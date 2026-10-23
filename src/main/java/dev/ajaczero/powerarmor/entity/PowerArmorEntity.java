@@ -207,6 +207,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Copies of the two slots, so clients can show the fuel left and (Phase 2) draw the socket tool. */
     private static final EntityDataAccessor<ItemStack> FUEL_ITEM =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
+    /** Energy one item in the fuel slot gives the installed engine. Worked out on the server (the firebox's burn times
+     *  are furnace data that only the server has, see SuitFuel), so the clients' gauge can count the slot. */
+    private static final EntityDataAccessor<Integer> FUEL_ENERGY =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<ItemStack> SOCKET_ITEM =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
     /** Is a helmet in its slot: clients draw it (or not) and know whether the suit is sealed. */
@@ -371,6 +375,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(BURN_LEFT, 0);
         builder.define(BURN_TOTAL, 0);
         builder.define(FUEL_ITEM, ItemStack.EMPTY);
+        builder.define(FUEL_ENERGY, 0);
         builder.define(BEAM_TARGET, -1);
         builder.define(TOOL_RUNNING, false);
         builder.define(TOOL_ACTIVE, false);
@@ -879,7 +884,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      *  their glass bottle. */
     private void igniteNextItem() {
         ItemStack stack = this.inventory.getItem(FUEL_SLOT);
-        int energy = SuitFuel.energyOf(this.getEngine(), stack);
+        int energy = SuitFuel.energyOf(this.getEngine(), stack, this.level());
         if (energy <= 0 || this.isFlooded()) {
             return;
         }
@@ -911,7 +916,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (engine == null || this.isFlooded()) {
             return false; // no engine, or a firebox under water: nothing can burn
         }
-        return this.runsFree() || this.burnLeft > 0 || SuitFuel.isFuel(engine, this.inventory.getItem(FUEL_SLOT));
+        return this.runsFree() || this.burnLeft > 0 || SuitFuel.energyOf(engine, this.inventory.getItem(FUEL_SLOT), this.level()) > 0;
     }
 
     private void setPowered(boolean powered) {
@@ -938,6 +943,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private void syncSlots() {
         if (!this.level().isClientSide()) {
             this.entityData.set(FUEL_ITEM, this.inventory.getItem(FUEL_SLOT).copy());
+            this.entityData.set(FUEL_ENERGY, SuitFuel.energyOf(SuitEngine.of(this.inventory.getItem(ENGINE_SLOT)),
+                    this.inventory.getItem(FUEL_SLOT), this.level()));
             this.entityData.set(SOCKET_ITEM, this.inventory.getItem(SOCKET_SLOT).copy());
             this.entityData.set(HELMET, !this.inventory.getItem(HELMET_SLOT).isEmpty());
             HelmetStyle style = SuitHelmetItem.style(this.inventory.getItem(HELMET_SLOT));
@@ -993,7 +1000,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Both sides: all energy on board, burning item + everything in the fuel slot. */
     public int getTotalEnergy() {
         ItemStack fuel = this.getFuelStack();
-        return this.getBurnLeft() + fuel.getCount() * SuitFuel.energyOf(this.getEngine(), fuel);
+        return this.getBurnLeft() + fuel.getCount() * this.entityData.get(FUEL_ENERGY);
     }
 
     public boolean isLowOnFuel() {
@@ -1142,7 +1149,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             return false;
         }
         ItemStack fuel = this.inventory.getItem(FUEL_SLOT);
-        return this.burnLeft + (float) fuel.getCount() * SuitFuel.energyOf(this.getEngine(), fuel) >= amount;
+        return this.burnLeft + (float) fuel.getCount() * SuitFuel.energyOf(this.getEngine(), fuel, this.level()) >= amount;
     }
 
     /** Server: take energy, lighting more fuel items if the burning one hasn't got enough left. */
