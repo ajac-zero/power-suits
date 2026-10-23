@@ -88,11 +88,13 @@ final class ExhaustSmoke {
     }
 
     /**
-     * The star reactor's aura: now and then a faint, half-transparent violet wisp (vanilla's potion-effect swirl, the
-     * one entities under an effect give off) rises off a canister's glass and fades within half a block. User: rising
-     * sparks and wisps were "too many", "more subtle, like a faint aura instead of a trace"; portal particles (the next
-     * try) always start a block above their target and fall in. A little livelier under load. Not in the pilot's own
-     * cockpit view: the canisters sit about a block behind and below the eye.
+     * The star reactor's aura: ender particles (vanilla's portal particle, the purple specks round endermen, ender chests
+     * and end portal frames) drawn into a canister's glass (user, 2026-10-23; it was a faint violet potion swirl).
+     * A portal particle flies from (its spawn point + its "velocity" + 1 block up) back to its spawn point over ~2 s,
+     * so the spawn point is the glass, the velocity a short way out and half a block down: each speck starts at most
+     * half a block off the canister and sinks into it (with the default 1 block up they fell in from overhead).
+     * A little livelier under load. Not in the pilot's own cockpit view: the canisters sit about a block behind and
+     * below the eye.
      */
     private static void reactorMotes(PowerArmorEntity suit) {
         if (!suit.isAlive() || !suit.isPowered()) {
@@ -104,7 +106,7 @@ final class ExhaustSmoke {
         }
         RandomSource random = suit.getRandom();
         float load = Math.min(1F, suit.engineLoad());
-        if (random.nextFloat() >= 0.2F + 0.15F * load) {
+        if (random.nextFloat() >= 0.4F + 0.3F * load) {
             return;
         }
         float yaw = Mth.rotLerp(suit.getAimBlend(), suit.yBodyRot, suit.getYHeadRot()) * Mth.DEG_TO_RAD;
@@ -114,13 +116,10 @@ final class ExhaustSmoke {
         // a point on a canister's glass (its outer side or its back), somewhere up its height
         Vec3 glass = suit.position().add(0, GLASS_UP + suit.getStepOffset(1F) + (random.nextDouble() - 0.5) * 0.3, 0)
                 .subtract(forward.scale(PIPE_BACK + random.nextDouble() * 0.12)).add(side.scale(which * (GLASS_SIDE - random.nextDouble() * 0.12)));
-        Vec3 motion = suit.getDeltaMovement();
-        suit.level().addParticle(AURA, glass.x, glass.y, glass.z, motion.x * 0.5, 0.0, motion.z * 0.5);
+        // where the speck starts, relative to the glass: out to the side or back, and up (cancelling most of the 1 block)
+        Vec3 out = side.scale(which * (0.15 + random.nextDouble() * 0.35)).subtract(forward.scale(random.nextDouble() * 0.3));
+        suit.level().addParticle(ParticleTypes.PORTAL, glass.x, glass.y, glass.z, out.x, -0.5 - random.nextDouble() * 0.3, out.z);
     }
-
-    /** The aura's colour: the reactor's violet at about 40% opacity (ARGB). */
-    private static final net.minecraft.core.particles.ColorParticleOption AURA =
-            net.minecraft.core.particles.ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, 0x66B48CFF);
 
     private static void puff(PowerArmorEntity suit, ParticleOptions type, int perPipe, double lift, double up) {
         puff(suit, type, perPipe, lift, up, PIPE_SIDE);

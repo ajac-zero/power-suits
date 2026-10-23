@@ -175,7 +175,7 @@ exhausts; the other two are their own models (simple boxes, detail in the textur
   steel straps and valves, a pump between them with the Heart of the Sea glowing teal in a porthole, **bubbles** from
   the valves while it runs with its backpack under water (not in rain); star reactor = a netherite housing (vent grille,
   a round glowing core) between two energy canisters with glass strips showing the energy (violet -> white, slow
-  pulse) and a **faint aura** (now and then a translucent violet wisp off the glass; trails of sparks were too much).
+  pulse) and a **faint aura**: ender particles (the purple portal specks of endermen) sinking into the glass (2026-10-23; before: translucent violet wisps; trails of sparks were too much).
   Gauge: flame (firebox and tidal on land), endless while running free.
 - The machine mind: firebox suits keep out of water; a tidal suit's mind only runs while it has power.
 
