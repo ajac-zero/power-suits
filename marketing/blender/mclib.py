@@ -401,8 +401,10 @@ def light(kind, name, loc, target, energy, color=(1, 1, 1), size=1.0, angle=None
     return ob
 
 
-def sky_world(zenith=(0.16, 0.36, 0.85), horizon=(0.75, 0.86, 1.0), strength=1.0, camera_strength=1.0, nadir=None):
-    """A vertical gradient world: lights the scene softly from all around and shows as the backdrop."""
+def sky_world(zenith=(0.16, 0.36, 0.85), horizon=(0.75, 0.86, 1.0), strength=1.0, camera_strength=1.0, nadir=None,
+              rotation=None):
+    """A vertical gradient world: lights the scene softly from all around and shows as the backdrop.
+    rotation: a Matrix taking a real view direction into the tilted world's (see env_tilt), or None."""
     w = bpy.data.worlds.new('sky')
     bpy.context.scene.world = w
     w.use_nodes = True
@@ -411,7 +413,14 @@ def sky_world(zenith=(0.16, 0.36, 0.85), horizon=(0.75, 0.86, 1.0), strength=1.0
     tc = nt.nodes.new('ShaderNodeTexCoord')
     sep = nt.nodes.new('ShaderNodeSeparateXYZ')
     ramp = nt.nodes.new('ShaderNodeValToRGB')
-    nt.links.new(tc.outputs['Generated'], sep.inputs['Vector'])
+    view = tc.outputs['Generated']
+    if rotation is not None:
+        rot = nt.nodes.new('ShaderNodeVectorRotate')
+        rot.rotation_type = 'EULER_XYZ'
+        rot.inputs['Rotation'].default_value = rotation.to_euler('XYZ')
+        nt.links.new(view, rot.inputs['Vector'])
+        view = rot.outputs['Vector']
+    nt.links.new(view, sep.inputs['Vector'])
     nt.links.new(sep.outputs['Z'], ramp.inputs['Fac'])
     # Generated coordinates of a world are the view direction: Z is the sine of the elevation (-1..1).
     ramp.color_ramp.elements[0].position = 0.0
@@ -510,6 +519,17 @@ def square_sun(direction, distance=400, size=40, strength=12.0, color=(1.0, 0.92
     ob.visible_shadow = False
     ob.visible_diffuse = False
     return ob
+
+
+def env_tilt(cam_loc, target, pitch=0.0, roll=0.0):
+    """Tilt the world round the camera instead of moving the camera (the subjects' framing stays as it was): returns
+    the matrix that places the backdrop (sky, sun, clouds, ground...) as a camera pitched up by `pitch` and rolled by
+    `roll` degrees would see it. Parent backdrop objects to an empty with this matrix and give its rotation's inverse
+    (the view direction into the tilted world) to sky_world / the haze."""
+    rot = (Vector(target) - Vector(cam_loc)).to_track_quat('-Z', 'Y').to_matrix().to_4x4()
+    c = Matrix.Translation(cam_loc) @ rot
+    turned = c @ Matrix.Rotation(math.radians(pitch), 4, 'X') @ Matrix.Rotation(math.radians(roll), 4, 'Z')
+    return c @ turned.inverted()
 
 
 def depth_of_field(cam, focus, fstop=2.8):

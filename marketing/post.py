@@ -1,6 +1,10 @@
 """Finishing pass for key-art renders: bloom around bright pixels (the square sun, highlights) and a soft vignette.
 
-    uv run --with pillow --with numpy python3 marketing/post.py in.png out.png [bloom 0.55] [vignette 0.22]
+    uv run --with pillow --with numpy python3 marketing/post.py in.png out.png [bloom 0.55] [vignette 0.22] [--white]
+
+--white: the render has a transparent background (film_transparent); lay it on pure white first (Man of Tomorrow's
+comic-cover look). Use vignette 0 with it, or the corners go grey. --ink N: also an ink outline N pixels thick round
+the figures' silhouettes (from the alpha, so see-through skin layers don't get a box drawn round them).
 """
 import sys
 
@@ -8,10 +12,21 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 src, dst = sys.argv[1], sys.argv[2]
-bloom = float(sys.argv[3]) if len(sys.argv) > 3 else 0.55
-vignette = float(sys.argv[4]) if len(sys.argv) > 4 else 0.22
 
-im = Image.open(src).convert('RGB')
+args = [x for i, x in enumerate(sys.argv[1:], 1) if not x.startswith('--') and sys.argv[i - 1] != '--ink']
+bloom = float(args[2]) if len(args) > 2 else 0.55
+vignette = float(args[3]) if len(args) > 3 else 0.22
+im = Image.open(src)
+if '--white' in sys.argv:
+    im = im.convert('RGBA')
+    white = Image.new('RGBA', im.size, (255, 255, 255, 255))
+    if '--ink' in sys.argv:
+        n = int(sys.argv[sys.argv.index('--ink') + 1])
+        alpha = im.getchannel('A').point(lambda v: 255 if v > 128 else 0)
+        grown = alpha.filter(ImageFilter.MaxFilter(2 * n + 1)).filter(ImageFilter.GaussianBlur(0.8))
+        white.paste((20, 20, 28, 255), mask=grown)
+    im = Image.alpha_composite(white, im)
+im = im.convert('RGB')
 a = np.asarray(im).astype(np.float32) / 255
 w, h = im.size
 

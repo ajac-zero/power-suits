@@ -15,6 +15,11 @@ Key art rendered in Blender from the mod's own model, so it always matches the g
    - backdrop: blocky clouds and the square sun
    - lights and Cycles settings
 
+   `metropolis.py` builds a Minecraft city seen from the air: a street grid of skyscrapers whose facades are one
+   quad per wall, tiled with a pattern made from vanilla block textures. It also adds parks, green copper crowns on
+   the art-deco towers, the Daily Planet with its gold globe, haze coloured like the sky, and a sun that lights only
+   the city (light linking).
+
    `mcblocks.py` builds Minecraft scenery (blocks with only their visible faces, crossed-quad plants, particle sprites)
    with the game's own textures, read from the Minecraft client jar in the Gradle cache. They're cached in
    `marketing/.cache/` (git-ignored: Mojang's files stay out of the repo).
@@ -26,7 +31,9 @@ Key art rendered in Blender from the mod's own model, so it always matches the g
    /Applications/Blender.app/Contents/MacOS/Blender -b -P marketing/blender/man_of_tomorrow.py -- --out marketing/out/man_of_tomorrow_raw.png
    uv run --with pillow --with numpy python3 marketing/post.py marketing/out/man_of_tomorrow_raw.png marketing/out/man_of_tomorrow.png
    ```
-   `--bg far|near|blur|clean` picks the backdrop. `--cpu` renders on the CPU (if Metal crashes). `--views` renders orthographic front/side/back/top checks of a pose instead.
+   Man of Tomorrow's final look is on white: `post.py raw.png out.png 0 0 --white` (no bloom, no vignette; the
+   transparent render is laid on pure white, `--ink N` would add an outline). `--bg white|sky|city|far|near|blur|clean`
+   picks the backdrop. `--cpu` renders on the CPU (if Metal crashes). `--views` renders orthographic front/side/back/top checks of a pose instead.
 
    Skin casting sheet (numbered heads, or `--body` for whole players):
    `/Applications/Blender.app/Contents/MacOS/Blender -b -P marketing/blender/skin_lineup.py -- sheet.png skin1.png skin2.png ...`
@@ -37,7 +44,12 @@ The creative process and staging rules are in `.agents/skills/key-art/SKILL.md`.
 - `man_of_tomorrow`: homage to the "Man of Tomorrow" cover (Superman vs Lex Luthor's warsuit), mirrored and staged
   a moment before contact. Lex flies the suit painted lime, without a helmet, so his head sits in the collar the way
   the game draws a helmetless pilot. He has the chainsaw raised overhead and the Nether Star reactor
-  on his back, with its glowmask lit. The camera looks down from above so his head reads. Superman and Lex are DC characters, so use this as
+  on his back, with its glowmask lit. The camera looks down from above so his head reads. Like the cover, the fighters
+  are alone on pure white, lit flat by an even white light with no sun and no lamps, so the colours read as flat
+  areas (2026-10-23; the first version had a cloud sea far below, which looked bland next to the other pictures).
+  `--bg sky` keeps the other try: a clear sky over a Minecraft metropolis far below, with the fighters above
+  downtown. The world is turned round the camera (`mclib.env_tilt`) so the horizon tilts into the frame without
+  moving the fighters, and a hard sun comes from the south-west. Superman and Lex are DC characters, so use this as
   gallery or social fan art, not as the mod's icon or banner.
 - `big_daddy`: a BioShock homage. The suit painted brown, with the Protector helmet (Subject Delta's riveted visor,
   lit amber as with a pilot inside: Big Daddies' portholes are yellow too), the tidal engine and the drill. It comes

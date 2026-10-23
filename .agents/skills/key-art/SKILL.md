@@ -119,6 +119,23 @@ comic cover. Lex Luthor in a lime suit fights Superman high above the clouds. Th
 - **Particles like the game's**: tinted `generic_N` sprites with low emission (1-1.6). Strong emission bleaches to pink
   under AgX. A beam the game respawns every tick reads best as the newest helix plus a few older, sparser twists.
 
+## Backdrops and finishing (Man of Tomorrow redo, 2026-10-23)
+- **The user's path was busy -> stylized**: a cloud sea (bland), a metropolis close under the fight (too close),
+  then far below at a tilt with a hard sun (glare from the side, flat from behind the camera; south-west + weaker
+  lamps fixed both). In the end they chose the reference's **pure white background, lit flat (no sun, no lamps)**,
+  with **no outline**. When a backdrop keeps needing fixes, offer the stylized option early.
+- **Pure white**: a white world comes out light grey through AgX. Render with `film_transparent` and lay it on white
+  in `post.py --white` (bloom 0, vignette 0: bloom spreads the white background over the figures). Turn depth of
+  field off: a blurred edge on white reads as a smudge.
+- **Outlines**: Freestyle draws a box round the skins' see-through outer layer (it can't see texture alpha). An
+  outline from the render's alpha (`post.py --ink N`) follows the real silhouette.
+- **Blender cameras stop at 1000 units** (`clip_end`): a city 1 km out was cut off and looked like a floating island.
+- **Tilt the world, not the camera**, to change the backdrop of an approved pose: `mclib.env_tilt` returns the
+  matrix for an empty that parents the sky's objects and lights; the world shader and the haze take its inverse
+  rotation. Place landmarks by frame position (cast from the camera to the ground), not by world coordinates.
+- **Big cities stay cheap** if each wall is one quad with a tiled pattern image (`metropolis.py`): about 170k
+  faces, and a preview still takes ~15 s.
+
 ## Ideas queued (from the first session)
 Helmet lineup, the 16 paint colours, a rogue suit at night in a lightning storm, and
 in-game screenshots (an autopilot photo scene) for the gallery.
