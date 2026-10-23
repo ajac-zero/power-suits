@@ -245,13 +245,21 @@ public final class ShowcaseScene {
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
             for (int a = -3; a <= 22; a++) {
-                for (int s = -6; s <= 6; s++) {
+                for (int s = -3; s <= 3; s++) {
                     Vec3 p = setPos.add(f.scale(a)).add(r.scale(s));
                     int x = Mth.floor(p.x), z = Mth.floor(p.z);
                     level.setBlock(new BlockPos(x, base.getY() - 1, z), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 2);
                     level.setBlock(new BlockPos(x, base.getY() - 2, z), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 2);
                     for (int y = 0; y <= 6; y++) {
                         level.setBlock(new BlockPos(x, base.getY() + y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                    }
+                    // a natural meadow on the strip: short grass here and there, a few sunflower-plains flowers
+                    long h = (x * 73856093L) ^ (z * 19349663L);
+                    h = Math.floorMod(h * 2654435761L >>> 7, 100);
+                    if (Math.abs(s) >= 1 && h < 45) {
+                        level.setBlock(new BlockPos(x, base.getY(), z), net.minecraft.world.level.block.Blocks.SHORT_GRASS.defaultBlockState(), 2);
+                    } else if (Math.abs(s) >= 1 && h < 50) {
+                        level.setBlock(new BlockPos(x, base.getY(), z), net.minecraft.world.level.block.Blocks.DANDELION.defaultBlockState(), 2);
                     }
                 }
             }
