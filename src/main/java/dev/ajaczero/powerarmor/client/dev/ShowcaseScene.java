@@ -144,7 +144,7 @@ public final class ShowcaseScene {
     /** Where the pilot aims (set by the server when a set starts; the view turns to it every tick), or null. */
     private static volatile Vec3 aim;
 
-    /** Set being shot: 0 = walk, 1 = chaingun at dusk, 2 = coral reef, 3 = drill into rock, 4 = chainsaw on a tree. */
+    /** Set being shot: 0 = walk, 1 = chaingun at dusk, 2 = coral reef, 3 = drill into rock, 4 = chainsaw on a tree, 5 = EM projector. */
     private static int set = -1;
     /** Client tick at which the current set's place was ready (-1: the server is still looking). */
     private static int setStart = -1;
@@ -185,6 +185,10 @@ public final class ShowcaseScene {
                 // the chainsaw felling a tree in a forest, filmed from outside
                 case 4 -> moveTo(mc, "tree", Biomes.PLAINS, 6000, l -> findTree(l, Biomes.PLAINS, new BlockPos(739, 80, -659)),
                         new Loadout(DyeColor.GREEN, ModItems.FIREBOX.get(), ModItems.CHAINSAW.get(), HelmetStyle.SPARTAN));
+                // the EM projector lifting a creeper, below the dusk set's village by day: purple (Samus's Gravity Suit)
+                // with the Hunter helmet and the star reactor
+                case 5 -> moveTo(mc, "em", Biomes.PLAINS, 5000, pin(595, 70, -812, 90),
+                        new Loadout(DyeColor.PURPLE, ModItems.STAR_REACTOR.get(), ModItems.EM_PROJECTOR.get(), HelmetStyle.HUNTER));
                 default -> { return false; }
             }
             return true;
@@ -203,6 +207,7 @@ public final class ShowcaseScene {
             case 2 -> reef(mc, k);
             case 3 -> mine(mc, k);
             case 4 -> tree(mc, k);
+            case 5 -> em(mc, k);
             default -> {}
         }
         return true;
@@ -300,6 +305,44 @@ public final class ShowcaseScene {
         if (k == 0) toolCamera(mc, TREE_CAM[0], TREE_CAM[1], TREE_CAM[2], 2.6);
         if (k >= 2 && k <= 40 && k % 2 == 0) shot(mc, "tree_side", k);
         if (k == 62) { fire = false; aim = null; done = true; }
+    }
+
+    /**
+     * The EM projector on a creeper: it comes in, the beam catches it, the pilot looks up and it rises into the air.
+     * The grab and the look up happen while the player is the camera (their aim reaches the server only then), then
+     * still cameras behind and in front (on the hand's side, then the projector's).
+     */
+    private static void em(Minecraft mc, int k) {
+        var o = mc.options;
+        if (k == -SETTLE) { o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, true); yaw = setYaw; pitch = 10; }
+        if (k == -20) creeper(mc);
+        if (k == -14) aim = target;
+        if (k == -6) fire = true;
+        if (k == 6) { aim = null; yaw = setYaw; pitch = -22; } // caught: look up, the creeper rises 3.5 blocks out along the view
+        // the in-game view from behind dropped into the grass when the pilot looked up: a still camera behind instead
+        if (k == 14) toolCamera(mc, -4.5, -2.5, 3.0, 3.5);
+        if (k >= 18 && k <= 27 && k % 3 == 0) shot(mc, "em_back", k);
+        // in front, on the hand's side: the raised projector arm hid the helmet from its own side
+        if (k == 30) toolCamera(mc, 6.5, -4.0, 1.0, 3.0);
+        if (k >= 34 && k <= 58 && k % 3 == 0) shot(mc, "em_front", k);
+        if (k == 60) toolCamera(mc, 6.5, 4.0, 1.0, 3.0);
+        if (k >= 64 && k <= 82 && k % 3 == 0) shot(mc, "em_front_tool", k);
+        if (k == 84) { fire = false; done = true; }
+    }
+
+    /** Server: a creeper 6 blocks ahead of the suit, facing it; {@code target} is its middle (the beam aims there). */
+    private static void creeper(Minecraft mc) {
+        AutoPilot.onServer(mc, player -> {
+            ServerLevel level = player.level();
+            Vec3 p = setPos.add(forward().scale(6));
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(p.x), Mth.floor(p.z));
+            if (EntityTypes.CREEPER.create(level, EntitySpawnReason.COMMAND) instanceof Mob mob) {
+                mob.snapTo(p.x, y, p.z, setYaw + 180, 0);
+                mob.setPersistenceRequired();
+                level.addFreshEntity(mob);
+                target = new Vec3(p.x, y + 0.85, p.z);
+            }
+        });
     }
 
     /**
@@ -574,7 +617,9 @@ public final class ShowcaseScene {
             player.teleportTo(pos.x, pos.y, pos.z);
             PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.COMMAND);
             suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(loadout.engine()));
-            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 48));
+            // the star reactor runs on a Nether Star in the fuel slot (never used up); the others burn coal
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, loadout.engine() == ModItems.STAR_REACTOR.get()
+                    ? new ItemStack(Items.NETHER_STAR) : new ItemStack(Items.COAL, 48));
             ItemStack helmet = new ItemStack(ModItems.SUIT_HELMET.get());
             if (loadout.helmet() != null) {
                 helmet.set(ModDataComponents.HELMET_STYLE.get(), loadout.helmet());
