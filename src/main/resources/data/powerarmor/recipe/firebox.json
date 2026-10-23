@@ -9,7 +9,7 @@
   "key": {
     "B": "minecraft:iron_block",
     "I": "minecraft:iron_ingot",
-    "F": "minecraft:campfire"
+    "F": "minecraft:blast_furnace"
   },
   "result": {
     "id": "powerarmor:firebox",

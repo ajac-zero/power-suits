@@ -59,7 +59,7 @@ The engines (swapped in the menu's engine slot; a new suit has none, so craft on
 
 | Engine | Recipe |
 |---|---|
-| Firebox | iron blocks in the corners, iron ingots on the edges, a campfire in the middle |
+| Firebox | iron blocks in the corners, iron ingots on the edges, a blast furnace in the middle |
 | Tidal Engine | iron blocks in the corners, dark prismarine on the edges, a Heart of the Sea in the middle |
 | Star Reactor | iron blocks in the corners, diamonds on the edges, an end crystal in the middle (its Nether Star goes in the fuel slot) |
 

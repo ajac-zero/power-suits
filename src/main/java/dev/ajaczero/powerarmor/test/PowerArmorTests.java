@@ -2083,11 +2083,10 @@ public final class PowerArmorTests {
         checkCraft(helper, 3, 1, List.of(i, p, c), ModItems.SUIT_ARM.get()); // mirrored: the other arm
         checkCraft(helper, 1, 3, List.of(c, p, i), ModItems.SUIT_LEG.get());
         ItemStack b = new ItemStack(Items.IRON_BLOCK), n = new ItemStack(Items.IRON_INGOT);
-        checkCraft(helper, 3, 3, List.of(b, n, b, n, new ItemStack(Items.CAMPFIRE), n, b, n, b), ModItems.FIREBOX.get());
-        // no lapis or furnaces any more (2026-10-23)
+        checkCraft(helper, 3, 3, List.of(b, n, b, n, new ItemStack(Items.BLAST_FURNACE), n, b, n, b), ModItems.FIREBOX.get());
+        // no lapis or furnaces in the suit any more (2026-10-23; the firebox keeps its blast furnace)
         ItemStack l = new ItemStack(Items.LAPIS_BLOCK);
         helper.assertTrue(craft(helper, 3, 3, List.of(i, l, i, l, new ItemStack(Items.FURNACE), l, i, l, i)).isEmpty(), "the old lapis torso is gone");
-        helper.assertTrue(craft(helper, 3, 3, List.of(b, n, b, n, new ItemStack(Items.BLAST_FURNACE), n, b, n, b)).isEmpty(), "the old blast-furnace firebox is gone");
         ItemStack h = new ItemStack(ModItems.SUIT_HELMET.get()), t = new ItemStack(ModItems.SUIT_TORSO.get());
         ItemStack a = new ItemStack(ModItems.SUIT_ARM.get()), g = new ItemStack(ModItems.SUIT_LEG.get());
         checkCraft(helper, 3, 2, List.of(a, t, a, g, e, g), ModItems.POWER_ARMOR.get()); // the helmet goes on afterwards
