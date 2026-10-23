@@ -219,18 +219,43 @@ public final class ShowcaseScene {
     private static void walk(Minecraft mc, int k) {
         var o = mc.options;
         // F5's front view turns the pilot's view round: looking up puts its camera higher, looking down at the suit
-        if (k == -SETTLE) { o.setCameraType(CameraType.THIRD_PERSON_FRONT); DevUtil.hideGui(mc, true); yaw = setYaw; pitch = -15; }
+        if (k == -SETTLE) { o.setCameraType(CameraType.THIRD_PERSON_FRONT); DevUtil.hideGui(mc, true); yaw = setYaw; pitch = -15; levelPath(mc); }
         if (k == 0) walk = true;
         if (k >= 8 && k <= 28 && k % 4 == 0) shot(mc, "front_walk", k);
         // a still camera standing in the suit's path, as a friend would: the suit walks up to it. (A scripted camera
         // stops the client sending the pilot's moves to the server; the client still walks the suit, for a few seconds.)
-        if (k == 30) pathCamera(mc, 8.0, 2.3);
+        // close and low with a narrow lens, so the suit fills the frame (the lens is put back for the cockpit shots)
+        if (k == 30) { pathCamera(mc, 7.0, 1.4); mc.options.fov().set(40); }
         if (k >= 34 && k <= 50 && k % 4 == 0) shot(mc, "front_close", k);
-        if (k == 52) { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); yaw = setYaw - 25; pitch = 3; } // the mountain and the sea
+        if (k == 52) { o.fov().set(fov); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); yaw = setYaw - 25; pitch = 3; } // the mountain and the sea
         if (k >= 62 && k <= 78 && k % 4 == 0) shot(mc, "cockpit", k);
         if (k == 80) { yaw = setYaw; o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, true); pitch = 12; }
         if (k >= 86 && k <= 114 && k % 4 == 0) shot(mc, "back_walk", k);
         if (k == 116) done = true;
+    }
+
+    /**
+     * Server: flattens the strip the suit walks along (and the camera stands on): grass at the pilot's ground level, nothing
+     * above it. On the hilltop a step in the ground put one foot half a block over the grass, and tall grass or a ledge
+     * crossed the front shots.
+     */
+    private static void levelPath(Minecraft mc) {
+        Vec3 f = forward(), r = new Vec3(-f.z, 0, f.x);
+        BlockPos base = BlockPos.containing(setPos);
+        AutoPilot.onServer(mc, player -> {
+            ServerLevel level = player.level();
+            for (int a = -3; a <= 22; a++) {
+                for (int s = -6; s <= 6; s++) {
+                    Vec3 p = setPos.add(f.scale(a)).add(r.scale(s));
+                    int x = Mth.floor(p.x), z = Mth.floor(p.z);
+                    level.setBlock(new BlockPos(x, base.getY() - 1, z), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+                    level.setBlock(new BlockPos(x, base.getY() - 2, z), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 2);
+                    for (int y = 0; y <= 6; y++) {
+                        level.setBlock(new BlockPos(x, base.getY() + y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                    }
+                }
+            }
+        });
     }
 
     /** Sunset (the sun on the horizon at ~12000; vanilla nights are near black in pictures). Zombies wear helmets: they'd burn now. */
