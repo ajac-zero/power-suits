@@ -114,6 +114,14 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'terrain:New World'
         }
 
+        // Dev tool: gameplay screenshots for the mod page (client/dev/ShowcaseScene): a fresh seeded world with real
+        // terrain, run/screenshots/showcase_*.png at 1920x1080 (960x540 window on a Retina screen), quits by itself.
+        showcase {
+            client()
+            systemProperty 'powerarmor.autopilot', 'showcase'
+            programArguments.addAll '--width', '960', '--height', '540'
+        }
+
         server {
             server()
             programArgument '--nogui'

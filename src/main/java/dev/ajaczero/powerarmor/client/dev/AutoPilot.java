@@ -43,7 +43,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class AutoPilot {
-    private static final boolean ENABLED = System.getProperty("powerarmor.autopilot") != null && !TerrainPilot.enabled();
+    private static final boolean ENABLED = System.getProperty("powerarmor.autopilot") != null && !TerrainPilot.enabled() && !ShowcaseScene.enabled();
     private static final String WORLD_PREFIX = "autopilot-";
     /** "view" mode: stay in the cockpit and re-shoot the viewmodel whenever run/view/shoot appears (live tuning). */
     private static final boolean VIEW = "view".equals(System.getProperty("powerarmor.autopilot"));
