@@ -122,6 +122,27 @@ neoForge {
             programArguments.addAll '--width', '960', '--height', '540'
         }
 
+
+        // Dev tools: multiplayer check. Start runServerMp first, then runMpDriver and runMpWatch (own game dirs, same
+        // machine); the server scripts the story and stops itself. Compare with tools/mp-report.py.
+        serverMp {
+            server()
+            programArgument '--nogui'
+            systemProperty 'powerarmor.mpscript', 'true'
+        }
+        mpDriver {
+            client()
+            gameDirectory = project.file('run-mp-driver')
+            systemProperty 'powerarmor.mp', 'driver'
+            programArguments.addAll '--username', 'Driver', '--quickPlayMultiplayer', 'localhost:25565', '--width', '640', '--height', '360'
+        }
+        mpWatch {
+            client()
+            gameDirectory = project.file('run-mp-watch')
+            systemProperty 'powerarmor.mp', 'watch'
+            programArguments.addAll '--username', 'Watcher', '--quickPlayMultiplayer', 'localhost:25565', '--width', '960', '--height', '540'
+        }
+
         server {
             server()
             programArgument '--nogui'

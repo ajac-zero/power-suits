@@ -48,3 +48,5 @@ __pycache__/
 marketing/out/*_raw.png
 marketing/out/*.tiles/
 marketing/.cache/
+run-mp-driver/
+run-mp-watch/
