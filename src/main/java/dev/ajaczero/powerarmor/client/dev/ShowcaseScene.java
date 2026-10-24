@@ -172,7 +172,7 @@ public final class ShowcaseScene {
                 // set with a null spot to search (findSpot), then copy the place from run/showcase.csv.
                 // a sunflower-plains hilltop: a mountain and the sea on the left, a village ahead
                 case 0 -> moveTo(mc, "walk", Biomes.SUNFLOWER_PLAINS, 6000, pin(739, 116, -659, 0),
-                        new Loadout(DyeColor.BLUE, ModItems.FIREBOX.get(), ModItems.DRILL.get()));
+                        new Loadout(null, ModItems.FIREBOX.get(), ModItems.DRILL.get()));
                 // plains below a village, looking west into the sunset (yaw 90 looks -X)
                 case 1 -> moveTo(mc, "dusk", Biomes.PLAINS, DUSK, pin(595, 70, -812, 90),
                         new Loadout(DyeColor.RED, ModItems.FIREBOX.get(), ModItems.CHAINGUN.get()));
@@ -219,14 +219,15 @@ public final class ShowcaseScene {
     private static void walk(Minecraft mc, int k) {
         var o = mc.options;
         // F5's front view turns the pilot's view round: looking up puts its camera higher, looking down at the suit
-        if (k == -SETTLE) { o.setCameraType(CameraType.THIRD_PERSON_FRONT); DevUtil.hideGui(mc, true); yaw = setYaw; pitch = -15; levelPath(mc); }
+        if (k == -SETTLE) { o.setCameraType(CameraType.THIRD_PERSON_FRONT); DevUtil.hideGui(mc, true); yaw = setYaw; pitch = 0; levelPath(mc); }
         if (k == 0) walk = true;
         if (k >= 8 && k <= 28 && k % 4 == 0) shot(mc, "front_walk", k);
         // a still camera standing in the suit's path, as a friend would: the suit walks up to it. (A scripted camera
         // stops the client sending the pilot's moves to the server; the client still walks the suit, for a few seconds.)
-        // close and low with a narrow lens, so the suit fills the frame (the lens is put back for the cockpit shots)
-        if (k == 30) { pathCamera(mc, 7.0, 1.4); mc.options.fov().set(40); }
-        if (k >= 34 && k <= 50 && k % 4 == 0) shot(mc, "front_close", k);
+        // head height, a little to the tool side, a narrow lens: the suit fills the frame and looks level, not up at the sky
+        // (a low camera tilted the visor up). Bare steel for this set.
+        if (k == 30) { angleCamera(mc, 6.5, 1.5, 2.4, 2.0); mc.options.fov().set(38); }
+        if (k >= 32 && k <= 38 && k % 2 == 0) shot(mc, "front_close", k);
         if (k == 52) { o.fov().set(fov); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); yaw = setYaw - 25; pitch = 3; } // the mountain and the sea
         if (k >= 62 && k <= 78 && k % 4 == 0) shot(mc, "cockpit", k);
         if (k == 80) { yaw = setYaw; o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, true); pitch = 12; }
@@ -959,6 +960,16 @@ public final class ShowcaseScene {
                 player.startRiding(suit, true, true);
             }
         });
+    }
+
+    /** A still camera {@code ahead} blocks in front of the suit, {@code side} to its tool side, {@code up} high, looking at a point {@code lookY} up the suit. */
+    private static void angleCamera(Minecraft mc, double ahead, double side, double up, double lookY) {
+        if (!(mc.player.getVehicle() instanceof PowerArmorEntity suit)) {
+            return;
+        }
+        Vec3 forward = forward(), left = new Vec3(forward.z, 0, -forward.x);
+        Vec3 at = suit.position();
+        camera(mc, at.add(forward.scale(ahead)).add(left.scale(side)).add(0, up, 0), at.add(0, lookY, 0));
     }
 
     /** A still camera {@code ahead} blocks in front of where the suit is now (the client's copy), a little to its tool side, {@code up} blocks up. */
