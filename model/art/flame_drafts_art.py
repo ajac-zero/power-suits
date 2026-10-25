@@ -394,16 +394,42 @@ def flamer_h(pre, pattern="shift"):
     return d
 
 
+def socket_base(donor="drill_base"):
+    """The standard tool socket every power tool's 7x1x7 base wears (slate sides, a two-tone underside, a steel top with
+    cyan contacts): a painter copying the donor base's faces pixel for pixel from the live texture (each tool owns a copy
+    of it; user, 2026-10-25: the flamethrower's plain iron base broke the set)."""
+    import base64, io
+    from PIL import Image
+    src = json.load(open(SRC))
+    tex = Image.open(io.BytesIO(base64.b64decode(src["texture"].split(",", 1)[1]))).convert("RGBA")
+    faces = next(e for e in src["model"]["elements"] if e["name"] == donor)["faces"]
+    keys = {v: k for k, v in backpack_kit.PAL.items()}
+    spare = iter("0123456789!#$%&*+=?@^~")
+
+    def key(rgb):
+        if rgb not in keys:
+            k = next(c for c in spare if c not in backpack_kit.PAL)
+            backpack_kit.PAL[k] = rgb; keys[rgb] = k
+        return keys[rgb]
+
+    def paint(face, w, h, f, t):
+        u0, v0, u1, v1 = faces[face]["uv"]          # a reversed pair = a mirrored face: sample it the same way
+        return [''.join(key('%02x%02x%02x' % tex.getpixel((int(u0 + (x + 0.5) * (u1 - u0) / w),
+                                                             int(v0 + (y + 0.5) * (v1 - v0) / h)))[:3])
+                        for x in range(w)) for y in range(h)]
+    return paint
+
+
 def flamer_slim(pre, glow=True):
     """Round 11, the game's flamethrower since 2026-10-25 (user: "make the barrel 3x3 and the tank 3 wide, so both fit in
     the flame neck"; picked over the 5x5 one): a 3x3 holed barrel round a 1x1 black core, holes in each face's middle
     column, staggered round the barrel (front/back on odd rows, sides on even), and the tank 3 wide x 2 deep right behind
     it; cap and pilot light scaled to match. Its barrel's centre is 1 px in front of the socket's axis
     (FlamethrowerItem.barrelForwardPixels)."""
-    # (2026-10-25, user after seeing it in Blockbench: no valve wheel; the base in the neck's iron; no neck: the barrel and
-    # tank take its pixel, up to the base's underside, and the pair is centred under the 7x7 base, x -13..-10, z -4..1)
+    # (2026-10-25, user after seeing it in Blockbench: no valve wheel; no neck: the barrel and tank take its pixel, up to
+    # the base's underside, and the pair is centred under the 7x7 base, x -13..-10, z -4..1)
     d = {}
-    d[f"{pre}_base"] = ([-15, BASE, -5], [-8, BASE + 1, 2], on('iron'))
+    d[f"{pre}_base"] = ([-15, BASE, -5], [-8, BASE + 1, 2], socket_base())   # the standard socket, like every tool
     d.update(shroud(pre, -13, -10, -4, -1, 10.625, BASE, 0, black=True, checker=True))
     d[f"{pre}_core"] = ([-12, 10.625, -3], [-11, BASE, -2], on('iron', **{k: lambda w, h, f, t: ['K' * w] * h
                                                                          for k in ("north", "south", "east", "west", "down")}))
