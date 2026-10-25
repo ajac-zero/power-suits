@@ -394,11 +394,40 @@ def flamer_h(pre, pattern="shift"):
     return d
 
 
-# Since 2026-10-25 draft H is the game's flamethrower bone (cubes flame_*): rebuilding it in place keeps the bone (only its
-# cubes are replaced; no animation keys them). The earlier drafts E and G were deleted (git history).
-DRAFTS = {"flamethrower": flamer_h("flame", "shift")}   # round 9's other patterns: mid / swap / board (not used)
+def flamer_slim(pre, glow=True):
+    """Round 11, the game's flamethrower since 2026-10-25 (user: "make the barrel 3x3 and the tank 3 wide, so both fit in
+    the flame neck"; picked over the 5x5 one, neck kept 5x5): the tool inside the neck's 5x5 footprint (x -14..-9,
+    z -5..0). A 3x3 holed barrel at the front (z -5..-2) round a 1x1 black core, holes in each face's middle column,
+    staggered round the barrel (front/back on odd rows, sides on even); the tank 3 wide x 2 deep right behind it
+    (z -2..0). Cap, pilot light and valve wheel scaled to match. Its barrel's centre is 2 px in front of the socket's axis
+    (FlamethrowerItem.barrelForwardPixels). In game the base cube is the drill's (box UV net at [200, 76]), moved over
+    from the old flamethrower when this one replaced it."""
+    d = {}
+    d[f"{pre}_base"] = ([-15, BASE, -5], [-8, BASE + 1, 2], on('iron'))
+    d[f"{pre}_neck"] = ([-14, 18.625, -5], [-9, BASE, 0], on('iron'))
+    d.update(shroud(pre, -13, -10, -5, -2, 10.625, 18.625, 0, black=True, checker=True))
+    d[f"{pre}_core"] = ([-12, 10.625, -4], [-11, 18.625, -3], on('iron', **{k: lambda w, h, f, t: ['K' * w] * h
+                                                                          for k in ("north", "south", "east", "west", "down")}))
+    # the tank ends at the neck's underside: running up into it, their back faces shared the plane z 0 (z-fighting)
+    d[f"{pre}_tank"] = ([-13, 13.125, -2], [-10, 18.625, 0], RED)
+    d[f"{pre}_cap"] = ([-12.5, 12.125, -2], [-10.5, 13.125, 0], on('steel'))
+    d[f"{pre}_wheel"] = ([-12, 15.625, 0], [-11, 16.625, 0.75], WHEEL)
+    d[f"{pre}_pilot_rod"] = ([-12, 9.625, -1], [-11, 12.125, 0], on('iron'))
+    d[f"{pre}_pilot_arm"] = ([-12, 9.625, -2], [-11, 10.625, -1], on('iron'))
+    # the tip glows (reserved dark blues u / v, lit by power_armor_glow_pilot.png); a draft built next to a glowing
+    # flamethrower can't use them (the kit refuses reserved colours already in the texture): glow=False paints a look-alike
+    u, v = ('u', 'v') if glow else ('w', 'w')
+    d[f"{pre}_pilot_tip"] = ([-12, 9.625, -3], [-11, 10.625, -2],
+                             on('iron', **{k: [v] for k in ("north", "east", "west")}, up=[u], down=[v], south=[u]))
+    return d
+
+
+backpack_kit.PAL.update(w='3a6ad0')
+# The game's flamethrower bone (cubes flame_*): rebuilding it in place keeps the bone (only its cubes are replaced; no
+# animation keys them). Draft H (5x5 barrel, flamer_h) was the game's from 76b3cf6 to round 11; E and G are in git history.
+DRAFTS = {"flamethrower": flamer_slim("flame")}
 
 if __name__ == "__main__":
-    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before flamethrower longer barrel")
+    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before flamethrower rebuild")
     json.dump(plan, open(OUT, "w"))
     print("cubes", sum(len(c) for c in DRAFTS.values()), "pixels", len(plan["pixels"]))

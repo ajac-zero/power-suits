@@ -91,7 +91,7 @@ public final class CockpitHands {
         pose.translate(p.x, p.y + bob(suit), p.z + kick * 0.10F);
         pose.rotateDegrees(Axis.YP, Mth.lerp(raise, toolYaw, toolRaisedYaw));
         pose.rotateDegrees(Axis.XP, Mth.lerp(raise, toolPitch, toolRaisedPitch) + kick * 8F);
-        pose.rotateDegrees(Axis.YP, toolRoll + extraRoll(suit));
+        pose.rotateDegrees(Axis.YP, toolRoll);
         pose.scale(toolScale, toolScale, toolScale);
     }
 
@@ -102,14 +102,8 @@ public final class CockpitHands {
                 .translate(p.x, p.y + bob(suit), p.z)
                 .rotateY(Mth.lerp(raise, toolYaw, toolRaisedYaw) * Mth.DEG_TO_RAD)
                 .rotateX(Mth.lerp(raise, toolPitch, toolRaisedPitch) * Mth.DEG_TO_RAD)
-                .rotateY((toolRoll + extraRoll(suit)) * Mth.DEG_TO_RAD)
+                .rotateY(toolRoll * Mth.DEG_TO_RAD)
                 .scale(toolScale);
-    }
-
-    /** The installed tool's own turn about its length (PowerTool.cockpitRollDegrees). Rolling about the axis keeps it
-     *  aimed at the crosshair and keeps the muzzle (on the axis) in place. */
-    private static float extraRoll(PowerArmorEntity suit) {
-        return suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.cockpitRollDegrees() : 0F;
     }
 
     /** Gait bob (the suit's hip drop, model pixels) plus a slow breathing drift; both off with vanilla's View Bobbing
@@ -181,8 +175,10 @@ public final class CockpitHands {
         if (operator != mc.player || !PowerArmorRenderer.isCockpitView(suit)) {
             return SocketAim.muzzlePosition(suit, operator); // also when a scripted camera watches the suit from outside
         }
-        float inset = suit.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.PowerTool tool ? tool.muzzleInsetPixels() : 0F;
-        Vector3f p = toolMatrix(suit, suit.getToolRaise(1F)).transformPosition(new Vector3f(0, (MUZZLE_PX + inset) / 16F, 0));
+        PowerTool tool = suit.getSocketStack().getItem() instanceof PowerTool t ? t : null;
+        float inset = tool != null ? tool.muzzleInsetPixels() : 0F;
+        float forward = tool != null ? tool.barrelForwardPixels() : 0F; // the model's front is -z
+        Vector3f p = toolMatrix(suit, suit.getToolRaise(1F)).transformPosition(new Vector3f(0, (MUZZLE_PX + inset) / 16F, -forward / 16F));
         double k = Math.tan(Math.toRadians(mc.options.fov().get()) / 2) / Math.tan(Math.toRadians(70) / 2);
         Camera camera = mc.gameRenderer.mainCamera();
         org.joml.Vector3fc look = camera.forwardVector(), up = camera.upVector(), left = camera.leftVector();

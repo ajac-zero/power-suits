@@ -40,9 +40,9 @@ public interface PowerTool {
     boolean use(PowerArmorEntity suit, LivingEntity operator, ItemStack tool);
 
     /** Continuous tools are driven by holdTick / release instead of use. */
-    /** Extra turn of this tool about its own length in the cockpit view, degrees (CockpitHands): the view shows one side
-     *  of the tool from above, so a part on the other side (the flamethrower's tank) would stay below the screen. */
-    default float cockpitRollDegrees() {
+    /** How far the barrel's centre line sits in front of the socket's axis, model pixels toward the suit's front. The
+     *  cockpit view starts this tool's shots there (in third person it's too small to see). */
+    default float barrelForwardPixels() {
         return 0F;
     }
 
