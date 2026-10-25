@@ -203,6 +203,14 @@ Hunter style (DONE 2026-10-22, branch `helmet-samus`): drafted as `proto_helm_U_
 (last: synced ordinals of the others unchanged), template in desert pyramids + jungle temples, slime ball; glowmask
 visor 498 -> 527 (its glass); the scene films six suits.
 
+## Phase 11: more power tools (queued 2026-10-23, one at a time, model first)
+Each tool: hidden `proto_*` drafts in Blockbench -> user picks -> game part (bone, code, icon, recipe, autopilot scene, tests).
+- [ ] Flamethrower (fire cone, heavy fuel use, dead underwater)
+- [ ] Hydraulic ram (heavy punch, knockback, breaks blocks in a line)
+- [ ] Riot plate (blocks damage in front while held)
+- [ ] Grenade launcher (explosive shots)
+- [ ] Water cannon (extinguishes, pushes mobs, waters crops)
+
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint
 before every change, save it with every mod commit that changes the art (user's rule), re-export with `node tools/export-model.mjs`.
