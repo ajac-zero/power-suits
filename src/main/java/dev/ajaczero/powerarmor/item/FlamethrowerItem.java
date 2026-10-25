@@ -58,6 +58,13 @@ public class FlamethrowerItem extends Item implements PowerTool {
         return PowerArmorConfig.FLAMETHROWER_ENERGY.get();
     }
 
+    /** In the cockpit the tank (on the barrel's back) would face down, below the screen: a quarter turn about the barrel
+     *  lays it beside the barrel, so the pilot sees both (2026-10-25: tank 0% on screen before, ~50% after). */
+    @Override
+    public float cockpitRollDegrees() {
+        return 90F;
+    }
+
     @Override
     public int cooldownTicks() {
         return 1;

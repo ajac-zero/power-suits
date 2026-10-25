@@ -91,7 +91,7 @@ public final class CockpitHands {
         pose.translate(p.x, p.y + bob(suit), p.z + kick * 0.10F);
         pose.rotateDegrees(Axis.YP, Mth.lerp(raise, toolYaw, toolRaisedYaw));
         pose.rotateDegrees(Axis.XP, Mth.lerp(raise, toolPitch, toolRaisedPitch) + kick * 8F);
-        pose.rotateDegrees(Axis.YP, toolRoll);
+        pose.rotateDegrees(Axis.YP, toolRoll + extraRoll(suit));
         pose.scale(toolScale, toolScale, toolScale);
     }
 
@@ -102,8 +102,14 @@ public final class CockpitHands {
                 .translate(p.x, p.y + bob(suit), p.z)
                 .rotateY(Mth.lerp(raise, toolYaw, toolRaisedYaw) * Mth.DEG_TO_RAD)
                 .rotateX(Mth.lerp(raise, toolPitch, toolRaisedPitch) * Mth.DEG_TO_RAD)
-                .rotateY(toolRoll * Mth.DEG_TO_RAD)
+                .rotateY((toolRoll + extraRoll(suit)) * Mth.DEG_TO_RAD)
                 .scale(toolScale);
+    }
+
+    /** The installed tool's own turn about its length (PowerTool.cockpitRollDegrees). Rolling about the axis keeps it
+     *  aimed at the crosshair and keeps the muzzle (on the axis) in place. */
+    private static float extraRoll(PowerArmorEntity suit) {
+        return suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.cockpitRollDegrees() : 0F;
     }
 
     /** Gait bob (the suit's hip drop, model pixels) plus a slow breathing drift; both off with vanilla's View Bobbing
