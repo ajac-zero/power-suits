@@ -201,13 +201,37 @@ backpack_kit.PAL.update(u='1b2638', v='22304a')
 backpack_kit.GLOW_LIT.update(u='2a6cff', v='8ec2ff')
 
 
-def lattice_paint(out, box=None):
+def barrel_skin(style, x0, z0, y1):
+    """The perforated barrel's outside, by position on the barrel (row r from the socket end, column c across the face:
+    every wall cube is one column wide), so all four faces match (2026-10-25, user: the flat grey "feels flat").
+      stripe  a lit stripe down the middle between the holes, a shadow row under the socket, soot at the muzzle end
+      worn    mixed steel greys with a few glints, lighter at the socket, sooty toward the muzzle"""
+    def skin(face, w, h, f, t):
+        c = int(f[0] - x0) if face in ("north", "south") else int(f[2] - z0)
+        rows = []
+        for y in range(h):
+            r = int(y1 - (t[1] - y - 0.5))
+            if style == "stripe":
+                k = 'S' if r == 0 else '5' if r >= 8 else ('G' if c == 1 else 'T' if r == 7 else 't')
+            else:
+                h_ = (r * 7 + c * 13 + {"north": 0, "south": 5, "east": 11, "west": 17}[face]) % 23
+                k = ('G' if r <= 1 else 't') if h_ % 3 else 'T'
+                if h_ in (4, 15): k = 'W'
+                if r >= 7: k = '5' if (r == 8 or h_ % 2) else 'S'
+            rows.append(k * w)
+        return rows
+    return skin
+
+
+def lattice_paint(out, box=None, skin=None):
     """Perforated shroud strip: flat steel outside, darker steel elsewhere. With box (the jacket's outer x0, x1, y0, y1,
     z0, z1 and the wall's own span a0, a1; round 8, user: "make the inside of the holes black") a face that lies inside
     the jacket's outline (a hole's wall, roof or floor) is black; the jacket's two end faces and the notched corners'
     faces stay steel."""
     def p(face, w, h, f, t):
-        if face == out: k = 't'
+        if face == out:
+            if skin: return [list(r) for r in skin(face, w, h, f, t)]
+            k = 't'
         elif box is None: k = 'S' if face in ("up", "down") else '5'
         else:
             y0, y1, lo, hi = box
@@ -216,6 +240,8 @@ def lattice_paint(out, box=None):
             else:
                 ax = 0 if face in ("east", "west") else 2     # the axis this face looks along
                 at = t[ax] if face in ("east", "south") else f[ax]
+                if (at <= lo or at >= hi) and skin:          # a wall's end on the barrel's corner: part of the side
+                    return [list(r) for r in skin(face, w, h, f, t)]
                 k = '5' if at <= lo or at >= hi else 'K'      # a wall's end (corner) or a hole's side
         return [[k] * w for _ in range(h)]
     return p
@@ -289,7 +315,7 @@ def checker_holes(side, width, r, L):
     return {width // 2} if (r % 2 == 1) == ns else set()
 
 
-def shroud(pre, x0, x1, z0, z1, y0, y1, notch, black=False, checker=False, pattern=None):
+def shroud(pre, x0, x1, z0, z1, y0, y1, notch, black=False, checker=False, pattern=None, skin=None):
     """A perforated jacket: four walls built column by column (a column is solid except at its holes), corners left
     out when notched. Rows from the top (base end): odd rows hold holes, staggered (1,3 / 2) on the 5-wide faces."""
     L = int(y1 - y0)
@@ -319,7 +345,8 @@ def shroud(pre, x0, x1, z0, z1, y0, y1, notch, black=False, checker=False, patte
                 else:
                     xx = (x0, x0 + 1) if side == "w" else (x1 - 1, x1)
                     f, t = [xx[0], ya, a0 + c], [xx[1], yb, a0 + c + 1]
-                out[f"{pre}_sh_{side}{c}_{ra}"] = (f, t, lattice_paint(face, (y0, y1, a0, a1) if black else None))
+                out[f"{pre}_sh_{side}{c}_{ra}"] = (f, t, lattice_paint(face, (y0, y1, a0, a1) if black else None,
+                                                                     skin and skin(x0, z0, y1)))
     return out
 
 
@@ -420,7 +447,7 @@ def socket_base(donor="drill_base"):
     return paint
 
 
-def flamer_slim(pre, glow=True):
+def flamer_slim(pre, glow=True, skin=None):
     """Round 11, the game's flamethrower since 2026-10-25 (user: "make the barrel 3x3 and the tank 3 wide, so both fit in
     the flame neck"; picked over the 5x5 one): a 3x3 holed barrel round a 1x1 black core, holes in each face's middle
     column, staggered round the barrel (front/back on odd rows, sides on even), and the tank 3 wide x 2 deep right behind
@@ -430,7 +457,8 @@ def flamer_slim(pre, glow=True):
     # the base's underside, and the pair is centred under the 7x7 base, x -13..-10, z -4..1)
     d = {}
     d[f"{pre}_base"] = ([-15, BASE, -5], [-8, BASE + 1, 2], socket_base())   # the standard socket, like every tool
-    d.update(shroud(pre, -13, -10, -4, -1, 10.625, BASE, 0, black=True, checker=True))
+    d.update(shroud(pre, -13, -10, -4, -1, 10.625, BASE, 0, black=True, checker=True,
+                    skin=skin and (lambda x0, z0, y1: barrel_skin(skin, x0, z0, y1))))
     d[f"{pre}_core"] = ([-12, 10.625, -3], [-11, BASE, -2], on('iron', **{k: lambda w, h, f, t: ['K' * w] * h
                                                                          for k in ("north", "south", "east", "west", "down")}))
     d[f"{pre}_tank"] = ([-13, 13.125, -1], [-10, BASE, 1], RED)
@@ -448,7 +476,9 @@ def flamer_slim(pre, glow=True):
 backpack_kit.PAL.update(w='3a6ad0')
 # The game's flamethrower bone (cubes flame_*): rebuilding it in place keeps the bone (only its cubes are replaced; no
 # animation keys them). Draft H (5x5 barrel, flamer_h) was the game's from 76b3cf6 to round 11; E and G are in git history.
-DRAFTS = {"flamethrower": flamer_slim("flame")}
+# the barrel's outside: "worn" (user's pick, 2026-10-25); skin=stripe was the other option, no skin = flat grey
+SKIN = next((a.split("=")[1] for a in sys.argv[1:] if a.startswith("skin=")), "worn")
+DRAFTS = {"flamethrower": flamer_slim("flame", skin=SKIN)}
 
 if __name__ == "__main__":
     plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before flamethrower rebuild")
