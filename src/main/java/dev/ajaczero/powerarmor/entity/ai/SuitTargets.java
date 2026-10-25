@@ -149,6 +149,26 @@ public final class SuitTargets {
         return true;
     }
 
+    /** The flamethrower's version (Phase 11): the stream fans out to about a block and a half and burns what's round the
+     *  target, so friends must be well clear of the line (a block) and not within 2.5 blocks of the target. */
+    public static boolean flameClear(PowerArmorEntity suit, LivingEntity target, Vec3 aim) {
+        Vec3 eye = suit.getEyePosition();
+        if (!(suit.level() instanceof ServerLevel level)) {
+            return false;
+        }
+        for (Entity e : level.getEntities(suit, new AABB(eye, aim).inflate(3.0), e -> e != target && e instanceof LivingEntity && e.isAlive()
+                && !e.isSpectator() && !(e instanceof PowerArmorEntity other && other.hasPassenger(p -> p == target)))) {
+            if (canAttack(suit, e, false)) {
+                continue;
+            }
+            AABB box = e.getBoundingBox().inflate(1.0);
+            if (box.contains(eye) || box.clip(eye, aim).isPresent() || e.distanceTo(target) < 2.5) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private SuitTargets() {}
 
     /** Server: the world's pvp game rule (players may hurt each other). */

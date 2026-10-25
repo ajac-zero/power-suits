@@ -378,6 +378,21 @@ def em_projector(ic):
     base(ic)
 
 
+def flamethrower(ic):
+    # the red tank slung under the barrel (lower right of it), then the holed barrel, the nozzle, the slate pilot light
+    ic.diag(7.5, 12.5, 12.5, 7.5, 3.6, 3.6, RED, 2)                    # tank
+    ic.set(12, 7, RED[4]); ic.set(13, 8, RED[1])
+    for x, y in ((9, 11), (11, 9)):                                    # its steel straps
+        ic.set(x, y, STEEL[3]); ic.set(x + 1, y, STEEL[2])
+    ic.diag(4.5, 10.5, 11, 4, 3.8, 3.8, STEEL, 4)                      # perforated barrel
+    for x, y in ((7, 8), (9, 6), (6, 8), (8, 6), (10, 4)):            # its holes, black
+        ic.set(x, y, IRON[0])
+    ic.diag(11, 4, 14, 1, 2.2, 2.2, STEEL, 3)                          # nozzle
+    ic.set(14, 1, IRON[0])                                             # exit hole
+    ic.set(13, 4, SLATE[2]); ic.set(14, 3, SLATE[2]); ic.set(15, 2, AQUA[4])   # pilot light, its blue tip
+    base(ic)
+
+
 # ---- smithing templates: a stone tablet in the style's colour with the helmet's face cut into it ----------------------
 def tablet(ic, r):
     """Shaped like vanilla's templates: a slab with an uneven rim (corners broken off)."""
@@ -459,6 +474,7 @@ ICONS = {
     'chainsaw': chainsaw,
     'chaingun': chaingun,
     'em_projector': em_projector,
+    'flamethrower': flamethrower,
     'protector_template': template(tone('8a5a2b'), t_protector),
     'spartan_template': template(tone('5e7a2e'), t_spartan),
     'noble_template': template(tone('5a6470'), t_noble),

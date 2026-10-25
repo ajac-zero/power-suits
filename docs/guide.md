@@ -20,12 +20,13 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel, tool, helmet and engine) |
-| Install a tool | Put a power tool (Chaingun, EM Projector, Mining Drill, Chainsaw) in the menu's socket slot; it appears on the suit's left arm |
+| Install a tool | Put a power tool (Chaingun, EM Projector, Mining Drill, Chainsaw, Flamethrower) in the menu's socket slot; it appears on the suit's left arm |
 | Your hand | Works as normal while piloting: the suit's right hand holds your selected item; left click punches, fights and mines, right click places, opens doors, throws potions... 1.5 blocks extra reach. No eating or drinking (you're sealed in): food in your hand counts as nothing to do, so right click goes to the tool |
 | Use the tool | Right-click when your hand has nothing to do (empty hand, a sword, aiming at the air with blocks...), like a shield in the off hand; hold it as long as you need. The tool arm raises while in use |
 | EM Projector | Hold right-click on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 1 fuel/tick while holding, 80 per throw |
 | Mining Drill | Hold right-click on a block: digs it and the 8 around it (a 3x3 face of a wall, floor or ceiling) like a diamond pickaxe + shovel. 20 fuel per block |
 | Chainsaw | Hold right-click on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 15 fuel per log |
+| Flamethrower | Hold right-click: a stream of fire about 7 blocks toward your crosshair. Sets mobs and blocks alight, melts ice and snow, lights campfires and candles, sets off TNT, cooks food lying on the ground. Dead under water. 6 fuel per tick |
 | Fire | Right-click while piloting (Chaingun): tap for heavy single shots, hold to spin up to a 10-a-second barrage toward your crosshair; one iron nugget per bullet (yours first, then the suit's store) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
 | Sealed suit | While powered and wearing its helmet: fire, frost, magma, cactus/berry bushes and harmful effects (poison, wither, slowness...) don't reach you or the hull; keeping them out costs fuel. You breathe under water (0.5 fuel/tick extra). A running suit never catches fire (lava excepted: it burns while in it, the flames die as it steps out). Lava still eats the hull (wade through at a third of your speed). No power, no seal: an empty or knocked-out suit burns like anything else. What's already inside you stays yours: poison or wither you had when you climbed in (food poisoning) hurts you, not the suit |
@@ -77,6 +78,7 @@ balance pass), with what one piece of coal (1600) buys:
 | EM Projector | 1 per tick holding, 80 per throw | 80 s of holding, or 20 throws |
 | Mining Drill | 20 per block (180 per 3x3) | ~9 faces (80 blocks) |
 | Chainsaw | 15 per log | ~20 oaks (5 logs each) |
+| Flamethrower | 6 per tick of flame (1.5 hearts per hit, then 5 s of burning) | ~13 s of flame |
 | Sealing | 20 per point of fire/frost damage kept out, 100 per harmful effect, +0.5 per tick of air under water | 80 s of burning |
 
 The firebox burns what a furnace burns, as long as a furnace burns it: coal and charcoal 1600, blaze rod 2400, lava bucket 20000, coal block 16000, planks 300. Hover over any fuel for its walking time.
@@ -84,7 +86,7 @@ The firebox burns what a furnace burns, as long as a furnace burns it: coal and 
 ### Sounds
 A powered suit is quiet: no engine loop. Now and then its backpack makes a soft sound (the firebox crackles, the tidal
 pump bubbles under water, the star reactor hums), a little more often and louder as it works harder (walking, sprinting,
-a tool running). The drill whirs, the chainsaw buzzes and the chaingun's motor whines while they run (subtitles included).
+a tool running). The drill whirs, the chainsaw buzzes, the chaingun's motor whines and the flamethrower roars while they run (subtitles included).
 They are vanilla sounds re-pitched in `assets/powerarmor/sounds.json`: swap in your own `.ogg` files there.
 
 Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It burns whenever
@@ -132,6 +134,18 @@ touching leaves that grew, not placed ones) brings down every connected log at o
 3 logs per tick, 15 fuel each; leaves are left to decay as usual. Log cabins and other builds only lose the
 block you cut. Both mining tools post Minecraft's block-break event for every block, so land-claim mods can
 protect blocks from them.
+
+**Flamethrower** (crafted: iron ingots, a bucket for the tank, copper, flint and steel, a blaze rod). Hold right-click
+and it throws a stream of burning fuel, one gob a tick, about 7 blocks out: it arcs a little and takes a moment to get
+there, so sweeping the nozzle sweeps the flame. Everything it washes over takes 1.5 hearts (about twice a second) and
+burns for 5 s; fire-proof mobs (blazes, magma cubes, a fire resistance potion) don't care. Where it lands it melts ice
+and snow, burns cobwebs away, lights campfires and candles, sets off TNT and now and then sets the block on fire (config
+`ignites_blocks`; you must be allowed to build there, and claim mods see a block-place event). Raw food lying in the
+stream cooks after about a second, the whole stack at once (what a smoker would make of it), and the stream sets no fire
+next to dropped items. Under water it only bubbles. Runs on fuel alone: 6 per tick (a coal lasts about 13 s of flame).
+Its pilot light glows blue whenever the suit is powered. With the machine mind it does the chaingun's job from close up
+(follows and defends its owner, fires from 5.5 blocks, keeps a wider berth round friends) and never sets blocks on fire;
+rogue suits sometimes carry one (and set fires if mobs may grief).
 
 **Right hand**: shows your selected hotbar item and carries it forward (`hold_item`), reaching out each time
 you use it (`use_item`). It's the suit's main hand, like yours: the tools sit on the left arm. In first person

@@ -2597,5 +2597,184 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
+    // =========================================================================================
+    // Flamethrower (Phase 11, 2026-10-25)
+    // =========================================================================================
+
+    /** A suit at (4, 2, 1) facing +Z with the flamethrower, fuel and a pilot looking at {@code target} (relative). */
+    private static Player flamePilot(GameTestHelper helper, PowerArmorEntity[] out, Vec3 target, ItemStack fuel) {
+        return flamePilot(helper, out, new BlockPos(4, 2, 1), target, fuel);
+    }
+
+    private static Player flamePilot(GameTestHelper helper, PowerArmorEntity[] out, BlockPos at, Vec3 target, ItemStack fuel) {
+        PowerArmorEntity suit = suitAt(helper, at);
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, fuel);
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.FLAMETHROWER.get()));
+        suit.setYRot(0);
+        suit.setYBodyRot(0);
+        Player pilot = boardedPilot(helper, suit);
+        suit.positionRider(pilot);
+        aim(helper, pilot, target);
+        out[0] = suit;
+        return pilot;
+    }
+
+    private static void aim(GameTestHelper helper, Player pilot, Vec3 target) {
+        Vec3 to = helper.absoluteVec(target).subtract(pilot.getEyePosition());
+        pilot.setYRot((float) (Mth.atan2(-to.x, to.z) * Mth.RAD_TO_DEG));
+        pilot.setXRot((float) (-Mth.atan2(to.y, to.horizontalDistance()) * Mth.RAD_TO_DEG));
+    }
+
+    /** Held, it throws a gob of flame every tick (fuel per tick), and the stream reaches a pig 4 blocks out: hurt with
+     *  flamethrower damage (credited to the pilot) and set alight. */
+    @SuitTest(timeoutTicks = 80)
+    public static void flamethrowerSetsAMobAlight(GameTestHelper helper) {
+        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 5));
+        pig.setNoAi(true);
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = flamePilot(helper, suit, new Vec3(4.5, 2.5, 5.5), new ItemStack(Items.BLAZE_ROD, 2));
+        int hold = 20;
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2 + hold, () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(2 + hold + 2, () -> {
+            helper.assertTrue(near(suit[0].getToolUses(), hold), "a gob a tick: " + suit[0].getToolUses() + " in " + hold + " ticks");
+            int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit[0].getTotalEnergy();
+            int expected = hold * PowerArmorConfig.FLAMETHROWER_ENERGY.get();
+            helper.assertTrue(used >= expected * 0.85 && used < expected * 1.15 + 15, "fuel per tick of flame: used " + used + ", expected ~" + expected);
+            helper.assertTrue(pig.getHealth() < pig.getMaxHealth(), "the pig should be burnt, health " + pig.getHealth());
+            helper.assertTrue(pig.isOnFire(), "and burning");
+            var src = pig.getLastDamageSource();
+            helper.assertTrue(src != null && (src.is(dev.ajaczero.powerarmor.entity.FlameJet.FLAMETHROWER) || src.is(net.minecraft.tags.DamageTypeTags.IS_FIRE)),
+                    "fire damage, got " + src);
+            helper.assertTrue(suit[0].getHealth() == suit[0].getMaxHealth(), "the stream must not burn its own suit");
+            helper.assertTrue(!pilot.isOnFire(), "nor its pilot");
+            helper.succeed();
+        });
+    }
+
+    /** Fire-proof mobs (a blaze) shrug the flame off. */
+    @SuitTest(timeoutTicks = 60)
+    public static void flamethrowerSparesFireproofMobs(GameTestHelper helper) {
+        var blaze = helper.spawn(net.minecraft.world.entity.EntityTypes.BLAZE, new BlockPos(4, 2, 5));
+        blaze.setNoAi(true);
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = flamePilot(helper, suit, new Vec3(4.5, 3.0, 5.5), new ItemStack(Items.BLAZE_ROD, 2));
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(30, () -> {
+            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].getToolUses() > 20, "it sprayed");
+            helper.assertTrue(blaze.getHealth() == blaze.getMaxHealth(), "a blaze takes no harm, health " + blaze.getHealth());
+            helper.succeed();
+        });
+    }
+
+    /** Under water there's no flame: no gobs, bubbles only. (A tidal engine runs there.) */
+    @SuitTest(timeoutTicks = 60)
+    public static void flamethrowerIsDeadUnderWater(GameTestHelper helper) {
+        pool(helper, true);
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = flamePilot(helper, suit, new BlockPos(4, 2, 3), new Vec3(4.5, 2.5, 6.0), ItemStack.EMPTY);
+        suit[0].getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.TIDAL_ENGINE.get()));
+        helper.runAfterDelay(10, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(30, () -> {
+            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].isPowered(), "the tidal engine runs under water");
+            helper.assertTrue(suit[0].getToolUses() == 0, "no flame under water, got " + suit[0].getToolUses());
+            helper.assertTrue(helper.getLevel().getEntitiesOfClass(dev.ajaczero.powerarmor.entity.FlameJet.class,
+                    new AABB(helper.absolutePos(BlockPos.ZERO)).inflate(16)).isEmpty(), "and no gobs");
+            helper.succeed();
+        });
+    }
+
+    /** Where the stream lands on wood, the wood catches fire. */
+    @SuitTest(timeoutTicks = 80)
+    public static void flamethrowerSetsBlocksOnFire(GameTestHelper helper) {
+        for (int x = 3; x <= 5; x++) {
+            for (int y = 2; y <= 4; y++) {
+                helper.setBlock(new BlockPos(x, y, 6), Blocks.OAK_PLANKS);
+            }
+        }
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = flamePilot(helper, suit, new Vec3(4.5, 3.5, 6.0), new ItemStack(Items.BLAZE_ROD, 2));
+        boolean[] fire = {false};
+        helper.onEachTick(() -> {
+            for (BlockPos p : BlockPos.betweenClosed(helper.absolutePos(new BlockPos(2, 2, 3)), helper.absolutePos(new BlockPos(6, 6, 7)))) {
+                fire[0] |= helper.getLevel().getBlockState(p).is(net.minecraft.tags.BlockTags.FIRE);
+            }
+        });
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(60, () -> {
+            suit[0].setTriggerHeld(pilot, false);
+            if (PowerArmorConfig.FLAMETHROWER_IGNITES_BLOCKS.get()) {
+                helper.assertTrue(fire[0], "the planks should catch fire");
+            }
+            helper.succeed();
+        });
+    }
+
+    /** Ice in the stream melts into water; an unlit campfire lights. */
+    @SuitTest(timeoutTicks = 80)
+    public static void flamethrowerMeltsIceAndLightsCampfires(GameTestHelper helper) {
+        helper.setBlock(new BlockPos(4, 2, 5), Blocks.ICE);
+        helper.setBlock(new BlockPos(5, 2, 4), Blocks.CAMPFIRE.defaultBlockState().setValue(net.minecraft.world.level.block.CampfireBlock.LIT, false));
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = flamePilot(helper, suit, new Vec3(4.5, 2.9, 5.2), new ItemStack(Items.BLAZE_ROD, 2));
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(25, () -> {
+            helper.assertTrue(!helper.getBlockState(new BlockPos(4, 2, 5)).is(Blocks.ICE), "the ice should have melted");
+            aim(helper, pilot, new Vec3(5.5, 2.3, 4.5));
+        });
+        helper.runAfterDelay(50, () -> {
+            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(helper.getBlockState(new BlockPos(5, 2, 4)).getValue(net.minecraft.world.level.block.CampfireBlock.LIT),
+                    "the campfire should be lit");
+            helper.succeed();
+        });
+    }
+
+    /** Raw beef on the ground cooks in the stream (the whole stack), and doesn't burn up. */
+    @SuitTest(timeoutTicks = 100)
+    public static void flamethrowerCooksDroppedFood(GameTestHelper helper) {
+        Vec3 at = helper.absoluteVec(new Vec3(4.5, 2.1, 4.5));
+        var beef = new net.minecraft.world.entity.item.ItemEntity(helper.getLevel(), at.x, at.y, at.z, new ItemStack(Items.BEEF, 3));
+        beef.setDeltaMovement(Vec3.ZERO);
+        helper.getLevel().addFreshEntity(beef);
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = flamePilot(helper, suit, new Vec3(4.5, 2.2, 4.5), new ItemStack(Items.BLAZE_ROD, 2));
+        helper.runAfterDelay(5, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(70, () -> {
+            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(beef.isAlive(), "the food must not burn up");
+            helper.assertTrue(beef.getItem().is(Items.COOKED_BEEF) && beef.getItem().getCount() == 3,
+                    "3 raw beef should be 3 steaks, got " + beef.getItem());
+            helper.succeed();
+        });
+    }
+
+    /** The machine mind fights with it like with the chaingun, from close up: a friendly suit burns a husk near its owner,
+     *  and never sets blocks on fire (it guards you, not your house). */
+    @SuitTest(timeoutTicks = 160)
+    public static void flamethrowerMindBurnsMonstersNearItsOwner(GameTestHelper helper) {
+        PowerArmorEntity suit = suitAt(helper, new BlockPos(4, 2, 1));
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.FLAMETHROWER.get()));
+        var owner = ownerAt(helper, suit, new Vec3(1.5, 2, 1.5));
+        var husk = statueHusk(helper, new Vec3(4.5, 2, 7.5));
+        boolean[] fire = {false};
+        helper.onEachTick(() -> {
+            for (BlockPos p : BlockPos.betweenClosed(helper.absolutePos(new BlockPos(0, 2, 0)), helper.absolutePos(new BlockPos(8, 4, 8)))) {
+                fire[0] |= helper.getLevel().getBlockState(p).is(net.minecraft.tags.BlockTags.FIRE);
+            }
+        });
+        helper.runAfterDelay(140, () -> {
+            dismiss(helper, owner);
+            helper.assertTrue(suit.followsOwner(), "a flamethrower suit takes the chaingun's job");
+            helper.assertTrue(suit.getToolUses() > 0, "it sprayed");
+            helper.assertTrue(husk.getHealth() < husk.getMaxHealth() || !husk.isAlive(), "the husk should be burnt, health " + husk.getHealth());
+            helper.assertTrue(!fire[0], "a friendly mind sets no blocks on fire");
+            helper.succeed();
+        });
+    }
+
     private PowerArmorTests() {}
 }

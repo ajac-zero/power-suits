@@ -2,6 +2,7 @@ package dev.ajaczero.powerarmor.registry;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.Bullet;
+import dev.ajaczero.powerarmor.entity.FlameJet;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -31,6 +32,13 @@ public final class ModEntities {
             ENTITIES.registerEntityType("bullet", Bullet::new, MobCategory.MISC, builder -> builder
                     .sized(0.2F, 0.2F)
                     .clientTrackingRange(8)
+                    .updateInterval(1));
+
+    /** The flamethrower's stream: one gob of burning fuel per tick, half a second of life. Updated every tick (fast). */
+    public static final DeferredHolder<EntityType<?>, EntityType<FlameJet>> FLAME_JET =
+            ENTITIES.registerEntityType("flame_jet", FlameJet::new, MobCategory.MISC, builder -> builder
+                    .sized(0.25F, 0.25F)
+                    .clientTrackingRange(6)
                     .updateInterval(1));
 
     private ModEntities() {}

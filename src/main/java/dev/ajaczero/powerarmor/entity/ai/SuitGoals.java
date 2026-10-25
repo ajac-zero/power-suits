@@ -192,10 +192,14 @@ public final class SuitGoals {
      * Chaingun job: aim the head at the target and hold the trigger while the line of fire is clear (never through the
      * owner, a villager, a pet...); walk closer while it can't see the target or something friendly is in the way. Out of
      * nuggets (the hidden store is empty), it walks up and punches instead.
+     * The flamethrower (Phase 11) does the same job up close: it walks to within {@link #FLAME_RANGE} and keeps a wider
+     * berth round friends (the flame fans out and sets the target alight; see SuitTargets.flameClear).
      */
     static class ChaingunAttack extends Goal {
         /** Fire from up to this far (bullets fly 80 blocks/s; past ~30 the spread misses small mobs). */
         private static final double FIRE_RANGE = 28;
+        /** The flamethrower's stream reaches about 7 blocks; it fires from a bit closer so the target is well inside. */
+        static final double FLAME_RANGE = 5.5;
         private static final double PUNCH_REACH = 1.4; // from the suit's box to the target's box, blocks
         private final PowerArmorEntity suit;
         private int repath;
@@ -208,7 +212,7 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            return this.suit.isAiDriven() && this.suit.hasChaingun() && this.suit.getTarget() != null && this.suit.getTarget().isAlive();
+            return this.suit.isAiDriven() && this.suit.hasGun() && this.suit.getTarget() != null && this.suit.getTarget().isAlive();
         }
 
         @Override
@@ -239,10 +243,12 @@ public final class SuitGoals {
                 this.punchCooldown--;
             }
             if (this.suit.hasAmmo()) {
-                boolean inRange = this.suit.distanceTo(target) < FIRE_RANGE;
-                // A rogue fires at will; a friendly mind never through someone it must not hurt.
-                boolean clear = sees && inRange && (this.suit.isRogue() || SuitTargets.lineOfFireClear(this.suit, target, aim));
-                this.suit.setAiTrigger(clear && !ChaingunItem.isOverheated(this.suit));
+                boolean flame = this.suit.hasFlamethrower();
+                boolean inRange = this.suit.distanceTo(target) < (flame ? FLAME_RANGE : FIRE_RANGE);
+                // A rogue fires at will; a friendly mind never through (or, with the flamethrower, near) someone it must not hurt.
+                boolean clear = sees && inRange && (this.suit.isRogue()
+                        || (flame ? SuitTargets.flameClear(this.suit, target, aim) : SuitTargets.lineOfFireClear(this.suit, target, aim)));
+                this.suit.setAiTrigger(clear && !(this.suit.hasChaingun() && ChaingunItem.isOverheated(this.suit)));
                 if (clear) {
                     this.suit.getNavigation().stop(); // plant the feet and fire
                 } else {
@@ -267,6 +273,7 @@ public final class SuitGoals {
             if (--this.repath <= 0) {
                 this.repath = 10;
                 this.suit.getNavigation().moveTo(target, this.suit.distanceTo(target) > 12 ? 1.6 : 1.0);
+                // (the flamethrower's range is short: moveTo stops at the target, and inRange plants the feet on the way)
             }
         }
 

@@ -35,8 +35,10 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
     /** The engine backpacks' glass (design sec. 4b): the tidal engine's Heart of the Sea, the star reactor's core + canisters. */
     static final Identifier TIDAL = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_tidal.png");
     static final Identifier REACTOR = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_reactor.png");
+    /** The flamethrower's pilot light (the tip of its slate rod by the nozzle). */
+    static final Identifier PILOT = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_pilot.png");
     /** The masks, in the order of the tints in SuitRenderData.GLOW. */
-    private static final Identifier[] MASKS = {FIRE, VISOR, HEAT, HEAT_BARREL, EM_CORE, EM_ARC, TIDAL, REACTOR};
+    private static final Identifier[] MASKS = {FIRE, VISOR, HEAT, HEAT_BARREL, EM_CORE, EM_ARC, TIDAL, REACTOR, PILOT};
 
     public SuitGlowLayer(GeoRenderer<PowerArmorEntity, Void, LivingEntityRenderState> renderer) {
         super(renderer);
@@ -59,7 +61,8 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
                 tint(suit.getEmCoreGlow(time), 1F, 1F, 1F),
                 tint(suit.getEmArcGlow(time), 1F, 1F, 1F),
                 tint(suit.getTidalGlow(time), 1F, 1F, 1F),
-                tint(suit.getReactorGlow(time), 1F, 1F, 1F)});
+                tint(suit.getReactorGlow(time), 1F, 1F, 1F),
+                tint(suit.getPilotGlow(time), 1F, 1F, 1F)});
     }
 
     /** Render: draw the model once per lit mask, after (on top of) the suit itself. */

@@ -20,6 +20,8 @@ public final class ClientSetup {
         SocketAim.visualMuzzle = CockpitHands::visualMuzzle; // muzzle effects start at the cockpit viewmodel's muzzle
         event.registerEntityRenderer(ModEntities.POWER_ARMOR.get(), PowerArmorRenderer::new);
         event.registerEntityRenderer(ModEntities.BULLET.get(), BulletRenderer::new);
+        // The flame stream draws itself with particles (FlameJet.clientTick): nothing to render.
+        event.registerEntityRenderer(ModEntities.FLAME_JET.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
     }
 
     /** Lets PilotView hide pilots: copies "sits in a suit" into every living thing's render state. */

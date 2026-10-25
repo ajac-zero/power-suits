@@ -9,6 +9,7 @@
     "minecraft:sweet_berry_bush",
     "minecraft:magic",
     "minecraft:wither",
-    "#neoforge:is_poison"
+    "#neoforge:is_poison",
+    "powerarmor:flamethrower"
   ]
 }

@@ -1,4 +1,7 @@
 {
   "replace": false,
-  "values": ["powerarmor:bullet"]
+  "values": [
+    "powerarmor:bullet",
+    "powerarmor:flamethrower"
+  ]
 }

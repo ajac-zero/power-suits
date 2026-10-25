@@ -8,6 +8,7 @@ import dev.ajaczero.powerarmor.item.ChainsawItem;
 import dev.ajaczero.powerarmor.item.DrillItem;
 import dev.ajaczero.powerarmor.item.EmProjectorItem;
 import dev.ajaczero.powerarmor.item.EngineItem;
+import dev.ajaczero.powerarmor.item.FlamethrowerItem;
 import dev.ajaczero.powerarmor.item.HelmetStyle;
 import dev.ajaczero.powerarmor.item.HelmetTemplateItem;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
@@ -50,6 +51,9 @@ public final class ModItems {
 
     /** Fourth: chainsaw, fells whole trees. */
     public static final DeferredItem<ChainsawItem> CHAINSAW = ITEMS.registerItem("chainsaw", ChainsawItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
+
+    /** Fifth (Phase 11, 2026-10-25): a stream of fire. */
+    public static final DeferredItem<FlamethrowerItem> FLAMETHROWER = ITEMS.registerItem("flamethrower", FlamethrowerItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
 
     // The suit's parts (2026-10-19): crafted one by one; torso, two arms and two legs are assembled into the suit (an
     // arm and a leg are crafted twice: both sides are the same piece), the helmet goes in the suit's helmet slot.

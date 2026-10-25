@@ -59,6 +59,8 @@ public final class AutoPilot {
     private static final boolean STYLES_ONLY = "styles".equals(System.getProperty("powerarmor.autopilot"));
     /** "engine" mode: only the engine scene (EngineScene: flooded firebox, tidal engine, star reactor), ~35 s. */
     private static final boolean ENGINE_ONLY = "engine".equals(System.getProperty("powerarmor.autopilot"));
+    /** "flame" mode: only the flamethrower scene (FlameScene: pigs, a plank wall, beef, ice, a campfire), ~30 s. */
+    private static final boolean FLAME_ONLY = "flame".equals(System.getProperty("powerarmor.autopilot"));
     private static final int MECH_START = 1712;
     /** A file run/cleanzap: no fire from the lightning scene's bolt, so the knock-out animation can be seen. */
     private static final boolean CLEAN_ZAP = Files.exists(Path.of("cleanzap"));
@@ -122,6 +124,10 @@ public final class AutoPilot {
             }
         } else if (STYLES_ONLY) {
             if (!StyleScene.step(mc, tick++)) {
+                mc.stop();
+            }
+        } else if (FLAME_ONLY) {
+            if (!FlameScene.step(mc, tick++)) {
                 mc.stop();
             }
         } else {

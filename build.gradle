@@ -102,6 +102,13 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'engine'
         }
 
+        // Dev tool: only the flamethrower scene (pigs, a plank wall, beef, ice, a campfire; ap_flame_*.png,
+        // run/autopilot_flame.csv), ~30 s.
+        autopilotFlame {
+            client()
+            systemProperty 'powerarmor.autopilot', 'flame'
+        }
+
         // Dev tool: live-tunes the cockpit viewmodel (see AutoPilot.viewTuner); stays open until closed.
         autopilotView {
             client()

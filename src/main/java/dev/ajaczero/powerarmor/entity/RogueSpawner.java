@@ -126,7 +126,9 @@ public final class RogueSpawner {
             if (!level.noCollision(rogue, rogue.getBoundingBox())) {
                 continue;
             }
-            makeRogue(rogue, random.nextBoolean());
+            // its weapon: a chaingun 2 in 5, an EM projector or a flamethrower otherwise
+            int pick = random.nextInt(5);
+            makeRogue(rogue, new ItemStack(pick < 2 ? ModItems.CHAINGUN.get() : pick < 4 ? ModItems.EM_PROJECTOR.get() : ModItems.FLAMETHROWER.get()));
             level.addFreshEntity(rogue);
             return rogue;
         }
@@ -135,9 +137,13 @@ public final class RogueSpawner {
 
     /** A rogue mind with a chaingun (or an EM projector). It needs no fuel and no nuggets. */
     public static void makeRogue(PowerArmorEntity suit, boolean chaingun) {
+        makeRogue(suit, new ItemStack(chaingun ? ModItems.CHAINGUN.get() : ModItems.EM_PROJECTOR.get()));
+    }
+
+    /** A rogue mind with this weapon (chaingun, EM projector or flamethrower). */
+    public static void makeRogue(PowerArmorEntity suit, ItemStack weapon) {
         suit.setMind(SuitMind.ROGUE);
-        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT,
-                new ItemStack(chaingun ? ModItems.CHAINGUN.get() : ModItems.EM_PROJECTOR.get()));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, weapon);
     }
 
     private RogueSpawner() {}

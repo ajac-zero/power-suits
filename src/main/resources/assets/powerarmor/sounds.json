@@ -64,5 +64,16 @@
         "volume": 0.8
       }
     ]
+  },
+  "tool.flamethrower": {
+    "subtitle": "subtitles.powerarmor.tool.flamethrower",
+    "sounds": [
+      {
+        "name": "minecraft:entity.blaze.burn",
+        "type": "event",
+        "pitch": 0.7,
+        "volume": 1.0
+      }
+    ]
   }
 }

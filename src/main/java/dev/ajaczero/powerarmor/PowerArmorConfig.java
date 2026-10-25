@@ -107,6 +107,21 @@ public final class PowerArmorConfig {
             .comment("How fast a tree comes down (logs per tick).").translation(key("chainsaw_logs_per_tick"))
             .defineInRange("logs_per_tick", 3, 1, 64);
 
+    // ---- flamethrower (Phase 11) -------------------------------------------------------------------------
+    public static final ModConfigSpec.IntValue FLAMETHROWER_ENERGY = B.pop().translation(key("flamethrower")).push("flamethrower")
+            .comment("Energy per tick while it sprays (walking burns 1; 6 = a coal lasts about 13 s of flame).").translation(key("flamethrower_energy"))
+            .defineInRange("energy_per_tick", 6, 0, 1000);
+    public static final ModConfigSpec.DoubleValue FLAMETHROWER_DAMAGE = B
+            .comment("Fire damage when the stream reaches a mob (2 = one heart; a mob can be hurt about twice a second).").translation(key("flamethrower_damage"))
+            .defineInRange("damage", 3.0, 0, 1000);
+    public static final ModConfigSpec.DoubleValue FLAMETHROWER_BURN_SECONDS = B
+            .comment("Seconds a mob keeps burning after the stream leaves it.").translation(key("flamethrower_burn_seconds"))
+            .defineInRange("burn_seconds", 5.0, 0, 300);
+    public static final ModConfigSpec.BooleanValue FLAMETHROWER_IGNITES_BLOCKS = B
+            .comment("The stream sets blocks on fire where it lands (and sets off TNT). Off: it still melts ice and snow and",
+                    "lights campfires and candles. The machine mind only does either with the mob_griefing game rule on.").translation(key("flamethrower_ignites_blocks"))
+            .define("ignites_blocks", true);
+
     // ---- the suit itself ---------------------------------------------------------------------------
     public static final ModConfigSpec.DoubleValue SEAL_ENERGY_PER_DAMAGE = B.pop().translation(key("suit")).push("suit")
             .comment("Sealed suit: fire, frost, magma, cactus and effect damage cost this much energy per point of damage instead of",

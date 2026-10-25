@@ -287,6 +287,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private float fireGlow, visorLevel;
     /** Client: the EM projector's redstone, 0..1: the lens + vents (core) and the prong tips (arc). */
     private float emCoreGlow, emArcGlow;
+    /** Client: the flamethrower's pilot light, 0 (out) .. 1 (spraying). */
+    private float pilotGlow;
     /** Client: the tidal engine's / star reactor's glass, 0 (dark) .. 1 (running), eased like the fire. */
     private float engineGlow;
     private final float[] visorColor = {1F, 0.68F, 0.22F};
@@ -520,9 +522,20 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.getSocketStack().getItem() instanceof EmProjectorItem;
     }
 
-    /** Both sides: the chaingun job (design sec. 8): a friendly mind with a chaingun follows its owner and defends them. */
+    /** Both sides: a flamethrower in the socket (the same job as the chaingun's, at close range; or a rogue's weapon). */
+    public boolean hasFlamethrower() {
+        return this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.FlamethrowerItem;
+    }
+
+    /** Both sides: a weapon the mind fights with by aiming and holding the trigger (chaingun, flamethrower). */
+    public boolean hasGun() {
+        return this.hasChaingun() || this.hasFlamethrower();
+    }
+
+    /** Both sides: the chaingun job (design sec. 8): a friendly mind with a chaingun (or a flamethrower, Phase 11)
+     *  follows its owner and defends them. */
     public boolean followsOwner() {
-        return !this.isRogue() && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.ChaingunItem;
+        return !this.isRogue() && this.hasGun();
     }
 
     /** Both sides: the EM guard job (design sec. 8): a friendly mind with an EM projector guards the area round home. */
@@ -547,9 +560,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.digsHall() && this.getControllingPassenger() == null ? 0 : super.getMaxFallDistance();
     }
 
-    /** Server: bullets for the mind's chaingun (its hidden store). */
+    /** Server: bullets for the mind's chaingun (its hidden store). The flamethrower runs on fuel alone. */
     public boolean hasAmmo() {
-        return this.isRogue() || this.getStoredNuggets() > 0;
+        return this.isRogue() || this.hasFlamethrower() || this.getStoredNuggets() > 0;
     }
 
     /** Server: the mind's bare-handed blow (no bullets left): a pilot's punch, 1 + the melee bonus, with a shove. */
@@ -1604,6 +1617,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         float arcTarget = holding ? 1F : 0F;
         this.emCoreGlow += (coreTarget - this.emCoreGlow) * (coreTarget > this.emCoreGlow ? 0.35F : 0.1F);
         this.emArcGlow += (arcTarget - this.emArcGlow) * (arcTarget > this.emArcGlow ? 0.5F : 0.15F);
+        // Flamethrower: the pilot light burns whenever the suit is powered with it fitted, brighter while it sprays; under
+        // water it goes out.
+        boolean flamer = powered && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.FlamethrowerItem
+                && !this.isEyeInFluid(net.minecraft.tags.FluidTags.WATER);
+        float pilotTarget = !flamer ? 0F : this.isToolActive() ? 1F : 0.7F;
+        this.pilotGlow += (pilotTarget - this.pilotGlow) * (pilotTarget > this.pilotGlow ? 0.4F : 0.1F);
         // The tidal engine's and the reactor's glass light up while they run (the firebox has its fire above).
         float engineTarget = powered && this.getEngine() != SuitEngine.FIREBOX ? 1F : 0F;
         this.engineGlow += (engineTarget - this.engineGlow) * (engineTarget > this.engineGlow ? 0.15F : 0.05F);
@@ -1639,6 +1658,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public float getEmArcGlow(float time) {
         float crackle = Mth.sin(time * 5.1F) * Mth.sin(time * 2.9F + this.getId()) > 0.5F ? 0.55F : 1F;
         return this.emArcGlow * crackle;
+    }
+
+    /** Client: the flamethrower's pilot light at this moment, 0..1: a small flame, it wavers a little. */
+    public float getPilotGlow(float time) {
+        return this.pilotGlow * (0.88F + 0.08F * Mth.sin(time * 0.9F + this.getId()) + 0.04F * Mth.sin(time * 2.3F));
     }
 
     /** Client: firebox glow, 0 (cold) .. 1 (roaring). */
