@@ -29,14 +29,17 @@ replace older advice. The how-to for this kind of work (setup, GeckoLib, riding,
 - `src/` the mod; `tools/` export / art / test helpers; `docs/` design + plan; `run/` dev game (not in git).
 - `model/` the Blockbench source: `power_armor.bbmodel`, `anim/` procedural animation specs (bake with
   `.agents/skills/blockbench-mcp/scripts/run.mjs`, see `model/anim/README.md`), `art/` one-off texture/part scripts.
-- `site/` the mod's web page (GitHub Pages, https://ajac-zero.github.io/power-suits/, deployed by
-  `.github/workflows/pages.yml` on every push to main that touches it). Plain HTML/CSS, no build step; its pictures are
-  web copies made by `tools/make-site-images.py` (re-run after new screenshots or renders). Download links point to
-  the latest GitHub Release. Releasing: bump `mod_version`, tag `vX.Y.Z`, push the tag, run the Release workflow
-  (`gh workflow run release.yml -f tag=vX.Y.Z`): GitHub builds the tag (repeatable jar, `tools/reproducible.gradle`),
-  signs a build attestation and publishes jar + SHA-256. Update the page's version line, "coming in" tags and its
-  guide link (pinned to the release tag). v1.0.0 = 9c9cf00 (the Modrinth upload, no flamethrower); the flamethrower
-  and the next tools are 1.1.
+- `site/` the mod's web page (GitHub Pages, https://ajac-zero.github.io/power-suits/). A template: `tools/build-site.py`
+  fills in `{{version}}` / `{{tag}}` / `{{java}}` from the latest GitHub Release, greys out elements marked
+  `data-since="1.1.0"` and shows `<span data-coming="1.1.0">` as "coming in 1.1" until that version is released (mark new
+  features that way while building them). Preview: `python3 tools/build-site.py --version 1.0.0 /tmp/site`. Pictures are
+  web copies made by `tools/make-site-images.py`. `.github/workflows/pages.yml` publishes it on pushes to main that touch
+  it and after every release.
+- Releasing: bump `mod_version`, commit, `git tag -a vX.Y.Z -m ... && git push origin main vX.Y.Z`. The tag push starts
+  `.github/workflows/release.yml`: GitHub builds the tag with the JDK pinned in `tools/jdk.env` (same version as Homebrew's)
+  and `tools/reproducible.gradle` (same source = same jar bytes), signs a build attestation, publishes jar + SHA-256 and
+  republishes the page. v1.0.0 = 9c9cf00 (the Modrinth upload, no flamethrower; its tag predates the workflow, so it was
+  run by hand: `gh workflow run release.yml -f tag=v1.0.0`); the flamethrower and the next tools are 1.1.
 - `.pi/mcp.json` connects pi to Blockbench's MCP server (`localhost:3000/bb-mcp`): start sessions here.
 - `marketing/` key art rendered in Blender from the model (`blender/` scene scripts, `out/` finished pictures; see its
   README). How we make them: `.agents/skills/key-art/SKILL.md`.

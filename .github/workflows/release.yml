@@ -1,11 +1,15 @@
 # Builds a release on GitHub's servers and publishes it, so the jar players download comes from the public source and
-# a public build log, not from anyone's computer.
+# a public build log, not from anyone's computer. Then it republishes the web page for the new version.
 #
-# Run it by hand (Actions tab > Release > Run workflow, or `gh workflow run release.yml -f tag=v1.1.0`) after pushing a
-# tag. It checks out the TAG (not main), so it also releases tags from before this workflow existed (v1.0.0).
+# Releasing = bump mod_version in gradle.properties, commit, then tag and push the tag:
+#   git tag -a v1.1.0 -m "Power Armor 1.1.0" && git push origin main v1.1.0
+# A pushed v* tag starts this workflow. Tags from before the workflow existed (v1.0.0) have no copy of it, so GitHub
+# can't start it for them: run it by hand from main (Actions tab > Release > Run workflow, or
+# `gh workflow run release.yml -f tag=v1.0.0`). It always builds the TAG, whichever way it starts.
 #
 # What it publishes on the release:
-#   - the mod jar, built with tools/reproducible.gradle (rebuild the tag yourself and you get the same bytes)
+#   - the mod jar, built with tools/reproducible.gradle by the exact JDK pinned in tools/jdk.env (rebuild the tag with
+#     the same JDK and you get the same bytes)
 #   - <jar>.sha256, its checksum
 #   - a signed build provenance attestation (Sigstore, stored by GitHub): proof that this exact file was built by this
 #     workflow in this repository from that commit. Check a download with
@@ -13,13 +17,15 @@
 name: Release
 
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to build and release (e.g. v1.1.0); push it first"
+        description: "Tag to build and release (e.g. v1.0.0); push it first"
         required: true
       notes:
-        description: "Release notes (Markdown)"
+        description: "Release notes (Markdown), above the standard part"
         required: false
         default: ""
 
@@ -27,6 +33,10 @@ permissions:
   contents: write      # create the release
   id-token: write      # sign the attestation
   attestations: write  # store it
+  actions: write       # start the Pages workflow afterwards
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   release:
@@ -35,35 +45,46 @@ jobs:
       - name: Check out the tag
         uses: actions/checkout@v4
         with:
-          ref: refs/tags/${{ inputs.tag }}
+          ref: refs/tags/${{ env.TAG }}
 
-      # The build script and init script come from the workflow's own commit (main), not from the tag.
+      # The reproducible-build script and the JDK pin come from the commit this workflow runs from (the tag itself
+      # when a tag push started it, main when started by hand), so older tags without them can still be built.
       - name: Check out the release tools
         uses: actions/checkout@v4
         with:
           path: .release-tools
-          sparse-checkout: tools/reproducible.gradle
+          sparse-checkout: |
+            tools/reproducible.gradle
+            tools/jdk.env
           sparse-checkout-cone-mode: false
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "25"
-
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-disabled: true # a release is built from scratch, nothing reused from earlier runs
+      - name: Install the pinned JDK
+        run: |
+          set -a; . .release-tools/tools/jdk.env; set +a
+          curl -sSL -o jdk.tar.gz "$JDK_URL"
+          echo "$JDK_SHA256  jdk.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/jdk" && tar -xzf jdk.tar.gz -C "$RUNNER_TEMP/jdk" --strip-components=1 && rm jdk.tar.gz
+          echo "JAVA_HOME=$RUNNER_TEMP/jdk" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/jdk/bin" >> "$GITHUB_PATH"
+          echo "JDK_NAME=Temurin ${JDK_RELEASE#jdk-}" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/jdk/bin/java" -version
 
       - name: The tag must match mod_version
         run: |
           version=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
-          if [ "v$version" != "${{ inputs.tag }}" ]; then
-            echo "::error::tag ${{ inputs.tag }} but gradle.properties says mod_version=$version"; exit 1
+          if [ "v$version" != "$TAG" ]; then
+            echo "::error::tag $TAG but gradle.properties says mod_version=$version"; exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
+      # Only the pinned JDK may compile: no other Java on the runner, no toolchain downloads.
       - name: Build
-        run: ./gradlew build --init-script .release-tools/tools/reproducible.gradle --no-daemon --no-configuration-cache --no-build-cache
+        run: >
+          ./gradlew build --init-script .release-tools/tools/reproducible.gradle
+          --no-daemon --no-configuration-cache --no-build-cache
+          -Porg.gradle.java.installations.auto-detect=false
+          -Porg.gradle.java.installations.auto-download=false
+          -Porg.gradle.java.installations.paths="$JAVA_HOME"
 
       - name: Checksum
         run: |
@@ -88,9 +109,17 @@ jobs:
             echo
             echo "**SHA-256** \`$sum\`"
             echo
-            echo "Built by [this workflow run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) from the tag ${{ inputs.tag }}."
+            echo "Built by [this workflow run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) from the tag $TAG"
+            echo "with Java: $JDK_NAME and tools/reproducible.gradle."
             echo "Check your download: \`gh attestation verify powerarmor-$VERSION.jar -R $GITHUB_REPOSITORY\`"
           } > notes.md
-          gh release create "${{ inputs.tag }}" \
+          gh release create "$TAG" \
             "build/libs/powerarmor-$VERSION.jar" "build/libs/powerarmor-$VERSION.jar.sha256" \
             --title "Power Armor $VERSION" --notes-file notes.md --verify-tag
+
+      # A release made with the workflow's own token doesn't trigger other workflows (GitHub's loop guard), except
+      # when started explicitly like this.
+      - name: Republish the web page
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
