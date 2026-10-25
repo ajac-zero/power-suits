@@ -58,11 +58,11 @@ public class FlamethrowerItem extends Item implements PowerTool {
         return PowerArmorConfig.FLAMETHROWER_ENERGY.get();
     }
 
-    /** The 3x3 barrel fills the front of the neck (z -5..-2) with the tank behind it: its centre is 2 px in front of the
-     *  socket's axis (z -1.5). */
+    /** The 3x3 barrel and the tank behind it are centred under the 7x7 base together, so the barrel's centre is 1 px in
+     *  front of the socket's axis. */
     @Override
     public float barrelForwardPixels() {
-        return 2F;
+        return 1F;
     }
 
     @Override

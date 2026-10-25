@@ -396,28 +396,25 @@ def flamer_h(pre, pattern="shift"):
 
 def flamer_slim(pre, glow=True):
     """Round 11, the game's flamethrower since 2026-10-25 (user: "make the barrel 3x3 and the tank 3 wide, so both fit in
-    the flame neck"; picked over the 5x5 one, neck kept 5x5): the tool inside the neck's 5x5 footprint (x -14..-9,
-    z -5..0). A 3x3 holed barrel at the front (z -5..-2) round a 1x1 black core, holes in each face's middle column,
-    staggered round the barrel (front/back on odd rows, sides on even); the tank 3 wide x 2 deep right behind it
-    (z -2..0). Cap, pilot light and valve wheel scaled to match. Its barrel's centre is 2 px in front of the socket's axis
-    (FlamethrowerItem.barrelForwardPixels). In game the base cube is the drill's (box UV net at [200, 76]), moved over
-    from the old flamethrower when this one replaced it."""
+    the flame neck"; picked over the 5x5 one): a 3x3 holed barrel round a 1x1 black core, holes in each face's middle
+    column, staggered round the barrel (front/back on odd rows, sides on even), and the tank 3 wide x 2 deep right behind
+    it; cap and pilot light scaled to match. Its barrel's centre is 1 px in front of the socket's axis
+    (FlamethrowerItem.barrelForwardPixels)."""
+    # (2026-10-25, user after seeing it in Blockbench: no valve wheel; the base in the neck's iron; no neck: the barrel and
+    # tank take its pixel, up to the base's underside, and the pair is centred under the 7x7 base, x -13..-10, z -4..1)
     d = {}
     d[f"{pre}_base"] = ([-15, BASE, -5], [-8, BASE + 1, 2], on('iron'))
-    d[f"{pre}_neck"] = ([-14, 18.625, -5], [-9, BASE, 0], on('iron'))
-    d.update(shroud(pre, -13, -10, -5, -2, 10.625, 18.625, 0, black=True, checker=True))
-    d[f"{pre}_core"] = ([-12, 10.625, -4], [-11, 18.625, -3], on('iron', **{k: lambda w, h, f, t: ['K' * w] * h
-                                                                          for k in ("north", "south", "east", "west", "down")}))
-    # the tank ends at the neck's underside: running up into it, their back faces shared the plane z 0 (z-fighting)
-    d[f"{pre}_tank"] = ([-13, 13.125, -2], [-10, 18.625, 0], RED)
-    d[f"{pre}_cap"] = ([-12.5, 12.125, -2], [-10.5, 13.125, 0], on('steel'))
-    d[f"{pre}_wheel"] = ([-12, 15.625, 0], [-11, 16.625, 0.75], WHEEL)
-    d[f"{pre}_pilot_rod"] = ([-12, 9.625, -1], [-11, 12.125, 0], on('iron'))
-    d[f"{pre}_pilot_arm"] = ([-12, 9.625, -2], [-11, 10.625, -1], on('iron'))
+    d.update(shroud(pre, -13, -10, -4, -1, 10.625, BASE, 0, black=True, checker=True))
+    d[f"{pre}_core"] = ([-12, 10.625, -3], [-11, BASE, -2], on('iron', **{k: lambda w, h, f, t: ['K' * w] * h
+                                                                         for k in ("north", "south", "east", "west", "down")}))
+    d[f"{pre}_tank"] = ([-13, 13.125, -1], [-10, BASE, 1], RED)
+    d[f"{pre}_cap"] = ([-12.5, 12.125, -1], [-10.5, 13.125, 1], on('steel'))
+    d[f"{pre}_pilot_rod"] = ([-12, 9.625, 0], [-11, 12.125, 1], on('iron'))
+    d[f"{pre}_pilot_arm"] = ([-12, 9.625, -1], [-11, 10.625, 0], on('iron'))
     # the tip glows (reserved dark blues u / v, lit by power_armor_glow_pilot.png); a draft built next to a glowing
     # flamethrower can't use them (the kit refuses reserved colours already in the texture): glow=False paints a look-alike
     u, v = ('u', 'v') if glow else ('w', 'w')
-    d[f"{pre}_pilot_tip"] = ([-12, 9.625, -3], [-11, 10.625, -2],
+    d[f"{pre}_pilot_tip"] = ([-12, 9.625, -2], [-11, 10.625, -1],
                              on('iron', **{k: [v] for k in ("north", "east", "west")}, up=[u], down=[v], south=[u]))
     return d
 
@@ -429,5 +426,26 @@ DRAFTS = {"flamethrower": flamer_slim("flame")}
 
 if __name__ == "__main__":
     plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before flamethrower rebuild")
+    # free the texels of the cubes it replaces (any cube now in the bone; none share texels with another bone) that the
+    # new paint doesn't cover: left painted, reserved glow colours on them would count in make-glowmasks
+    from backpack_kit import used_mask
+    model = json.load(open(SRC))["model"]
+    gs = {g["uuid"]: g for g in model["groups"]}
+    def uuids(node, inside):
+        out = set()
+        for c in node:
+            if isinstance(c, str):
+                if inside: out.add(c)
+            else:
+                out |= uuids(c.get("children", []), inside or gs[c["uuid"]]["name"] in DRAFTS)
+        return out
+    old = uuids(model["outliner"], False)
+    import base64, io
+    from PIL import Image
+    size = Image.open(io.BytesIO(base64.b64decode(json.load(open(SRC))["texture"].split(",", 1)[1]))).size
+    mask = lambda els: used_mask(dict(model, elements=els), Image.new("RGBA", size, (0, 0, 0, 0)))
+    o, k = mask([e for e in model["elements"] if e["uuid"] in old]), mask([e for e in model["elements"] if e["uuid"] not in old])
+    new = {(x, y) for x, y, _ in plan["pixels"]}
+    plan["clear"] = [[x, y] for y, row in enumerate(o) for x, v in enumerate(row) if v and not k[y][x] and (x, y) not in new]
     json.dump(plan, open(OUT, "w"))
     print("cubes", sum(len(c) for c in DRAFTS.values()), "pixels", len(plan["pixels"]))
