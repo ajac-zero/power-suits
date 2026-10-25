@@ -337,7 +337,8 @@ public class FlameJet extends Projectile {
         Vec3 velocity = this.getDeltaMovement();
         int age = this.tickCount;
         double spread = 0.04 + 0.03 * age;
-        int n = 3;
+        // One flame per gob per tick (user, 2026-10-25: three made the stream too thick): ~11 in the air per stream.
+        int n = 1;
         for (int i = 0; i < n; i++) {
             float t = (i + this.random.nextFloat()) / n;
             Vec3 p = this.drawn(from.lerp(to, t), age - 1 + t);
@@ -356,11 +357,11 @@ public class FlameJet extends Projectile {
         if (hitsBlock || this.isInWater()) {
             this.spent = true;
             if (!this.isInWater()) {
-                for (int i = 0; i < 3; i++) { // splashes against the wall
+                for (int i = 0; i < 1 + this.random.nextInt(2); i++) { // splashes against the wall
                     double sx = this.random.nextGaussian() * 0.15, sz = this.random.nextGaussian() * 0.15;
                     level.addParticle(ParticleTypes.FLAME, to.x, to.y, to.z, sx * 0.3, 0.04, sz * 0.3);
                 }
-                if (this.random.nextInt(3) == 0) {
+                if (this.random.nextInt(5) == 0) {
                     level.addParticle(ParticleTypes.LARGE_SMOKE, to.x, to.y, to.z, 0, 0.03, 0);
                 }
             }

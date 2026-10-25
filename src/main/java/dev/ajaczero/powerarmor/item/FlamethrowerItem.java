@@ -68,10 +68,10 @@ public class FlamethrowerItem extends Item implements PowerTool {
         return "flamethrower";
     }
 
-    /** Its nozzle sticks out 4 px past the chaingun's muzzle (the tool is 19 px long from the socket, the chaingun 15). */
+    /** Its barrel ends where the chaingun's muzzle does, 10 px below the socket base (the tip is painted on its end). */
     @Override
     public float muzzleInsetPixels() {
-        return -4F;
+        return 0F;
     }
 
     @Override

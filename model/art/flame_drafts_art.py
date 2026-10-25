@@ -244,7 +244,52 @@ TANK7 = on('iron', east=tank_side, west=tank_side, south=tank_side, north=tank_s
 HOT = on('iron', east=hot_coil, west=hot_coil, south=hot_coil, north=hot_coil)
 
 
-def shroud(pre, x0, x1, z0, z1, y0, y1, notch, black=False):
+def pattern_holes(pattern, side, width, r, L):
+    """Hole columns (0..width-1) of a 3-wide notched face on row r (0 = the base end). Round 9 options:
+      mid    one hole in the middle column, front/back faces on odd rows, sides on even rows (3 per face; "too few")
+      swap   the round 8 density (rows of 2 edge holes / 1 middle hole) with neighbouring faces out of step, so a face's
+             edge holes never sit on the same row as the next face's (5 / 4 per face)
+      board  a full checkerboard per face, shifted one row on neighbouring faces (9 per face)"""
+    ns = side in "ns"
+    if pattern == "shift" and not ns and r == 0:
+        # (user: "add more holes on the other side of the shift that is empty"): the shift left the side faces blank rows
+        # at the base end; their pattern goes on there with a middle hole, under the neck
+        return {width // 2}
+    if r == 0 or r == L - 1:
+        return set()
+    if pattern == "mid":
+        return checker_holes(side, width, r, L)
+    if pattern == "shift":
+        # (user, after mid/swap/board: "go back to the committed model and shift one side one block so the holes don't
+        # line up"): round 8's pattern, rows of 2 edge holes / 1 middle hole; the left and right faces one row further
+        # along, so their holes never share a row with the top and bottom faces' across a cut corner. (Tried after this
+        # and dropped: every hole row a pair of edge holes, with or without middle holes between: "we overdid it".)
+        rr = r if ns else r - 1
+        if rr <= 0 or rr % 2 == 0 or r == L - 1:
+            return set()
+        return {0, width - 1} if (rr // 2) % 2 == 0 else {width // 2}
+    if pattern == "swap":
+        if r % 2 == 0:
+            return set()
+        edge = (r // 2) % 2 == 0
+        return {0, width - 1} if edge == ns else {width // 2}
+    if pattern == "board":
+        return {0, width - 1} if (r % 2 == 1) == ns else {width // 2}
+    raise ValueError(pattern)
+
+
+def checker_holes(side, width, r, L):
+    """Round 9 (user: "a more checkered pattern so that the holes on two sides aren't adjacent and form a bigger hole"):
+    a face's edge columns sit next to the notched corner, so a hole there joined the notch and the next face's hole into
+    one gap. Holes only in each face's middle column, the front/back faces on odd rows and the sides on even rows: a
+    checker round the barrel, every hole walled in on all four sides."""
+    if r == 0 or r == L - 1:
+        return set()
+    ns = side in "ns"
+    return {width // 2} if (r % 2 == 1) == ns else set()
+
+
+def shroud(pre, x0, x1, z0, z1, y0, y1, notch, black=False, checker=False, pattern=None):
     """A perforated jacket: four walls built column by column (a column is solid except at its holes), corners left
     out when notched. Rows from the top (base end): odd rows hold holes, staggered (1,3 / 2) on the 5-wide faces."""
     L = int(y1 - y0)
@@ -262,7 +307,8 @@ def shroud(pre, x0, x1, z0, z1, y0, y1, notch, black=False):
         for c in range(width):
             runs, start = [], None
             for r in range(L + 1):
-                solid = r < L and (c + off) not in holes(full, r)
+                solid = r < L and (c not in pattern_holes(pattern, side, width, r, L) if pattern
+                                   else c not in checker_holes(side, width, r, L) if checker else (c + off) not in holes(full, r))
                 if solid and start is None: start = r
                 if not solid and start is not None: runs.append((start, r)); start = None
             for ra, rb in runs:
@@ -316,40 +362,43 @@ def flamer(pre, notch):
 # concentrated, not this wide disk"): G's notched perforated barrel, round 6's red tank flush underneath (hazard band,
 # steel cap, valve wheel), and no bell: the 3x3 nozzle narrows through a cross-shaped step to a 1x1 tip with the hot
 # orifice. The pilot light sits beside the tip, on the tank side.
-def flamer_h(pre):
+def flamer_h(pre, pattern="shift"):
+    """The flamethrower. Round 10 (user: "much bigger than the other power tools": 15.5 px long, volume 397 against the
+    drill's 11 px / 226): neck 1, holed barrel 6 rows, cross step 1; the tank 2 px shorter. Then (user: "remove the flame
+    nozzle and leave just the flame tapers") the 3x3 nozzle went: the cross step sits on the barrel's end, 9 px below the
+    socket base, and the pilot light ends 1 px past it, 10 px from the socket: the chaingun's length. Last ("remove the
+    taper altogether, instead painting it on"): the tip is painted on the barrel's end face, 8 px below the socket base;
+    the pilot light ends 1 px past it. Then the barrel 2 rows longer again for one more set of holes at the end: the
+    barrel ends 10 px below the socket base (the chaingun's muzzle), the pilot light 11 (the drill's length)."""
     d = {}
     d[f"{pre}_base"] = ([-15, BASE, -5], [-8, BASE + 1, 2], on('iron'))           # UV swapped for the drill's on apply
-    d[f"{pre}_neck"] = ([-14, 17.625, -5], [-9, BASE, 0], on('iron'))
-    d.update(shroud(pre, -14, -9, -5, 0, 9.625, 17.625, 1, black=True))
-    d[f"{pre}_core"] = ([-13, 9.625, -4], [-10, 17.625, -1], on('iron', **{k: lambda w, h, f, t: ['K' * w] * h
-                                                                          for k in ("north", "south", "east", "west")}))
-    d[f"{pre}_nozzle"] = ([-13, 7.625, -4], [-10, 9.625, -1], on('steel'))         # 3x3
-    d[f"{pre}_taper_a"] = ([-12, 6.625, -4], [-11, 7.625, -1],                     # cross-shaped step: 1x3 ...
-                           on('steel', down=lambda w, h, f, t: ['.K.' if w == 3 else '.' for _ in range(h)] if w == 3
-                              else ['.', 'K', '.']))                                # ... the exit hole painted on its centre
-    d[f"{pre}_taper_w"] = ([-13, 6.625, -3], [-12, 7.625, -2], on('steel'))        # ... plus 1x1 each side
-    d[f"{pre}_taper_e"] = ([-11, 6.625, -3], [-10, 7.625, -2], on('steel'))
-    # (the 1x1 tip below the cross step is gone: user, "remove the nozzle tip")
-    # round 6's tank, unchanged
-    d[f"{pre}_tank"] = ([-14, 11.125, 0], [-9, BASE, 3], RED)
-    d[f"{pre}_cap"] = ([-13.5, 10.125, 0.5], [-9.5, 11.125, 2.5], on('steel'))
-    d[f"{pre}_wheel"] = ([-12.5, 14.625, 3], [-10.5, 15.625, 3.75], WHEEL)
-    # pilot light (user: "make the pilot light meet the tip", then "black/slate", then "keep it one tip forward like it
-    # was" after the tip went): dark iron, down from the tank's cap to 1.5 px past the barrel's end, then straight in
-    # under the exit hole
-    d[f"{pre}_pilot_rod"] = ([-12, 5.125, 1], [-11, 10.125, 2], on('iron'))
-    d[f"{pre}_pilot_arm"] = ([-12, 5.125, -1], [-11, 6.125, 1], on('iron'))
-    # its tip glows like the EM projector's prong tips (user): reserved dark blues, lit by a new glowmask in game
-    d[f"{pre}_pilot_tip"] = ([-12, 5.125, -2], [-11, 6.125, -1],
+    d[f"{pre}_neck"] = ([-14, 18.625, -5], [-9, BASE, 0], on('iron'))
+    # 8 rows (user: "one more set of holes at the end there"; notches in a 6-row barrel's last row instead: no, "go back
+    # to the longer barrel")
+    d.update(shroud(pre, -14, -9, -5, 0, 10.625, 18.625, 1, black=True, pattern=pattern))
+    # the black core inside; its end face carries the painted tip (user: "remove the taper altogether, instead painting it
+    # on"): a light steel plus with the black exit hole in its centre, dark corners
+    d[f"{pre}_core"] = ([-13, 10.625, -4], [-10, 18.625, -1], on('iron', **{k: lambda w, h, f, t: ['K' * w] * h
+                                                                          for k in ("north", "south", "east", "west")},
+                                                                    down=['DGD', 'GKG', 'DGD']))
+    # round 6's tank, 2 px shorter
+    d[f"{pre}_tank"] = ([-14, 13.125, 0], [-9, BASE, 3], RED)
+    d[f"{pre}_cap"] = ([-13.5, 12.125, 0.5], [-9.5, 13.125, 2.5], on('steel'))
+    d[f"{pre}_wheel"] = ([-12.5, 15.625, 3], [-10.5, 16.625, 3.75], WHEEL)
+    # pilot light: dark iron, down from the tank's cap to 1 px past the barrel's end, straight in under the exit hole;
+    # its tip glows like the EM projector's prong tips (reserved dark blues, lit by a glowmask in game)
+    d[f"{pre}_pilot_rod"] = ([-12, 9.625, 1], [-11, 12.125, 2], on('iron'))
+    d[f"{pre}_pilot_arm"] = ([-12, 9.625, -1], [-11, 10.625, 1], on('iron'))
+    d[f"{pre}_pilot_tip"] = ([-12, 9.625, -2], [-11, 10.625, -1],
                              on('iron', **{k: ['v'] for k in ("north", "east", "west")}, up=['u'], down=['v'], south=['u']))
     return d
 
 
-DRAFTS = {"proto_flame_E_fallout": E_,             # earlier rounds live in git history / compare_round*.png
-          "proto_flame_G_round": flamer("pkFG", 1),
-          "proto_flame_H_mix": flamer_h("pkFH")}
+# Since 2026-10-25 draft H is the game's flamethrower bone (cubes flame_*): rebuilding it in place keeps the bone (only its
+# cubes are replaced; no animation keys them). The earlier drafts E and G were deleted (git history).
+DRAFTS = {"flamethrower": flamer_h("flame", "shift")}   # round 9's other patterns: mid / swap / board (not used)
 
 if __name__ == "__main__":
-    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before flamethrower drafts")
+    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before flamethrower longer barrel")
     json.dump(plan, open(OUT, "w"))
     print("cubes", sum(len(c) for c in DRAFTS.values()), "pixels", len(plan["pixels"]))
