@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Power Armor: a power suit mod for Minecraft</title>
+  <meta name="description" content="Power Armor is a NeoForge mod for Minecraft 26.3: an enterable power suit with a chaingun, drill, chainsaw, flamethrower and EM projector, swappable engines, a machine mind and rogue suits.">
+  <link rel="icon" href="img/favicon.png">
+  <meta property="og:title" content="Power Armor">
+  <meta property="og:description" content="For situations where plain old armor isn't enough. An enterable power suit mod for Minecraft (NeoForge 26.3).">
+  <meta property="og:image" content="https://ajac-zero.github.io/power-suits/img/suppressing_fire.jpg">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="#"><img src="img/icon.png" alt="" width="36" height="36"> Power Armor</a>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#gallery">Gallery</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/ajac-zero/power-suits">GitHub</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <img class="hero-bg" src="img/suppressing_fire.jpg" alt="">
+  <div class="hero-text">
+    <h1>Power Armor</h1>
+    <p class="tagline">For situations where plain old armor isn't enough.</p>
+    <p class="sub">An enterable power suit for Minecraft, with power tools, swappable engines and a mind of its own.</p>
+    <div class="buttons">
+      <a class="btn primary" href="https://github.com/ajac-zero/power-suits/releases/latest">Download</a>
+      <a class="btn" href="https://github.com/ajac-zero/power-suits">Source code</a>
+    </div>
+    <p class="badges"><span>Minecraft 26.3</span><span>NeoForge</span><span>GeckoLib 5</span><span>MIT</span></p>
+  </div>
+</section>
+
+<main>
+
+<section class="intro">
+  <p>
+    Craft a suit, deploy it and climb in. It gives you maximum protection, extra strength and a socket for heavy power
+    tools. Fit it with a helmet and you become immune to fire, frost, poison and drowning. Soaking up that punishment
+    burns fuel, so keep an eye on the gauge.
+  </p>
+  <p>
+    Get out and the suit carries on by itself: it can drill, cut trees, guard your home or follow you into a fight.
+    Be careful though... rogue suits exist, and they aren't friendly.
+  </p>
+</section>
+
+<div id="features"></div>
+
+<section class="feature">
+  <img class="shot" src="img/dusk_cockpit.jpg" alt="The view from inside a red suit's cockpit at dusk, with a village ahead" loading="lazy">
+  <div>
+    <h2>Climb in</h2>
+    <p>
+      Pilot the suit from its cockpit or watch it from behind. It walks with real weight, sprints, charges its jump
+      and lands with a stomp that throws everything around it. Your own hand still works: the suit's right hand holds
+      your item, punches with four extra damage and reaches further.
+    </p>
+    <ul>
+      <li>Walks through leaves, glass panes and cobwebs; sprinting smashes glass and ice</li>
+      <li>A fuel gauge by the hotbar: the firebox burns anything a furnace burns</li>
+      <li>Pack it up into an item and carry it with you</li>
+    </ul>
+  </div>
+</section>
+
+<section class="feature flip">
+  <img class="shot" src="img/tree_side.jpg" alt="A green suit with a Spartan helmet felling an oak tree with its chainsaw" loading="lazy">
+  <div>
+    <h2>Power tools</h2>
+    <p>Five tools fit the socket on the suit's left arm. Hold right click to use them.</p>
+    <ul class="items">
+      <li><img src="img/items/chaingun.png" alt=""><b>Chaingun</b> Tap for heavy shots, hold to spin up a ten-a-second barrage. Eats iron nuggets.</li>
+      <li><img src="img/items/em_projector.png" alt=""><b>EM Projector</b> Grabs items and mobs, holds them floating and throws them.</li>
+      <li><img src="img/items/drill.png" alt=""><b>Mining Drill</b> Diamond-tipped, digs a 3x3 face at a time.</li>
+      <li><img src="img/items/chainsaw.png" alt=""><b>Chainsaw</b> Cut a trunk and the whole tree comes down.</li>
+      <li><img src="img/items/flamethrower.png" alt=""><b>Flamethrower</b> A stream of fire that lights blocks and mobs and cooks food.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="feature">
+  <img class="shot" src="img/reef_back.jpg" alt="A yellow suit with a tidal engine walking across a coral reef, seen from behind" loading="lazy">
+  <div>
+    <h2>Engines</h2>
+    <p>The backpack is the engine, and you can swap it. Each one has its own look on the suit.</p>
+    <ul class="items">
+      <li><img src="img/items/firebox.png" alt=""><b>Firebox</b> Burns furnace fuel. Floods and dies when water covers it.</li>
+      <li><img src="img/items/tidal_engine.png" alt=""><b>Tidal Engine</b> Runs for free under water or in rain; drinks water buckets on land.</li>
+      <li><img src="img/items/star_reactor.png" alt=""><b>Star Reactor</b> Feed it a Nether Star and it runs everything, forever.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="feature flip">
+  <img class="shot" src="img/em_front.jpg" alt="A purple suit with a Hunter helmet and a Nether Star reactor lifting a creeper with the EM projector" loading="lazy">
+  <div>
+    <h2>A mind of its own</h2>
+    <p>
+      A powered suit with its helmet on and nobody inside works for its owner. Its job depends on the tool in its
+      socket:
+    </p>
+    <ul>
+      <li><b>Chaingun</b>: follows you like a tamed wolf and shoots whatever attacks you</li>
+      <li><b>EM Projector</b>: guards your home and flings monsters into the sky</li>
+      <li><b>Mining Drill</b>: clears out a hall around its home</li>
+      <li><b>Chainsaw</b>: fells the trees nearby</li>
+    </ul>
+    <p>
+      Rogue suits with red visors are rare, and they attack anything they see. Defeat one for its tool, or wait for a
+      lightning strike to reboot its mind and claim it.
+    </p>
+  </div>
+</section>
+
+<section class="feature">
+  <img class="shot" src="img/walk_front.jpg" alt="A blue power armor suit walking toward the camera across a meadow" loading="lazy">
+  <div>
+    <h2>Make it yours</h2>
+    <p>
+      The suit comes out in bare polished steel. Right click it with any of the 16 dyes to paint its plates, and a wet
+      sponge washes it clean again.
+    </p>
+    <p>
+      Five helmet styles hide as smithing templates in structure chests, each one a nod to a famous helmet.
+      Find them all.
+    </p>
+    <p class="helmets">
+      <img src="img/items/suit_helmet.png" alt="Standard helmet" title="Standard">
+      <img src="img/items/suit_helmet_protector.png" alt="Protector helmet" title="Protector">
+      <img src="img/items/suit_helmet_spartan.png" alt="Spartan helmet" title="Spartan">
+      <img src="img/items/suit_helmet_noble.png" alt="Noble helmet" title="Noble">
+      <img src="img/items/suit_helmet_robot.png" alt="Robot helmet" title="Robot">
+      <img src="img/items/suit_helmet_hunter.png" alt="Hunter helmet" title="Hunter">
+    </p>
+  </div>
+</section>
+
+<section id="gallery" class="gallery">
+  <h2>Gallery</h2>
+  <p class="note">In-game screenshots, vanilla look, no shaders.</p>
+  <div class="grid">
+    <a href="img/walk_front.jpg"><img src="img/walk_front.jpg" alt="A blue suit walking across a meadow" loading="lazy"></a>
+    <a href="img/dusk_cockpit.jpg"><img src="img/dusk_cockpit.jpg" alt="A red suit's cockpit at dusk" loading="lazy"></a>
+    <a href="img/mine_cockpit.jpg"><img src="img/mine_cockpit.jpg" alt="Drilling into a stone ravine from the cockpit" loading="lazy"></a>
+    <a href="img/tree_side.jpg"><img src="img/tree_side.jpg" alt="A green suit felling an oak with its chainsaw" loading="lazy"></a>
+    <a href="img/reef_back.jpg"><img src="img/reef_back.jpg" alt="A yellow tidal suit on a coral reef" loading="lazy"></a>
+    <a href="img/em_front.jpg"><img src="img/em_front.jpg" alt="A purple suit lifting a creeper with the EM projector" loading="lazy"></a>
+  </div>
+  <p class="note">Key art, rendered in Blender from the mod's own model. The homages are fan art.</p>
+  <div class="grid art">
+    <a href="img/suppressing_fire.jpg"><img src="img/suppressing_fire.jpg" alt="A green suit with a Spartan helmet firing its chaingun at night" loading="lazy"></a>
+    <a href="img/containment.jpg"><img src="img/containment.jpg" alt="An orange suit with a Hunter helmet lifting a slime in a spaceship's cargo bay" loading="lazy"></a>
+    <a href="img/man_of_tomorrow.jpg"><img src="img/man_of_tomorrow.jpg" alt="A lime suit with a chainsaw leaping at a flying caped fighter" loading="lazy"></a>
+    <a href="img/big_daddy.jpg" class="tall"><img src="img/big_daddy.jpg" alt="A brown suit with a drill on the sea floor in front of an ocean monument" loading="lazy"></a>
+  </div>
+</section>
+
+<section id="install" class="install">
+  <h2>Install</h2>
+  <ol>
+    <li>Install <a href="https://neoforged.net/">NeoForge</a> for Minecraft 26.3.</li>
+    <li>Download <a href="https://modrinth.com/mod/geckolib">GeckoLib 5</a> for NeoForge 26.3 and put it in your <code>mods</code> folder.</li>
+    <li>Download <a href="https://github.com/ajac-zero/power-suits/releases/latest">Power Armor</a> and put the jar next to it.</li>
+  </ol>
+  <p>
+    The suit is in the creative tab <i>Tools &amp; Utilities</i>. In survival, craft a torso, two arms and two legs
+    and assemble them like a body at a crafting table, then craft a helmet and an engine for it. Controls, recipes
+    and every number are in the <a href="https://github.com/ajac-zero/power-suits/blob/main/docs/guide.md">guide</a>.
+  </p>
+  <p>Server and client both need the mod.</p>
+</section>
+
+</main>
+
+<footer>
+  <p>
+    Power Armor is open source under the MIT license:
+    <a href="https://github.com/ajac-zero/power-suits">github.com/ajac-zero/power-suits</a>.
+    Bugs and ideas go to the <a href="https://github.com/ajac-zero/power-suits/issues">issues</a>.
+  </p>
+  <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
+</footer>
+
+<dialog id="viewer"><img alt=""></dialog>
+<script>
+  // Click a gallery picture to see it full size; click again (or Esc) to close.
+  const viewer = document.getElementById("viewer");
+  document.querySelectorAll(".gallery a").forEach(a => a.addEventListener("click", e => {
+    e.preventDefault();
+    viewer.querySelector("img").src = a.href;
+    viewer.querySelector("img").alt = a.querySelector("img").alt;
+    viewer.showModal();
+  }));
+  viewer.addEventListener("click", () => viewer.close());
+</script>
+</body>
+</html>

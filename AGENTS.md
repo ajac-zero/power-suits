@@ -29,6 +29,10 @@ replace older advice. The how-to for this kind of work (setup, GeckoLib, riding,
 - `src/` the mod; `tools/` export / art / test helpers; `docs/` design + plan; `run/` dev game (not in git).
 - `model/` the Blockbench source: `power_armor.bbmodel`, `anim/` procedural animation specs (bake with
   `.agents/skills/blockbench-mcp/scripts/run.mjs`, see `model/anim/README.md`), `art/` one-off texture/part scripts.
+- `site/` the mod's web page (GitHub Pages, https://ajac-zero.github.io/power-suits/, deployed by
+  `.github/workflows/pages.yml` on every push to main that touches it). Plain HTML/CSS, no build step; its pictures are
+  web copies made by `tools/make-site-images.py` (re-run after new screenshots or renders). Download links point to
+  the latest GitHub Release, so a new version = a new release with the jar.
 - `.pi/mcp.json` connects pi to Blockbench's MCP server (`localhost:3000/bb-mcp`): start sessions here.
 - `marketing/` key art rendered in Blender from the model (`blender/` scene scripts, `out/` finished pictures; see its
   README). How we make them: `.agents/skills/key-art/SKILL.md`.
