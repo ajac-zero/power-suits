@@ -21,6 +21,7 @@
     <a href="#features">Features</a>
     <a href="#gallery">Gallery</a>
     <a href="#install">Install</a>
+    <a href="#verify">Verify</a>
     <a href="https://github.com/ajac-zero/power-suits">GitHub</a>
   </nav>
 </header>
@@ -76,13 +77,13 @@
   <img class="shot" src="img/tree_side.jpg" alt="A green suit with a Spartan helmet felling an oak tree with its chainsaw" loading="lazy">
   <div>
     <h2>Power tools</h2>
-    <p>Five tools fit the socket on the suit's left arm. Hold right click to use them.</p>
+    <p>Tools fit the socket on the suit's left arm. Hold right click to use them.</p>
     <ul class="items">
       <li><img src="img/items/chaingun.png" alt=""><b>Chaingun</b> Tap for heavy shots, hold to spin up a ten-a-second barrage. Eats iron nuggets.</li>
       <li><img src="img/items/em_projector.png" alt=""><b>EM Projector</b> Grabs items and mobs, holds them floating and throws them.</li>
       <li><img src="img/items/drill.png" alt=""><b>Mining Drill</b> Diamond-tipped, digs a 3x3 face at a time.</li>
       <li><img src="img/items/chainsaw.png" alt=""><b>Chainsaw</b> Cut a trunk and the whole tree comes down.</li>
-      <li><img src="img/items/flamethrower.png" alt=""><b>Flamethrower</b> A stream of fire that lights blocks and mobs and cooks food.</li>
+      <li class="soon"><img src="img/items/flamethrower.png" alt=""><b>Flamethrower <span class="tag">coming in 1.1</span></b> A stream of fire that lights blocks and mobs and cooks food.</li>
     </ul>
   </div>
 </section>
@@ -171,12 +172,48 @@
     <li>Download <a href="https://modrinth.com/mod/geckolib">GeckoLib 5</a> for NeoForge 26.3 and put it in your <code>mods</code> folder.</li>
     <li>Download <a href="https://github.com/ajac-zero/power-suits/releases/latest">Power Armor</a> and put the jar next to it.</li>
   </ol>
+  <p class="version">Latest version: <b>1.0.0</b>. Every version is on the <a href="https://github.com/ajac-zero/power-suits/releases">releases page</a>.</p>
   <p>
     The suit is in the creative tab <i>Tools &amp; Utilities</i>. In survival, craft a torso, two arms and two legs
     and assemble them like a body at a crafting table, then craft a helmet and an engine for it. Controls, recipes
-    and every number are in the <a href="https://github.com/ajac-zero/power-suits/blob/main/docs/guide.md">guide</a>.
+    and every number are in the <a href="https://github.com/ajac-zero/power-suits/blob/v1.0.0/docs/guide.md">guide</a>.
   </p>
   <p>Server and client both need the mod.</p>
+</section>
+
+<section id="verify" class="install verify">
+  <h2>Verify your download</h2>
+  <p>
+    Be careful with mods from websites you don't know: malware has spread through Minecraft mods before. You don't
+    have to take our word for this one:
+  </p>
+  <ul>
+    <li>
+      <b>Built in public.</b> Every release is built by GitHub from the public source code, by a
+      <a href="https://github.com/ajac-zero/power-suits/blob/main/.github/workflows/release.yml">workflow</a> anyone can
+      read. The release links to its build log.
+    </li>
+    <li>
+      <b>Signed.</b> GitHub signs a record of each build: this file, from this repository, at this commit. With the
+      <a href="https://cli.github.com/">GitHub CLI</a>, check the jar you downloaded:
+      <pre>gh attestation verify powerarmor-1.0.0.jar -R ajac-zero/power-suits</pre>
+    </li>
+    <li>
+      <b>Checksum.</b> Each release lists the jar's SHA-256. Compare it with yours:
+      <code>shasum -a 256 powerarmor-1.0.0.jar</code> (macOS, Linux) or
+      <code>certutil -hashfile powerarmor-1.0.0.jar SHA256</code> (Windows).
+    </li>
+    <li>
+      <b>Rebuild it yourself.</b> The build is repeatable: the same source gives the same file, byte for byte.
+      Check out the release's tag and build it with Java 25 and the
+      <a href="https://github.com/ajac-zero/power-suits/blob/main/tools/reproducible.gradle">reproducible.gradle</a>
+      script (saved anywhere): <code>./gradlew build --init-script reproducible.gradle</code>. The checksum should match.
+    </li>
+  </ul>
+  <p>
+    What the mod does: it adds the suit, its parts and tools to the game. It makes no network connections of its own,
+    runs no other programs and loads no code from anywhere else. Its only dependencies are NeoForge and GeckoLib.
+  </p>
 </section>
 
 </main>

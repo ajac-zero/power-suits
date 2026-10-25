@@ -277,6 +277,13 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
 }
 
+// Repeatable builds: fixed timestamps and sorted entries in the jar, so the same code always gives the same file and
+// anyone can check a release by rebuilding it (tools/reproducible.gradle does the same for older tags).
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
 // IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.
 idea {
     module {

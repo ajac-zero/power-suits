@@ -32,7 +32,11 @@ replace older advice. The how-to for this kind of work (setup, GeckoLib, riding,
 - `site/` the mod's web page (GitHub Pages, https://ajac-zero.github.io/power-suits/, deployed by
   `.github/workflows/pages.yml` on every push to main that touches it). Plain HTML/CSS, no build step; its pictures are
   web copies made by `tools/make-site-images.py` (re-run after new screenshots or renders). Download links point to
-  the latest GitHub Release, so a new version = a new release with the jar.
+  the latest GitHub Release. Releasing: bump `mod_version`, tag `vX.Y.Z`, push the tag, run the Release workflow
+  (`gh workflow run release.yml -f tag=vX.Y.Z`): GitHub builds the tag (repeatable jar, `tools/reproducible.gradle`),
+  signs a build attestation and publishes jar + SHA-256. Update the page's version line, "coming in" tags and its
+  guide link (pinned to the release tag). v1.0.0 = 9c9cf00 (the Modrinth upload, no flamethrower); the flamethrower
+  and the next tools are 1.1.
 - `.pi/mcp.json` connects pi to Blockbench's MCP server (`localhost:3000/bb-mcp`): start sessions here.
 - `marketing/` key art rendered in Blender from the model (`blender/` scene scripts, `out/` finished pictures; see its
   README). How we make them: `.agents/skills/key-art/SKILL.md`.

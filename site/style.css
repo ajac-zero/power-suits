@@ -131,6 +131,15 @@ dialog img { max-width: 95vw; max-height: 95vh; object-fit: contain; }
 }
 .install li { margin: 6px 0; }
 code { background: #0d1014; padding: 1px 6px; border-radius: 3px; }
+pre { background: #0d1014; padding: 10px 14px; border-radius: 4px; overflow-x: auto; font-size: 14px; }
+.verify ul { padding-left: 20px; }
+.verify li { margin: 10px 0; }
+.version { color: var(--dim); }
+.soon { opacity: 0.6; }
+.tag {
+  font-size: 12px; font-weight: 600; margin-left: 6px; padding: 1px 8px; vertical-align: 2px;
+  border: 1px solid var(--amber); border-radius: 99px; color: var(--amber);
+}
 
 footer { border-top: 1px solid var(--line); padding: 28px 24px 40px; text-align: center; color: var(--dim); }
 footer .small { font-size: 13px; }

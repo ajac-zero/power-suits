@@ -1,0 +1,17 @@
+// Gradle init script: makes the mod jar come out byte for byte the same on every machine, so anyone can rebuild a
+// release from its tag and compare checksums with the published jar (see "Verify your download" on the web page).
+//
+//   git checkout v1.0.0
+//   ./gradlew build --init-script tools/reproducible.gradle      (any checkout of this file works)
+//   shasum -a 256 build/libs/powerarmor-1.0.0.jar
+//
+// Jars are zip files, and by default a zip records each file's modification time and the order the file system lists
+// files in: two builds of the same code then differ. These settings write fixed timestamps and sort the entries.
+// The release workflow builds every release with this script; build.gradle has the same settings since 1.1, the init
+// script is what makes tags from before that (v1.0.0) repeatable too.
+allprojects {
+    tasks.withType(AbstractArchiveTask).configureEach {
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+}
