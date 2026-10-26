@@ -324,12 +324,54 @@ ROUND3 = {"proto_rail_F4_flat4": flat("pkRF4", 4, core_depth=3),
           "proto_rail_F3_flat3": flat("pkRF3", 3),
           "proto_rail_F2_slab": flat("pkRF2", 2, prong_w=3),
           "proto_rail_F3o_open": flat("pkRF3o", 3, core_w=2)}
-DRAFTS = ROUND3   # (user picked F3: the game bone rail_cannon since 2026-10-26, prongs in rail_fork_out / rail_fork_in)
-REMOVED = ["proto_rail_B_split", "proto_rail_B1_long", "proto_rail_B2_fork", "proto_rail_B3_coils", "proto_rail_B4_bridged",
-           "proto_rail_B5_wide"]
+# (user picked F3: the game bone rail_cannon since 2026-10-26, prongs in rail_fork_out / rail_fork_in)
+
+# round 4 (user, 2026-10-26: "add like one step at the tips so it looks pointier, and also add width to the sides of the
+# rails that reduces as it gets to the tip: that large to small feeling"): F3 with stepped, tapering prongs. The inner
+# faces (along the core) stay straight; the outer sides step in toward the muzzle, and the last pixel is a tip one
+# pixel wide and a pixel shallower. Segments from the base: (bottom y, width).
+SEGMENTS = [15.625, 11.625, 8.625, TIP + 1]   # bottoms of root, mid, front, then the tip down to TIP
+
+
+def steel_step(end_dark=False, vents_at=None):
+    """A prong segment: steel; vents across its top/bottom (z faces) on the root, a dark end only on the tip."""
+    fns = []
+    if vents_at is not None:
+        fns.append(vents('z', vents_at, TIP + 1, BASE - 5))
+    if end_dark:
+        fns.append(lambda face, x, y, z: 'K' if face == "down" else '.')
+    return on('steel', **wf(first(*fns))) if fns else on('steel')
+
+
+def tapered(pre, widths, depth=3, tip_w=1.0, tip_inset=.5, band_pad=.25):
+    """Two prongs of 4 segments each (widths root, mid, front; the tip tip_w wide and tip_inset shallower on both faces);
+    the core, receiver and band as F3 (the band wraps the root)."""
+    z0, z1 = CZ - depth / 2, CZ + depth / 2
+    gap_out, gap_in = -13.5, -9.5          # the prongs' inner faces (the core slot), as F3
+    d = {f"{pre}_base": BASE_CUBE()}
+    tops = [BASE] + SEGMENTS[:-1]
+    for i, (top, bottom) in enumerate(zip(tops, SEGMENTS + [TIP])):
+        w = widths[i] if i < 3 else tip_w
+        zi = tip_inset if i == 3 else 0
+        tip = i == 3
+        vx = (gap_out - w / 2) if i == 0 else None
+        d[f"{pre}_prong_out_{i}"] = ([gap_out - w, bottom, z0 + zi], [gap_out, top, z1 - zi], steel_step(tip, vx))
+        d[f"{pre}_prong_in_{i}"] = ([gap_in, bottom, z0 + zi], [gap_in + w, top, z1 - zi],
+                                    steel_step(tip, None if vx is None else gap_in + w / 2))
+    root = widths[0]
+    d[f"{pre}_receiver"] = ([gap_out - .05, BASE - 3, z0 + .1], [gap_in + .05, BASE - .05, z1 - .1], on('slate'))
+    d[f"{pre}_core"] = ([CX - 1.5, TIP + 1, CZ - (depth - .1) / 2], [CX + 1.5, BASE - 3, CZ + (depth - .1) / 2], on('core_flow'))
+    d.update(bands(pre, [BASE - 2], gap_out - root - band_pad, gap_in + root + band_pad, z0 - .25, z1 + .25))
+    return d
+
+
+ROUND4 = {"proto_rail_T1_wide_base": tapered("pkRT1", [3.5, 2.5, 1.5]),
+          "proto_rail_T2_taper": tapered("pkRT2", [2.5, 2.0, 1.5])}
+DRAFTS = ROUND4
+REMOVED = []
 
 if __name__ == "__main__":
-    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before rail cannon round 3 (flat)", own=("pk", "rail_"))
+    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before rail cannon round 4 (tapered prongs)", own=("pk", "rail_"))
     # free the texels of the drafts dropped (painted, but no cube uses them any more)
     import base64, io
     from PIL import Image

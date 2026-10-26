@@ -210,7 +210,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   survived the port and for six days the torso twisted away from the view, leaned back when the pilot looked down
   (third person: nearly always) and the tool "raise" swung the arm back. Check any code pose with `runAutopilotPose`
   (fixed side + top cameras, marker blocks along the view yaws), not with one action shot.
-- **Added light hardly shows against a day sky** (rail cannon, 2026-10-26): the beam drawn only in the additive `eyes` type
+- **Added light hardly shows against a day sky** (rail cannon, 2026-10-26): the beam drawn only in the `eyes` type
   at 60% was invisible in every daytime shot (a pixel diff found nothing); a see-through blue sheath
   (`entityTranslucentEmissive`, alpha fades) round an additive white core reads by day and glows by night. Check new effects
   with a diff of a frame with and without them, not by eye.
@@ -220,7 +220,10 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   eye along the view is seen end-on from the third-person back camera (nothing to see but the impact): film it from the side.
 - **Glowing pixels are painted in reserved colours** (dark coal / smoked glass, listed in `tools/make-glowmasks.py`):
   the masks are generated from them, so never reuse those colours elsewhere (the script counts them and refuses).
-  The glow is additive (`RenderTypes.eyes`): dark base + bright mask = dead when off, glowing when on, also by day.
+  The glow is drawn full-bright on top (`RenderTypes.eyes`; in 26.3 it blends by alpha, it doesn't add): dark base + bright
+  mask = dead when off, glowing when on, also by day. Light with nothing behind it (the rail cannon's core: see-through
+  when off, its pixels cleared by `make-glowmasks.py`'s SEE_THROUGH) fades by the tint's alpha (`SuitGlowLayer.energy`):
+  a dimmed opaque colour drew a dark core where there should be air.
 - **Night shots in the autopilot**: the client hears the new time of day only once a second, and place scene cameras
   from the ground height (`Heightmap`), not from where the player happens to stand.
 - **Projectile orientation**: `ProjectileUtil.rotateTowardsMovement` stores yaw as `atan2(z, x) + 90` and pitch with up

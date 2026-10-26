@@ -53,10 +53,10 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
                     SuitGlowLayer.tint(suit.getEmCoreGlow(time), 1F, 1F, 1F),
                     SuitGlowLayer.tint(suit.getEmArcGlow(time), 1F, 1F, 1F),
                     SuitGlowLayer.tint(suit.getPilotGlow(time), 1F, 1F, 1F),
-                    SuitGlowLayer.tint(suit.getRailGlow(time), 1F, 1F, 1F),
-                    SuitGlowLayer.tint(suit.getRailFlowGlow(0, partialTick), 1F, 1F, 1F),
-                    SuitGlowLayer.tint(suit.getRailFlowGlow(1, partialTick), 1F, 1F, 1F),
-                    SuitGlowLayer.tint(suit.getRailFlowGlow(2, partialTick), 1F, 1F, 1F)});
+                    SuitGlowLayer.energy(suit.getRailGlow(time)),
+                    SuitGlowLayer.energy(suit.getRailFlowGlow(0, partialTick)),
+                    SuitGlowLayer.energy(suit.getRailFlowGlow(1, partialTick)),
+                    SuitGlowLayer.energy(suit.getRailFlowGlow(2, partialTick))});
             state.addGeckolibData(RAIL_SHAKE, new float[] {suit.getRailCharge(), time});
         }
     }

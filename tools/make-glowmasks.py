@@ -20,6 +20,8 @@ which adds nothing (SuitGlowLayer draws the masks full-bright and additively, ti
   power_armor_glow_rail.png     the rail cannon's core between its prongs (its edges and ends; brightens as it charges)
   power_armor_glow_rail_flow_{0,1,2}.png  the core's rings, a third each: lit in turn, energy runs along the core
 The script refuses to run if a reserved colour turns up outside the expected amount (someone painted with it).
+The rail cannon's core colours are see-through (SEE_THROUGH): cleared from power_armor.png once their masks are made, so
+run make-paint-textures.py after this script.
 """
 from pathlib import Path
 from PIL import Image
@@ -60,7 +62,7 @@ GLOW = {
     H('16304a'): ('rail', H('1a5cc8')), H('1d3f5e'): ('rail', H('2f9cff')),
     H('254e73'): ('rail_flow_0', H('9ae8ff')), H('245079'): ('rail_flow_1', H('9ae8ff')), H('26507b'): ('rail_flow_2', H('9ae8ff')),
 }
-EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20, 'tidal': 4, 'reactor': 69, 'pilot': 6, 'rail': 82, 'rail_flow_0': 12, 'rail_flow_1': 12, 'rail_flow_2': 8}  # pixels per mask (fire: the backpack's painted firebox, 4 coals x 3 rows (backpack v3, 2026-10-20: the old firebox cube and its 8 vent slits are gone); the visor cube: 7x5 glass front + 59 on its
+EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20, 'tidal': 4, 'reactor': 69, 'pilot': 6, 'rail': 246, 'rail_flow_0': 36, 'rail_flow_1': 36, 'rail_flow_2': 24}  # pixels per mask (fire: the backpack's painted firebox, 4 coals x 3 rows (backpack v3, 2026-10-20: the old firebox cube and its 8 vent slits are gone); the visor cube: 7x5 glass front + 59 on its
 # other faces, plus 150 left in the texture from the old visor that no cube uses (2026-10-19 export: harmless, never drawn);
 # 2026-10-21 export: 540 = 236 of those + 304 on the hidden helmet drafts' faces (proto_helm_*: their visors are glass
 # too; since 2026-10-22 they're the helmet styles, helm_*, drawn when worn: their visors glow like the standard one; 8 old leftovers were painted over by the drafts); 2026-10-21 engine
@@ -71,7 +73,8 @@ EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core':
 # 2026-10-26 the rail cannon's drafts were packed over 6 never-drawn visor leftovers (441; checked: no texel a cube
 # draws changed);
 # rail (2026-10-26, flowing core; draft F3 since the same day, the drafts and the old core gone): the 3x8x3 core's edge
-# columns (4 x 16) and ends (18) = 82; rail_flow_*: its 4 x 8 ring texels by phase (12 / 12 / 8);
+# columns (4 x 16) and ends (18) = 82; rail_flow_*: its 4 x 8 ring texels by phase (12 / 12 / 8); x3 while the two
+# round-4 drafts (proto_rail_T1 / T2, tapered prongs) are in the texture;
 # pilot: the 1x1x1 tip of the flamethrower's pilot light, 6 faces;
 # tidal: the 2x2 porthole x 2 faces' worth (8); reactor: the core's ring + the canisters' glass strips (69);
 # 4 barrel sides x 2x2 tips; 4 barrel sides x 2x3 behind them + the front collar's 6x1x6 net, 96;
@@ -79,10 +82,19 @@ EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core':
 # tip, 2x2 end + 4 sides x 2x2)
 
 
+# Reserved colours that are only light (2026-10-26, user: the rail cannon's core should be see-through when off, "like
+# actual energy charging up instead of some blue LEDs"): after the masks are made, these pixels are cleared from the
+# base texture, so the cube is invisible (cut out) and only its glow shows. Blockbench keeps them painted (to design with,
+# and so the next export brings them back for this script).
+SEE_THROUGH = {'rail', 'rail_flow_0', 'rail_flow_1', 'rail_flow_2'}
+
+
 def main():
-    src = Image.open(TEX / 'power_armor.png').convert('RGBA')
+    path = TEX / 'power_armor.png'
+    src = Image.open(path).convert('RGBA')
     masks = {name: Image.new('RGBA', src.size, (0, 0, 0, 0)) for name in EXPECTED}
     count = dict.fromkeys(EXPECTED, 0)
+    clear = []
     for y in range(src.height):
         for x in range(src.width):
             r, g, b, a = src.getpixel((x, y))
@@ -90,13 +102,26 @@ def main():
             if hit:
                 masks[hit[0]].putpixel((x, y), hit[1] + (255,))
                 count[hit[0]] += 1
+                if hit[0] in SEE_THROUGH:
+                    clear.append((x, y))
+    # Run again on a texture already cleared (no new export): the see-through masks are kept as they are.
+    kept = {name for name in SEE_THROUGH if count[name] == 0 and (TEX / f'power_armor_glow_{name}.png').exists()}
+    for name in kept:
+        count[name] = EXPECTED[name]
     if count != EXPECTED:
         raise SystemExit(f'glow pixels {count}, expected {EXPECTED}: a reserved colour was used elsewhere, or the '
                          f'glowing parts changed (update EXPECTED)')
     for name, im in masks.items():
+        if name in kept:
+            print(f'kept power_armor_glow_{name}.png (its pixels were already cleared from the texture)')
+            continue
         out = TEX / f'power_armor_glow_{name}.png'
         im.save(out)
         print(f'wrote {out.relative_to(ROOT)} ({count[name]} pixels)')
-
+    if clear:
+        for x, y in clear:
+            src.putpixel((x, y), (0, 0, 0, 0))
+        src.save(path)
+        print(f'cleared {len(clear)} see-through pixels from {path.relative_to(ROOT)}')
 
 main()

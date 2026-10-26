@@ -21,7 +21,8 @@ import org.jspecify.annotations.Nullable;
  * The suit's lights: the engine (firebox fire, tidal Heart of the Sea, reactor energy), the visor, the chaingun's hot barrels, the EM projector's redstone and the rail cannon's core, drawn on top of the model at full brightness so they glow
  * in the dark. Like GeckoLib's AutoGlowingGeoLayer, the whole model is drawn again with a glowmask texture (black
  * everywhere except the glowing pixels, made by tools/make-glowmasks.py) in vanilla's "eyes" render type (the one
- * spider and enderman eyes use): it ignores light and adds its colour on top. Unlike AutoGlowingGeoLayer, each mask
+ * spider and enderman eyes use): it ignores light and draws its colour on top (blended by alpha in 26.3, not added:
+ * a dimmed mask is a darker colour, fine over the dark glass and coals it sits on). Unlike AutoGlowingGeoLayer, each mask
  * is tinted every frame, so the fire flickers and fades and the visor changes colour (PowerArmorEntity.tickLights).
  */
 public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, LivingEntityRenderState> {
@@ -72,10 +73,10 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
                 tint(suit.getTidalGlow(time), 1F, 1F, 1F),
                 tint(suit.getReactorGlow(time), 1F, 1F, 1F),
                 tint(suit.getPilotGlow(time), 1F, 1F, 1F),
-                tint(suit.getRailGlow(time), 1F, 1F, 1F),
-                tint(suit.getRailFlowGlow(0, partialTick), 1F, 1F, 1F),
-                tint(suit.getRailFlowGlow(1, partialTick), 1F, 1F, 1F),
-                tint(suit.getRailFlowGlow(2, partialTick), 1F, 1F, 1F)});
+                energy(suit.getRailGlow(time)),
+                energy(suit.getRailFlowGlow(0, partialTick)),
+                energy(suit.getRailFlowGlow(1, partialTick)),
+                energy(suit.getRailFlowGlow(2, partialTick))});
         state.addGeckolibData(SuitRenderData.RAIL_SHAKE, new float[] {suit.getRailCharge(), time});
     }
 
@@ -91,7 +92,7 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
         }
     }
 
-    /** Draws the model again in the additive "eyes" render type for each mask whose tint isn't black. The tint, light
+    /** Draws the model again in the "eyes" render type for each mask whose tint isn't black. The tint, light
      *  and overlay are read from the render state when a pass is submitted, so they're swapped in for each pass and put
      *  back afterwards. */
     static <R extends GeoRenderState> void drawMasks(GeoRenderer<?, ?, R> renderer, RenderPassInfo<R> info, SubmitNodeCollector renderTasks,
@@ -102,7 +103,7 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
             if ((tints[i] & 0xFFFFFF) == 0) {
                 continue;
             }
-            state.addGeckolibData(DataTickets.RENDER_COLOR, tints[i]); // additive: scaling the colour down dims the glow
+            state.addGeckolibData(DataTickets.RENDER_COLOR, tints[i]); // scaling the colour down dims the glow
             state.addGeckolibData(DataTickets.PACKED_LIGHT, LightCoordsUtil.FULL_BRIGHT);
             state.addGeckolibData(DataTickets.PACKED_OVERLAY, OverlayTexture.NO_OVERLAY);
             renderer.submitRenderTasks(info, renderTasks.order(1), RenderTypes.eyes(masks[i]));
@@ -122,6 +123,16 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
     static float barrelGlow(float heat) {
         float h = Math.max(0F, (heat - 0.55F) / 0.45F);
         return h * h * (3 - 2 * h);
+    }
+
+    /** Light with nothing behind it (the rail cannon's core, see-through when off: its pixels are cleared from the
+     *  texture): the mask's own colour, faded by its opacity instead of darkened. The "eyes" pipeline blends by alpha
+     *  (it isn't additive), so a dimmed opaque colour would draw a dark core where there should be air. */
+    static int energy(float brightness) {
+        if (brightness <= 0.01F) {
+            return 0xFF000000;
+        }
+        return channel(brightness) << 24 | 0xFFFFFF;
     }
 
     /** Opaque ARGB of (r, g, b) x brightness; black (= nothing to draw) below 1%. */
