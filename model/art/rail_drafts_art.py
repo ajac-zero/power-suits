@@ -17,7 +17,7 @@ charging). The plan's "lit" texels give the charged look for review renders.
     uv run --with pillow python3 model/art/rail_drafts_art.py   (writes .scratch/rail/plan.json; apply: .scratch/flame/apply.js
     with {plan: ".scratch/rail/plan.json"}; review: .scratch/flame/look.js with {group, out})
 """
-import json, sys
+import json, math, sys
 sys.path.insert(0, "model/art")
 import backpack_kit
 from backpack_kit import on, build, PAL, MATERIALS, grid
@@ -401,3 +401,68 @@ if __name__ == "__main__":
     lit["checkpoint"] = "rail drafts: lit preview"
     json.dump(lit, open(OUT.replace(".json", "_lit.json"), "w"))
     print("cubes", sum(len(c) for c in DRAFTS.values()), "pixels", len(plan["pixels"]), "lit", len(plan["lit"]))
+
+
+# ---- rail top texture (user, 2026-10-26: "add some texture to the topside of the rails, currently looking a little flat")
+# The prongs' top and bottom when raised are their north / south faces (plain steel 'S' so far). Painted in place on the
+# game cubes (rail_prong_{out,in}_0..3), by position on the rail: u = distance from the inner edge (the core slot), v =
+# distance from the socket base. Three styles to compare:
+#   vents   a lit lip along the slot, shaded outer edge, dark vent slots across the root and mid segments (F3 had vents)
+#   panels  plate seams just before each step, rivets at the seams, a groove down the middle of the wide segments
+#   worn    the flamethrower barrel's worn steel (mixed greys, glints) with a copper conduit along the slot edge
+GAP_EDGE = {"out": -13.5, "in": -9.5}
+
+
+def rail_skin(style, side):
+    edge = GAP_EDGE[side]
+
+    def paint(face, x, y, z):
+        if face not in ("north", "south"):
+            return '.'
+        u = abs(x - edge)                    # 0 at the slot edge
+        v = BASE - y                         # 0 at the socket base
+        seg = 0 if y > 15.625 else 1 if y > 11.625 else 2 if y > 8.625 else 3
+        w = [2.5, 2.0, 1.5, 1.0][seg]
+        outer = u > w - 1.0
+        lip = u < 1.0                        # the texel along the slot (half a texel on the inner prong: 2.5 px faces)
+        if style == "vents":
+            if lip: return 'G'
+            if outer: return 'T' if seg < 3 else '5'
+            if seg < 2 and v > 1 and int(v) % 2 == 1: return 'K'
+            return 't'
+        if style == "panels":
+            top, bottom = [BASE, 15.625, 11.625, 8.625][seg], [15.625, 11.625, 8.625, TIP][seg]
+            if seg < 3 and y - bottom < 1: return '5'                                                         # seam
+            if seg < 2 and abs(y - (top - 1.5)) < 0.5 and outer: return 'W'                                   # rivet
+            if seg < 2 and w >= 2 and abs(u - 1.0) < 0.5 and 2 < v < 10: return 'D'                          # groove
+            if lip: return 'G'
+            return 'S' if outer else 'T'
+        # worn
+        if lip: return 'k' if int(v) % 3 == 0 else 'C'
+        h = (int(v) * 7 + int(u * 2) * 13 + (0 if face == "north" else 5) + (0 if side == "out" else 11)) % 23
+        if h in (4, 15): return 'W'
+        if outer: return 'S' if h % 2 else 'T'
+        return ('G' if v < 2 else 't') if h % 3 else 'T'
+    return paint
+
+
+def skin_plan(style):
+    """A repaint plan for the game prongs' top and bottom faces in one style (apply with .scratch/flame/apply.js)."""
+    src = json.load(open(SRC))
+    pixels = []
+    for e in src["model"]["elements"]:
+        n = e["name"]
+        if not n.startswith("rail_prong_"):
+            continue
+        side = "out" if "_out_" in n else "in"
+        fn = rail_skin(style, side)
+        f, t = e["from"], e["to"]
+        for face in ("north", "south"):
+            u0, v0, u1, v1 = e["faces"][face]["uv"]
+            w, h = math.ceil(abs(u1 - u0) - 1e-6), math.ceil(abs(v1 - v0) - 1e-6)
+            for r in range(h):
+                for c in range(w):
+                    k = fn(face, *face_point(face, f, t, c, r))
+                    if k != '.':
+                        pixels.append([int(min(u0, u1)) + c, int(min(v0, v1)) + r, PAL[k]])
+    return {"groups": {}, "pixels": pixels, "origin": ORIGIN, "parent": "left_forearm", "checkpoint": f"rail top skin {style}"}
