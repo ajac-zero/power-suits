@@ -2954,5 +2954,187 @@ public final class PowerArmorTests {
         });
     }
 
+    // =========================================================================================
+    // Rail cannon (Phase 11, 2026-10-26)
+    // =========================================================================================
+
+    /** A suit at (4, 2, 1) facing +Z with the rail cannon, fuel, {@code ingots} iron ingots in its ammo slot and a
+     *  survival pilot looking at {@code target} (relative). */
+    private static Player railPilot(GameTestHelper helper, PowerArmorEntity[] out, Vec3 target, int ingots) {
+        PowerArmorEntity suit = suitAt(helper, new BlockPos(4, 2, 1));
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 2));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.RAIL_CANNON.get()));
+        suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, ingots > 0 ? new ItemStack(Items.IRON_INGOT, ingots) : ItemStack.EMPTY);
+        suit.setYRot(0);
+        suit.setYBodyRot(0);
+        Player pilot = boardedPilot(helper, suit);
+        suit.positionRider(pilot);
+        aim(helper, pilot, target);
+        out[0] = suit;
+        return pilot;
+    }
+
+    /** Let go early and nothing happens (nothing spent); hold to a full charge and let go: one shot, one ingot, the
+     *  shot's fuel. */
+    @SuitTest(timeoutTicks = 120, batch = "rail")
+    public static void railCannonFiresOnlyAtFullCharge(GameTestHelper helper) {
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = railPilot(helper, suit, new Vec3(4.5, 3, 7.5), 3);
+        int full = PowerArmorConfig.RAIL_CHARGE.get();
+        int[] energy = new int[1];
+        helper.runAfterDelay(2, () -> {
+            energy[0] = suit[0].getTotalEnergy();
+            suit[0].setTriggerHeld(pilot, true);
+        });
+        helper.runAfterDelay(2 + full - 5, () -> {
+            helper.assertTrue(suit[0].getToolSpin() > 0.5F && suit[0].getToolSpin() < 1F, "charging, got " + suit[0].getToolSpin());
+            suit[0].setTriggerHeld(pilot, false);
+        });
+        helper.runAfterDelay(2 + full + 5, () -> {
+            helper.assertTrue(suit[0].getToolUses() == 0 && ammoLeft(suit[0]) == 3, "an early release fires nothing, uses " + suit[0].getToolUses());
+            helper.assertTrue(suit[0].getToolSpin() < 0.5F, "and the charge winds down, " + suit[0].getToolSpin());
+            suit[0].setTriggerHeld(pilot, true);
+        });
+        helper.runAfterDelay(2 + 2 * full + 15, () -> {
+            helper.assertTrue(suit[0].getToolSpin() >= 0.999F, "fully charged, " + suit[0].getToolSpin());
+            helper.assertTrue(suit[0].getToolUses() == 0, "it holds the charge while the trigger is down");
+            suit[0].setTriggerHeld(pilot, false);
+        });
+        helper.runAfterDelay(2 + 2 * full + 17, () -> {
+            helper.assertTrue(suit[0].getToolUses() == 1, "let go at full charge: one shot, got " + suit[0].getToolUses());
+            helper.assertTrue(ammoLeft(suit[0]) == 2 && suit[0].getAmmoStack().getCount() == 2, "one ingot used, left " + ammoLeft(suit[0]));
+            int used = energy[0] - suit[0].getTotalEnergy(), shot = PowerArmorConfig.RAIL_ENERGY.get();
+            helper.assertTrue(used >= shot && used < shot + 40, "a shot costs " + shot + " energy (+ idle), used " + used);
+            helper.assertTrue(suit[0].getToolSpin() == 0F, "the charge is spent");
+            helper.succeed();
+        });
+    }
+
+    /** The beam goes through every mob on the line: two husks one behind the other both take the hit (and die: 40 >
+     *  20), credited to the pilot, with rail damage. */
+    @SuitTest(timeoutTicks = 80, batch = "rail")
+    public static void railCannonPiercesEveryMobInLine(GameTestHelper helper) {
+        var near = statueHusk(helper, new Vec3(4.5, 2, 4.5));
+        var far = statueHusk(helper, new Vec3(4.5, 2, 7.5));
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = railPilot(helper, suit, new Vec3(4.5, 3.0, 7.5), 1);
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(4 + PowerArmorConfig.RAIL_CHARGE.get(), () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(6 + PowerArmorConfig.RAIL_CHARGE.get(), () -> {
+            var shot = dev.ajaczero.powerarmor.item.RailCannonItem.lastShot(suit[0]);
+            helper.assertTrue(shot != null && shot.hit().size() == 2, "both husks on the beam, got " + (shot == null ? null : shot.hit()));
+            for (var husk : List.of(near, far)) {
+                float expected = PowerArmorConfig.RAIL_DAMAGE.get().floatValue();
+                helper.assertTrue(expected >= husk.getMaxHealth() ? !husk.isAlive() || husk.getHealth() <= 0 : husk.getHealth() <= husk.getMaxHealth() - expected + 0.01F,
+                        "each takes the whole hit, health " + husk.getHealth());
+                var src = husk.getLastDamageSource();
+                helper.assertTrue(src != null && src.is(dev.ajaczero.powerarmor.item.RailCannonItem.RAIL), "rail damage, got " + src);
+                helper.assertTrue(src.getEntity() == pilot, "credited to the pilot, got " + src.getEntity());
+            }
+            helper.assertTrue(pilot.getHealth() == pilot.getMaxHealth() && suit[0].getHealth() == suit[0].getMaxHealth(), "the shooter isn't hit");
+            helper.succeed();
+        });
+    }
+
+    /** It breaks what a sprinting suit smashes (glass) and goes on, and stops at stone: a husk behind the stone is safe. */
+    @SuitTest(timeoutTicks = 80, batch = "rail")
+    public static void railCannonBreaksGlassAndStopsAtStone(GameTestHelper helper) {
+        for (int x = 2; x <= 6; x++) {
+            for (int y = 2; y <= 5; y++) {
+                helper.setBlock(new BlockPos(x, y, 4), Blocks.GLASS);
+                helper.setBlock(new BlockPos(x, y, 6), Blocks.STONE);
+            }
+        }
+        var husk = statueHusk(helper, new Vec3(4.5, 2, 7.5));
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = railPilot(helper, suit, new Vec3(4.5, 3.5, 7.5), 1);
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(4 + PowerArmorConfig.RAIL_CHARGE.get(), () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(6 + PowerArmorConfig.RAIL_CHARGE.get(), () -> {
+            int glass = 0, stone = 0;
+            for (int x = 2; x <= 6; x++) {
+                for (int y = 2; y <= 5; y++) {
+                    glass += helper.getBlockState(new BlockPos(x, y, 4)).is(Blocks.GLASS) ? 1 : 0;
+                    stone += helper.getBlockState(new BlockPos(x, y, 6)).is(Blocks.STONE) ? 1 : 0;
+                }
+            }
+            var shot = dev.ajaczero.powerarmor.item.RailCannonItem.lastShot(suit[0]);
+            helper.assertTrue(suit[0].getToolUses() == 1 && shot != null, "it fired");
+            if (PowerArmorConfig.RAIL_BREAKS_BLOCKS.get()) {
+                helper.assertTrue(glass >= 18 && glass <= 19 && shot.blocksBroken() == 20 - glass, "it broke the glass it went through, left " + glass);
+                helper.assertTrue(shot.to().z - helper.absoluteVec(Vec3.ZERO).z > 5.9, "and went on to the stone, stopped at z " + shot.to().z);
+            }
+            helper.assertTrue(stone == 20, "the stone stops it, intact " + stone);
+            helper.assertTrue(husk.getHealth() == husk.getMaxHealth(), "the husk behind the stone is safe");
+            helper.succeed();
+        });
+    }
+
+    /** Without iron ingots it doesn't even charge: a click and a message, nothing used. A creative pilot needs none. */
+    @SuitTest(timeoutTicks = 100, batch = "rail")
+    public static void railCannonNeedsIronIngots(GameTestHelper helper) {
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = railPilot(helper, suit, new Vec3(4.5, 3, 7.5), 0);
+        int full = PowerArmorConfig.RAIL_CHARGE.get();
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(4 + full, () -> {
+            helper.assertTrue(suit[0].getToolSpin() == 0F, "no ingot, no charge: " + suit[0].getToolSpin());
+            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(menuSlotTakes(helper, suit[0], new ItemStack(Items.IRON_INGOT)), "the ammo slot takes iron ingots");
+            pilot.getAbilities().instabuild = true;
+            suit[0].setTriggerHeld(pilot, true);
+        });
+        helper.runAfterDelay(8 + 2 * full, () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(10 + 2 * full, () -> {
+            helper.assertTrue(suit[0].getToolUses() == 1, "creative fires with an empty ammo slot, got " + suit[0].getToolUses());
+            helper.succeed();
+        });
+    }
+
+    private static boolean menuSlotTakes(GameTestHelper helper, PowerArmorEntity suit, ItemStack stack) {
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        return new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit).getSlot(4).mayPlace(stack);
+    }
+
+    private static PowerArmorEntity railGuard(GameTestHelper helper, BlockPos at, int ingots) {
+        PowerArmorEntity suit = suitAt(helper, at);
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.RAIL_CANNON.get()));
+        suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.IRON_INGOT, ingots));
+        suit.setHome(helper.absolutePos(at));
+        return suit;
+    }
+
+    /** The machine mind guards home with it: a husk across the pad gets shot (charge, aim, let go), one ingot spent; the
+     *  suit stays home. */
+    @SuitTest(timeoutTicks = 140)
+    public static void railCannonMindShootsMonstersFromHome(GameTestHelper helper) {
+        PowerArmorEntity suit = railGuard(helper, new BlockPos(4, 2, 1), 4);
+        var husk = statueHusk(helper, new Vec3(5.5, 2, 7.5));
+        helper.runAfterDelay(120, () -> {
+            helper.assertTrue(suit.getToolUses() >= 1, "it should have fired, uses " + suit.getToolUses());
+            helper.assertTrue(!husk.isAlive() || husk.getHealth() < husk.getMaxHealth(), "and hit the husk, health " + husk.getHealth());
+            helper.assertTrue(ammoLeft(suit) == 4 - suit.getToolUses(), "an ingot per shot, left " + ammoLeft(suit));
+            helper.assertTrue(!suit.isAwayFromHome(1.0), "from home");
+            helper.assertTrue(!suit.followsOwner() && suit.snipesFromHome(), "the rail guard job, not the chaingun's");
+            helper.succeed();
+        });
+    }
+
+    /** The beam goes on past the target, so a villager behind the husk (on the line) holds the mind's fire. */
+    @SuitTest(timeoutTicks = 140)
+    public static void railCannonMindHoldsFireWithAFriendOnTheBeam(GameTestHelper helper) {
+        PowerArmorEntity suit = railGuard(helper, new BlockPos(4, 2, 1), 4);
+        statueHusk(helper, new Vec3(4.5, 2, 5.5));
+        // right behind it: the beam aimed down at the husk would reach the floor further back, past a villager there
+        var villager = helper.spawn(net.minecraft.world.entity.EntityTypes.VILLAGER, new Vec3(4.5, 2, 6.7));
+        villager.setNoAi(true);
+        helper.runAfterDelay(120, () -> {
+            helper.assertTrue(suit.getToolUses() == 0, "no shot through a villager, uses " + suit.getToolUses());
+            helper.assertTrue(villager.getHealth() == villager.getMaxHealth(), "the villager is fine");
+            helper.succeed();
+        });
+    }
+
     private PowerArmorTests() {}
 }

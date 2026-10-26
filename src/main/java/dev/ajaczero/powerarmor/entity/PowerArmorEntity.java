@@ -198,6 +198,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> TOOL_SHOTS =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
+    /** Where the rail cannon's last beam ended (world position): with the shot counter, every client draws the beam. */
+    private static final EntityDataAccessor<org.joml.Vector3fc> RAIL_END =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.VECTOR3);
     /** True while a lightning strike has knocked the suit out (it restarts by itself): the slump starts with sparks. */
     /** Who the machine mind works for (SuitMind ordinal): the visor shows it. */
     private static final EntityDataAccessor<Byte> MIND =
@@ -302,6 +305,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private float emCoreGlow, emArcGlow;
     /** Client: the flamethrower's pilot light, 0 (out) .. 1 (spraying). */
     private float pilotGlow;
+    /** Client: the rail cannon's core glow, 0..1 (the charge, a flash after each shot). */
+    private float railGlow;
     /** Client: the tidal engine's / star reactor's glass, 0 (dark) .. 1 (running), eased like the fire. */
     private float engineGlow;
     private final float[] visorColor = {1F, 0.68F, 0.22F};
@@ -397,6 +402,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(TOOL_SPIN, 0F);
         builder.define(TOOL_HEAT, 0F);
         builder.define(TOOL_SHOTS, 0);
+        builder.define(RAIL_END, new org.joml.Vector3f());
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
         builder.define(AMMO_ITEM, ItemStack.EMPTY);
         builder.define(HELMET, false);
@@ -539,6 +545,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Both sides: a flamethrower in the socket (the same job as the chaingun's, at close range; or a rogue's weapon). */
     public boolean hasFlamethrower() {
         return this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.FlamethrowerItem;
+    }
+
+    /** Both sides: a rail cannon in the socket (the long-range guard job; never a rogue's). */
+    public boolean hasRailCannon() {
+        return this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.RailCannonItem;
+    }
+
+    /** Both sides: the rail guard job (Phase 11): a friendly mind with a rail cannon shoots from home at what comes near. */
+    public boolean snipesFromHome() {
+        return !this.isRogue() && this.hasRailCannon();
     }
 
     /** Both sides: a weapon the mind fights with by aiming and holding the trigger (chaingun, flamethrower). */
@@ -1655,6 +1671,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 && !this.isEyeInFluid(net.minecraft.tags.FluidTags.WATER);
         float pilotTarget = !flamer ? 0F : this.isToolActive() ? 1F : 0.7F;
         this.pilotGlow += (pilotTarget - this.pilotGlow) * (pilotTarget > this.pilotGlow ? 0.4F : 0.1F);
+        // Rail cannon: the core idles at a faint blue while it's fitted to a powered suit and brightens with the charge
+        // (synced as the tool spin); a shot flashes it (tickShotEffects), then it fades back.
+        boolean rail = powered && this.hasRailCannon();
+        float railTarget = !rail ? 0F : 0.15F + 0.85F * this.getToolSpin();
+        this.railGlow += (railTarget - this.railGlow) * (railTarget > this.railGlow ? 0.5F : 0.12F);
         // The tidal engine's and the reactor's glass light up while they run (the firebox has its fire above).
         float engineTarget = powered && this.getEngine() != SuitEngine.FIREBOX ? 1F : 0F;
         this.engineGlow += (engineTarget - this.engineGlow) * (engineTarget > this.engineGlow ? 0.15F : 0.05F);
@@ -1695,6 +1716,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Client: the flamethrower's pilot light at this moment, 0..1: a small flame, it wavers a little. */
     public float getPilotGlow(float time) {
         return this.pilotGlow * (0.88F + 0.08F * Mth.sin(time * 0.9F + this.getId()) + 0.04F * Mth.sin(time * 2.3F));
+    }
+
+    /** Client: the rail cannon's core at this moment, 0..1: steady while it charges, a fast shimmer once it's full. */
+    public float getRailGlow(float time) {
+        boolean full = this.getToolSpin() >= 0.999F;
+        return this.railGlow * (full ? 0.85F + 0.15F * Mth.sin(time * 2.7F + this.getId()) : 1F);
     }
 
     /** Client: firebox glow, 0 (cold) .. 1 (roaring). */
@@ -2350,6 +2377,14 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (launcher) {
             this.drumTurn += 90F;
         }
+        if (this.hasRailCannon()) {
+            // The beam, drawn here by every client from the muzzle it sees; the core flashes white-hot.
+            this.railGlow = 1F;
+            LivingEntity operator = this.getControllingPassenger() instanceof Player pilot ? pilot : this;
+            org.joml.Vector3fc end = this.entityData.get(RAIL_END);
+            RailBeamEffects.shot(this, operator, new Vec3(end.x(), end.y(), end.z()));
+            return;
+        }
         if (this.getControllingPassenger() instanceof Player pilot && pilot.isLocalPlayer()) {
             Vec3 muzzle = dev.ajaczero.powerarmor.item.SocketAim.visualMuzzle.apply(this, pilot);
             boolean firstPerson = muzzle.distanceTo(pilot.getEyePosition()) < 1.4;
@@ -2377,6 +2412,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public void setToolSpin(float spin, float heat) {
         this.entityData.set(TOOL_SPIN, spin);
         this.entityData.set(TOOL_HEAT, heat);
+    }
+
+    /** Server: where the rail cannon's beam ended (set before countShot, so clients get both in one update). */
+    public void setRailBeamEnd(Vec3 end) {
+        this.entityData.set(RAIL_END, new org.joml.Vector3f((float) end.x, (float) end.y, (float) end.z));
     }
 
     /** Server: a shot was fired (bumps the synced counter: recoil, muzzle burst). */

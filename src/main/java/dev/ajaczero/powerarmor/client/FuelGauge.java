@@ -23,7 +23,8 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 /**
  * The fuel gauge next to the hotbar while you pilot a suit: a flame that shrinks as the current item
  * burns, the fuel slot's item and count, how long the fuel lasts at walking pace, and with the chaingun installed
- * how many bullets (iron nuggets) you carry and the barrels' heat; with the TNT launcher the TNT left in the ammo slot.
+ * how many bullets (iron nuggets) you carry and the barrels' heat; with the TNT launcher the TNT left in the ammo slot; with the
+ * rail cannon the iron ingots left and the charge.
  * It's a "GUI layer" (registered in ClientSetup), drawn every frame on top of the vanilla hotbar.
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
@@ -90,11 +91,27 @@ public final class FuelGauge {
             graphics.item(tntIcon, x + 16, y - 18);
             Component count = Component.literal(rounds < 0 ? "\u221e" : Integer.toString(rounds));
             graphics.text(mc.font, count, x + 36, y - 14, rounds == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
+        } else if (suit.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.RailCannonItem) {
+            // Shots left (iron ingots in the ammo slot), red when there are none; under the count, the charge as a thin
+            // blue bar that turns white when it's full (let go!).
+            int rounds = dev.ajaczero.powerarmor.item.RailCannonItem.countRounds(suit, mc.player);
+            if (ingotIcon == null) {
+                ingotIcon = new ItemStack(net.minecraft.world.item.Items.IRON_INGOT);
+            }
+            graphics.item(ingotIcon, x + 16, y - 18);
+            Component count = Component.literal(rounds < 0 ? "\u221e" : Integer.toString(rounds));
+            graphics.text(mc.font, count, x + 36, y - 14, rounds == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
+            float charge = suit.getToolSpin();
+            if (charge > 0.01F) {
+                int w = Math.round(24 * charge);
+                graphics.fill(x + 36, y - 4, x + 60, y - 2, 0x80000000);
+                graphics.fill(x + 36, y - 4, x + 36 + w, y - 2, charge >= 0.999F ? 0xFFE6FBFF : 0xFF2F9CFF);
+            }
         }
     }
 
     /** Made on first use: since 1.21.x an ItemStack can't be created before the game has loaded its item data. */
-    private static ItemStack bulletIcon, tntIcon;
+    private static ItemStack bulletIcon, tntIcon, ingotIcon;
 
     /** Warning beep every 2 seconds while running on the last few seconds of fuel. */
     @SubscribeEvent

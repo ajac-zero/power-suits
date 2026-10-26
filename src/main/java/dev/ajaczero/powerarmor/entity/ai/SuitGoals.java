@@ -40,6 +40,7 @@ public final class SuitGoals {
         goals.addGoal(7, new RogueWander(suit));
         goals.addGoal(2, new ChaingunAttack(suit));
         goals.addGoal(2, new EmGuard(suit));
+        goals.addGoal(2, new RailGuard(suit));
         goals.addGoal(3, new DrillWorker(suit));
         goals.addGoal(3, new SawWorker(suit));
         goals.addGoal(4, new FollowOwner(suit));
@@ -639,6 +640,123 @@ public final class SuitGoals {
 
         @Override
         public void stop() {
+            this.suit.setAiTrigger(false);
+            this.suit.setAiAim(null);
+            this.suit.setTarget(null);
+            this.target = null;
+        }
+    }
+
+    /**
+     * Rail cannon job (Phase 11, user: "a long-range guard"): a sentry at home. Pick what to shoot within the rail guard
+     * radius of home (whatever just hurt the owner or the suit first, then the monster nearest home) that the suit can
+     * see and the beam can reach, aim the head at it and hold the trigger until the cannon is charged; then let go (it
+     * fires on release) once the head points at the target and nobody it must not hurt is anywhere on the beam
+     * (SuitTargets.beamClear: the beam goes on past the target). Only LOOK: ReturnHome keeps the feet at home. A shot it
+     * can't take within a few seconds is dropped without firing (RailCannonItem.disarm). Never breaks blocks.
+     */
+    static class RailGuard extends Goal {
+        /** Give up on a target after this long (out of sight, friends in the way). */
+        private static final int GIVE_UP_TICKS = 120;
+        /** Fire only with the head within this many degrees of the target (the beam is a hand wide). */
+        private static final double MAX_AIM_ERROR = 2.0;
+        private final PowerArmorEntity suit;
+        @org.jetbrains.annotations.Nullable
+        private LivingEntity target;
+        private int ticks;
+        private boolean fired;
+
+        RailGuard(PowerArmorEntity suit) {
+            this.suit = suit;
+            this.setFlags(EnumSet.of(Flag.LOOK));
+        }
+
+        @org.jetbrains.annotations.Nullable
+        private dev.ajaczero.powerarmor.item.RailCannonItem cannon() {
+            return this.suit.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.RailCannonItem c ? c : null;
+        }
+
+        @Override
+        public boolean canUse() {
+            var cannon = this.cannon();
+            if (cannon == null || !this.suit.isAiDriven() || !this.suit.snipesFromHome() || this.suit.getHome() == null
+                    || dev.ajaczero.powerarmor.item.RailCannonItem.isCoolingDown(this.suit) || !cannon.canPay(this.suit, this.suit)) {
+                return false;
+            }
+            this.target = this.pick();
+            return this.target != null;
+        }
+
+        /** Provoked attackers first (the owner's, then the suit's own), else the monster nearest home. */
+        @org.jetbrains.annotations.Nullable
+        private LivingEntity pick() {
+            BlockPos home = this.suit.getHome();
+            if (home == null) {
+                return null;
+            }
+            Vec3 centre = Vec3.atBottomCenterOf(home);
+            double radius = dev.ajaczero.powerarmor.PowerArmorConfig.RAIL_GUARD_RADIUS.get();
+            double reach = dev.ajaczero.powerarmor.PowerArmorConfig.RAIL_RANGE.get() - 1;
+            java.util.function.Predicate<LivingEntity> shootable = e -> e.distanceToSqr(centre) < radius * radius
+                    && e.distanceTo(this.suit) < reach && this.suit.getSensing().hasLineOfSight(e);
+            net.minecraft.world.entity.player.Player owner = this.suit.getOwner();
+            for (LivingEntity provoked : new LivingEntity[] {owner == null ? null : owner.getLastHurtByMob(), this.suit.getLastHurtByMob()}) {
+                if (provoked != null && SuitTargets.isProvoked(this.suit, provoked) && SuitTargets.canAttack(this.suit, provoked, true)
+                        && shootable.test(provoked)) {
+                    return provoked;
+                }
+            }
+            return this.suit.level().getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(centre, centre).inflate(radius, 16, radius),
+                            e -> (e instanceof net.minecraft.world.entity.monster.Enemy || e instanceof PowerArmorEntity other && other.isRogue())
+                                    && SuitTargets.canAttack(this.suit, e, false) && shootable.test(e))
+                    .stream().min(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(centre))).orElse(null);
+        }
+
+        @Override
+        public void start() {
+            this.suit.setTarget(this.target);
+            this.ticks = 0;
+            this.fired = false;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return !this.fired && this.target != null && this.target.isAlive() && this.ticks < GIVE_UP_TICKS
+                    && this.suit.isAiDriven() && this.suit.snipesFromHome() && this.cannon() != null;
+        }
+
+        @Override
+        public boolean requiresUpdateEveryTick() {
+            return true;
+        }
+
+        @Override
+        public void tick() {
+            if (this.target == null) {
+                return;
+            }
+            this.ticks++;
+            Vec3 aim = this.target.getBoundingBox().getCenter();
+            this.suit.setAiAim(aim);
+            this.suit.setAiTrigger(true); // charge (it holds a full charge as long as the trigger stays down)
+            if (!dev.ajaczero.powerarmor.item.RailCannonItem.isCharged(this.suit) || !this.suit.getSensing().hasLineOfSight(this.target)) {
+                return;
+            }
+            Vec3 eye = this.suit.getEyePosition();
+            Vec3 view = this.suit.getViewVector(1F);
+            Vec3 want = aim.subtract(eye).normalize();
+            double error = Math.toDegrees(Math.acos(net.minecraft.util.Mth.clamp(view.dot(want), -1, 1)));
+            if (error <= MAX_AIM_ERROR && SuitTargets.beamClear(this.suit, view, dev.ajaczero.powerarmor.PowerArmorConfig.RAIL_RANGE.get())) {
+                this.suit.setAiTrigger(false); // let go: it fires this tick, after the goals (PowerArmorEntity.tickTool)
+                this.fired = true;
+            }
+        }
+
+        @Override
+        public void stop() {
+            if (!this.fired) {
+                dev.ajaczero.powerarmor.item.RailCannonItem.disarm(this.suit); // let go without firing
+            }
             this.suit.setAiTrigger(false);
             this.suit.setAiAim(null);
             this.suit.setTarget(null);

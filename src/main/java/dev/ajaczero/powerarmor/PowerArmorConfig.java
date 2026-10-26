@@ -137,6 +137,28 @@ public final class PowerArmorConfig {
                     "only hurt and push what's near.").translation(key("tnt_launcher_breaks_blocks"))
             .define("breaks_blocks", true);
 
+    // ---- Rail cannon (Phase 11) ---------------------------------------------------------------------------
+    public static final ModConfigSpec.IntValue RAIL_CHARGE = B.pop().translation(key("rail_cannon")).push("rail_cannon")
+            .comment("Ticks of holding the trigger to charge a shot (20 = a second). It only fires fully charged, on release.").translation(key("rail_charge"))
+            .defineInRange("charge_ticks", 30, 1, 1200);
+    public static final ModConfigSpec.DoubleValue RAIL_DAMAGE = B
+            .comment("Damage to everything the beam passes through (2 = one heart; 40 kills an enderman, a third of an iron golem).").translation(key("rail_damage"))
+            .defineInRange("damage", 40.0, 0, 10_000);
+    public static final ModConfigSpec.DoubleValue RAIL_RANGE = B
+            .comment("How far the beam reaches, blocks (it stops at the first solid block before that).").translation(key("rail_range"))
+            .defineInRange("range", 64.0, 1, 256);
+    public static final ModConfigSpec.IntValue RAIL_ENERGY = B
+            .comment("Fuel energy per shot, on top of the iron ingot it uses up (walking burns 1 per tick; a coal holds 1600).").translation(key("rail_energy"))
+            .defineInRange("energy_per_shot", 100, 0, 100_000);
+    public static final ModConfigSpec.IntValue RAIL_COOLDOWN = B
+            .comment("Ticks after a shot before it can charge again.").translation(key("rail_cooldown"))
+            .defineInRange("cooldown_ticks", 20, 0, 1200);
+    public static final ModConfigSpec.BooleanValue RAIL_BREAKS_BLOCKS = B
+            .comment("A pilot's beam breaks what a sprinting suit smashes through (glass, panes, leaves, ice...: block tag",
+                    "powerarmor:suit_smashes_sprinting) and goes on; it stops at anything else. Off: it stops at those too.",
+                    "The machine mind's beam never breaks blocks.").translation(key("rail_breaks_blocks"))
+            .define("breaks_blocks", true);
+
     // ---- the suit itself ---------------------------------------------------------------------------
     public static final ModConfigSpec.DoubleValue SEAL_ENERGY_PER_DAMAGE = B.pop().translation(key("suit")).push("suit")
             .comment("Sealed suit: fire, frost, magma, cactus and effect damage cost this much energy per point of damage instead of",
@@ -196,6 +218,11 @@ public final class PowerArmorConfig {
             .comment("How hard the guarding mind flings a monster, blocks per second (straight up: 44 = ~24 blocks high, enough",
                     "for the fall to kill a zombie; a pilot's throws are 32). Creepers are thrown away from home instead.").translation(key("em_guard_launch"))
             .defineInRange("em_guard_launch", 44.0, 0, 200);
+
+    public static final ModConfigSpec.DoubleValue RAIL_GUARD_RADIUS = B
+            .comment("A friendly suit with a rail cannon guards this many blocks around its home from where it stands: it shoots",
+                    "monsters it can see inside (and whatever attacks it or its owner), never with a friend anywhere on the beam.").translation(key("rail_guard_radius"))
+            .defineInRange("rail_guard_radius", 40.0, 0, 128);
 
     public static final ModConfigSpec SPEC = B.pop().build();
 

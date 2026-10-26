@@ -56,6 +56,7 @@ public class PowerArmor {
             event.accept(ModItems.CHAINSAW);
             event.accept(ModItems.FLAMETHROWER);
             event.accept(ModItems.TNT_LAUNCHER);
+            event.accept(ModItems.RAIL_CANNON);
             event.accept(ModItems.SUIT_HELMET);
             // the styled helmets and their templates (design sec. 4c): in survival these come from structure chests
             for (var style : dev.ajaczero.powerarmor.item.HelmetStyle.values()) {

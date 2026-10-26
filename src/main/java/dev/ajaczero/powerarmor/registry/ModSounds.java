@@ -31,6 +31,8 @@ public final class ModSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> CHAINGUN = register("tool.chaingun");
     /** The flamethrower's roar while it sprays. */
     public static final DeferredHolder<SoundEvent, SoundEvent> FLAMETHROWER = register("tool.flamethrower");
+    /** The rail cannon's hum while it charges; the pitch rises with the charge (RailCannonItem.runSoundPitch). */
+    public static final DeferredHolder<SoundEvent, SoundEvent> RAIL_CANNON = register("tool.rail_cannon");
 
     private static DeferredHolder<SoundEvent, SoundEvent> register(String name) {
         return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath(PowerArmor.MODID, name)));

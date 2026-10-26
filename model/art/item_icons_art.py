@@ -411,6 +411,33 @@ def tnt_launcher(ic):
     base(ic)
 
 
+def rail_cannon(ic):
+    # two steel prongs along the diagonals x + y = 12..13 and 17..18, the blue core glowing in the slot between them
+    # (x + y = 15, dark glass either side), a slate receiver at the base with a copper band round it
+    BLUE = ramp('0e2238', '16304a', '1d3f5e', '2f9cff', '8edcff', 'e6fbff')
+    for x in range(5, 16):
+        for d in range(12, 19):
+            y = d - x
+            if not 0 <= y < N:
+                continue
+            if d in (12, 13):
+                c = STEEL[6] if d == 12 else STEEL[4]
+            elif d in (17, 18):
+                c = STEEL[3] if d == 17 else STEEL[2]
+            elif x < 7 or (d == 15 and y < 2) or (d != 15 and (y < 1 or x > 14)):
+                continue
+            else:
+                c = BLUE[4] if d == 15 and x % 2 else BLUE[3] if d == 15 else BLUE[1]
+            ic.set(x, y, c)
+    for d in (12, 13):                            # the prongs' dark ends
+        ic.set(d, 0, IRON[1])
+    for d in (17, 18):
+        ic.set(15, d - 15, IRON[1])
+    ic.diag(4.5, 10.5, 7, 8, 7.4, 7.4, SLATE, 3)  # receiver
+    ic.diag(7.0, 8.0, 7.9, 7.1, 7.6, 7.6, COPPER, 3)  # copper band
+    base(ic)
+
+
 # ---- smithing templates: a stone tablet in the style's colour with the helmet's face cut into it ----------------------
 def tablet(ic, r):
     """Shaped like vanilla's templates: a slab with an uneven rim (corners broken off)."""
@@ -494,6 +521,7 @@ ICONS = {
     'em_projector': em_projector,
     'flamethrower': flamethrower,
     'tnt_launcher': tnt_launcher,
+    'rail_cannon': rail_cannon,
     'protector_template': template(tone('8a5a2b'), t_protector),
     'spartan_template': template(tone('5e7a2e'), t_spartan),
     'noble_template': template(tone('5a6470'), t_noble),

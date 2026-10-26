@@ -28,7 +28,7 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
     private static final DataTicket<Float> BARREL_ANGLE = DataTicket.create("powerarmor_view_barrel_angle", Float.class);
     private static final DataTicket<int[]> GLOW = DataTicket.create("powerarmor_view_glow", int[].class);
     /** The tool's lights, like on the suit (SuitGlowLayer): the chaingun's hot barrels, the EM projector's redstone. */
-    private static final Identifier[] MASKS = {SuitGlowLayer.HEAT, SuitGlowLayer.HEAT_BARREL, SuitGlowLayer.EM_CORE, SuitGlowLayer.EM_ARC, SuitGlowLayer.PILOT};
+    private static final Identifier[] MASKS = {SuitGlowLayer.HEAT, SuitGlowLayer.HEAT_BARREL, SuitGlowLayer.EM_CORE, SuitGlowLayer.EM_ARC, SuitGlowLayer.PILOT, SuitGlowLayer.RAIL};
 
     CockpitViewRenderer() {
         super(new Model());
@@ -49,7 +49,8 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
                     SuitGlowLayer.tint(SuitGlowLayer.barrelGlow(heat), 1F, 1F, 1F),
                     SuitGlowLayer.tint(suit.getEmCoreGlow(time), 1F, 1F, 1F),
                     SuitGlowLayer.tint(suit.getEmArcGlow(time), 1F, 1F, 1F),
-                    SuitGlowLayer.tint(suit.getPilotGlow(time), 1F, 1F, 1F)});
+                    SuitGlowLayer.tint(suit.getPilotGlow(time), 1F, 1F, 1F),
+                    SuitGlowLayer.tint(suit.getRailGlow(time), 1F, 1F, 1F)});
         }
     }
 

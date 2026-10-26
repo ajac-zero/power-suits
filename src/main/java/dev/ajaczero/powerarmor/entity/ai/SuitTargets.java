@@ -169,6 +169,31 @@ public final class SuitTargets {
         return true;
     }
 
+    /**
+     * The rail cannon's version (Phase 11): its beam goes through everything to the end of its range (or the first solid
+     * block), so nobody it must not hurt may be anywhere on that line, in front of the target or behind it. {@code dir}
+     * is where the suit's head really points (the beam leaves along it, not along the aim).
+     */
+    public static boolean beamClear(PowerArmorEntity suit, Vec3 dir, double range) {
+        if (!(suit.level() instanceof ServerLevel level)) {
+            return false;
+        }
+        Vec3 eye = suit.getEyePosition();
+        Vec3 end = level.clip(new net.minecraft.world.level.ClipContext(eye, eye.add(dir.scale(range)),
+                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, suit)).getLocation();
+        for (Entity e : level.getEntities(suit, new AABB(eye, end).inflate(1.5), e -> e instanceof LivingEntity && e.isAlive()
+                && !e.isSpectator() && !suit.hasPassenger(e))) {
+            if (canAttack(suit, e, false)) {
+                continue; // another monster on the line: it gets skewered too
+            }
+            AABB box = e.getBoundingBox().inflate(0.5);
+            if (box.contains(eye) || box.clip(eye, end).isPresent()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private SuitTargets() {}
 
     /** Server: the world's pvp game rule (players may hurt each other). */

@@ -75,5 +75,16 @@
         "volume": 1.0
       }
     ]
+  },
+  "tool.rail_cannon": {
+    "subtitle": "subtitles.powerarmor.tool.rail_cannon",
+    "sounds": [
+      {
+        "name": "minecraft:entity.guardian.attack",
+        "type": "event",
+        "pitch": 1.0,
+        "volume": 0.9
+      }
+    ]
   }
 }

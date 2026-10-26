@@ -56,6 +56,9 @@ public final class ModItems {
     public static final DeferredItem<FlamethrowerItem> FLAMETHROWER = ITEMS.registerItem("flamethrower", FlamethrowerItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
     public static final DeferredItem<dev.ajaczero.powerarmor.item.TntLauncherItem> TNT_LAUNCHER = ITEMS.registerItem("tnt_launcher",
             dev.ajaczero.powerarmor.item.TntLauncherItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
+    /** Phase 11 (2026-10-26): the chaingun's opposite, one charged piercing shot. */
+    public static final DeferredItem<dev.ajaczero.powerarmor.item.RailCannonItem> RAIL_CANNON = ITEMS.registerItem("rail_cannon",
+            dev.ajaczero.powerarmor.item.RailCannonItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
 
     // The suit's parts (2026-10-19): crafted one by one; torso, two arms and two legs are assembled into the suit (an
     // arm and a leg are crafted twice: both sides are the same piece), the helmet goes in the suit's helmet slot.
