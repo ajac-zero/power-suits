@@ -989,7 +989,14 @@ public final class AutoPilot {
             case 262, 264 -> shot(mc, "view_tracers_tp_" + s);
             case 265 -> { releaseAll(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 10;
                           giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); }
-            case 285 -> {
+            // the Phase 11 tools at rest
+            case 280 -> socket(mc, dev.ajaczero.powerarmor.registry.ModItems.FLAMETHROWER.get());
+            case 292 -> shot(mc, "view_flame");
+            case 293 -> socket(mc, dev.ajaczero.powerarmor.registry.ModItems.TNT_LAUNCHER.get());
+            case 305 -> shot(mc, "view_tnt");
+            case 306 -> socket(mc, dev.ajaczero.powerarmor.registry.ModItems.RAIL_CANNON.get());
+            case 318 -> shot(mc, "view_rail");
+            case 320 -> {
                 viewStep = -1;
                 try {
                     java.nio.file.Files.writeString(dir.resolve("done"), "ok");
