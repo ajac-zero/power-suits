@@ -49,7 +49,7 @@ public class FlamethrowerItem extends Item implements PowerTool {
     }
 
     private static State state(PowerArmorEntity suit) {
-        return suit.toolData(State.class, State::new);
+        return suit.socket().toolData(State.class, State::new);
     }
 
     /** Energy per tick of spraying. */
@@ -153,7 +153,7 @@ public class FlamethrowerItem extends Item implements PowerTool {
                 .yRot((float) level.getRandom().nextGaussian() * spread);
         Vec3 velocity = direction.scale(FlameJet.SPEED).add(suit.getDeltaMovement().multiply(1, 0, 1));
         level.addFreshEntity(new FlameJet(level, operator, eye, velocity));
-        suit.countToolUse();
+        suit.socket().countUse();
     }
 
     @Override

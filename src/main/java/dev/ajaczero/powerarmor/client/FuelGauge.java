@@ -76,7 +76,7 @@ public final class FuelGauge {
             Component count = Component.literal(bullets < 0 ? "\u221e" : Integer.toString(bullets));
             graphics.text(mc.font, count, x + 36, y - 14, bullets == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
             // Barrel heat (with overheat on): a thin bar under the count, orange to red, blinking when overheated.
-            float heat = suit.getToolHeat();
+            float heat = suit.socket().getHeat();
             if (heat > 0.01F && !(heat >= 0.99F && (suit.tickCount / 4) % 2 == 0)) {
                 int w = Math.round(24 * heat);
                 graphics.fill(x + 36, y - 4, x + 60, y - 2, 0x80000000);
@@ -101,7 +101,7 @@ public final class FuelGauge {
             graphics.item(ingotIcon, x + 16, y - 18);
             Component count = Component.literal(rounds < 0 ? "\u221e" : Integer.toString(rounds));
             graphics.text(mc.font, count, x + 36, y - 14, rounds == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
-            float charge = suit.getToolSpin();
+            float charge = suit.socket().getSpin();
             if (charge > 0.01F) {
                 int w = Math.round(24 * charge);
                 graphics.fill(x + 36, y - 4, x + 60, y - 2, 0x80000000);

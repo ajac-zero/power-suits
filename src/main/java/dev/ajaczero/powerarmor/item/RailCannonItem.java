@@ -82,7 +82,7 @@ public class RailCannonItem extends Item implements PowerTool {
     public record Shot(Vec3 from, Vec3 to, List<LivingEntity> hit, int blocksBroken) {}
 
     private static State state(PowerArmorEntity suit) {
-        return suit.toolData(State.class, State::new);
+        return suit.socket().toolData(State.class, State::new);
     }
 
     /** Fuel per shot (paid when it fires). */
@@ -159,7 +159,7 @@ public class RailCannonItem extends Item implements PowerTool {
             s.charge = Math.max(0, s.charge - 3);
         }
         s.held = false; // holdTick sets it again if the trigger is still down this tick
-        suit.setToolSpin(s.charge / (float) PowerArmorConfig.RAIL_CHARGE.get(), 0F);
+        suit.socket().setSpin(s.charge / (float) PowerArmorConfig.RAIL_CHARGE.get(), 0F);
     }
 
     /** Every tick the trigger is held: charge up. It won't start charging without an ingot and the fuel for a shot. */
@@ -207,9 +207,9 @@ public class RailCannonItem extends Item implements PowerTool {
         suit.power().tryUseEnergy(this.energyPerUse());
         s.lastShot = fire(level, suit, operator);
         s.cooldown = this.cooldownTicks();
-        suit.countToolUse();
-        suit.setRailBeamEnd(s.lastShot.to());
-        suit.countShot(); // every client: the beam (from the muzzle it sees), the recoil, the core's flash
+        suit.socket().countUse();
+        suit.socket().setRailBeamEnd(s.lastShot.to());
+        suit.socket().countShot(); // every client: the beam (from the muzzle it sees), the recoil, the core's flash
         // A crack like the warden's sonic boom, pitched up, over a deep blast.
         level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 1.5F, 1.5F);
         level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.PLAYERS, 1.2F, 0.5F);
@@ -275,7 +275,7 @@ public class RailCannonItem extends Item implements PowerTool {
     /** Keep the hum going while the charge winds down. */
     @Override
     public boolean keepsRunning(PowerArmorEntity suit) {
-        return suit.getToolSpin() > 0.01F;
+        return suit.socket().getSpin() > 0.01F;
     }
 
     @Override
@@ -287,12 +287,12 @@ public class RailCannonItem extends Item implements PowerTool {
     /** The charging hum rises with the charge (like a guardian's beam locking on). */
     @Override
     public float runSoundPitch(PowerArmorEntity suit) {
-        return 0.6F + 1.0F * suit.getToolSpin();
+        return 0.6F + 1.0F * suit.socket().getSpin();
     }
 
     @Override
     public float runSoundVolume(PowerArmorEntity suit) {
-        return 0.3F + 0.7F * suit.getToolSpin();
+        return 0.3F + 0.7F * suit.socket().getSpin();
     }
 
     /** Both sides: shots left for this pilot (the ammo slot's iron ingots), or -1 for endless (creative). */

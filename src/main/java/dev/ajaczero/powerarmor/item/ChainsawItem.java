@@ -144,7 +144,7 @@ public class ChainsawItem extends Item implements PowerTool {
 
     @Override
     public boolean keepsRunning(PowerArmorEntity suit) {
-        return !suit.toolData(State.class, () -> new State(suit)).falling.isEmpty();
+        return !suit.socket().toolData(State.class, () -> new State(suit)).falling.isEmpty();
     }
 
     @Override
@@ -157,10 +157,10 @@ public class ChainsawItem extends Item implements PowerTool {
         if (!(suit.level() instanceof ServerLevel level)) {
             return;
         }
-        State state = suit.toolData(State.class, () -> new State(suit));
+        State state = suit.socket().toolData(State.class, () -> new State(suit));
         state.ticks++;
         BlockHitResult hit = ToolMining.target(suit, operator);
-        if (hit == null || !suit.isToolReady()) {
+        if (hit == null || !suit.socket().isReady()) {
             state.clear(level);
             return;
         }
@@ -192,8 +192,8 @@ public class ChainsawItem extends Item implements PowerTool {
         Player breaker = suit.blockBreaker(operator);
         if (ToolMining.breakBlock(level, pos, breaker, new ItemStack(Items.DIAMOND_AXE))) {
             suit.power().tryUseEnergy(cost);
-            suit.countToolUse();
-            suit.setToolCooldown(BREAK_DELAY);
+            suit.socket().countUse();
+            suit.socket().setCooldown(BREAK_DELAY);
             if (!tree.isEmpty()) {
                 state.falling.addAll(tree);
                 state.feller = breaker;
@@ -205,14 +205,14 @@ public class ChainsawItem extends Item implements PowerTool {
     @Override
     public void release(PowerArmorEntity suit, @Nullable LivingEntity operator, boolean interrupted) {
         if (suit.level() instanceof ServerLevel level) {
-            suit.toolData(State.class, () -> new State(suit)).clear(level);
+            suit.socket().toolData(State.class, () -> new State(suit)).clear(level);
         }
     }
 
     /** The tree keeps coming down after the trigger is released, while the suit has power and fuel. */
     @Override
     public void serverTick(PowerArmorEntity suit) {
-        State state = suit.toolData(State.class, () -> new State(suit));
+        State state = suit.socket().toolData(State.class, () -> new State(suit));
         if (state.falling.isEmpty() || !(suit.level() instanceof ServerLevel level)) {
             return;
         }

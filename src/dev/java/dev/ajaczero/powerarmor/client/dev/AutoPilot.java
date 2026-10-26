@@ -533,11 +533,11 @@ public final class AutoPilot {
         if (emCsv == null || fuelSuit == null) {
             return;
         }
-        var target = fuelSuit.getBeamTarget();
+        var target = fuelSuit.socket().getBeamTarget();
         try {
             emCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%d,%d,%d,%.2f,%.2f,%.1f,%b%n", t,
                     target == null ? "-" : target.getType().toShortString(), fuelSuit.power().getTotalEnergy(),
-                    mc.player.getInventory().countItem(net.minecraft.world.item.Items.DIAMOND), fuelSuit.getToolUses(),
+                    mc.player.getInventory().countItem(net.minecraft.world.item.Items.DIAMOND), fuelSuit.socket().getUses(),
                     emPig == null ? -1 : emPig.distanceTo(fuelSuit), emPig == null ? 0 : emPig.getY() - fuelSuit.getY(),
                     emPig == null ? 0 : emPig.getHealth(), emPig != null && emPig.isNoGravity()));
         } catch (IOException e) {
@@ -712,7 +712,7 @@ public final class AutoPilot {
             }
             mineCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s%n", t,
                     net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(fuelSuit.getSocketStack().getItem()).getPath(),
-                    fuelSuit.getToolUses(), fuelSuit.power().getTotalEnergy(), face, logs, drops,
+                    fuelSuit.socket().getUses(), fuelSuit.power().getTotalEnergy(), face, logs, drops,
                     mc.player.getVehicle() instanceof PowerArmorEntity s ? s.getMovementAnimationName() : "-", aimed, toolAnim, dev.ajaczero.powerarmor.client.SuitSounds.activeLoops()));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] mine csv", e);
@@ -764,9 +764,9 @@ public final class AutoPilot {
         String health = pigs.stream().map(p -> p.isAlive() ? String.format(java.util.Locale.ROOT, "%.0f", p.getHealth()) : "dead")
                 .reduce((a, b) -> a + "/" + b).orElse("");
         try {
-            cannonCsv.write(String.format(java.util.Locale.ROOT, "%d,%d,%d,%b,%s,%s,%.2f,%.2f%n", t, fuelSuit.getToolUses(), fuelSuit.power().getTotalEnergy(),
-                    fuelSuit.isTriggerHeld(), health, mc.player.getVehicle() instanceof PowerArmorEntity s ? s.getMovementAnimationName() : "-",
-                    fuelSuit.getToolSpin(), fuelSuit.getToolHeat()));
+            cannonCsv.write(String.format(java.util.Locale.ROOT, "%d,%d,%d,%b,%s,%s,%.2f,%.2f%n", t, fuelSuit.socket().getUses(), fuelSuit.power().getTotalEnergy(),
+                    fuelSuit.socket().isTriggerHeld(), health, mc.player.getVehicle() instanceof PowerArmorEntity s ? s.getMovementAnimationName() : "-",
+                    fuelSuit.socket().getSpin(), fuelSuit.socket().getHeat()));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] cannon csv", e);
         }
@@ -972,13 +972,13 @@ public final class AutoPilot {
             case 191 -> { onFoot(mc, false); giveHeld(mc, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64)); }
             // overheated chaingun (client-side heat: the server keeps sending 0 only when it changes, so it sticks)
             case 192 -> socket(mc, dev.ajaczero.powerarmor.registry.ModItems.CHAINGUN.get());
-            case 198 -> { if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.setToolSpin(0F, 1F); }
+            case 198 -> { if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.socket().setSpin(0F, 1F); }
             case 202 -> shot(mc, "view_hot");
-            case 203 -> { if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.setToolSpin(0F, 0.7F); }
+            case 203 -> { if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.socket().setSpin(0F, 0.7F); }
             case 206 -> shot(mc, "view_warm");
-            case 207 -> { o.setCameraType(CameraType.THIRD_PERSON_FRONT); if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.setToolSpin(0F, 1F); }
+            case 207 -> { o.setCameraType(CameraType.THIRD_PERSON_FRONT); if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.socket().setSpin(0F, 1F); }
             case 214 -> shot(mc, "view_hot_tp");
-            case 215 -> { o.setCameraType(CameraType.FIRST_PERSON); if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.setToolSpin(0F, 0F); }
+            case 215 -> { o.setCameraType(CameraType.FIRST_PERSON); if (mc.player.getVehicle() instanceof PowerArmorEntity suit) suit.socket().setSpin(0F, 0F); }
             // tracers: a barrage diagonally up at the sky (yaw 45: the streaks must trail straight back along their flight)
             case 216 -> { giveHeld(mc, net.minecraft.world.item.ItemStack.EMPTY); yaw = 45; pitch = -25;
                           onServer(mc, p -> p.getInventory().setItem(8, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_NUGGET, 64))); }
@@ -1215,9 +1215,9 @@ public final class AutoPilot {
             case 447, 452, 457, 462, 467, 475 -> shot(mc, "ai_home_" + (m - 420));
             case 485 -> { mindPhase = "drill"; onServer(mc, p -> { if (mindSuit != null) {
                               mindSuit.setAiAim(Vec3.atCenterOf(mindBase.offset(0, 1, 3)));
-                              mindSuit.setAiTrigger(true); } }); }
+                              mindSuit.socket().setAiTrigger(true); } }); }
             case 490, 496, 504, 512 -> shot(mc, "ai_drill_" + (m - 420));
-            case 520 -> { mindPhase = "after"; onServer(mc, p -> { if (mindSuit != null) { mindSuit.setAiTrigger(false); mindSuit.setAiAim(null); } }); }
+            case 520 -> { mindPhase = "after"; onServer(mc, p -> { if (mindSuit != null) { mindSuit.socket().setAiTrigger(false); mindSuit.setAiAim(null); } }); }
             case 522 -> mindVisorCamera(mc);
             case 532 -> shot(mc, "ai_visor");
             // chaingun job (step 2): load the hidden store by right-clicking with nuggets, then the suit follows its owner,
@@ -1441,12 +1441,12 @@ public final class AutoPilot {
             mindCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%s,%.1f,%.1f,%.1f,%b,%.2f,%d,%d,%d,%.2f,%.2f,%.2f,%b,%s,%.2f,%s,%d,%d,%d,%.1f,%s,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%s%n",
                     m, mindPhase, server.getX() - (b.getX() + 0.5), server.getZ() - (b.getZ() + 0.5),
                     Math.hypot(server.getX() - server.xo, server.getZ() - server.zo) * 20, server.isAiDriven(), client.getMovementAnimationName(),
-                    server.getYHeadRot(), server.yBodyRot, server.getXRot(), server.isToolActive(), client.getToolRaise(1F), faceLeft, drops,
+                    server.getYHeadRot(), server.yBodyRot, server.getXRot(), server.socket().isActive(), client.getToolRaise(1F), faceLeft, drops,
                     server.power().getTotalEnergy(), visor[0], visor[1], visor[2], server.getNavigation().isDone(),
                     server.runningGoalNames(), server.getOwner() == null ? -1F : server.distanceTo(server.getOwner()),
-                    server.getTarget() == null ? "-" : server.getTarget().getType().toShortString(), server.getStoredNuggets(), server.getToolUses(),
+                    server.getTarget() == null ? "-" : server.getTarget().getType().toShortString(), server.getStoredNuggets(), server.socket().getUses(),
                     mindMobs.stream().filter(e -> e.isAlive()).count(), mindMobs.stream().filter(e -> e.isAlive()).mapToDouble(e -> e.getHealth()).sum(),
-                    server.getBeamTarget() == null ? "-" : server.getBeamTarget().getType().toShortString(),
+                    server.socket().getBeamTarget() == null ? "-" : server.socket().getBeamTarget().getType().toShortString(),
                     mindMobs.stream().filter(e -> e.isAlive()).mapToDouble(e -> e.getY() - b.getY()).max().orElse(0),
                     client.getYHeadRot(), client.yBodyRot, twist, drawnYaw, aimYaw, aimErr,
                     mindMobs.stream().map(e -> e.getType().toShortString() + ":" + (e.isAlive() ? String.format(java.util.Locale.ROOT, "%.0f@%.1f",

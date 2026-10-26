@@ -269,7 +269,7 @@ final class RailScene {
         String p = phase;
         PowerArmorEntity client = clientSuit(mc);
         int clientAmmo = client == null ? -1 : client.getAmmoStack().getCount();
-        float clientCharge = client == null ? -1F : client.getToolSpin();
+        float clientCharge = client == null ? -1F : client.socket().getSpin();
         float recoil = client == null ? 0F : client.getRecoil(0F);
         float raise = client == null ? 0F : client.getToolRaise(0F);
         float glow = client == null ? 0F : client.getRailGlow(client.tickCount);
@@ -286,8 +286,8 @@ final class RailScene {
             }
             RailCannonItem.Shot shot = RailCannonItem.lastShot(x);
             try {
-                w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%.2f,%.2f,%d,%d,%d,%d,%d,%.1f,%.2f,%.2f,%.2f,%s%n", s, p, x.getToolUses(),
-                        x.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).getCount(), clientAmmo, x.getToolSpin(), clientCharge,
+                w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%.2f,%.2f,%d,%d,%d,%d,%d,%.1f,%.2f,%.2f,%.2f,%s%n", s, p, x.socket().getUses(),
+                        x.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).getCount(), clientAmmo, x.socket().getSpin(), clientCharge,
                         husks, glass, wall, shot == null ? -1 : shot.hit().size(), shot == null ? -1 : shot.blocksBroken(),
                         shot == null ? -1D : shot.from().distanceTo(shot.to()), recoil, raise, glow, x.runningGoalNames()));
             } catch (IOException ignored) {

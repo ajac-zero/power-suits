@@ -249,7 +249,7 @@ public final class SuitGoals {
                 // A rogue fires at will; a friendly mind never through (or, with the flamethrower, near) someone it must not hurt.
                 boolean clear = sees && inRange && (this.suit.isRogue()
                         || (flame ? SuitTargets.flameClear(this.suit, target, aim) : SuitTargets.lineOfFireClear(this.suit, target, aim)));
-                this.suit.setAiTrigger(clear && !(this.suit.hasChaingun() && ChaingunItem.isOverheated(this.suit)));
+                this.suit.socket().setAiTrigger(clear && !(this.suit.hasChaingun() && ChaingunItem.isOverheated(this.suit)));
                 if (clear) {
                     this.suit.getNavigation().stop(); // plant the feet and fire
                 } else {
@@ -258,7 +258,7 @@ public final class SuitGoals {
                 return;
             }
             // No bullets: the fists (1 + the melee bonus, like a pilot's bare hand).
-            this.suit.setAiTrigger(false);
+            this.suit.socket().setAiTrigger(false);
             if (!inPunchReach(this.suit, target) || !sees) {
                 this.approach(target);
             } else {
@@ -280,7 +280,7 @@ public final class SuitGoals {
 
         @Override
         public void stop() {
-            this.suit.setAiTrigger(false);
+            this.suit.socket().setAiTrigger(false);
             this.suit.setAiAim(null);
             this.suit.getNavigation().stop();
         }
@@ -394,14 +394,14 @@ public final class SuitGoals {
                 this.punchCooldown--;
             }
             boolean sees = this.suit.getSensing().hasLineOfSight(target);
-            if (this.suit.getBeamTarget() == target) {
+            if (this.suit.socket().getBeamTarget() == target) {
                 // Caught: swing it up and away (from the suit toward where it was), then let go: the projector throws it.
                 this.suit.getNavigation().stop();
                 Vec3 away = target.position().subtract(this.suit.position()).multiply(1, 0, 1);
                 away = away.lengthSqr() < 1.0E-4 ? this.suit.getLookAngle().multiply(1, 0, 1) : away;
                 this.suit.setAiAim(this.suit.getEyePosition().add(away.normalize().scale(10)).add(0, 4, 0));
                 // Something heavy (a suit, a boss) can't be lifted: pin it down for a couple of seconds before the shove.
-                this.suit.setAiTrigger(++this.lift < (dev.ajaczero.powerarmor.item.EmProjectorItem.isHeavy(target) ? 40 : LIFT_TICKS));
+                this.suit.socket().setAiTrigger(++this.lift < (dev.ajaczero.powerarmor.item.EmProjectorItem.isHeavy(target) ? 40 : LIFT_TICKS));
                 return;
             }
             this.lift = 0;
@@ -410,7 +410,7 @@ public final class SuitGoals {
                 boolean landed = target.onGround() || target.isInLiquid() || SuitTargets.isFlyer(target);
                 boolean inReach = sees && landed && this.suit.distanceTo(target) < REACH;
                 this.suit.setAiAim(target.getBoundingBox().getCenter());
-                this.suit.setAiTrigger(inReach && this.suit.isToolReady());
+                this.suit.socket().setAiTrigger(inReach && this.suit.socket().isReady());
                 if (inReach) {
                     this.suit.getNavigation().stop();
                 } else {
@@ -419,7 +419,7 @@ public final class SuitGoals {
                 return;
             }
             // Too heavy for the beam: the fists.
-            this.suit.setAiTrigger(false);
+            this.suit.socket().setAiTrigger(false);
             this.suit.setAiAim(target.getBoundingBox().getCenter());
             if (!sees || !inPunchReach(this.suit, target)) {
                 this.approach(target);
@@ -441,7 +441,7 @@ public final class SuitGoals {
 
         @Override
         public void stop() {
-            this.suit.setAiTrigger(false);
+            this.suit.socket().setAiTrigger(false);
             this.suit.setAiAim(null);
             this.suit.getNavigation().stop();
         }
@@ -554,8 +554,8 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            if (!this.suit.isAiDriven() || !this.suit.guardsHome() || this.suit.getHome() == null || !this.suit.isToolReady()
-                    || this.suit.getBeamTarget() != null) {
+            if (!this.suit.isAiDriven() || !this.suit.guardsHome() || this.suit.getHome() == null || !this.suit.socket().isReady()
+                    || this.suit.socket().getBeamTarget() != null) {
                 return false;
             }
             this.target = this.pick();
@@ -596,7 +596,7 @@ public final class SuitGoals {
             if (this.thrown || this.target == null || !this.target.isAlive() || !this.suit.isAiDriven() || !this.suit.guardsHome()) {
                 return false;
             }
-            return this.lifting ? this.suit.getBeamTarget() == this.target : this.ticks < SEEK_TICKS;
+            return this.lifting ? this.suit.socket().getBeamTarget() == this.target : this.ticks < SEEK_TICKS;
         }
 
         @Override
@@ -612,8 +612,8 @@ public final class SuitGoals {
             this.ticks++;
             if (!this.lifting) {
                 this.suit.setAiAim(this.target.getBoundingBox().getCenter());
-                this.suit.setAiTrigger(true);
-                if (this.suit.getBeamTarget() == this.target) {
+                this.suit.socket().setAiTrigger(true);
+                if (this.suit.socket().getBeamTarget() == this.target) {
                     this.lifting = true; // caught: now up with it
                     this.ticks = 0;
                 }
@@ -621,7 +621,7 @@ public final class SuitGoals {
             }
             this.suit.setAiAim(this.liftAim());
             if (this.ticks >= LIFT_TICKS) {
-                this.suit.setAiTrigger(false); // let go: the projector throws it along the aim (this tick, after the goals)
+                this.suit.socket().setAiTrigger(false); // let go: the projector throws it along the aim (this tick, after the goals)
                 this.thrown = true;
             }
         }
@@ -640,7 +640,7 @@ public final class SuitGoals {
 
         @Override
         public void stop() {
-            this.suit.setAiTrigger(false);
+            this.suit.socket().setAiTrigger(false);
             this.suit.setAiAim(null);
             this.suit.setTarget(null);
             this.target = null;
@@ -738,7 +738,7 @@ public final class SuitGoals {
             this.ticks++;
             Vec3 aim = this.target.getBoundingBox().getCenter();
             this.suit.setAiAim(aim);
-            this.suit.setAiTrigger(true); // charge (it holds a full charge as long as the trigger stays down)
+            this.suit.socket().setAiTrigger(true); // charge (it holds a full charge as long as the trigger stays down)
             if (!dev.ajaczero.powerarmor.item.RailCannonItem.isCharged(this.suit) || !this.suit.getSensing().hasLineOfSight(this.target)) {
                 return;
             }
@@ -747,7 +747,7 @@ public final class SuitGoals {
             Vec3 want = aim.subtract(eye).normalize();
             double error = Math.toDegrees(Math.acos(net.minecraft.util.Mth.clamp(view.dot(want), -1, 1)));
             if (error <= MAX_AIM_ERROR && SuitTargets.beamClear(this.suit, view, dev.ajaczero.powerarmor.PowerArmorConfig.RAIL_RANGE.get())) {
-                this.suit.setAiTrigger(false); // let go: it fires this tick, after the goals (PowerArmorEntity.tickTool)
+                this.suit.socket().setAiTrigger(false); // let go: it fires this tick, after the goals (PowerArmorEntity.tickTool)
                 this.fired = true;
             }
         }
@@ -757,7 +757,7 @@ public final class SuitGoals {
             if (!this.fired) {
                 dev.ajaczero.powerarmor.item.RailCannonItem.disarm(this.suit); // let go without firing
             }
-            this.suit.setAiTrigger(false);
+            this.suit.socket().setAiTrigger(false);
             this.suit.setAiAim(null);
             this.suit.setTarget(null);
             this.target = null;
@@ -840,7 +840,7 @@ public final class SuitGoals {
                 return;
             }
             if (this.busy()) {
-                this.suit.setAiTrigger(false);
+                this.suit.socket().setAiTrigger(false);
                 return;
             }
             if (!this.stillWork(this.target)) {
@@ -858,10 +858,10 @@ public final class SuitGoals {
             if (this.suit.getEyePosition().distanceTo(aim) <= REACH && canHit) {
                 this.suit.getNavigation().stop();
                 this.suit.setAiAim(aim);
-                this.suit.setAiTrigger(true);
+                this.suit.socket().setAiTrigger(true);
                 return;
             }
-            this.suit.setAiTrigger(false);
+            this.suit.socket().setAiTrigger(false);
             this.suit.setAiAim(null);
             if (--this.repath <= 0) {
                 this.repath = 20;
@@ -871,7 +871,7 @@ public final class SuitGoals {
         }
 
         private void next() {
-            this.suit.setAiTrigger(false);
+            this.suit.socket().setAiTrigger(false);
             this.ticks = 0;
             this.repath = 0;
             this.target = this.findTarget(this.skip);
@@ -882,7 +882,7 @@ public final class SuitGoals {
 
         @Override
         public void stop() {
-            this.suit.setAiTrigger(false);
+            this.suit.socket().setAiTrigger(false);
             this.suit.setAiAim(null);
             this.suit.getNavigation().stop();
             this.target = null;
@@ -945,7 +945,7 @@ public final class SuitGoals {
 
         @Override
         boolean busy() {
-            return this.suit.isToolRunning() && !this.suit.isAiTriggerHeld(); // the tree is still coming down
+            return this.suit.socket().isRunning() && !this.suit.socket().isAiTriggerHeld(); // the tree is still coming down
         }
     }
 

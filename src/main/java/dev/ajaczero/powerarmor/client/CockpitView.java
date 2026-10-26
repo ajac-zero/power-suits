@@ -36,7 +36,7 @@ final class CockpitView implements GeoAnimatable {
     }
 
     private PlayState toolAnimation(AnimationTest<CockpitView> state) {
-        if (this.suit != null && this.suit.isToolRunning() && this.suit.getSocketStack().getItem() instanceof PowerTool tool
+        if (this.suit != null && this.suit.socket().isRunning() && this.suit.getSocketStack().getItem() instanceof PowerTool tool
                 && tool.runAnimation() != null) {
             return state.setAndContinue(tool.runAnimation());
         }

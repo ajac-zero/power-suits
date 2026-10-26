@@ -179,24 +179,24 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     static final EntityDataAccessor<Integer> BURN_TOTAL =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     /** Entity id of whatever the EM projector holds (-1: nothing), so every client can draw the beam. */
-    private static final EntityDataAccessor<Integer> BEAM_TARGET =
+    static final EntityDataAccessor<Integer> BEAM_TARGET =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     /** True while a continuous socket tool runs (drill spinning, chainsaw cutting), for its animation. */
-    private static final EntityDataAccessor<Boolean> TOOL_RUNNING =
+    static final EntityDataAccessor<Boolean> TOOL_RUNNING =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     /** True while the pilot is using the socket tool (button held, tool installed, power): the tool arm is raised. */
-    private static final EntityDataAccessor<Boolean> TOOL_ACTIVE =
+    static final EntityDataAccessor<Boolean> TOOL_ACTIVE =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     /** The socket tool's spin (chaingun barrels, 0..1) and heat (0..1), and a counter bumped on every shot: clients
      *  turn them into the barrel spin, heat glow, motor whine, recoil and muzzle bursts. */
-    private static final EntityDataAccessor<Float> TOOL_SPIN =
+    static final EntityDataAccessor<Float> TOOL_SPIN =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.FLOAT);
-    private static final EntityDataAccessor<Float> TOOL_HEAT =
+    static final EntityDataAccessor<Float> TOOL_HEAT =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.FLOAT);
-    private static final EntityDataAccessor<Integer> TOOL_SHOTS =
+    static final EntityDataAccessor<Integer> TOOL_SHOTS =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     /** Where the rail cannon's last beam ended (world position): with the shot counter, every client draws the beam. */
-    private static final EntityDataAccessor<org.joml.Vector3fc> RAIL_END =
+    static final EntityDataAccessor<org.joml.Vector3fc> RAIL_END =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.VECTOR3);
     /** Who the machine mind works for (SuitMind ordinal): the visor shows it. */
     private static final EntityDataAccessor<Byte> MIND =
@@ -245,6 +245,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      *  the server. Old saves load fine with fewer: each saved item carries its slot number. */
     /** The engine and its energy (fuel, flooding, free power, the lightning knock-out): see SuitPower. */
     private final SuitPower power = new SuitPower(this);
+    /** The socket tool as the suit works it (trigger, cooldown, synced spin/shots...): see SuitSocket. */
+    private final SuitSocket socket = new SuitSocket(this);
     private final SimpleContainer inventory = new SimpleContainer(5) {
         @Override
         public void setChanged() {
@@ -259,25 +261,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** The suit was already off when we first saw it: hold the slumped pose instead of playing the slump. */
     private boolean wasOffWhenLoaded;
     private int startupTicks;
-    /** Server: the pilot is holding the tool's button (right click, sent by the client, see ToolInput / ToolTriggerPayload). */
-    private boolean triggerHeld;
-    /** Server: ticks until the socket tool may be used again. */
-    private int toolCooldown;
-    /** Server: how many times the socket tool has been used (tests and dev logs). */
-    private int toolUses;
-    /** Server: the continuous tool currently held down (to release it when anything changes). */
-    @Nullable
-    private PowerTool activeContinuousTool;
-    /** Server: who started it (a pilot taking over from the mind mid-use interrupts it). */
-    @Nullable
-    private LivingEntity activeOperator;
-    /** Server: a tool's per-suit state (items are shared by every stack, so state can't live on the item). */
-    @Nullable
-    private Object toolData;
     /** Client: the pilot's arm was mid-swing last tick (to catch the start of each swing). */
     private boolean pilotWasSwinging;
-    /** Server: the tool was in use last tick (for the raise sound). */
-    private boolean toolWasActive;
     /** Client: the action controller was already playing a shot last tick (for the pilot's own muzzle burst). */
     private int seenShots;
     /** Client: chaingun barrel angle (degrees, this and last tick) and the recoil kick (1 right after a shot, decays). The
@@ -308,8 +293,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private java.util.UUID ownerId;
     @Nullable
     private BlockPos home;
-    /** Server: the machine mind holds the tool's trigger (its goals aim the suit first). */
-    private boolean aiTrigger;
     @Nullable
     private Vec3 aiAim;
     /** Server: when the seal last paid for keeping fire/frost out (SuitSeal: once per half second, like hit immunity). */
@@ -619,15 +602,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return dx * dx + dz * dz > slack * slack || Math.abs(this.getY() - this.home.getY()) > 1.5;
     }
 
-    /** Server: the mind pulls or releases the tool's trigger (it aims the suit's head first: setAiAim). */
-    public void setAiTrigger(boolean down) {
-        this.aiTrigger = down;
-    }
-
-    public boolean isAiTriggerHeld() {
-        return this.aiTrigger;
-    }
-
     /** Server: the point the mind aims the head (and so the torso and the tool) at, or null to let the look goals
      *  wander. A machine: it snaps onto the target instead of easing round like an animal. */
     public void setAiAim(@Nullable Vec3 target) {
@@ -703,7 +677,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         super.addPassenger(passenger);
         if (!this.level().isClientSide() && passenger instanceof Player player) {
             this.ownerId = player.getUUID();
-            this.aiTrigger = false;
+            this.socket.setAiTrigger(false);
             this.getNavigation().stop();
         }
     }
@@ -736,6 +710,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** The suit's engine and energy. */
     public SuitPower power() {
         return this.power;
+    }
+
+    /** The left-arm socket and the tool in it. */
+    public SuitSocket socket() {
+        return this.socket;
     }
 
     /** Server, every tick: a rogue always wears a helmet and a backpack, whatever made it. */
@@ -851,133 +830,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     // ---- Socket tool ---------------------------------------------------------------------------
 
-    /** Server: the pilot pressed or released the tool's button (right click). Anyone else (or a forged packet) is ignored. */
-    public void setTriggerHeld(Player who, boolean down) {
-        if (who != this.getControllingPassenger()) {
-            return;
-        }
-        if (down && !this.triggerHeld && !(this.getSocketTool() != null && this.canOperate())) {
-            // Nothing in the socket, or no power: the trigger just clicks.
-            this.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F);
-        }
-        this.triggerHeld = down;
-    }
-
-    /** Server: run the socket tool. Repeating tools fire each time they're ready while the trigger is held;
-     *  continuous tools get a tick while held and a release when the trigger goes up or anything interrupts. */
-    private void tickTool() {
-        if (this.toolCooldown > 0) {
-            this.toolCooldown--;
-        }
-        PowerTool tool = this.getSocketTool();
-        // The pilot works the tool with their trigger; with nobody inside, the machine mind with its own.
-        LivingEntity operator = this.toolOperator();
-        boolean trigger = operator instanceof Player ? this.triggerHeld : this.aiTrigger;
-        if (tool != null) {
-            tool.serverTick(this);
-        }
-        boolean active = operator != null && trigger && tool != null && this.canOperate();
-        this.entityData.set(TOOL_RUNNING, tool != null && tool.isContinuous() && (active || tool.keepsRunning(this)));
-        this.entityData.set(TOOL_ACTIVE, active);
-        if (active && !this.toolWasActive) {
-            // The arm swings up into the aiming pose (PowerArmorModel.raiseTool): a heavy mechanical clunk and a hiss.
-            this.playSound(SoundEvents.PISTON_CONTRACT, 0.5F, 0.7F);
-            this.playSound(SoundEvents.GENERIC_EXTINGUISH_FIRE, 0.15F, 1.9F);
-        }
-        this.toolWasActive = active;
-        if (this.activeContinuousTool != null && (this.activeContinuousTool != tool || !active)) {
-            boolean interrupted = this.activeContinuousTool != tool || operator == null || operator != this.activeOperator
-                    || !this.canOperate();
-            this.activeContinuousTool.release(this, operator == this.activeOperator ? operator : null, interrupted);
-            this.activeContinuousTool = null;
-            this.activeOperator = null;
-        }
-        if (!(operator instanceof Player)) {
-            this.triggerHeld = false; // the pilot left with the button down
-        }
-        if (operator != this) {
-            this.aiTrigger = false; // the mind lost control (pilot, power) with its trigger down
-        }
-        if (!active) {
-            return;
-        }
-        if (tool.isContinuous()) {
-            this.activeContinuousTool = tool;
-            this.activeOperator = operator;
-            tool.holdTick(this, operator, this.inventory.getItem(SOCKET_SLOT));
-            return;
-        }
-        if (this.toolCooldown > 0) {
-            return;
-        }
-        int cost = tool.energyPerUse();
-        if (!this.power.hasEnergyFor(cost)) {
-            this.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F); // not enough fuel for a shot
-            this.toolCooldown = tool.cooldownTicks();
-            return;
-        }
-        if (tool.use(this, operator, this.inventory.getItem(SOCKET_SLOT))) {
-            this.power.consume(cost);
-            this.toolUses++;
-        }
-        this.toolCooldown = tool.cooldownTicks(); // also after a dry click: one click per cooldown
-    }
-
-    /** Server: a tool's state for this suit, created on first use. */
-    @SuppressWarnings("unchecked")
-    public <T> T toolData(Class<T> type, java.util.function.Supplier<T> create) {
-        if (!type.isInstance(this.toolData)) {
-            this.toolData = create.get();
-        }
-        return (T) this.toolData;
-    }
-
-    public boolean isToolReady() {
-        return this.toolCooldown == 0;
-    }
-
-    public void setToolCooldown(int ticks) {
-        this.toolCooldown = ticks;
-    }
-
-    public void countToolUse() {
-        this.toolUses++;
-    }
-
-    /** Server: what the EM beam holds (synced for the beam effect). */
-    public void setBeamTarget(@Nullable Entity target) {
-        this.entityData.set(BEAM_TARGET, target == null ? -1 : target.getId());
-    }
-
-    /** Both sides: the entity in the EM beam, if any. */
-    @Nullable
-    public Entity getBeamTarget() {
-        int id = this.entityData.get(BEAM_TARGET);
-        return id < 0 ? null : this.level().getEntity(id);
-    }
-
     /** Unloaded, packed or destroyed with something in the beam: let it go, or it would float forever. */
     @Override
     public void remove(RemovalReason reason) {
-        if (!this.level().isClientSide() && this.activeContinuousTool != null) {
-            this.activeContinuousTool.release(this, null, true);
-            this.activeContinuousTool = null;
-            this.activeOperator = null;
+        if (!this.level().isClientSide()) {
+            this.socket.onRemoved();
         }
         super.remove(reason);
-    }
-
-    @Nullable
-    private PowerTool getSocketTool() {
-        return this.inventory.getItem(SOCKET_SLOT).getItem() instanceof PowerTool tool ? tool : null;
-    }
-
-    public int getToolUses() {
-        return this.toolUses;
-    }
-
-    public boolean isTriggerHeld() {
-        return this.triggerHeld;
     }
 
     /** Server: the real slots (used by the menu and tests). */
@@ -1356,11 +1215,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return current == null ? "-" : current.animation().name().replace("animation.power_armor.", "");
     }
 
-    /** Both sides: the pilot is using the socket tool (synced): the tool arm raises. */
-    public boolean isToolActive() {
-        return this.entityData.get(TOOL_ACTIVE);
-    }
-
     /** Client: how far the tool arm is raised, 0 (hip carry) .. 1 (aiming), eased, for this frame. */
     public float getToolRaise(float partial) {
         float t = Mth.lerp(partial, this.toolRaiseO, this.toolRaise);
@@ -1388,8 +1242,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         // is held (searching for something to grab) and runs full while the beam holds something; the prong tips
         // only light up while the beam holds something (that's when they spark). Quick to light, slower to fade.
         boolean em = powered && this.getSocketStack().getItem() instanceof EmProjectorItem;
-        boolean holding = em && this.getBeamTarget() != null;
-        float coreTarget = !em ? 0F : holding ? 1F : this.isToolActive() ? 0.6F : 0.25F;
+        boolean holding = em && this.socket.getBeamTarget() != null;
+        float coreTarget = !em ? 0F : holding ? 1F : this.socket.isActive() ? 0.6F : 0.25F;
         float arcTarget = holding ? 1F : 0F;
         this.emCoreGlow += (coreTarget - this.emCoreGlow) * (coreTarget > this.emCoreGlow ? 0.35F : 0.1F);
         this.emArcGlow += (arcTarget - this.emArcGlow) * (arcTarget > this.emArcGlow ? 0.5F : 0.15F);
@@ -1397,16 +1251,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         // water it goes out.
         boolean flamer = powered && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.FlamethrowerItem
                 && !this.isEyeInFluid(net.minecraft.tags.FluidTags.WATER);
-        float pilotTarget = !flamer ? 0F : this.isToolActive() ? 1F : 0.7F;
+        float pilotTarget = !flamer ? 0F : this.socket.isActive() ? 1F : 0.7F;
         this.pilotGlow += (pilotTarget - this.pilotGlow) * (pilotTarget > this.pilotGlow ? 0.4F : 0.1F);
         // Rail cannon: the core idles at a faint blue while it's fitted to a powered suit and brightens with the charge
         // (synced as the tool spin); a shot flashes it (tickShotEffects), then it fades back.
         boolean rail = powered && this.hasRailCannon();
-        float railTarget = !rail ? 0F : 0.15F + 0.85F * this.getToolSpin();
+        float railTarget = !rail ? 0F : 0.15F + 0.85F * this.socket.getSpin();
         this.railGlow += (railTarget - this.railGlow) * (railTarget > this.railGlow ? 0.5F : 0.12F);
         // The energy in the core runs toward the muzzle: slowly while idle, racing as the charge builds.
         this.railFlowO = this.railFlow;
-        this.railFlow += 0.06F + 0.55F * this.getToolSpin();
+        this.railFlow += 0.06F + 0.55F * this.socket.getSpin();
         if (this.railFlow > 300F) { // keep it small (a multiple of 3 rings: the pattern repeats every 3)
             this.railFlow -= 300F;
             this.railFlowO -= 300F;
@@ -1455,7 +1309,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** Client: the rail cannon's core at this moment, 0..1: steady while it charges, a fast shimmer once it's full. */
     public float getRailGlow(float time) {
-        boolean full = this.getToolSpin() >= 0.999F;
+        boolean full = this.socket.getSpin() >= 0.999F;
         return this.railGlow * (full ? 0.85F + 0.15F * Mth.sin(time * 2.7F + this.getId()) : 1F);
     }
 
@@ -1465,7 +1319,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public float getRailFlowGlow(int phase, float partial) {
         float flow = Mth.lerp(partial, this.railFlowO, this.railFlow);
         float wave = Mth.cos((flow - phase) * Mth.TWO_PI / 3F) * 0.5F + 0.5F;  // 1 when the crest is on this phase
-        float charge = this.getToolSpin();
+        float charge = this.socket.getSpin();
         float crest = wave * wave * wave;                                  // a narrow crest, so it reads as moving rings
         float flash = Math.max(0F, this.railGlow - (0.15F + 0.85F * charge)); // what's left of a shot's flash: all rings lit
         return Math.min(1F, this.railGlow * (0.3F + 0.7F * crest) + flash);
@@ -1473,7 +1327,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** Client: the rail cannon's charge, 0..1 (synced tool spin), for the shake and the sparks. */
     public float getRailCharge() {
-        return this.hasRailCannon() ? this.getToolSpin() : 0F;
+        return this.hasRailCannon() ? this.socket.getSpin() : 0F;
     }
 
     /** Client: firebox glow, 0 (cold) .. 1 (roaring). */
@@ -1505,15 +1359,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return level;
     }
 
-    /** Both sides: a continuous socket tool is running (synced). */
-    public boolean isToolRunning() {
-        return this.entityData.get(TOOL_RUNNING);
-    }
-
     /** Client: how hard the engine works, 0 idle .. 1 sprinting, +0.3 while a tool runs (engine sound). */
     public float engineLoad() {
         float load = this.isWalking() ? (this.isRunning() ? 1F : 0.55F) : 0F;
-        return this.isToolRunning() ? load + 0.3F : load;
+        return this.socket.isRunning() ? load + 0.3F : load;
     }
 
     /** Client: smoothed ground speed in blocks/s (for camera effects). */
@@ -1889,7 +1738,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (!this.level().isClientSide() && this.isAlive()) {
             this.equipRogue();
             this.power.tick();
-            this.tickTool();
+            this.socket.tick();
             this.tickRogueLifetime();
             if (this.isFieldHeld() && this.tickCount > this.fieldHeldUntil) {
                 this.entityData.set(FIELD_HELD, false); // the field let go
@@ -1910,7 +1759,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.aimBlend += (aimTarget - this.aimBlend) * 0.2F;
             // Raise the tool arm in 3 ticks while the tool is used, lower it in 5 (heavier on the way down).
             this.toolRaiseO = this.toolRaise;
-            this.toolRaise = this.isToolActive() && this.isDriven() ? Math.min(1F, this.toolRaise + 1F / 3F)
+            this.toolRaise = this.socket.isActive() && this.isDriven() ? Math.min(1F, this.toolRaise + 1F / 3F)
                     : Math.max(0F, this.toolRaise - 1F / 5F);
             this.tickLights();
             this.tickSparks();
@@ -2068,7 +1917,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     private PlayState toolAnimation(AnimationTest<PowerArmorEntity> state) {
-        if (this.isToolRunning() && this.getSocketStack().getItem() instanceof PowerTool tool && tool.runAnimation() != null) {
+        if (this.socket.isRunning() && this.getSocketStack().getItem() instanceof PowerTool tool && tool.runAnimation() != null) {
             return state.setAndContinue(tool.runAnimation());
         }
         return PlayState.STOP;
@@ -2114,7 +1963,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      *  their screen (the cockpit viewmodel's in first person, SocketAim.visualMuzzle). The server sends the burst to
      *  everyone else. */
     private void tickShotEffects() {
-        float spin = this.getToolSpin();
+        float spin = this.socket.getSpin();
         boolean launcher = this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.TntLauncherItem;
         this.barrelAngleO = this.barrelAngle;
         this.barrelAngle += 60F * spin;
@@ -2134,7 +1983,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         this.recoilO = this.recoil;
         this.recoil *= 0.55F;
-        int shots = this.entityData.get(TOOL_SHOTS);
+        int shots = this.socket.getShots();
         if (shots == this.seenShots) {
             return;
         }
@@ -2147,8 +1996,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             // The beam, drawn here by every client from the muzzle it sees; the core flashes white-hot.
             this.railGlow = 1F;
             LivingEntity operator = this.getControllingPassenger() instanceof Player pilot ? pilot : this;
-            org.joml.Vector3fc end = this.entityData.get(RAIL_END);
-            RailBeamEffects.shot(this, operator, new Vec3(end.x(), end.y(), end.z()));
+            RailBeamEffects.shot(this, operator, this.socket.getRailBeamEnd());
             return;
         }
         if (this.getControllingPassenger() instanceof Player pilot && pilot.isLocalPlayer()) {
@@ -2172,32 +2020,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 dev.ajaczero.powerarmor.item.ChaingunItem.muzzleBurst(out, muzzle, spin, !firstPerson);
             }
         }
-    }
-
-    /** Server: the socket tool's spin and heat, for every client. */
-    public void setToolSpin(float spin, float heat) {
-        this.entityData.set(TOOL_SPIN, spin);
-        this.entityData.set(TOOL_HEAT, heat);
-    }
-
-    /** Server: where the rail cannon's beam ended (set before countShot, so clients get both in one update). */
-    public void setRailBeamEnd(Vec3 end) {
-        this.entityData.set(RAIL_END, new org.joml.Vector3f((float) end.x, (float) end.y, (float) end.z));
-    }
-
-    /** Server: a shot was fired (bumps the synced counter: recoil, muzzle burst). */
-    public void countShot() {
-        this.entityData.set(TOOL_SHOTS, this.entityData.get(TOOL_SHOTS) + 1);
-    }
-
-    /** Both sides: chaingun barrel spin, 0 (at rest) .. 1 (full speed). */
-    public float getToolSpin() {
-        return this.entityData.get(TOOL_SPIN);
-    }
-
-    /** Both sides: chaingun barrel heat, 0 (cold) .. 1 (overheated). */
-    public float getToolHeat() {
-        return this.entityData.get(TOOL_HEAT);
     }
 
     /** Client: the chaingun barrels' angle this frame, degrees. */

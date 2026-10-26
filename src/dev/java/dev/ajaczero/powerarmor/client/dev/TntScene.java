@@ -233,7 +233,7 @@ final class TntScene {
                 }
             }
             try {
-                w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%d,%.1f,%.2f,%.2f%n", s, p, x.getToolUses(),
+                w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%d,%.1f,%.2f,%.2f%n", s, p, x.socket().getUses(),
                         x.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).getCount(), clientAmmo, shells, husks, wall, drum, recoil, raise));
             } catch (IOException ignored) {
                 // closed at the end of the scene

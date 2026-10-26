@@ -45,7 +45,7 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
         state.addGeckolibData(TOOL_BONE, suit != null && suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.suitBone() : "");
         state.addGeckolibData(BARREL_ANGLE, suit == null ? 0F : suit.getBarrelAngle(partialTick));
         if (suit != null && view.part == Part.TOOL) {
-            float heat = suit.getToolHeat();
+            float heat = suit.socket().getHeat();
             float time = (float) ClientUtil.getCurrentTick(partialTick);
             state.addGeckolibData(GLOW, new int[] {
                     SuitGlowLayer.energy(SuitGlowLayer.heatGlow(heat)), // heat fades in by opacity (see SuitGlowLayer)

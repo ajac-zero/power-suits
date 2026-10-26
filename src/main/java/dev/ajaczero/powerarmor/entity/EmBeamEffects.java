@@ -26,7 +26,7 @@ final class EmBeamEffects {
     private static final double KEEP_CLEAR = 1.3, KEEP_CLEAR_SPARKS = 0.9;
 
     static void tick(PowerArmorEntity suit) {
-        Entity target = suit.getBeamTarget();
+        Entity target = suit.socket().getBeamTarget();
         LivingEntity operator = suit.toolOperator(); // the pilot, or the suit itself while its mind drives
         if (target == null || operator == null) {
             return;

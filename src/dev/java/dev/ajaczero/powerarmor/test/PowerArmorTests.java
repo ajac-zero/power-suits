@@ -432,10 +432,10 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2)); // 4800 energy
         Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
-        helper.runAfterDelay(2, () -> suit.setTriggerHeld(pilot, true));
-        helper.runAfterDelay(3, () -> suit.setTriggerHeld(pilot, false));
+        helper.runAfterDelay(2, () -> suit.socket().setTriggerHeld(pilot, true));
+        helper.runAfterDelay(3, () -> suit.socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(20, () -> {
-            helper.assertTrue(suit.getToolUses() == 1, "a tap fires exactly one shot, got " + suit.getToolUses());
+            helper.assertTrue(suit.socket().getUses() == 1, "a tap fires exactly one shot, got " + suit.socket().getUses());
             helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 63, "one nugget used");
             int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit.power().getTotalEnergy(), shot = PowerArmorConfig.CHAINGUN_ENERGY.get();
             helper.assertTrue(used >= shot && used < shot + 10, "one bullet costs " + shot + " energy (+ spin, idle), used " + used);
@@ -450,16 +450,16 @@ public final class PowerArmorTests {
         Player pilot = creativePilot(helper, suit);
         suit.positionRider(pilot);
         int hold = PowerArmorConfig.CHAINGUN_SPIN_UP.get() + 20;
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(hold, () -> {
             int atSlowRate = hold / PowerArmorConfig.CHAINGUN_SLOW_INTERVAL.get() + 1;
-            helper.assertTrue(suit.getToolUses() >= 2 * atSlowRate, "spin-up should at least double the slow rate: "
-                    + suit.getToolUses() + " shots in " + hold + " ticks (slow rate: " + atSlowRate + ")");
-            helper.assertTrue(suit.getToolSpin() > 0.99F, "full spin after the spin-up time, got " + suit.getToolSpin());
-            suit.setTriggerHeld(pilot, false);
+            helper.assertTrue(suit.socket().getUses() >= 2 * atSlowRate, "spin-up should at least double the slow rate: "
+                    + suit.socket().getUses() + " shots in " + hold + " ticks (slow rate: " + atSlowRate + ")");
+            helper.assertTrue(suit.socket().getSpin() > 0.99F, "full spin after the spin-up time, got " + suit.socket().getSpin());
+            suit.socket().setTriggerHeld(pilot, false);
         });
         helper.runAfterDelay(hold + 40, () -> {
-            helper.assertTrue(suit.getToolSpin() == 0F, "the barrels should have coasted to rest, spin " + suit.getToolSpin());
+            helper.assertTrue(suit.socket().getSpin() == 0F, "the barrels should have coasted to rest, spin " + suit.socket().getSpin());
             helper.succeed();
         });
     }
@@ -471,9 +471,9 @@ public final class PowerArmorTests {
         Player pilot = boardedPilot(helper, suit);
         pilot.getInventory().add(new ItemStack(Items.IRON_NUGGET, 3));
         suit.positionRider(pilot);
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(60, () -> {
-            helper.assertTrue(suit.getToolUses() == 3, "three nuggets, three bullets, got " + suit.getToolUses());
+            helper.assertTrue(suit.socket().getUses() == 3, "three nuggets, three bullets, got " + suit.socket().getUses());
             helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 0, "all nuggets used");
             int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit.power().getTotalEnergy();
             int most = 3 * PowerArmorConfig.CHAINGUN_ENERGY.get() + 61 * PowerArmorConfig.CHAINGUN_SPIN_ENERGY.get() + 20;
@@ -487,9 +487,9 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
         Player pilot = creativePilot(helper, suit);
         suit.positionRider(pilot);
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(5, () -> {
-            helper.assertTrue(suit.getToolUses() == 1, "creative fires without nuggets, uses " + suit.getToolUses());
+            helper.assertTrue(suit.socket().getUses() == 1, "creative fires without nuggets, uses " + suit.socket().getUses());
             helper.succeed();
         });
     }
@@ -505,20 +505,20 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 8));
         Player pilot = creativePilot(helper, suit);
         suit.positionRider(pilot);
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         int limit = PowerArmorConfig.CHAINGUN_OVERHEAT_SHOTS.get();
         int[] stopped = {-1};
         helper.onEachTick(() -> {
-            if (stopped[0] < 0 && suit.getToolHeat() >= 1F) {
-                stopped[0] = suit.getToolUses();
+            if (stopped[0] < 0 && suit.socket().getHeat() >= 1F) {
+                stopped[0] = suit.socket().getUses();
                 helper.assertTrue(stopped[0] == limit, "overheats after " + limit + " bullets, got " + stopped[0]);
                 helper.runAfterDelay(20, () -> {
-                    helper.assertTrue(suit.getToolUses() == stopped[0], "an overheated gun must not fire");
-                    suit.setTriggerHeld(pilot, false);
+                    helper.assertTrue(suit.socket().getUses() == stopped[0], "an overheated gun must not fire");
+                    suit.socket().setTriggerHeld(pilot, false);
                 });
-                helper.runAfterDelay(30 + PowerArmorConfig.CHAINGUN_COOL_TICKS.get(), () -> suit.setTriggerHeld(pilot, true));
+                helper.runAfterDelay(30 + PowerArmorConfig.CHAINGUN_COOL_TICKS.get(), () -> suit.socket().setTriggerHeld(pilot, true));
                 helper.runAfterDelay(40 + PowerArmorConfig.CHAINGUN_COOL_TICKS.get(), () -> {
-                    helper.assertTrue(suit.getToolUses() > stopped[0], "cooled barrels fire again");
+                    helper.assertTrue(suit.socket().getUses() > stopped[0], "cooled barrels fire again");
                     helper.succeed();
                 });
             }
@@ -531,18 +531,18 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
         Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
-        helper.runAfterDelay(2, () -> suit.setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2, () -> suit.socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(4, () -> {
-            helper.assertTrue(suit.isToolActive(), "tool held: the arm should be raised");
-            suit.setTriggerHeld(pilot, false);
+            helper.assertTrue(suit.socket().isActive(), "tool held: the arm should be raised");
+            suit.socket().setTriggerHeld(pilot, false);
         });
         helper.runAfterDelay(6, () -> {
-            helper.assertTrue(!suit.isToolActive(), "released: the arm should lower");
+            helper.assertTrue(!suit.socket().isActive(), "released: the arm should lower");
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, ItemStack.EMPTY);
-            suit.setTriggerHeld(pilot, true);
+            suit.socket().setTriggerHeld(pilot, true);
         });
         helper.runAfterDelay(9, () -> {
-            helper.assertTrue(!suit.isToolActive(), "an empty socket has nothing to raise");
+            helper.assertTrue(!suit.socket().isActive(), "an empty socket has nothing to raise");
             helper.succeed();
         });
     }
@@ -554,9 +554,9 @@ public final class PowerArmorTests {
         suit.power().setBurn(start, 1600); // not enough for a bullet by itself
         Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(3, () -> {
-            helper.assertTrue(suit.getToolUses() == 1, "should fire using the next coal");
+            helper.assertTrue(suit.socket().getUses() == 1, "should fire using the next coal");
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).isEmpty(), "the coal should have been lit");
             helper.succeed();
         });
@@ -566,9 +566,9 @@ public final class PowerArmorTests {
     public static void emptySocketDoesNothing(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(20, () -> {
-            helper.assertTrue(suit.getToolUses() == 0, "no tool, no shots");
+            helper.assertTrue(suit.socket().getUses() == 0, "no tool, no shots");
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 3, "only the idle burn uses fuel");
             helper.succeed();
         });
@@ -578,9 +578,9 @@ public final class PowerArmorTests {
     public static void unpoweredChaingunDoesNotFire(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, ItemStack.EMPTY);
         Player pilot = armedPilot(helper, suit);
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(20, () -> {
-            helper.assertTrue(suit.getToolUses() == 0, "no fuel, no shots");
+            helper.assertTrue(suit.socket().getUses() == 0, "no fuel, no shots");
             helper.succeed();
         });
     }
@@ -590,9 +590,9 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.COAL, 4));
         armedPilot(helper, suit);
         Player stranger = helper.makeMockPlayer(GameType.SURVIVAL);
-        suit.setTriggerHeld(stranger, true); // e.g. a forged packet from another player
+        suit.socket().setTriggerHeld(stranger, true); // e.g. a forged packet from another player
         helper.runAfterDelay(10, () -> {
-            helper.assertTrue(!suit.isTriggerHeld() && suit.getToolUses() == 0, "a non-pilot must not fire the suit");
+            helper.assertTrue(!suit.socket().isTriggerHeld() && suit.socket().getUses() == 0, "a non-pilot must not fire the suit");
             helper.succeed();
         });
     }
@@ -610,10 +610,10 @@ public final class PowerArmorTests {
         Vec3 toPig = pig.position().add(0, pig.getBbHeight() / 2, 0).subtract(pilot.getEyePosition());
         pilot.setYRot((float) (Mth.atan2(-toPig.x, toPig.z) * Mth.RAD_TO_DEG));
         pilot.setXRot((float) (-Mth.atan2(toPig.y, toPig.horizontalDistance()) * Mth.RAD_TO_DEG));
-        suit.setTriggerHeld(pilot, true);
-        helper.runAfterDelay(1, () -> suit.setTriggerHeld(pilot, false));
+        suit.socket().setTriggerHeld(pilot, true);
+        helper.runAfterDelay(1, () -> suit.socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(15, () -> {
-            helper.assertTrue(suit.getToolUses() == 1, "one shot");
+            helper.assertTrue(suit.socket().getUses() == 1, "one shot");
             helper.assertTrue(pig.getHealth() < pig.getMaxHealth(), "the pig should be hit, health " + pig.getHealth());
             helper.assertTrue(pig.getLastDamageSource() != null && pig.getLastDamageSource().is(Bullet.BULLET),
                     "damage should be bullet, got " + pig.getLastDamageSource());
@@ -792,8 +792,8 @@ public final class PowerArmorTests {
         var item = helper.spawnItem(Items.DIAMOND, 4.5F, 2.2F, 7.5F);
         Player pilot = emPilotLookingAt(helper, suit, item.position());
         int before = suit.power().getTotalEnergy();
-        suit.setTriggerHeld(pilot, true);
-        helper.runAfterDelay(2, () -> helper.assertTrue(suit.getBeamTarget() == item, "the beam should lock onto the diamond"));
+        suit.socket().setTriggerHeld(pilot, true);
+        helper.runAfterDelay(2, () -> helper.assertTrue(suit.socket().getBeamTarget() == item, "the beam should lock onto the diamond"));
         helper.runAfterDelay(60, () -> {
             helper.assertTrue(item.isRemoved(), "the diamond should have been collected");
             helper.assertTrue(pilot.getInventory().countItem(Items.DIAMOND) == 1, "the diamond should be in the pilot's inventory");
@@ -809,17 +809,17 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = emSuit(helper);
         Pig pig = floatingPigTarget(helper);
         Player pilot = emPilotLookingAt(helper, suit, pig.position().add(0, 0.45, 0));
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(30, () -> {
-            helper.assertTrue(suit.getBeamTarget() == pig && pig.isNoGravity(), "the pig should float in the beam");
+            helper.assertTrue(suit.socket().getBeamTarget() == pig && pig.isNoGravity(), "the pig should float in the beam");
             helper.assertTrue(pig.distanceTo(suit) < 5.5, "the pig should be pulled in close, distance " + pig.distanceTo(suit));
             pilot.setXRot(0); // look straight ahead, then let go
             int before = suit.power().getTotalEnergy();
-            suit.setTriggerHeld(pilot, false);
+            suit.socket().setTriggerHeld(pilot, false);
             helper.runAfterDelay(1, () -> {
-                helper.assertTrue(suit.getBeamTarget() == null && !pig.isNoGravity(), "released: gravity back on");
+                helper.assertTrue(suit.socket().getBeamTarget() == null && !pig.isNoGravity(), "released: gravity back on");
                 helper.assertTrue(before - suit.power().getTotalEnergy() >= PowerArmorConfig.EM_THROW_ENERGY.get(), "a throw costs the throw energy");
-                helper.assertTrue(suit.getToolUses() == 1, "one throw");
+                helper.assertTrue(suit.socket().getUses() == 1, "one throw");
                 helper.succeed();
             });
         });
@@ -831,10 +831,10 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = emSuit(helper);
         Pig pig = floatingPigTarget(helper);
         Player pilot = emPilotLookingAt(helper, suit, pig.position().add(0, 0.45, 0));
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(25, () -> {
             pilot.setXRot(0);
-            suit.setTriggerHeld(pilot, false);
+            suit.socket().setTriggerHeld(pilot, false);
         });
         helper.runAfterDelay(40, () -> {
             helper.assertTrue(!pig.isAlive() || pig.getHealth() < pig.getMaxHealth(), "the slam should hurt, health " + pig.getHealth());
@@ -850,10 +850,10 @@ public final class PowerArmorTests {
         Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 4)); // room to fly before the pad's wall
         double startZ = pig.getZ();
         Player pilot = emPilotLookingAt(helper, suit, pig.position().add(0, 0.45, 0));
-        suit.setTriggerHeld(pilot, true);
-        helper.runAfterDelay(1, () -> suit.setTriggerHeld(pilot, false));
+        suit.socket().setTriggerHeld(pilot, true);
+        helper.runAfterDelay(1, () -> suit.socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(3, () -> {
-            helper.assertTrue(suit.getToolUses() == 1, "a tap should shove");
+            helper.assertTrue(suit.socket().getUses() == 1, "a tap should shove");
             helper.assertTrue(pig.getZ() - startZ > 1.5, "the pig should fly away from the suit, moved " + (pig.getZ() - startZ));
             helper.succeed();
         });
@@ -864,14 +864,14 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = emSuit(helper);
         Pig pig = floatingPigTarget(helper);
         Player pilot = emPilotLookingAt(helper, suit, pig.position().add(0, 0.45, 0));
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(10, () -> {
             helper.assertTrue(pig.isNoGravity(), "held");
             pilot.stopRiding();
         });
         helper.runAfterDelay(13, () -> {
-            helper.assertTrue(!pig.isNoGravity() && suit.getBeamTarget() == null, "the pig must drop when the pilot climbs out");
-            helper.assertTrue(suit.getToolUses() == 0, "climbing out drops, it doesn't throw");
+            helper.assertTrue(!pig.isNoGravity() && suit.socket().getBeamTarget() == null, "the pig must drop when the pilot climbs out");
+            helper.assertTrue(suit.socket().getUses() == 0, "climbing out drops, it doesn't throw");
             helper.succeed();
         });
     }
@@ -917,13 +917,13 @@ public final class PowerArmorTests {
         PowerArmorEntity heavy = suitAt(helper, new BlockPos(4, 2, 7)); // unpowered: parked
         Vec3 start = heavy.position();
         Player pilot = emPilotLookingAt(helper, suit, heavy.position().add(0, 1.5, 0));
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(30, () -> {
-            helper.assertTrue(suit.getBeamTarget() == heavy, "caught in the beam");
+            helper.assertTrue(suit.socket().getBeamTarget() == heavy, "caught in the beam");
             helper.assertTrue(!heavy.isNoGravity() && Math.abs(heavy.getY() - start.y) < 0.01, "not lifted");
             double moved = heavy.position().distanceTo(start);
             helper.assertTrue(moved > 0.1 && moved < 1.5, "dragged a little (1.2 blocks/s at most, slowed), moved " + moved);
-            suit.setTriggerHeld(pilot, false);
+            suit.socket().setTriggerHeld(pilot, false);
             helper.succeed();
         });
     }
@@ -988,10 +988,10 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
         int before = suit.power().getTotalEnergy();
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(4, () -> helper.assertTrue(wallLeft(helper) == 9, "stone takes 6 ticks with a diamond tool, not instant"));
         helper.runAfterDelay(25, () -> {
-            suit.setTriggerHeld(pilot, false);
+            suit.socket().setTriggerHeld(pilot, false);
             helper.assertTrue(wallLeft(helper) == 0, "all 9 blocks of the face should be gone, left " + wallLeft(helper));
             helper.assertBlockPresent(Blocks.OBSIDIAN, new BlockPos(4, 3, 6));
             helper.assertTrue(dropped(helper, Items.COBBLESTONE) == 9, "9 cobblestone should drop, got " + dropped(helper, Items.COBBLESTONE));
@@ -1010,10 +1010,10 @@ public final class PowerArmorTests {
         helper.setBlock(new BlockPos(5, 3, 5), Blocks.OAK_PLANKS);
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(150, () -> helper.assertTrue(wallLeft(helper) == 9, "obsidian takes ~9.4 s and the stone waits for it"));
         helper.runAfterDelay(220, () -> {
-            suit.setTriggerHeld(pilot, false);
+            suit.socket().setTriggerHeld(pilot, false);
             helper.assertBlockNotPresent(Blocks.OBSIDIAN, new BlockPos(4, 3, 5));
             helper.assertBlockPresent(Blocks.BEDROCK, new BlockPos(3, 3, 5));
             helper.assertBlockPresent(Blocks.OAK_PLANKS, new BlockPos(5, 3, 5));
@@ -1028,9 +1028,9 @@ public final class PowerArmorTests {
         wall(helper, Blocks.OAK_PLANKS);
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(40, () -> {
-            helper.assertTrue(wallLeft(helper) == 9 && suit.getToolUses() == 0, "the drill must not cut wood");
+            helper.assertTrue(wallLeft(helper) == 9 && suit.socket().getUses() == 0, "the drill must not cut wood");
             helper.succeed();
         });
     }
@@ -1046,9 +1046,9 @@ public final class PowerArmorTests {
         var handBreak = new net.neoforged.neoforge.event.level.block.BreakBlockEvent(helper.getLevel(), helper.absolutePos(new BlockPos(3, 2, 5)), Blocks.STONE.defaultBlockState(), pilot);
         NeoForge.EVENT_BUS.post(handBreak);
         helper.assertTrue(handBreak.isCanceled(), "a pilot's own (hand) break must still be cancelled");
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(14, () -> {
-            suit.setTriggerHeld(pilot, false);
+            suit.socket().setTriggerHeld(pilot, false);
             ProtectedBlock.pos = null;
             helper.assertBlockPresent(Blocks.STONE, new BlockPos(4, 3, 5));
             helper.assertTrue(wallLeft(helper) == 1, "the 8 unprotected blocks should break, left " + wallLeft(helper));
@@ -1073,9 +1073,9 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.CHAINSAW.get()), new Vec3(4.5, 2.5, 5));
         int before = suit.power().getTotalEnergy();
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(30, () -> {
-            suit.setTriggerHeld(pilot, false);
+            suit.socket().setTriggerHeld(pilot, false);
             for (int y = 2; y <= 6; y++) {
                 helper.assertBlockNotPresent(Blocks.OAK_LOG, new BlockPos(4, y, 5));
             }
@@ -1094,9 +1094,9 @@ public final class PowerArmorTests {
         helper.setBlock(new BlockPos(4, 5, 5), Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.CHAINSAW.get()), new Vec3(4.5, 2.5, 5));
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(25, () -> {
-            suit.setTriggerHeld(pilot, false);
+            suit.socket().setTriggerHeld(pilot, false);
             helper.assertBlockNotPresent(Blocks.OAK_LOG, new BlockPos(4, 2, 5));
             helper.assertBlockPresent(Blocks.OAK_LOG, new BlockPos(4, 3, 5));
             helper.assertBlockPresent(Blocks.OAK_LOG, new BlockPos(4, 4, 5));
@@ -1109,9 +1109,9 @@ public final class PowerArmorTests {
         wall(helper, Blocks.STONE);
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.CHAINSAW.get()), new Vec3(4.5, 3.5, 5));
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(40, () -> {
-            helper.assertTrue(wallLeft(helper) == 9 && suit.getToolUses() == 0, "the chainsaw must not cut stone");
+            helper.assertTrue(wallLeft(helper) == 9 && suit.socket().getUses() == 0, "the chainsaw must not cut stone");
             helper.succeed();
         });
     }
@@ -1124,13 +1124,13 @@ public final class PowerArmorTests {
         PowerTool drill = (PowerTool) ModItems.DRILL.get();
         helper.assertTrue(drill.runAnimation() != null && drill.runSound() != null, "the drill has a loop animation and sound");
         helper.assertTrue(((PowerTool) ModItems.CHAINSAW.get()).runSound() != null, "so does the chainsaw");
-        suit.setTriggerHeld(pilot, true);
+        suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(2, () -> {
-            helper.assertTrue(suit.isToolRunning(), "held: running (spinning even in the air)");
-            suit.setTriggerHeld(pilot, false);
+            helper.assertTrue(suit.socket().isRunning(), "held: running (spinning even in the air)");
+            suit.socket().setTriggerHeld(pilot, false);
         });
         helper.runAfterDelay(4, () -> {
-            helper.assertTrue(!suit.isToolRunning(), "released: stopped");
+            helper.assertTrue(!suit.socket().isRunning(), "released: stopped");
             helper.succeed();
         });
     }
@@ -1575,11 +1575,11 @@ public final class PowerArmorTests {
         suit.setHome(suit.blockPosition()); // the mind only drills its hall round home (the wall is in it)
         helper.runAfterDelay(2, () -> { // once the engine runs (an unpowered mind forgets its aim and trigger)
             suit.setAiAim(Vec3.atCenterOf(center));
-            suit.setAiTrigger(true);
+            suit.socket().setAiTrigger(true);
         });
-        helper.runAfterDelay(5, () -> helper.assertTrue(suit.isToolActive(), "the mind's trigger runs the tool"));
+        helper.runAfterDelay(5, () -> helper.assertTrue(suit.socket().isActive(), "the mind's trigger runs the tool"));
         helper.runAfterDelay(30, () -> {
-            suit.setAiTrigger(false);
+            suit.socket().setAiTrigger(false);
             BreakWatch.pos = null;
             helper.assertTrue(wallLeft(helper) == 0, "the face should be gone, left " + wallLeft(helper));
             helper.assertTrue(dropped(helper, Items.COBBLESTONE) == 9, "9 cobblestone should drop, got " + dropped(helper, Items.COBBLESTONE));
@@ -1596,10 +1596,10 @@ public final class PowerArmorTests {
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
         helper.runAfterDelay(2, () -> {
             suit.setAiAim(helper.absoluteVec(new Vec3(4.5, 3, 7)));
-            suit.setAiTrigger(true);
+            suit.socket().setAiTrigger(true);
         });
         helper.runAfterDelay(20, () -> {
-            helper.assertTrue(suit.isToolActive() && suit.getToolUses() == 0, "spins, but no nuggets: no shots");
+            helper.assertTrue(suit.socket().isActive() && suit.socket().getUses() == 0, "spins, but no nuggets: no shots");
             helper.succeed();
         });
     }
@@ -1700,8 +1700,8 @@ public final class PowerArmorTests {
             dismiss(helper, owner);
             helper.assertTrue(!husk.isAlive(), "the husk should be shot down, health " + husk.getHealth());
             helper.assertTrue(husk.getLastHurtByMob() == suit, "killed by the suit itself (it owns its bullets)");
-            helper.assertTrue(suit.getStoredNuggets() < 64 && suit.getToolUses() == 64 - suit.getStoredNuggets(),
-                    "one nugget from the store per bullet, store " + suit.getStoredNuggets() + " shots " + suit.getToolUses());
+            helper.assertTrue(suit.getStoredNuggets() < 64 && suit.socket().getUses() == 64 - suit.getStoredNuggets(),
+                    "one nugget from the store per bullet, store " + suit.getStoredNuggets() + " shots " + suit.socket().getUses());
             helper.succeed();
         });
     }
@@ -1716,7 +1716,7 @@ public final class PowerArmorTests {
         helper.assertTrue(!dev.ajaczero.powerarmor.entity.ai.SuitTargets.lineOfFireClear(suit, husk, husk.getBoundingBox().getCenter()),
                 "the owner blocks the line");
         boolean[] blockedShot = {false};
-        helper.onEachTick(() -> blockedShot[0] |= suit.getToolUses() > 0 && suit.tickCount <= 6);
+        helper.onEachTick(() -> blockedShot[0] |= suit.socket().getUses() > 0 && suit.tickCount <= 6);
         helper.runAfterDelay(6, () -> {
             helper.assertTrue(suit.getTarget() == husk, "it has picked the husk");
             helper.assertTrue(!blockedShot[0] && husk.getHealth() == husk.getMaxHealth(), "but must not fire through its owner");
@@ -1750,7 +1750,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(80, () -> {
             dismiss(helper, owner);
             float lost = husk.getMaxHealth() - husk.getHealth();
-            helper.assertTrue(suit.getToolUses() == 0, "no nuggets: no shots");
+            helper.assertTrue(suit.socket().getUses() == 0, "no nuggets: no shots");
             helper.assertTrue(lost >= 1F + PowerArmorConfig.MELEE_BONUS.get() - 0.01, "walks up and punches (1 + melee bonus), lost " + lost);
             helper.succeed();
         });
@@ -1802,13 +1802,13 @@ public final class PowerArmorTests {
         boolean[] caught = {false};
         double[] highest = {0};
         helper.onEachTick(() -> {
-            caught[0] |= suit.getBeamTarget() == husk;
+            caught[0] |= suit.socket().getBeamTarget() == husk;
             highest[0] = Math.max(highest[0], husk.getY() - helper.absoluteVec(Vec3.ZERO).y);
         });
         helper.runAfterDelay(90, () -> {
             helper.assertTrue(caught[0], "the beam should catch the husk");
             helper.assertTrue(highest[0] > 5.5, "lifted overhead, highest " + highest[0]);
-            helper.assertTrue(suit.getToolUses() >= 1, "and thrown (a throw counts as a use)");
+            helper.assertTrue(suit.socket().getUses() >= 1, "and thrown (a throw counts as a use)");
             helper.assertTrue(husk.getHealth() < husk.getMaxHealth(), "the fall hurts, health " + husk.getHealth());
             helper.succeed();
         });
@@ -1820,7 +1820,7 @@ public final class PowerArmorTests {
         helper.spawn(net.minecraft.world.entity.EntityTypes.COW, new Vec3(2.5, 2, 6.5));
         helper.spawn(net.minecraft.world.entity.EntityTypes.VILLAGER, new Vec3(6.5, 2, 6.5));
         boolean[] grabbed = {false};
-        helper.onEachTick(() -> grabbed[0] |= suit.getBeamTarget() != null || suit.isAiTriggerHeld());
+        helper.onEachTick(() -> grabbed[0] |= suit.socket().getBeamTarget() != null || suit.socket().isAiTriggerHeld());
         helper.runAfterDelay(50, () -> {
             helper.assertTrue(!grabbed[0], "only monsters get grabbed");
             helper.succeed();
@@ -1834,12 +1834,12 @@ public final class PowerArmorTests {
         var creeper = helper.spawn(net.minecraft.world.entity.EntityTypes.CREEPER, new Vec3(4.5, 2, 5.5));
         double[] furthest = {0};
         helper.onEachTick(() -> {
-            if (suit.getToolUses() > 0) {
+            if (suit.socket().getUses() > 0) {
                 furthest[0] = Math.max(furthest[0], creeper.getZ() - helper.absoluteVec(Vec3.ZERO).z);
             }
         });
         helper.runAfterDelay(90, () -> {
-            helper.assertTrue(suit.getToolUses() >= 1, "the creeper should be thrown");
+            helper.assertTrue(suit.socket().getUses() >= 1, "the creeper should be thrown");
             helper.assertTrue(furthest[0] > 7.0, "away from home (+z, to the far wall), got to z " + furthest[0]);
             helper.succeed();
         });
@@ -1933,7 +1933,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(3, () -> helper.assertTrue(suit.isPowered() && suit.isAiDriven(), "a rogue needs no fuel"));
         helper.succeedWhen(() -> {
             helper.assertTrue(!cow.isAlive(), "the cow should be shot");
-            helper.assertTrue(suit.power().getTotalEnergy() == 0 && suit.getStoredNuggets() == 0 && suit.getToolUses() > 0,
+            helper.assertTrue(suit.power().getTotalEnergy() == 0 && suit.getStoredNuggets() == 0 && suit.socket().getUses() > 0,
                     "fired without fuel or nuggets");
         });
     }
@@ -2634,10 +2634,10 @@ public final class PowerArmorTests {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = flamePilot(helper, suit, new Vec3(4.5, 2.5, 5.5), new ItemStack(Items.BLAZE_ROD, 2));
         int hold = 20;
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
-        helper.runAfterDelay(2 + hold, () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2 + hold, () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(2 + hold + 2, () -> {
-            helper.assertTrue(near(suit[0].getToolUses(), hold), "a gob a tick: " + suit[0].getToolUses() + " in " + hold + " ticks");
+            helper.assertTrue(near(suit[0].socket().getUses(), hold), "a gob a tick: " + suit[0].socket().getUses() + " in " + hold + " ticks");
             int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit[0].power().getTotalEnergy();
             int expected = hold * PowerArmorConfig.FLAMETHROWER_ENERGY.get();
             helper.assertTrue(used >= expected * 0.85 && used < expected * 1.15 + 15, "fuel per tick of flame: used " + used + ", expected ~" + expected);
@@ -2659,10 +2659,10 @@ public final class PowerArmorTests {
         blaze.setNoAi(true);
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = flamePilot(helper, suit, new Vec3(4.5, 3.0, 5.5), new ItemStack(Items.BLAZE_ROD, 2));
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(30, () -> {
-            suit[0].setTriggerHeld(pilot, false);
-            helper.assertTrue(suit[0].getToolUses() > 20, "it sprayed");
+            suit[0].socket().setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].socket().getUses() > 20, "it sprayed");
             helper.assertTrue(blaze.getHealth() == blaze.getMaxHealth(), "a blaze takes no harm, health " + blaze.getHealth());
             helper.succeed();
         });
@@ -2675,11 +2675,11 @@ public final class PowerArmorTests {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = flamePilot(helper, suit, new BlockPos(4, 2, 3), new Vec3(4.5, 2.5, 6.0), ItemStack.EMPTY);
         suit[0].getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.TIDAL_ENGINE.get()));
-        helper.runAfterDelay(10, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(10, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(30, () -> {
-            suit[0].setTriggerHeld(pilot, false);
+            suit[0].socket().setTriggerHeld(pilot, false);
             helper.assertTrue(suit[0].isPowered(), "the tidal engine runs under water");
-            helper.assertTrue(suit[0].getToolUses() == 0, "no flame under water, got " + suit[0].getToolUses());
+            helper.assertTrue(suit[0].socket().getUses() == 0, "no flame under water, got " + suit[0].socket().getUses());
             helper.assertTrue(helper.getLevel().getEntitiesOfClass(dev.ajaczero.powerarmor.entity.FlameJet.class,
                     new AABB(helper.absolutePos(BlockPos.ZERO)).inflate(16)).isEmpty(), "and no gobs");
             helper.succeed();
@@ -2702,9 +2702,9 @@ public final class PowerArmorTests {
                 fire[0] |= helper.getLevel().getBlockState(p).is(net.minecraft.tags.BlockTags.FIRE);
             }
         });
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(60, () -> {
-            suit[0].setTriggerHeld(pilot, false);
+            suit[0].socket().setTriggerHeld(pilot, false);
             if (PowerArmorConfig.FLAMETHROWER_IGNITES_BLOCKS.get()) {
                 helper.assertTrue(fire[0], "the planks should catch fire");
             }
@@ -2719,13 +2719,13 @@ public final class PowerArmorTests {
         helper.setBlock(new BlockPos(5, 2, 4), Blocks.CAMPFIRE.defaultBlockState().setValue(net.minecraft.world.level.block.CampfireBlock.LIT, false));
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = flamePilot(helper, suit, new Vec3(4.5, 2.9, 5.2), new ItemStack(Items.BLAZE_ROD, 2));
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(25, () -> {
             helper.assertTrue(!helper.getBlockState(new BlockPos(4, 2, 5)).is(Blocks.ICE), "the ice should have melted");
             aim(helper, pilot, new Vec3(5.5, 2.3, 4.5));
         });
         helper.runAfterDelay(50, () -> {
-            suit[0].setTriggerHeld(pilot, false);
+            suit[0].socket().setTriggerHeld(pilot, false);
             helper.assertTrue(helper.getBlockState(new BlockPos(5, 2, 4)).getValue(net.minecraft.world.level.block.CampfireBlock.LIT),
                     "the campfire should be lit");
             helper.succeed();
@@ -2741,9 +2741,9 @@ public final class PowerArmorTests {
         helper.getLevel().addFreshEntity(beef);
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = flamePilot(helper, suit, new Vec3(4.5, 2.2, 4.5), new ItemStack(Items.BLAZE_ROD, 2));
-        helper.runAfterDelay(5, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(5, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(70, () -> {
-            suit[0].setTriggerHeld(pilot, false);
+            suit[0].socket().setTriggerHeld(pilot, false);
             helper.assertTrue(beef.isAlive(), "the food must not burn up");
             helper.assertTrue(beef.getItem().is(Items.COOKED_BEEF) && beef.getItem().getCount() == 3,
                     "3 raw beef should be 3 steaks, got " + beef.getItem());
@@ -2769,7 +2769,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(140, () -> {
             dismiss(helper, owner);
             helper.assertTrue(suit.followsOwner(), "a flamethrower suit takes the chaingun's job");
-            helper.assertTrue(suit.getToolUses() > 0, "it sprayed");
+            helper.assertTrue(suit.socket().getUses() > 0, "it sprayed");
             helper.assertTrue(husk.getHealth() < husk.getMaxHealth() || !husk.isAlive(), "the husk should be burnt, health " + husk.getHealth());
             helper.assertTrue(!fire[0], "a friendly mind sets no blocks on fire");
             helper.succeed();
@@ -2837,10 +2837,10 @@ public final class PowerArmorTests {
     public static void tntLauncherClicksWithoutTnt(GameTestHelper helper) {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.5, 6.5), 0);
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(8, () -> {
-            suit[0].setTriggerHeld(pilot, false);
-            helper.assertTrue(suit[0].getToolUses() == 0, "no TNT, no shot: " + suit[0].getToolUses());
+            suit[0].socket().setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].socket().getUses() == 0, "no TNT, no shot: " + suit[0].socket().getUses());
             helper.assertTrue(shellsInTest(helper).isEmpty(), "no round in the air");
             helper.succeed();
         });
@@ -2853,10 +2853,10 @@ public final class PowerArmorTests {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 6.5), 3);
         BlockPos floor = new BlockPos(4, 1, 6);
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(3, () -> {
-            suit[0].setTriggerHeld(pilot, false);
-            helper.assertTrue(suit[0].getToolUses() == 1, "a tap fires one round, got " + suit[0].getToolUses());
+            suit[0].socket().setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].socket().getUses() == 1, "a tap fires one round, got " + suit[0].socket().getUses());
             helper.assertTrue(ammoLeft(suit[0]) == 2, "using one TNT from the ammo slot, left " + ammoLeft(suit[0]));
             helper.assertTrue(suit[0].getAmmoStack().getCount() == 2, "the synced copy (HUD) follows");
         });
@@ -2876,10 +2876,10 @@ public final class PowerArmorTests {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 7.5), 10);
         int reload = PowerArmorConfig.TNT_LAUNCHER_RELOAD.get();
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(2 + 2 * reload + 1, () -> {
-            suit[0].setTriggerHeld(pilot, false);
-            helper.assertTrue(suit[0].getToolUses() == 3, "3 rounds in two reloads, got " + suit[0].getToolUses());
+            suit[0].socket().setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].socket().getUses() == 3, "3 rounds in two reloads, got " + suit[0].socket().getUses());
             helper.assertTrue(ammoLeft(suit[0]) == 7, "3 TNT used, left " + ammoLeft(suit[0]));
             helper.succeed();
         });
@@ -2891,8 +2891,8 @@ public final class PowerArmorTests {
         var husk = statueHusk(helper, new Vec3(4.5, 2, 6.5));
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = tntPilot(helper, suit, new Vec3(4.5, 3, 6.5), 1);
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
-        helper.runAfterDelay(3, () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
+        helper.runAfterDelay(3, () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(husk.getHealth() < husk.getMaxHealth() || !husk.isAlive(), "the husk took the blast, health " + husk.getHealth());
             var src = husk.getLastDamageSource();
@@ -2908,10 +2908,10 @@ public final class PowerArmorTests {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 7.5), 0);
         pilot.getAbilities().instabuild = true;
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(3, () -> {
-            suit[0].setTriggerHeld(pilot, false);
-            helper.assertTrue(suit[0].getToolUses() == 1, "creative fires with an empty ammo slot, got " + suit[0].getToolUses());
+            suit[0].socket().setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].socket().getUses() == 1, "creative fires with an empty ammo slot, got " + suit[0].socket().getUses());
             helper.succeed();
         });
     }
@@ -2924,11 +2924,11 @@ public final class PowerArmorTests {
         rules.set(net.minecraft.world.level.gamerules.GameRules.TNT_EXPLODES, false, helper.getLevel().getServer());
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 6.5), 1);
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
-        helper.runAfterDelay(3, () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
+        helper.runAfterDelay(3, () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(20, () -> {
             rules.set(net.minecraft.world.level.gamerules.GameRules.TNT_EXPLODES, before, helper.getLevel().getServer());
-            helper.assertTrue(suit[0].getToolUses() == 1, "it still fires");
+            helper.assertTrue(suit[0].socket().getUses() == 1, "it still fires");
             helper.assertTrue(shellsInTest(helper).isEmpty(), "the round is gone");
             helper.assertTrue(helper.getBlockState(new BlockPos(4, 1, 6)).is(Blocks.SMOOTH_STONE), "but breaks nothing (the pad's smooth stone floor)");
             helper.succeed();
@@ -2948,7 +2948,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(100, () -> {
             dismiss(helper, owner);
             helper.assertTrue(!suit.followsOwner() && !suit.hasGun(), "the launcher is no weapon for the mind");
-            helper.assertTrue(suit.getToolUses() == 0 && ammoLeft(suit) == 8, "it never fired, uses " + suit.getToolUses());
+            helper.assertTrue(suit.socket().getUses() == 0 && ammoLeft(suit) == 8, "it never fired, uses " + suit.socket().getUses());
             helper.assertTrue(shellsInTest(helper).isEmpty(), "no rounds");
             helper.succeed();
         });
@@ -2984,28 +2984,28 @@ public final class PowerArmorTests {
         int[] energy = new int[1];
         helper.runAfterDelay(2, () -> {
             energy[0] = suit[0].power().getTotalEnergy();
-            suit[0].setTriggerHeld(pilot, true);
+            suit[0].socket().setTriggerHeld(pilot, true);
         });
         helper.runAfterDelay(2 + full - 5, () -> {
-            helper.assertTrue(suit[0].getToolSpin() > 0.5F && suit[0].getToolSpin() < 1F, "charging, got " + suit[0].getToolSpin());
-            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].socket().getSpin() > 0.5F && suit[0].socket().getSpin() < 1F, "charging, got " + suit[0].socket().getSpin());
+            suit[0].socket().setTriggerHeld(pilot, false);
         });
         helper.runAfterDelay(2 + full + 5, () -> {
-            helper.assertTrue(suit[0].getToolUses() == 0 && ammoLeft(suit[0]) == 3, "an early release fires nothing, uses " + suit[0].getToolUses());
-            helper.assertTrue(suit[0].getToolSpin() < 0.5F, "and the charge winds down, " + suit[0].getToolSpin());
-            suit[0].setTriggerHeld(pilot, true);
+            helper.assertTrue(suit[0].socket().getUses() == 0 && ammoLeft(suit[0]) == 3, "an early release fires nothing, uses " + suit[0].socket().getUses());
+            helper.assertTrue(suit[0].socket().getSpin() < 0.5F, "and the charge winds down, " + suit[0].socket().getSpin());
+            suit[0].socket().setTriggerHeld(pilot, true);
         });
         helper.runAfterDelay(2 + 2 * full + 15, () -> {
-            helper.assertTrue(suit[0].getToolSpin() >= 0.999F, "fully charged, " + suit[0].getToolSpin());
-            helper.assertTrue(suit[0].getToolUses() == 0, "it holds the charge while the trigger is down");
-            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].socket().getSpin() >= 0.999F, "fully charged, " + suit[0].socket().getSpin());
+            helper.assertTrue(suit[0].socket().getUses() == 0, "it holds the charge while the trigger is down");
+            suit[0].socket().setTriggerHeld(pilot, false);
         });
         helper.runAfterDelay(2 + 2 * full + 17, () -> {
-            helper.assertTrue(suit[0].getToolUses() == 1, "let go at full charge: one shot, got " + suit[0].getToolUses());
+            helper.assertTrue(suit[0].socket().getUses() == 1, "let go at full charge: one shot, got " + suit[0].socket().getUses());
             helper.assertTrue(ammoLeft(suit[0]) == 2 && suit[0].getAmmoStack().getCount() == 2, "one ingot used, left " + ammoLeft(suit[0]));
             int used = energy[0] - suit[0].power().getTotalEnergy(), shot = PowerArmorConfig.RAIL_ENERGY.get();
             helper.assertTrue(used >= shot && used < shot + 40, "a shot costs " + shot + " energy (+ idle), used " + used);
-            helper.assertTrue(suit[0].getToolSpin() == 0F, "the charge is spent");
+            helper.assertTrue(suit[0].socket().getSpin() == 0F, "the charge is spent");
             helper.succeed();
         });
     }
@@ -3018,8 +3018,8 @@ public final class PowerArmorTests {
         var far = statueHusk(helper, new Vec3(4.5, 2, 7.5));
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = railPilot(helper, suit, new Vec3(4.5, 3.0, 7.5), 1);
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
-        helper.runAfterDelay(4 + PowerArmorConfig.RAIL_CHARGE.get(), () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
+        helper.runAfterDelay(4 + PowerArmorConfig.RAIL_CHARGE.get(), () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(6 + PowerArmorConfig.RAIL_CHARGE.get(), () -> {
             var shot = dev.ajaczero.powerarmor.item.RailCannonItem.lastShot(suit[0]);
             helper.assertTrue(shot != null && shot.hit().size() == 2, "both husks on the beam, got " + (shot == null ? null : shot.hit()));
@@ -3048,8 +3048,8 @@ public final class PowerArmorTests {
         var husk = statueHusk(helper, new Vec3(4.5, 2, 7.5));
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = railPilot(helper, suit, new Vec3(4.5, 3.5, 7.5), 1);
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
-        helper.runAfterDelay(4 + PowerArmorConfig.RAIL_CHARGE.get(), () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
+        helper.runAfterDelay(4 + PowerArmorConfig.RAIL_CHARGE.get(), () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(6 + PowerArmorConfig.RAIL_CHARGE.get(), () -> {
             int glass = 0, stone = 0;
             for (int x = 2; x <= 6; x++) {
@@ -3059,7 +3059,7 @@ public final class PowerArmorTests {
                 }
             }
             var shot = dev.ajaczero.powerarmor.item.RailCannonItem.lastShot(suit[0]);
-            helper.assertTrue(suit[0].getToolUses() == 1 && shot != null, "it fired");
+            helper.assertTrue(suit[0].socket().getUses() == 1 && shot != null, "it fired");
             if (PowerArmorConfig.RAIL_BREAKS_BLOCKS.get()) {
                 helper.assertTrue(glass >= 18 && glass <= 19 && shot.blocksBroken() == 20 - glass, "it broke the glass it went through, left " + glass);
                 helper.assertTrue(shot.to().z - helper.absoluteVec(Vec3.ZERO).z > 5.9, "and went on to the stone, stopped at z " + shot.to().z);
@@ -3076,17 +3076,17 @@ public final class PowerArmorTests {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = railPilot(helper, suit, new Vec3(4.5, 3, 7.5), 0);
         int full = PowerArmorConfig.RAIL_CHARGE.get();
-        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(4 + full, () -> {
-            helper.assertTrue(suit[0].getToolSpin() == 0F, "no ingot, no charge: " + suit[0].getToolSpin());
-            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].socket().getSpin() == 0F, "no ingot, no charge: " + suit[0].socket().getSpin());
+            suit[0].socket().setTriggerHeld(pilot, false);
             helper.assertTrue(menuSlotTakes(helper, suit[0], new ItemStack(Items.IRON_INGOT)), "the ammo slot takes iron ingots");
             pilot.getAbilities().instabuild = true;
-            suit[0].setTriggerHeld(pilot, true);
+            suit[0].socket().setTriggerHeld(pilot, true);
         });
-        helper.runAfterDelay(8 + 2 * full, () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(8 + 2 * full, () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(10 + 2 * full, () -> {
-            helper.assertTrue(suit[0].getToolUses() == 1, "creative fires with an empty ammo slot, got " + suit[0].getToolUses());
+            helper.assertTrue(suit[0].socket().getUses() == 1, "creative fires with an empty ammo slot, got " + suit[0].socket().getUses());
             helper.succeed();
         });
     }
@@ -3112,9 +3112,9 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = railGuard(helper, new BlockPos(4, 2, 1), 4);
         var husk = statueHusk(helper, new Vec3(5.5, 2, 7.5));
         helper.runAfterDelay(120, () -> {
-            helper.assertTrue(suit.getToolUses() >= 1, "it should have fired, uses " + suit.getToolUses());
+            helper.assertTrue(suit.socket().getUses() >= 1, "it should have fired, uses " + suit.socket().getUses());
             helper.assertTrue(!husk.isAlive() || husk.getHealth() < husk.getMaxHealth(), "and hit the husk, health " + husk.getHealth());
-            helper.assertTrue(ammoLeft(suit) == 4 - suit.getToolUses(), "an ingot per shot, left " + ammoLeft(suit));
+            helper.assertTrue(ammoLeft(suit) == 4 - suit.socket().getUses(), "an ingot per shot, left " + ammoLeft(suit));
             helper.assertTrue(!suit.isAwayFromHome(1.0), "from home");
             helper.assertTrue(!suit.followsOwner() && suit.snipesFromHome(), "the rail guard job, not the chaingun's");
             helper.succeed();
@@ -3130,7 +3130,7 @@ public final class PowerArmorTests {
         var villager = helper.spawn(net.minecraft.world.entity.EntityTypes.VILLAGER, new Vec3(4.5, 2, 6.7));
         villager.setNoAi(true);
         helper.runAfterDelay(120, () -> {
-            helper.assertTrue(suit.getToolUses() == 0, "no shot through a villager, uses " + suit.getToolUses());
+            helper.assertTrue(suit.socket().getUses() == 0, "no shot through a villager, uses " + suit.socket().getUses());
             helper.assertTrue(villager.getHealth() == villager.getMaxHealth(), "the villager is fine");
             helper.succeed();
         });

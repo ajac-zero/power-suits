@@ -216,12 +216,12 @@ final class RogueScene {
                 e -> e.getItem().is(ModItems.EM_PROJECTOR.get())).isEmpty();
         try {
             csv.write(String.format(Locale.ROOT, "%d,%s,%.1f,%s,%.1f,%b,%b,%s,%d,%d,%.2f,%.2f,%.2f,%b,%s,%d,%d,%.2f,%.2f,%.1f,%s,%.1f,%s,%s,%b,%.2f,%.2f,%b,%.2f%n",
-                    s, phase, spawnDistance, r.getMind(), r.getHealth(), r.isPowered(), r.isStunned(), name(r.getTarget()), r.getToolUses(),
-                    r.power().getTotalEnergy(), visor[0], visor[1], visor[2], player.getUUID().equals(r.getOwnerId()), name(f.getTarget()), f.getToolUses(),
+                    s, phase, spawnDistance, r.getMind(), r.getHealth(), r.isPowered(), r.isStunned(), name(r.getTarget()), r.socket().getUses(),
+                    r.power().getTotalEnergy(), visor[0], visor[1], visor[2], player.getUUID().equals(r.getOwnerId()), name(f.getTarget()), f.socket().getUses(),
                     cows.stream().filter(LivingEntity::isAlive).count(), player.getY() - base.getY(), player.getDeltaMovement().y,
                     player.getHealth(), player.getVehicle() == null ? "-" : player.getVehicle() == r ? "rebooted" : "other",
                     em == null ? -1F : em.getHealth(), em == null ? "-" : name(em.getTarget()),
-                    em == null || em.getBeamTarget() == null ? "-" : em.getBeamTarget().getType().toShortString(), emDropped,
+                    em == null || em.socket().getBeamTarget() == null ? "-" : em.socket().getBeamTarget().getType().toShortString(), emDropped,
                     mc.player.getY() - base.getY(), mc.player.getDeltaMovement().y, mc.player.isNoGravity(),
                     mc.player.getVehicle() == null ? -1 : Math.hypot(mc.player.getVehicle().getX() - mc.player.getVehicle().xo,
                             mc.player.getVehicle().getZ() - mc.player.getVehicle().zo) * 20));

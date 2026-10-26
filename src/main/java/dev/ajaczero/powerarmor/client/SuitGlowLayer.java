@@ -62,7 +62,7 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
         float fire = suit.getFireGlow() * (0.86F + 0.08F * Mth.sin(time * 0.37F + suit.getId()) + 0.06F * Mth.sin(time * 1.31F));
         float[] visor = suit.getVisorColor();
         float on = suit.getVisorFlicker(time);
-        float heat = suit.getToolHeat();
+        float heat = suit.socket().getHeat();
         state.addGeckolibData(SuitRenderData.GLOW, new int[] {
                 tint(fire, 1F, 1F, 1F),
                 tint(on, visor[0], visor[1], visor[2]),

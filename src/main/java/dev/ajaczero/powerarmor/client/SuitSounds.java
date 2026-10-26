@@ -124,7 +124,7 @@ public final class SuitSounds {
     }
 
     private static SoundEvent toolSound(PowerArmorEntity suit) {
-        return suit.isAlive() && suit.isToolRunning() && suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.runSound() : null;
+        return suit.isAlive() && suit.socket().isRunning() && suit.getSocketStack().getItem() instanceof PowerTool tool ? tool.runSound() : null;
     }
 
     /** A loop that follows its suit, eases toward its target volume / pitch, and fades out when it should stop. */

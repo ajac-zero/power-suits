@@ -68,7 +68,7 @@ public class ChaingunItem extends Item implements PowerTool {
     }
 
     private static State state(PowerArmorEntity suit) {
-        return suit.toolData(State.class, State::new);
+        return suit.socket().toolData(State.class, State::new);
     }
 
     @Override
@@ -134,7 +134,7 @@ public class ChaingunItem extends Item implements PowerTool {
             s.heat = 0F;
             s.overheated = false;
         }
-        suit.setToolSpin(s.spin, s.heat);
+        suit.socket().setSpin(s.spin, s.heat);
     }
 
     /** Every tick the trigger is held (and the suit can operate): spin up, and fire whenever the next shot is due. */
@@ -178,8 +178,8 @@ public class ChaingunItem extends Item implements PowerTool {
         direction = direction.xRot((float) level.getRandom().nextGaussian() * spread).yRot((float) level.getRandom().nextGaussian() * spread);
         float spin = s.spin;
         level.addFreshEntity(new Bullet(level, operator, eye, direction.scale(Bullet.SPEED), damage(spin), 1F - spin));
-        suit.countToolUse();
-        suit.countShot(); // every client: recoil kick, muzzle burst (the pilot's own client draws it on screen)
+        suit.socket().countUse();
+        suit.socket().countShot(); // every client: recoil kick, muzzle burst (the pilot's own client draws it on screen)
         s.sinceShot = 0;
         if (PowerArmorConfig.CHAINGUN_OVERHEAT.get()) {
             s.heat = Math.min(1F, s.heat + 1F / PowerArmorConfig.CHAINGUN_OVERHEAT_SHOTS.get());
@@ -266,12 +266,12 @@ public class ChaingunItem extends Item implements PowerTool {
     /** The motor whine rises with the spin. */
     @Override
     public float runSoundPitch(PowerArmorEntity suit) {
-        return 0.5F + 1.3F * suit.getToolSpin();
+        return 0.5F + 1.3F * suit.socket().getSpin();
     }
 
     @Override
     public float runSoundVolume(PowerArmorEntity suit) {
-        return 0.25F + 0.75F * suit.getToolSpin();
+        return 0.25F + 0.75F * suit.socket().getSpin();
     }
 
     /** On foot it's just a heavy piece of kit: say where it goes. */

@@ -165,9 +165,9 @@ public class EmProjectorItem extends Item implements PowerTool {
 
     @Override
     public void holdTick(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
-        Beam beam = suit.toolData(Beam.class, Beam::new);
+        Beam beam = suit.socket().toolData(Beam.class, Beam::new);
         if (beam.target == null) {
-            if (!suit.isToolReady()) {
+            if (!suit.socket().isReady()) {
                 return;
             }
             // A pilot grabs whatever they point at; the machine mind only the monster it picked (never an item, a cow or
@@ -196,7 +196,7 @@ public class EmProjectorItem extends Item implements PowerTool {
             item.playerTouch(pilot);
             if (item.isRemoved()) {
                 beam.target = null;
-                suit.setBeamTarget(null);
+                suit.socket().setBeamTarget(null);
                 return;
             }
             item.setNoGravity(true); // inventory full: keep it floating
@@ -232,7 +232,7 @@ public class EmProjectorItem extends Item implements PowerTool {
 
     @Override
     public void release(PowerArmorEntity suit, @Nullable LivingEntity operator, boolean interrupted) {
-        Beam beam = suit.toolData(Beam.class, Beam::new);
+        Beam beam = suit.socket().toolData(Beam.class, Beam::new);
         Entity target = beam.target;
         if (target == null) {
             return;
@@ -256,9 +256,9 @@ public class EmProjectorItem extends Item implements PowerTool {
             beam.thrown.add(new Thrown(living, operator));
         }
         beam.target = null;
-        suit.setBeamTarget(null);
-        suit.setToolCooldown(COOLDOWN_TICKS);
-        suit.countToolUse();
+        suit.socket().setBeamTarget(null);
+        suit.socket().setCooldown(COOLDOWN_TICKS);
+        suit.socket().countUse();
         suit.triggerAnim("action", "tool_recoil");
         suit.playSound(SoundEvents.WIND_CHARGE_BURST.value(), 1.0F, 0.8F);
         if (suit.level() instanceof ServerLevel level) {
@@ -270,7 +270,7 @@ public class EmProjectorItem extends Item implements PowerTool {
 
     @Override
     public void serverTick(PowerArmorEntity suit) {
-        Beam beam = suit.toolData(Beam.class, Beam::new);
+        Beam beam = suit.socket().toolData(Beam.class, Beam::new);
         beam.thrown.removeIf(t -> {
             t.ticks++;
             if (!t.entity.isAlive() || t.ticks > 40) {
@@ -294,7 +294,7 @@ public class EmProjectorItem extends Item implements PowerTool {
         if (!isHeavy(target)) {
             target.setNoGravity(true); // lifted; heavy things stay on the ground
         }
-        suit.setBeamTarget(target);
+        suit.socket().setBeamTarget(target);
         suit.playSound(SoundEvents.BEACON_POWER_SELECT, 0.8F, 1.6F);
     }
 
@@ -303,7 +303,7 @@ public class EmProjectorItem extends Item implements PowerTool {
         if (beam.target != null) {
             beam.target.setNoGravity(beam.targetHadNoGravity);
             beam.target = null;
-            suit.setBeamTarget(null);
+            suit.socket().setBeamTarget(null);
             suit.playSound(SoundEvents.BEACON_DEACTIVATE, 0.6F, 2.0F);
         }
     }

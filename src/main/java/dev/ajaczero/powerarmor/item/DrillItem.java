@@ -113,10 +113,10 @@ public class DrillItem extends Item implements PowerTool {
         if (!(suit.level() instanceof ServerLevel level)) {
             return;
         }
-        ToolMining.Progress state = suit.toolData(ToolMining.Progress.class, () -> new ToolMining.Progress(suit));
+        ToolMining.Progress state = suit.socket().toolData(ToolMining.Progress.class, () -> new ToolMining.Progress(suit));
         state.ticks++;
         BlockHitResult hit = ToolMining.target(suit, operator);
-        if (hit == null || !suit.isToolReady()) {
+        if (hit == null || !suit.socket().isReady()) {
             state.clear(level); // spinning in the air, or catching its breath after a 3x3
             return;
         }
@@ -162,15 +162,15 @@ public class DrillItem extends Item implements PowerTool {
         }
         state.clear(level);
         if (broken > 0) {
-            suit.countToolUse();
-            suit.setToolCooldown(PowerArmorConfig.DRILL_PAUSE.get()); // vanilla mining pauses 5 ticks between blocks
+            suit.socket().countUse();
+            suit.socket().setCooldown(PowerArmorConfig.DRILL_PAUSE.get()); // vanilla mining pauses 5 ticks between blocks
         }
     }
 
     @Override
     public void release(PowerArmorEntity suit, @Nullable LivingEntity operator, boolean interrupted) {
         if (suit.level() instanceof ServerLevel level) {
-            suit.toolData(ToolMining.Progress.class, () -> new ToolMining.Progress(suit)).clear(level);
+            suit.socket().toolData(ToolMining.Progress.class, () -> new ToolMining.Progress(suit)).clear(level);
         }
     }
 

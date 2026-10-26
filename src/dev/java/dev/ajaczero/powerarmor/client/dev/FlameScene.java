@@ -189,7 +189,7 @@ final class FlameScene {
         }
         String p = phase;
         var client = mc.level == null ? null : mc.level.getEntity(x.getId()) instanceof PowerArmorEntity c ? c : null;
-        boolean running = client != null && client.isToolRunning();
+        boolean running = client != null && client.socket().isRunning();
         float glow = client == null ? 0F : client.getPilotGlow(0F);
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
@@ -211,7 +211,7 @@ final class FlameScene {
             var camp = level.getBlockState(b.offset(3, 0, 3));
             boolean lit = camp.hasProperty(CampfireBlock.LIT) && camp.getValue(CampfireBlock.LIT);
             try {
-                w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%d,%.1f,%d,%s,%b,%b,%b,%.2f%n", s, p, x.getToolUses(), x.power().getTotalEnergy(),
+                w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%d,%.1f,%d,%s,%b,%b,%b,%.2f%n", s, p, x.socket().getUses(), x.power().getTotalEnergy(),
                         jets, burning, health, fire, beefState, ice, lit, running, glow));
             } catch (IOException ignored) {
                 // closed at the end of the scene

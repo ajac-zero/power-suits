@@ -34,7 +34,7 @@ public record ToolTriggerPayload(boolean down) implements CustomPacketPayload {
     /** Server, main thread. Never trust the client: the suit checks that this player is its pilot. */
     private static void handle(ToolTriggerPayload payload, IPayloadContext context) {
         if (context.player().getVehicle() instanceof PowerArmorEntity suit) {
-            suit.setTriggerHeld(context.player(), payload.down());
+            suit.socket().setTriggerHeld(context.player(), payload.down());
         }
     }
 }

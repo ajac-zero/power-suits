@@ -104,7 +104,7 @@ public class TntLauncherItem extends Item implements PowerTool {
         level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_LAUNCH, SoundSource.PLAYERS, 1.0F, 0.5F);
         level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 0.8F, 0.6F);
         level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.TNT_PRIMED, SoundSource.PLAYERS, 0.35F, 1.3F);
-        suit.countShot(); // every client: the recoil kick and the drum's quarter turn; the pilot's own client puffs smoke
+        suit.socket().countShot(); // every client: the recoil kick and the drum's quarter turn; the pilot's own client puffs smoke
         for (ServerPlayer viewer : level.players()) {
             if (viewer != operator && viewer.distanceToSqr(muzzle) < 64 * 64) {
                 muzzlePuff((type, x, y, z, n, sp, v) -> level.sendParticles(viewer, type, false, false, x, y, z, n, sp, sp, sp, v), muzzle, true);
