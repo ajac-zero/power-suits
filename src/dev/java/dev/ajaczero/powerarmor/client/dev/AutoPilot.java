@@ -1214,10 +1214,10 @@ public final class AutoPilot {
             case 446 -> mindCamera(mc);
             case 447, 452, 457, 462, 467, 475 -> shot(mc, "ai_home_" + (m - 420));
             case 485 -> { mindPhase = "drill"; onServer(mc, p -> { if (mindSuit != null) {
-                              mindSuit.setAiAim(Vec3.atCenterOf(mindBase.offset(0, 1, 3)));
+                              mindSuit.brain().setAim(Vec3.atCenterOf(mindBase.offset(0, 1, 3)));
                               mindSuit.socket().setAiTrigger(true); } }); }
             case 490, 496, 504, 512 -> shot(mc, "ai_drill_" + (m - 420));
-            case 520 -> { mindPhase = "after"; onServer(mc, p -> { if (mindSuit != null) { mindSuit.socket().setAiTrigger(false); mindSuit.setAiAim(null); } }); }
+            case 520 -> { mindPhase = "after"; onServer(mc, p -> { if (mindSuit != null) { mindSuit.socket().setAiTrigger(false); mindSuit.brain().setAim(null); } }); }
             case 522 -> mindVisorCamera(mc);
             case 532 -> shot(mc, "ai_visor");
             // chaingun job (step 2): load the hidden store by right-clicking with nuggets, then the suit follows its owner,
@@ -1353,8 +1353,8 @@ public final class AutoPilot {
             suit.snapTo(x + 0.5, y, z + 0.5, 0, 0);
             suit.setYBodyRot(0);
             suit.setYHeadRot(0);
-            suit.setOwnerId(player.getUUID());
-            suit.setHome(base);
+            suit.brain().setOwnerId(player.getUUID());
+            suit.brain().setHome(base);
             level.addFreshEntity(suit);
             player.teleportTo(x - 5.5, y, z - 3.5);
             mindSuit = suit;
@@ -1434,7 +1434,7 @@ public final class AutoPilot {
         // torso faces drawnYaw. aimErr: how far that is from where the mind aims (its target point), degrees.
         float twist = net.minecraft.util.Mth.wrapDegrees(client.getYHeadRot() - client.yBodyRot);
         float drawnYaw = client.yBodyRot + net.minecraft.util.Mth.clamp(twist, -90F, 90F);
-        Vec3 aim = server.getAiAim();
+        Vec3 aim = server.brain().getAim();
         float aimYaw = aim == null ? Float.NaN : (float) (net.minecraft.util.Mth.atan2(aim.z - server.getZ(), aim.x - server.getX()) * net.minecraft.util.Mth.RAD_TO_DEG) - 90F;
         float aimErr = aim == null ? Float.NaN : net.minecraft.util.Mth.wrapDegrees(aimYaw - drawnYaw);
         try {
@@ -1443,7 +1443,7 @@ public final class AutoPilot {
                     Math.hypot(server.getX() - server.xo, server.getZ() - server.zo) * 20, server.isAiDriven(), client.animator().getMovementAnimationName(),
                     server.getYHeadRot(), server.yBodyRot, server.getXRot(), server.socket().isActive(), client.socketVisuals().raise(1F), faceLeft, drops,
                     server.power().getTotalEnergy(), visor[0], visor[1], visor[2], server.getNavigation().isDone(),
-                    server.runningGoalNames(), server.getOwner() == null ? -1F : server.distanceTo(server.getOwner()),
+                    server.brain().runningGoalNames(), server.brain().getOwner() == null ? -1F : server.distanceTo(server.brain().getOwner()),
                     server.getTarget() == null ? "-" : server.getTarget().getType().toShortString(), server.getStoredNuggets(), server.socket().getUses(),
                     mindMobs.stream().filter(e -> e.isAlive()).count(), mindMobs.stream().filter(e -> e.isAlive()).mapToDouble(e -> e.getHealth()).sum(),
                     server.socket().getBeamTarget() == null ? "-" : server.socket().getBeamTarget().getType().toShortString(),

@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
@@ -110,6 +111,11 @@ public class RailCannonItem extends Item implements PowerTool {
     @Override
     public ToolEffects createEffects() {
         return new RailCannonEffects();
+    }
+
+    @Override
+    public ToolUse mindUse() {
+        return ToolUse.RAIL;
     }
 
     @Override
@@ -251,7 +257,7 @@ public class RailCannonItem extends Item implements PowerTool {
         }, ctx -> null);
         Vec3 end = stop == null ? far : stop.getLocation();
         int broken = 0;
-        Player breaker = suit.blockBreaker(operator);
+        Player breaker = suit.brain().blockBreaker(operator);
         for (BlockPos pos : smash) { // (all in front of the stop: the traversal went in order and ended there)
             if (ToolMining.breakBlock(level, pos, breaker, ItemStack.EMPTY, false)) { // claims may veto; nothing drops
                 broken++;

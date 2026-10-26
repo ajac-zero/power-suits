@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor.entity.ai;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import java.util.EnumSet;
 import dev.ajaczero.powerarmor.item.ChaingunItem;
+import dev.ajaczero.powerarmor.item.FlamethrowerItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.target.TargetGoal;
@@ -86,13 +87,13 @@ public final class SuitGoals {
         @Override
         public boolean canUse() {
             // On the ground: vanilla's pathfinder finds nothing for a mob in the air (falling, just spawned).
-            return this.suit.tickCount >= this.retryAt && this.suit.isAiDriven() && !this.suit.followsOwner() && this.suit.onGround()
-                    && this.suit.getHome() != null && this.suit.isAwayFromHome(HOME_SLACK);
+            return this.suit.tickCount >= this.retryAt && this.suit.isAiDriven() && !this.suit.brain().followsOwner() && this.suit.onGround()
+                    && this.suit.brain().getHome() != null && this.suit.brain().isAwayFromHome(HOME_SLACK);
         }
 
         @Override
         public void start() {
-            BlockPos home = this.suit.getHome();
+            BlockPos home = this.suit.brain().getHome();
             this.ticks = 0;
             if (home == null || !this.suit.getNavigation().moveTo(home.getX() + 0.5, home.getY(), home.getZ() + 0.5, 1.0)) {
                 this.retryAt = this.suit.tickCount + 40; // no way there right now: look again in 2 seconds
@@ -104,7 +105,7 @@ public final class SuitGoals {
         @Override
         public void tick() {
             this.ticks++;
-            BlockPos home = this.suit.getHome();
+            BlockPos home = this.suit.brain().getHome();
             if (home != null && this.suit.getNavigation().isDone()) {
                 this.suit.getMoveControl().setWantedPosition(home.getX() + 0.5, home.getY(), home.getZ() + 0.5, 0.6);
             }
@@ -117,8 +118,8 @@ public final class SuitGoals {
 
         @Override
         public boolean canContinueToUse() {
-            return this.suit.isAiDriven() && !this.suit.followsOwner() && this.suit.getHome() != null && this.ticks < 600
-                    && (!this.suit.getNavigation().isDone() || this.suit.isAwayFromHome(ARRIVED));
+            return this.suit.isAiDriven() && !this.suit.brain().followsOwner() && this.suit.brain().getHome() != null && this.ticks < 600
+                    && (!this.suit.getNavigation().isDone() || this.suit.brain().isAwayFromHome(ARRIVED));
         }
 
         @Override
@@ -141,7 +142,7 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            if (!this.suit.isAiDriven() || !this.suit.followsOwner()) {
+            if (!this.suit.isAiDriven() || !this.suit.brain().followsOwner()) {
                 return false;
             }
             this.targetMob = SuitTargets.pick(this.suit);
@@ -158,7 +159,7 @@ public final class SuitGoals {
         @Override
         public boolean canContinueToUse() {
             LivingEntity target = this.suit.getTarget();
-            if (!this.suit.isAiDriven() || !this.suit.followsOwner() || target == null || target.distanceToSqr(this.suit) > 40 * 40
+            if (!this.suit.isAiDriven() || !this.suit.brain().followsOwner() || target == null || target.distanceToSqr(this.suit) > 40 * 40
                     || !SuitTargets.canAttack(this.suit, target, SuitTargets.isProvoked(this.suit, target) || this.provokedAtStart(target))) {
                 return false;
             }
@@ -213,7 +214,7 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            return this.suit.isAiDriven() && this.suit.hasGun() && this.suit.getTarget() != null && this.suit.getTarget().isAlive();
+            return this.suit.isAiDriven() && this.suit.brain().hasGun() && this.suit.getTarget() != null && this.suit.getTarget().isAlive();
         }
 
         @Override
@@ -231,6 +232,12 @@ public final class SuitGoals {
             this.repath = 0;
         }
 
+        /** Something to shoot: a rogue never runs dry, the flamethrower runs on fuel alone, the chaingun needs bullets
+         *  (its hidden store). */
+        private boolean hasAmmo() {
+            return this.suit.isRogue() || this.suit.socket().tool() instanceof FlamethrowerItem || this.suit.getStoredNuggets() > 0;
+        }
+
         @Override
         public void tick() {
             LivingEntity target = this.suit.getTarget();
@@ -238,18 +245,18 @@ public final class SuitGoals {
                 return;
             }
             Vec3 aim = target.getBoundingBox().getCenter();
-            this.suit.setAiAim(aim);
+            this.suit.brain().setAim(aim);
             boolean sees = this.suit.getSensing().hasLineOfSight(target);
             if (this.punchCooldown > 0) {
                 this.punchCooldown--;
             }
-            if (this.suit.hasAmmo()) {
-                boolean flame = this.suit.hasFlamethrower();
+            if (this.hasAmmo()) {
+                boolean flame = this.suit.socket().tool() instanceof FlamethrowerItem;
                 boolean inRange = this.suit.distanceTo(target) < (flame ? FLAME_RANGE : FIRE_RANGE);
                 // A rogue fires at will; a friendly mind never through (or, with the flamethrower, near) someone it must not hurt.
                 boolean clear = sees && inRange && (this.suit.isRogue()
                         || (flame ? SuitTargets.flameClear(this.suit, target, aim) : SuitTargets.lineOfFireClear(this.suit, target, aim)));
-                this.suit.socket().setAiTrigger(clear && !(this.suit.hasChaingun() && ChaingunItem.isOverheated(this.suit)));
+                this.suit.socket().setAiTrigger(clear && !(this.suit.socket().tool() instanceof ChaingunItem && ChaingunItem.isOverheated(this.suit)));
                 if (clear) {
                     this.suit.getNavigation().stop(); // plant the feet and fire
                 } else {
@@ -264,7 +271,7 @@ public final class SuitGoals {
             } else {
                 this.suit.getNavigation().stop();
                 if (this.punchCooldown == 0) {
-                    this.suit.punch(target);
+                    this.suit.brain().punch(target);
                     this.punchCooldown = 20;
                 }
             }
@@ -281,7 +288,7 @@ public final class SuitGoals {
         @Override
         public void stop() {
             this.suit.socket().setAiTrigger(false);
-            this.suit.setAiAim(null);
+            this.suit.brain().setAim(null);
             this.suit.getNavigation().stop();
         }
     }
@@ -364,7 +371,7 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            return this.suit.isAiDriven() && this.suit.isRogue() && this.suit.hasEmProjector() && this.suit.getTarget() != null
+            return this.suit.isAiDriven() && this.suit.isRogue() && this.suit.brain().toolUse() == ToolUse.EM && this.suit.getTarget() != null
                     && this.suit.getTarget().isAlive();
         }
 
@@ -399,7 +406,7 @@ public final class SuitGoals {
                 this.suit.getNavigation().stop();
                 Vec3 away = target.position().subtract(this.suit.position()).multiply(1, 0, 1);
                 away = away.lengthSqr() < 1.0E-4 ? this.suit.getLookAngle().multiply(1, 0, 1) : away;
-                this.suit.setAiAim(this.suit.getEyePosition().add(away.normalize().scale(10)).add(0, 4, 0));
+                this.suit.brain().setAim(this.suit.getEyePosition().add(away.normalize().scale(10)).add(0, 4, 0));
                 // Something heavy (a suit, a boss) can't be lifted: pin it down for a couple of seconds before the shove.
                 this.suit.socket().setAiTrigger(++this.lift < (dev.ajaczero.powerarmor.item.EmProjectorItem.isHeavy(target) ? 40 : LIFT_TICKS));
                 return;
@@ -409,7 +416,7 @@ public final class SuitGoals {
                 // Only from the ground (or water): re-catching a thrown one mid-flight would juggle it and spare it the landing.
                 boolean landed = target.onGround() || target.isInLiquid() || SuitTargets.isFlyer(target);
                 boolean inReach = sees && landed && this.suit.distanceTo(target) < REACH;
-                this.suit.setAiAim(target.getBoundingBox().getCenter());
+                this.suit.brain().setAim(target.getBoundingBox().getCenter());
                 this.suit.socket().setAiTrigger(inReach && this.suit.socket().isReady());
                 if (inReach) {
                     this.suit.getNavigation().stop();
@@ -420,13 +427,13 @@ public final class SuitGoals {
             }
             // Too heavy for the beam: the fists.
             this.suit.socket().setAiTrigger(false);
-            this.suit.setAiAim(target.getBoundingBox().getCenter());
+            this.suit.brain().setAim(target.getBoundingBox().getCenter());
             if (!sees || !inPunchReach(this.suit, target)) {
                 this.approach(target);
             } else {
                 this.suit.getNavigation().stop();
                 if (this.punchCooldown == 0) {
-                    this.suit.punch(target);
+                    this.suit.brain().punch(target);
                     this.punchCooldown = 20;
                 }
             }
@@ -442,7 +449,7 @@ public final class SuitGoals {
         @Override
         public void stop() {
             this.suit.socket().setAiTrigger(false);
-            this.suit.setAiAim(null);
+            this.suit.brain().setAim(null);
             this.suit.getNavigation().stop();
         }
     }
@@ -492,8 +499,8 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            net.minecraft.world.entity.player.Player owner = this.suit.getOwner();
-            if (!this.suit.isAiDriven() || !this.suit.followsOwner() || owner == null || owner.isSpectator()) {
+            net.minecraft.world.entity.player.Player owner = this.suit.brain().getOwner();
+            if (!this.suit.isAiDriven() || !this.suit.brain().followsOwner() || owner == null || owner.isSpectator()) {
                 return false;
             }
             double d = owner.distanceTo(this.suit);
@@ -502,8 +509,8 @@ public final class SuitGoals {
 
         @Override
         public boolean canContinueToUse() {
-            net.minecraft.world.entity.player.Player owner = this.suit.getOwner();
-            if (!this.suit.isAiDriven() || !this.suit.followsOwner() || owner == null || owner.isSpectator()) {
+            net.minecraft.world.entity.player.Player owner = this.suit.brain().getOwner();
+            if (!this.suit.isAiDriven() || !this.suit.brain().followsOwner() || owner == null || owner.isSpectator()) {
                 return false;
             }
             double d = owner.distanceTo(this.suit);
@@ -517,7 +524,7 @@ public final class SuitGoals {
 
         @Override
         public void tick() {
-            net.minecraft.world.entity.player.Player owner = this.suit.getOwner();
+            net.minecraft.world.entity.player.Player owner = this.suit.brain().getOwner();
             if (owner != null && --this.repath <= 0) {
                 this.repath = 10;
                 this.suit.getNavigation().moveTo(owner, owner.distanceTo(this.suit) > SPRINT ? PowerArmorEntity.SPRINT_MULTIPLIER : 1.0);
@@ -554,7 +561,7 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            if (!this.suit.isAiDriven() || !this.suit.guardsHome() || this.suit.getHome() == null || !this.suit.socket().isReady()
+            if (!this.suit.isAiDriven() || !this.suit.brain().guardsHome() || this.suit.brain().getHome() == null || !this.suit.socket().isReady()
                     || this.suit.socket().getBeamTarget() != null) {
                 return false;
             }
@@ -565,7 +572,7 @@ public final class SuitGoals {
         /** The monster nearest home that the beam could catch from here. */
         @org.jetbrains.annotations.Nullable
         private LivingEntity pick() {
-            BlockPos home = this.suit.getHome();
+            BlockPos home = this.suit.brain().getHome();
             if (home == null) {
                 return null;
             }
@@ -593,7 +600,7 @@ public final class SuitGoals {
 
         @Override
         public boolean canContinueToUse() {
-            if (this.thrown || this.target == null || !this.target.isAlive() || !this.suit.isAiDriven() || !this.suit.guardsHome()) {
+            if (this.thrown || this.target == null || !this.target.isAlive() || !this.suit.isAiDriven() || !this.suit.brain().guardsHome()) {
                 return false;
             }
             return this.lifting ? this.suit.socket().getBeamTarget() == this.target : this.ticks < SEEK_TICKS;
@@ -611,7 +618,7 @@ public final class SuitGoals {
             }
             this.ticks++;
             if (!this.lifting) {
-                this.suit.setAiAim(this.target.getBoundingBox().getCenter());
+                this.suit.brain().setAim(this.target.getBoundingBox().getCenter());
                 this.suit.socket().setAiTrigger(true);
                 if (this.suit.socket().getBeamTarget() == this.target) {
                     this.lifting = true; // caught: now up with it
@@ -619,7 +626,7 @@ public final class SuitGoals {
                 }
                 return;
             }
-            this.suit.setAiAim(this.liftAim());
+            this.suit.brain().setAim(this.liftAim());
             if (this.ticks >= LIFT_TICKS) {
                 this.suit.socket().setAiTrigger(false); // let go: the projector throws it along the aim (this tick, after the goals)
                 this.thrown = true;
@@ -629,7 +636,7 @@ public final class SuitGoals {
         /** Where to point while lifting: straight up, leaning a little away from home so the monster comes down outside
          *  (not on the suit); a creeper is thrown up and away instead: it must not burst at home. */
         private Vec3 liftAim() {
-            BlockPos home = this.suit.getHome();
+            BlockPos home = this.suit.brain().getHome();
             Vec3 eye = this.suit.getEyePosition();
             Vec3 out = this.target.position().subtract(home == null ? this.suit.position() : Vec3.atBottomCenterOf(home)).multiply(1, 0, 1);
             out = out.lengthSqr() < 1.0E-4 ? this.suit.getLookAngle().multiply(1, 0, 1) : out;
@@ -641,7 +648,7 @@ public final class SuitGoals {
         @Override
         public void stop() {
             this.suit.socket().setAiTrigger(false);
-            this.suit.setAiAim(null);
+            this.suit.brain().setAim(null);
             this.suit.setTarget(null);
             this.target = null;
         }
@@ -679,7 +686,7 @@ public final class SuitGoals {
         @Override
         public boolean canUse() {
             var cannon = this.cannon();
-            if (cannon == null || !this.suit.isAiDriven() || !this.suit.snipesFromHome() || this.suit.getHome() == null
+            if (cannon == null || !this.suit.isAiDriven() || !this.suit.brain().snipesFromHome() || this.suit.brain().getHome() == null
                     || dev.ajaczero.powerarmor.item.RailCannonItem.isCoolingDown(this.suit) || !cannon.canPay(this.suit, this.suit)) {
                 return false;
             }
@@ -690,7 +697,7 @@ public final class SuitGoals {
         /** Provoked attackers first (the owner's, then the suit's own), else the monster nearest home. */
         @org.jetbrains.annotations.Nullable
         private LivingEntity pick() {
-            BlockPos home = this.suit.getHome();
+            BlockPos home = this.suit.brain().getHome();
             if (home == null) {
                 return null;
             }
@@ -699,7 +706,7 @@ public final class SuitGoals {
             double reach = dev.ajaczero.powerarmor.PowerArmorConfig.RAIL_RANGE.get() - 1;
             java.util.function.Predicate<LivingEntity> shootable = e -> e.distanceToSqr(centre) < radius * radius
                     && e.distanceTo(this.suit) < reach && this.suit.getSensing().hasLineOfSight(e);
-            net.minecraft.world.entity.player.Player owner = this.suit.getOwner();
+            net.minecraft.world.entity.player.Player owner = this.suit.brain().getOwner();
             for (LivingEntity provoked : new LivingEntity[] {owner == null ? null : owner.getLastHurtByMob(), this.suit.getLastHurtByMob()}) {
                 if (provoked != null && SuitTargets.isProvoked(this.suit, provoked) && SuitTargets.canAttack(this.suit, provoked, true)
                         && shootable.test(provoked)) {
@@ -722,7 +729,7 @@ public final class SuitGoals {
         @Override
         public boolean canContinueToUse() {
             return !this.fired && this.target != null && this.target.isAlive() && this.ticks < GIVE_UP_TICKS
-                    && this.suit.isAiDriven() && this.suit.snipesFromHome() && this.cannon() != null;
+                    && this.suit.isAiDriven() && this.suit.brain().snipesFromHome() && this.cannon() != null;
         }
 
         @Override
@@ -737,7 +744,7 @@ public final class SuitGoals {
             }
             this.ticks++;
             Vec3 aim = this.target.getBoundingBox().getCenter();
-            this.suit.setAiAim(aim);
+            this.suit.brain().setAim(aim);
             this.suit.socket().setAiTrigger(true); // charge (it holds a full charge as long as the trigger stays down)
             if (!dev.ajaczero.powerarmor.item.RailCannonItem.isCharged(this.suit) || !this.suit.getSensing().hasLineOfSight(this.target)) {
                 return;
@@ -758,7 +765,7 @@ public final class SuitGoals {
                 dev.ajaczero.powerarmor.item.RailCannonItem.disarm(this.suit); // let go without firing
             }
             this.suit.socket().setAiTrigger(false);
-            this.suit.setAiAim(null);
+            this.suit.brain().setAim(null);
             this.suit.setTarget(null);
             this.target = null;
         }
@@ -804,7 +811,7 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            if (!this.suit.isAiDriven() || !this.hasJob() || this.suit.getHome() == null || this.suit.tickCount < this.nextScan) {
+            if (!this.suit.isAiDriven() || !this.hasJob() || this.suit.brain().getHome() == null || this.suit.tickCount < this.nextScan) {
                 return false;
             }
             if (this.suit.tickCount >= this.forgetSkipsAt) {
@@ -857,12 +864,12 @@ public final class SuitGoals {
             boolean canHit = first != null && (first.equals(this.target) || this.mayWorkOn(first));
             if (this.suit.getEyePosition().distanceTo(aim) <= REACH && canHit) {
                 this.suit.getNavigation().stop();
-                this.suit.setAiAim(aim);
+                this.suit.brain().setAim(aim);
                 this.suit.socket().setAiTrigger(true);
                 return;
             }
             this.suit.socket().setAiTrigger(false);
-            this.suit.setAiAim(null);
+            this.suit.brain().setAim(null);
             if (--this.repath <= 0) {
                 this.repath = 20;
                 // Toward the block itself: the path ends next to it (the block's own spot is solid).
@@ -883,7 +890,7 @@ public final class SuitGoals {
         @Override
         public void stop() {
             this.suit.socket().setAiTrigger(false);
-            this.suit.setAiAim(null);
+            this.suit.brain().setAim(null);
             this.suit.getNavigation().stop();
             this.target = null;
         }
@@ -897,7 +904,7 @@ public final class SuitGoals {
 
         @Override
         boolean hasJob() {
-            return this.suit.digsHall();
+            return this.suit.brain().digsHall();
         }
 
         @Override
@@ -925,7 +932,7 @@ public final class SuitGoals {
 
         @Override
         boolean hasJob() {
-            return this.suit.fellsTrees();
+            return this.suit.brain().fellsTrees();
         }
 
         @Override

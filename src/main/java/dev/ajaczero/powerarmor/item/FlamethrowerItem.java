@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.FlameJet;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
@@ -84,6 +85,11 @@ public class FlamethrowerItem extends Item implements PowerTool {
     @Override
     public ToolEffects createEffects() {
         return new FlamethrowerEffects();
+    }
+
+    @Override
+    public ToolUse mindUse() {
+        return ToolUse.GUN;
     }
 
     @Override

@@ -95,8 +95,8 @@ final class WorkScene {
             DevUtil.firebox(s); s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16)); s.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             s.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.DRILL.get()));
             s.snapTo(x + 0.5, y, z + 0.5, 0, 0);
-            s.setOwnerId(player.getUUID());
-            s.setHome(home);
+            s.brain().setOwnerId(player.getUUID());
+            s.brain().setHome(home);
             level.addFreshEntity(s);
             player.teleportTo(x - 6.5, y, z - 3.5);
             allays.clear();
@@ -133,7 +133,7 @@ final class WorkScene {
             }
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINSAW.get()));
             suit.teleportTo(home.getX() + 0.5, home.getY(), home.getZ() + 0.5);
-            suit.setHome(home);
+            suit.brain().setHome(home);
             player.teleportTo(home.getX() - 6.5, home.getY(), home.getZ() - 4.5);
             sawHome = home;
         });
@@ -196,7 +196,7 @@ final class WorkScene {
         }
         try {
             csv.write(String.format(Locale.ROOT, "%d,%s,%.2f,%.2f,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%n", s, phase,
-                    server.getX() - home.getX() - 0.5, server.getZ() - home.getZ() - 0.5, server.runningGoalNames(),
+                    server.getX() - home.getX() - 0.5, server.getZ() - home.getZ() - 0.5, server.brain().runningGoalNames(),
                     server.getTarget() == null ? "-" : server.getTarget().getType().toShortString(), rock, ores, lavaWalls, hole, ceiling,
                     player.getInventory().countItem(Items.COAL), player.getInventory().countItem(Items.RAW_IRON), onGround, items.size(),
                     logs, server.power().getTotalEnergy()));

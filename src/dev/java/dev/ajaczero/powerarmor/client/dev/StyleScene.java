@@ -118,7 +118,7 @@ final class StyleScene {
                 s.snapTo(x + 0.5 + SPACING * i, y, z + 0.5, 180, 0);
                 s.setYBodyRot(180);
                 s.setYHeadRot(180);
-                s.setOwnerId(player.getUUID());
+                s.brain().setOwnerId(player.getUUID());
                 s.setNoAi(true); // photo models: their minds turned them to look at each other and the cameras
                 level.addFreshEntity(s);
                 suits[i] = s;

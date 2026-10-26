@@ -183,7 +183,7 @@ final class RailScene {
             s.snapTo(x + 0.5, g, z + 0.5, 0, 0);
             s.setYBodyRot(0);
             s.setYHeadRot(0);
-            s.setOwnerId(player.getUUID());
+            s.brain().setOwnerId(player.getUUID());
             level.addFreshEntity(s);
             suit = s;
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY); // the hand would take the right click
@@ -289,7 +289,7 @@ final class RailScene {
                 w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%.2f,%.2f,%d,%d,%d,%d,%d,%.1f,%.2f,%.2f,%.2f,%s%n", s, p, x.socket().getUses(),
                         x.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).getCount(), clientAmmo, x.socket().getSpin(), clientCharge,
                         husks, glass, wall, shot == null ? -1 : shot.hit().size(), shot == null ? -1 : shot.blocksBroken(),
-                        shot == null ? -1D : shot.from().distanceTo(shot.to()), recoil, raise, glow, x.runningGoalNames()));
+                        shot == null ? -1D : shot.from().distanceTo(shot.to()), recoil, raise, glow, x.brain().runningGoalNames()));
             } catch (IOException ignored) {
                 // closed at the end of the scene
             }

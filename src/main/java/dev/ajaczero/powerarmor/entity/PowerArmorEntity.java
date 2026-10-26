@@ -227,6 +227,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private final SuitAnimator animator = new SuitAnimator(this);
     /** Client: the fire, the visor, the engines' glass, lightning sparks: see SuitLights. */
     private final SuitLights lights = new SuitLights(this);
+    /** Server: the machine mind's state (owner, home, aim, which job its tool gives it, a rogue's lifetime): see SuitBrain. */
+    private final SuitBrain brain = new SuitBrain(this);
     /** The suit's own slots: fuel, the left-arm socket, the helmet, the engine and the ammo. Real contents only exist on
      *  the server. Old saves load fine with fewer: each saved item carries its slot number. */
     private final SimpleContainer inventory = new SimpleContainer(5) {
@@ -243,14 +245,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** The suit was already off when we first saw it: hold the slumped pose instead of playing the slump. */
     private boolean wasOffWhenLoaded;
     private int startupTicks;
-    /** Server: the machine mind's owner (the last pilot, or who deployed it) and home (where the pilot got out). Not
-     *  synced: only the server-side AI uses them. */
-    @Nullable
-    private java.util.UUID ownerId;
-    @Nullable
-    private BlockPos home;
-    @Nullable
-    private Vec3 aiAim;
     /** Server: when the seal last paid for keeping fire/frost out (SuitSeal: once per half second, like hit immunity). */
     public int lastSealTick = -100;
 
@@ -348,10 +342,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         this.power.load(tag); // burn, tidal state (loading isn't an engine swap: the half-burnt item stays)
         this.setMind(SuitMind.byName(tag.getStringOr("Mind", ""))); // suits from before the AI: "" -> friendly
-        this.ownerId = tag.read("Owner", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
-        this.home = tag.read("Home", BlockPos.CODEC).orElse(null);
+        this.brain.load(tag); // owner, home, a rogue's age
         this.setStoredNuggets(tag.getIntOr("Nuggets", 0));
-        this.rogueAge = tag.getIntOr("RogueAge", 0);
         this.setPaint(tag.read("Paint", DyeColor.CODEC).orElse(null)); // suits from before paint: bare
         this.syncSlots();
         this.entityData.set(POWERED, this.power.shouldRun(null)); // a pilot (if any) boards after loading: next tick knows
@@ -366,9 +358,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.power.save(tag);
         tag.putString("Mind", this.getMind().name());
         tag.putInt("Nuggets", this.getStoredNuggets());
-        tag.putInt("RogueAge", this.rogueAge);
-        tag.storeNullable("Owner", net.minecraft.core.UUIDUtil.CODEC, this.ownerId); // int array, as before
-        tag.storeNullable("Home", BlockPos.CODEC, this.home);
+        this.brain.save(tag);
         tag.storeNullable("Paint", DyeColor.CODEC, this.getPaint()); // the dye's name, e.g. "red"
     }
 
@@ -398,132 +388,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.getMind() == SuitMind.ROGUE;
     }
 
-    /** Server: the owner if they're online in this dimension (not spectating), else null. */
-    @Nullable
-    public Player getOwner() {
-        if (this.ownerId == null || !(this.level() instanceof ServerLevel level)) {
-            return null;
-        }
-        Player owner = level.getPlayerByUUID(this.ownerId);
-        return owner != null && owner.isAlive() && !owner.isSpectator() ? owner : null;
-    }
-
-    /** Both sides: a chaingun in the socket (the friendly job below, or a rogue's weapon). */
-    public boolean hasChaingun() {
-        return this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.ChaingunItem;
-    }
-
-    /** Both sides: an EM projector in the socket (the guard job, or a rogue's weapon). */
-    public boolean hasEmProjector() {
-        return this.getSocketStack().getItem() instanceof EmProjectorItem;
-    }
-
-    /** Both sides: a flamethrower in the socket (the same job as the chaingun's, at close range; or a rogue's weapon). */
-    public boolean hasFlamethrower() {
-        return this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.FlamethrowerItem;
-    }
-
-    /** Both sides: a rail cannon in the socket (the long-range guard job; never a rogue's). */
-    public boolean hasRailCannon() {
-        return this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.RailCannonItem;
-    }
-
-    /** Both sides: the rail guard job (Phase 11): a friendly mind with a rail cannon shoots from home at what comes near. */
-    public boolean snipesFromHome() {
-        return !this.isRogue() && this.hasRailCannon();
-    }
-
-    /** Both sides: a weapon the mind fights with by aiming and holding the trigger (chaingun, flamethrower). */
-    public boolean hasGun() {
-        return this.hasChaingun() || this.hasFlamethrower();
-    }
-
-    /** Both sides: the chaingun job (design sec. 8): a friendly mind with a chaingun (or a flamethrower, Phase 11)
-     *  follows its owner and defends them. */
-    public boolean followsOwner() {
-        return !this.isRogue() && this.hasGun();
-    }
-
-    /** Both sides: the EM guard job (design sec. 8): a friendly mind with an EM projector guards the area round home. */
-    public boolean guardsHome() {
-        return !this.isRogue() && this.getSocketStack().getItem() instanceof EmProjectorItem;
-    }
-
-    /** Both sides: the drill job: a friendly mind with the drill clears an open hall round home (SuitWork). */
-    public boolean digsHall() {
-        return !this.isRogue() && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.DrillItem;
-    }
-
-    /** Both sides: the chainsaw job: a friendly mind with the chainsaw fells the natural trees round home. */
-    public boolean fellsTrees() {
-        return !this.isRogue() && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.ChainsawItem;
-    }
-
     /** Paths may drop this far. The drilling mind never steps down at all ("never where it would fall"): its hall is
      *  flat, and a step down there is a hole in the floor. */
     @Override
     public int getMaxFallDistance() {
-        return this.digsHall() && this.getControllingPassenger() == null ? 0 : super.getMaxFallDistance();
-    }
-
-    /** Server: bullets for the mind's chaingun (its hidden store). The flamethrower runs on fuel alone. */
-    public boolean hasAmmo() {
-        return this.isRogue() || this.hasFlamethrower() || this.getStoredNuggets() > 0;
-    }
-
-    /** Server: the mind's bare-handed blow (no bullets left): a pilot's punch, 1 + the melee bonus, with a shove. */
-    public void punch(LivingEntity target) {
-        float damage = 1F + PowerArmorConfig.MELEE_BONUS.get().floatValue();
-        this.triggerAnim("right_hand", "use_item"); // the right arm reaches out (the hand's use animation)
-        this.swingForAttack(InteractionHand.MAIN_HAND);
-        DamageSource blow = this.damageSources().mobAttack(this);
-        if (target.level() instanceof ServerLevel level && target.hurtServer(level, blow, damage)) {
-            Vec3 push = target.position().subtract(this.position()).multiply(1, 0, 1).normalize();
-            target.knockback(0.6, -push.x, -push.z, blow, damage);
-            this.setLastHurtMob(target);
-        }
-        this.playSound(SoundEvents.IRON_GOLEM_ATTACK, 1.0F, 0.8F);
-    }
-
-    /** Server: the player the mind works for (null: nobody yet, e.g. a rebooted wild suit). */
-    @Nullable
-    public java.util.UUID getOwnerId() {
-        return this.ownerId;
-    }
-
-    public void setOwnerId(@Nullable java.util.UUID owner) {
-        this.ownerId = owner;
-    }
-
-    /** Server: the block the mind's jobs are anchored to (null: none, e.g. spawned by a command). */
-    @Nullable
-    public BlockPos getHome() {
-        return this.home;
-    }
-
-    public void setHome(@Nullable BlockPos home) {
-        this.home = home == null ? null : home.immutable();
-    }
-
-    /** Server: further than {@code slack} blocks (horizontally) from home. */
-    public boolean isAwayFromHome(double slack) {
-        if (this.home == null) {
-            return false;
-        }
-        double dx = this.getX() - (this.home.getX() + 0.5), dz = this.getZ() - (this.home.getZ() + 0.5);
-        return dx * dx + dz * dz > slack * slack || Math.abs(this.getY() - this.home.getY()) > 1.5;
-    }
-
-    /** Server: the point the mind aims the head (and so the torso and the tool) at, or null to let the look goals
-     *  wander. A machine: it snaps onto the target instead of easing round like an animal. */
-    public void setAiAim(@Nullable Vec3 target) {
-        this.aiAim = target;
-    }
-
-    /** Server/dev: where the mind aims right now (autopilot logs), or null. */
-    @Nullable
-    public Vec3 getAiAim() {
-        return this.aiAim;
+        return this.brain.digsHall() && this.getControllingPassenger() == null ? 0 : super.getMaxFallDistance();
     }
 
     /** Vanilla's look control resets the pitch and eases the head back toward the body every tick unless something
@@ -532,18 +401,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     @Override
     protected void customServerAiStep(ServerLevel level) {
         super.customServerAiStep(level);
-        if (!this.isAiDriven()) {
-            this.aiAim = null;
-        } else if (this.aiAim != null) {
-            this.getLookControl().setLookAt(this.aiAim.x, this.aiAim.y, this.aiAim.z, 180F, 180F);
-        }
-    }
-
-    /** Server/dev: the mind's running goals, e.g. "ReturnHome/LookAtPlayerGoal" (autopilot logs). */
-    public String runningGoalNames() {
-        return this.goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning())
-                .map(g -> g.getGoal().getClass().getSimpleName().isEmpty() ? g.getGoal().getClass().getSuperclass().getSimpleName() : g.getGoal().getClass().getSimpleName())
-                .reduce((a, b) -> a + "/" + b).orElse("-");
+        this.brain.applyAim();
     }
 
     /** The head (and so the torso, which follows it) may turn as far from the legs as the model's torso twists. */
@@ -564,31 +422,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.isAiDriven() ? this : null;
     }
 
-    /**
-     * Server: the player a block is broken as. Breaking needs a player: claim mods veto by who breaks (BreakEvent), and
-     * loot tables and XP want one. With the mind driving, that's a FakePlayer (NeoForge's stand-in player that never
-     * joins the game) carrying the owner's UUID, so claims treat the suit like its owner.
-     */
-    public Player blockBreaker(LivingEntity operator) {
-        if (operator instanceof Player player) {
-            return player;
-        }
-        java.util.UUID id = this.ownerId != null ? this.ownerId : WILD_SUIT_ID;
-        Player fake = net.neoforged.neoforge.common.util.FakePlayerFactory.get((ServerLevel) this.level(),
-                new com.mojang.authlib.GameProfile(id, "[Power Armor]"));
-        fake.snapTo(this.getX(), this.getY(), this.getZ(), this.getYHeadRot(), this.getXRot()); // mods may check where it stands
-        return fake;
-    }
-
-    /** The FakePlayer UUID for suits nobody owns. */
-    private static final java.util.UUID WILD_SUIT_ID = java.util.UUID.fromString("6d1c1b8e-3f0a-4c55-9d7e-5a2f0b9c1e01");
-
     /** The first pilot to climb in owns the suit (and every later pilot takes it over: the mind works for the last one). */
     @Override
     protected void addPassenger(Entity passenger) {
         super.addPassenger(passenger);
         if (!this.level().isClientSide() && passenger instanceof Player player) {
-            this.ownerId = player.getUUID();
+            this.brain.pilotBoarded(player);
             this.socket.setAiTrigger(false);
             this.getNavigation().stop();
         }
@@ -599,8 +438,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
         if (!this.level().isClientSide() && passenger instanceof Player player && this.isAlive()) {
-            this.ownerId = player.getUUID();
-            this.home = this.blockPosition();
+            this.brain.pilotLeft(player);
         }
     }
 
@@ -644,25 +482,14 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.lights;
     }
 
-    /** Server, every tick: a rogue always wears a helmet and a backpack, whatever made it. */
-    private void equipRogue() {
-        if (this.isRogue() && this.inventory.getItem(HELMET_SLOT).isEmpty()) {
-            // Rogues always wear one (/summon, or a rogue from before the helmet existed): its mind lives in it. A
-            // defeated rogue still drops only its tool; one rebooted by lightning keeps it.
-            ItemStack helmet = new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get());
-            if (this.random.nextInt(4) == 0) {
-                // one rogue in four wears a styled helmet (design sec. 4c): only a look, and not loot (rogues drop their tool only)
-                HelmetStyle[] styles = HelmetStyle.values();
-                helmet.set(dev.ajaczero.powerarmor.registry.ModDataComponents.HELMET_STYLE.get(), styles[this.random.nextInt(styles.length)]);
-            }
-            this.inventory.setItem(HELMET_SLOT, helmet);
-        }
-        if (this.isRogue() && this.inventory.getItem(ENGINE_SLOT).isEmpty()) {
-            // Suits come without an engine now, and a rogue needs a backpack to look the part (it runs on nothing
-            // anyway). Not loot either (a defeated rogue drops its tool only), but one rebooted by lightning keeps it,
-            // so its coal can burn.
-            this.inventory.setItem(ENGINE_SLOT, new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get()));
-        }
+    /** The machine mind's state and jobs. */
+    public SuitBrain brain() {
+        return this.brain;
+    }
+
+    /** The mind's goals (for SuitBrain's dev log). */
+    net.minecraft.world.entity.ai.goal.GoalSelector goals() {
+        return this.goalSelector;
     }
 
     // ---- Engines (design sec. 4b) ------------------------------------------------------------------------
@@ -1136,7 +963,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     // ---- Lights (client): the firebox and the visor, drawn by SuitGlowLayer -----------------------------
 
-
     /** Client: true while the legs are shuffling round to face the view (plays a step cycle). */
     public boolean isRealigning() {
         return this.realigning;
@@ -1322,8 +1148,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             // The rogue mind reboots friendly (design sec. 8): nobody's (the first pilot claims it), no home, and only the
             // fuel left in its firebox (one coal's worth) to restart with after the knock-out below.
             this.setMind(SuitMind.FRIENDLY);
-            this.ownerId = null;
-            this.home = null;
+            this.brain.forget();
             this.setTarget(null);
             this.power.setBurn(1600, 1600);
             for (Player near : level.getEntitiesOfClass(Player.class, this.getBoundingBox().inflate(32))) {
@@ -1345,34 +1170,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     // ---- Rogues: they leave after a while (design sec. 8), like the wandering trader ---------------------------
-
-    /** Server: ticks this rogue has been around (saved). */
-    private int rogueAge;
-
-    /** Server, every tick: a rogue past its lifetime vanishes once no player is near enough to watch it go. */
-    private void tickRogueLifetime() {
-        if (!this.isRogue()) {
-            this.rogueAge = 0;
-            return;
-        }
-        this.rogueAge++;
-        if (this.mayRogueLeave()) {
-            if (this.level() instanceof ServerLevel level) {
-                level.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, this.getX(), this.getY() + 1.5, this.getZ(), 20, 0.5, 1, 0.5, 0.02);
-            }
-            this.discard();
-        }
-    }
-
-    /** Server: old enough, and no player within 64 blocks (checked once a second). */
-    public boolean mayRogueLeave() {
-        return this.isRogue() && this.rogueAge >= PowerArmorConfig.ROGUE_LIFETIME.get() && this.tickCount % 20 == 0
-                && this.level().getNearestPlayer(this, 64) == null;
-    }
-
-    public void setRogueAge(int ticks) {
-        this.rogueAge = ticks;
-    }
 
     /** Death messages and the like say "Rogue Power Armor" for a rogue (synced mind: right on both sides). */
     @Override
@@ -1464,10 +1261,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.putOutFire(); // before baseTick, which decides whether clients see flames (see putOutFire)
         super.tick();
         if (!this.level().isClientSide() && this.isAlive()) {
-            this.equipRogue();
+            this.brain.equipRogue();
             this.power.tick();
             this.socket.tick();
-            this.tickRogueLifetime();
+            this.brain.tick();
             if (this.isFieldHeld() && this.tickCount > this.fieldHeldUntil) {
                 this.entityData.set(FIELD_HELD, false); // the field let go
             }

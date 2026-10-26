@@ -94,7 +94,7 @@ final class HelmetScene {
             s.snapTo(x + 0.5, y, z + 0.5, 180, 0); // facing north, toward the player and the camera
             s.setYBodyRot(180);
             s.setYHeadRot(180);
-            s.setOwnerId(player.getUUID());
+            s.brain().setOwnerId(player.getUUID());
             level.addFreshEntity(s);
             suit = s;
         });

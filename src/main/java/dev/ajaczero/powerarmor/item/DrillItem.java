@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import java.util.ArrayList;
@@ -72,6 +73,11 @@ public class DrillItem extends Item implements PowerTool {
     }
 
     // ---- PowerTool -------------------------------------------------------------------------------
+
+    @Override
+    public ToolUse mindUse() {
+        return ToolUse.DRILL;
+    }
 
     @Override
     public boolean isContinuous() {
@@ -147,7 +153,7 @@ public class DrillItem extends Item implements PowerTool {
         ItemStack bit = new ItemStack(Items.DIAMOND_PICKAXE);
         ItemStack shovel = new ItemStack(Items.DIAMOND_SHOVEL);
         int broken = 0;
-        Player breaker = suit.blockBreaker(operator);
+        Player breaker = suit.brain().blockBreaker(operator);
         for (BlockPos p : blocks) {
             if (!suit.power().hasEnergyFor(cost)) {
                 suit.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F);

@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -92,6 +93,11 @@ public interface PowerTool {
      *  goes into a socket. Tools with nothing to show keep the default. */
     default ToolEffects createEffects() {
         return ToolEffects.NONE;
+    }
+
+    /** How the machine mind uses this tool, which picks its job (design sec. 8). */
+    default ToolUse mindUse() {
+        return ToolUse.NONE;
     }
 
     /** Server: keep the run animation going after the trigger is released (a tree still coming down). */

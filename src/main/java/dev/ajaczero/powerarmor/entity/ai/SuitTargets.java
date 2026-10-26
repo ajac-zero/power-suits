@@ -33,7 +33,7 @@ public final class SuitTargets {
         if (!(entity instanceof LivingEntity living) || !living.isAlive() || living == suit || !living.canBeSeenAsEnemy()) {
             return false;
         }
-        if (suit.getOwnerId() != null && suit.getOwnerId().equals(living.getUUID())) {
+        if (suit.brain().getOwnerId() != null && suit.brain().getOwnerId().equals(living.getUUID())) {
             return false;
         }
         if (living instanceof PowerArmorEntity other) {
@@ -46,7 +46,7 @@ public final class SuitTargets {
             return provoked && !player.isCreative() && pvpAllowed(suit);
         }
         if (living instanceof OwnableEntity pet && pet.getOwnerReference() != null
-                && (pet.getOwnerReference().getUUID().equals(suit.getOwnerId()) || !provoked)) {
+                && (pet.getOwnerReference().getUUID().equals(suit.brain().getOwnerId()) || !provoked)) {
             return false; // the owner's wolves and cats, and nobody else's unless they started it
         }
         if (living instanceof AbstractVillager || living instanceof IronGolem || living instanceof SnowGolem) {
@@ -62,7 +62,7 @@ public final class SuitTargets {
      */
     @Nullable
     public static LivingEntity pick(PowerArmorEntity suit) {
-        Player owner = suit.getOwner();
+        Player owner = suit.brain().getOwner();
         if (owner != null) {
             LivingEntity attacker = owner.getLastHurtByMob();
             if (attacker != null && canAttack(suit, attacker, true)) {
@@ -118,7 +118,7 @@ public final class SuitTargets {
 
     /** Was this target provoked (so non-monsters stay valid while the fight lasts)? */
     public static boolean isProvoked(PowerArmorEntity suit, LivingEntity target) {
-        Player owner = suit.getOwner();
+        Player owner = suit.brain().getOwner();
         if (owner != null && (owner.getLastHurtByMob() == target
                 || owner.getLastHurtMob() == target && owner.tickCount - owner.getLastHurtMobTimestamp() < PROVOKED_TICKS)) {
             return true;

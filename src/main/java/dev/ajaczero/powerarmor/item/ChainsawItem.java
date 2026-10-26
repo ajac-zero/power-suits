@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import java.util.ArrayDeque;
@@ -113,6 +114,11 @@ public class ChainsawItem extends Item implements PowerTool {
     // ---- PowerTool -------------------------------------------------------------------------------
 
     @Override
+    public ToolUse mindUse() {
+        return ToolUse.SAW;
+    }
+
+    @Override
     public boolean isContinuous() {
         return true;
     }
@@ -189,7 +195,7 @@ public class ChainsawItem extends Item implements PowerTool {
         }
         // Look for the tree before the cut: afterwards the log that joins it all is gone.
         List<BlockPos> tree = block.is(BlockTags.LOGS) ? treeAbove(level, pos) : List.of();
-        Player breaker = suit.blockBreaker(operator);
+        Player breaker = suit.brain().blockBreaker(operator);
         if (ToolMining.breakBlock(level, pos, breaker, new ItemStack(Items.DIAMOND_AXE))) {
             suit.power().tryUseEnergy(cost);
             suit.socket().countUse();

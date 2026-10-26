@@ -130,7 +130,7 @@ final class RogueScene {
             DevUtil.firebox(f); f.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16)); f.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
             f.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
             f.setStoredNuggets(256);
-            f.setOwnerId(player.getUUID());
+            f.brain().setOwnerId(player.getUUID());
             f.snapTo(x + 3.5, y, z - 1.5, 0, 0);
             level.addFreshEntity(f);
             cows.clear();
@@ -217,7 +217,7 @@ final class RogueScene {
         try {
             csv.write(String.format(Locale.ROOT, "%d,%s,%.1f,%s,%.1f,%b,%b,%s,%d,%d,%.2f,%.2f,%.2f,%b,%s,%d,%d,%.2f,%.2f,%.1f,%s,%.1f,%s,%s,%b,%.2f,%.2f,%b,%.2f%n",
                     s, phase, spawnDistance, r.getMind(), r.getHealth(), r.isPowered(), r.isStunned(), name(r.getTarget()), r.socket().getUses(),
-                    r.power().getTotalEnergy(), visor[0], visor[1], visor[2], player.getUUID().equals(r.getOwnerId()), name(f.getTarget()), f.socket().getUses(),
+                    r.power().getTotalEnergy(), visor[0], visor[1], visor[2], player.getUUID().equals(r.brain().getOwnerId()), name(f.getTarget()), f.socket().getUses(),
                     cows.stream().filter(LivingEntity::isAlive).count(), player.getY() - base.getY(), player.getDeltaMovement().y,
                     player.getHealth(), player.getVehicle() == null ? "-" : player.getVehicle() == r ? "rebooted" : "other",
                     em == null ? -1F : em.getHealth(), em == null ? "-" : name(em.getTarget()),

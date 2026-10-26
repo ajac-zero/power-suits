@@ -157,7 +157,7 @@ final class TntScene {
             s.snapTo(x + 0.5, g, z + 0.5, 0, 0);
             s.setYBodyRot(0);
             s.setYHeadRot(0);
-            s.setOwnerId(player.getUUID());
+            s.brain().setOwnerId(player.getUUID());
             level.addFreshEntity(s);
             suit = s;
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY); // the hand would take the right click

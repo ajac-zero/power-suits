@@ -48,7 +48,7 @@ public final class SuitWork {
 
     /** May the drilling mind remove this block? In the hall, drillable, not next to a liquid, and with floor under it. */
     public static boolean mayDig(PowerArmorEntity suit, BlockPos pos) {
-        BlockPos home = suit.getHome();
+        BlockPos home = suit.brain().getHome();
         Level level = suit.level();
         if (home == null || !inHall(home, pos)) {
             return false;
@@ -77,7 +77,7 @@ public final class SuitWork {
      */
     @Nullable
     public static BlockPos nextDigTarget(PowerArmorEntity suit, Set<BlockPos> skip) {
-        BlockPos home = suit.getHome();
+        BlockPos home = suit.brain().getHome();
         if (home == null) {
             return null;
         }
@@ -124,7 +124,7 @@ public final class SuitWork {
      *  home, a few blocks above or below home level. Null: no tree left. */
     @Nullable
     public static BlockPos nextTrunk(PowerArmorEntity suit, Set<BlockPos> skip) {
-        BlockPos home = suit.getHome();
+        BlockPos home = suit.brain().getHome();
         if (home == null) {
             return null;
         }

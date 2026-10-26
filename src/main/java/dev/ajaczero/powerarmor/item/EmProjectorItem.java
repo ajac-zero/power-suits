@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
@@ -135,6 +136,11 @@ public class EmProjectorItem extends Item implements PowerTool {
     @Override
     public ToolEffects createEffects() {
         return new EmProjectorEffects();
+    }
+
+    @Override
+    public ToolUse mindUse() {
+        return ToolUse.EM;
     }
 
     @Override

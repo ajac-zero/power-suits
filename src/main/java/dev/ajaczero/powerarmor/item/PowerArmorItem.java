@@ -64,9 +64,9 @@ public class PowerArmorItem extends Item {
         suit.setPaint(stack.get(ModDataComponents.PAINT.get()));
         // The machine mind works for whoever deployed it, from the spot it stands on, until a pilot takes over.
         if (player != null) {
-            suit.setOwnerId(player.getUUID());
+            suit.brain().setOwnerId(player.getUUID());
         }
-        suit.setHome(pos);
+        suit.brain().setHome(pos);
         level.addFreshEntity(suit);
         level.playSound(null, suit.getX(), suit.getY(), suit.getZ(), SoundEvents.ANVIL_PLACE, SoundSource.NEUTRAL, 0.7F, 0.6F);
         stack.consume(1, player);

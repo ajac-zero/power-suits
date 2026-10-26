@@ -1430,11 +1430,11 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         helper.runAfterDelay(2, () -> { // the engine lights on the suit's first tick
             Player pilot = boardedPilot(helper, suit);
-            helper.assertTrue(pilot.getUUID().equals(suit.getOwnerId()), "climbing in claims the suit");
+            helper.assertTrue(pilot.getUUID().equals(suit.brain().getOwnerId()), "climbing in claims the suit");
             helper.assertTrue(!suit.isAiDriven() && suit.toolOperator() == pilot, "the pilot drives, not the mind");
             pilot.stopRiding();
-            helper.assertTrue(pilot.getUUID().equals(suit.getOwnerId()), "the last pilot stays the owner");
-            helper.assertTrue(suit.blockPosition().equals(suit.getHome()), "home is where the pilot got out, got " + suit.getHome());
+            helper.assertTrue(pilot.getUUID().equals(suit.brain().getOwnerId()), "the last pilot stays the owner");
+            helper.assertTrue(suit.blockPosition().equals(suit.brain().getHome()), "home is where the pilot got out, got " + suit.brain().getHome());
             helper.assertTrue(suit.isAiDriven() && suit.toolOperator() == suit, "powered and empty: the mind drives");
             helper.succeed();
         });
@@ -1447,8 +1447,8 @@ public final class PowerArmorTests {
         player.setItemInHand(InteractionHand.MAIN_HAND, stack);
         useOnFloor(helper, player, stack, new BlockPos(4, 1, 4));
         PowerArmorEntity suit = suitsInTest(helper).get(0);
-        helper.assertTrue(player.getUUID().equals(suit.getOwnerId()), "the placer owns it");
-        helper.assertTrue(helper.absolutePos(new BlockPos(4, 2, 4)).equals(suit.getHome()), "home is where it was placed, got " + suit.getHome());
+        helper.assertTrue(player.getUUID().equals(suit.brain().getOwnerId()), "the placer owns it");
+        helper.assertTrue(helper.absolutePos(new BlockPos(4, 2, 4)).equals(suit.brain().getHome()), "home is where it was placed, got " + suit.brain().getHome());
         helper.succeed();
     }
 
@@ -1457,18 +1457,18 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = spawnSuit(helper);
         java.util.UUID owner = java.util.UUID.randomUUID();
         suit.setMind(dev.ajaczero.powerarmor.entity.SuitMind.ROGUE);
-        suit.setOwnerId(owner);
-        suit.setHome(new BlockPos(10, 64, -3));
+        suit.brain().setOwnerId(owner);
+        suit.brain().setHome(new BlockPos(10, 64, -3));
         CompoundTag saved = saveTag(helper, suit);
         PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
         loadTag(helper, loaded, saved);
-        helper.assertTrue(loaded.isRogue() && owner.equals(loaded.getOwnerId()) && new BlockPos(10, 64, -3).equals(loaded.getHome()),
+        helper.assertTrue(loaded.isRogue() && owner.equals(loaded.brain().getOwnerId()) && new BlockPos(10, 64, -3).equals(loaded.brain().getHome()),
                 "mind, owner and home should survive saving");
         CompoundTag old = saveTag(helper, spawnSuit(helper)); // a suit saved before the AI existed: friendly, nobody's, no home
         old.remove("Mind");
         PowerArmorEntity legacy = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
         loadTag(helper, legacy, old);
-        helper.assertTrue(!legacy.isRogue() && legacy.getOwnerId() == null && legacy.getHome() == null, "old saves load as friendly, unowned, homeless");
+        helper.assertTrue(!legacy.isRogue() && legacy.brain().getOwnerId() == null && legacy.brain().getHome() == null, "old saves load as friendly, unowned, homeless");
         helper.succeed();
     }
 
@@ -1479,7 +1479,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = suitAt(helper, new BlockPos(7, 2, 4));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
         BlockPos home = helper.absolutePos(new BlockPos(1, 2, 4));
-        suit.setHome(home);
+        suit.brain().setHome(home);
         double[] fastest = {0};
         Vec3[] last = {suit.position()};
         helper.onEachTick(() -> { // blocks moved per tick (the velocity field already has the next tick's drag in it)
@@ -1487,7 +1487,7 @@ public final class PowerArmorTests {
             last[0] = suit.position();
         });
         helper.runAfterDelay(100, () -> {
-            helper.assertTrue(!suit.isAwayFromHome(0.5), "should be back home after 5 s, at " + suit.position().subtract(Vec3.atBottomCenterOf(home)));
+            helper.assertTrue(!suit.brain().isAwayFromHome(0.5), "should be back home after 5 s, at " + suit.position().subtract(Vec3.atBottomCenterOf(home)));
             double walk = PowerArmorEntity.WALK_BLOCKS_PER_SECOND; // the mind's speed 1.0 = the pilot's walk
             helper.assertTrue(fastest[0] > walk * 0.88 && fastest[0] < walk * 1.27, "walks (~" + walk + " blocks/s), fastest " + fastest[0]);
             helper.succeed();
@@ -1497,7 +1497,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 40)
     public static void unpoweredSuitStaysPut(GameTestHelper helper) {
         PowerArmorEntity suit = suitAt(helper, new BlockPos(2, 2, 2));
-        suit.setHome(helper.absolutePos(new BlockPos(6, 2, 6)));
+        suit.brain().setHome(helper.absolutePos(new BlockPos(6, 2, 6)));
         Vec3 start = suit.position();
         helper.runAfterDelay(30, () -> {
             helper.assertTrue(suit.position().distanceTo(start) < 0.05, "no fuel, no mind: it must not walk home");
@@ -1509,7 +1509,7 @@ public final class PowerArmorTests {
     public static void boardingStopsTheMind(GameTestHelper helper) {
         PowerArmorEntity suit = suitAt(helper, new BlockPos(2, 2, 2));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
-        suit.setHome(helper.absolutePos(new BlockPos(6, 2, 6)));
+        suit.brain().setHome(helper.absolutePos(new BlockPos(6, 2, 6)));
         helper.runAfterDelay(8, () -> {
             helper.assertTrue(!suit.getNavigation().isDone(), "on its way home");
             Player pilot = helper.makeMockPlayer(GameType.SURVIVAL);
@@ -1571,10 +1571,10 @@ public final class PowerArmorTests {
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.DRILL.get()));
         java.util.UUID owner = java.util.UUID.randomUUID();
-        suit.setOwnerId(owner);
-        suit.setHome(suit.blockPosition()); // the mind only drills its hall round home (the wall is in it)
+        suit.brain().setOwnerId(owner);
+        suit.brain().setHome(suit.blockPosition()); // the mind only drills its hall round home (the wall is in it)
         helper.runAfterDelay(2, () -> { // once the engine runs (an unpowered mind forgets its aim and trigger)
-            suit.setAiAim(Vec3.atCenterOf(center));
+            suit.brain().setAim(Vec3.atCenterOf(center));
             suit.socket().setAiTrigger(true);
         });
         helper.runAfterDelay(5, () -> helper.assertTrue(suit.socket().isActive(), "the mind's trigger runs the tool"));
@@ -1595,7 +1595,7 @@ public final class PowerArmorTests {
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
         helper.runAfterDelay(2, () -> {
-            suit.setAiAim(helper.absoluteVec(new Vec3(4.5, 3, 7)));
+            suit.brain().setAim(helper.absoluteVec(new Vec3(4.5, 3, 7)));
             suit.socket().setAiTrigger(true);
         });
         helper.runAfterDelay(20, () -> {
@@ -1668,7 +1668,7 @@ public final class PowerArmorTests {
         net.minecraft.server.level.ServerPlayer owner = mockServerPlayer(helper);
         Vec3 abs = helper.absoluteVec(at);
         owner.teleportTo(helper.getLevel(), abs.x, abs.y, abs.z, java.util.Set.of(), 0F, 0F, true);
-        suit.setOwnerId(owner.getUUID());
+        suit.brain().setOwnerId(owner.getUUID());
         return owner;
     }
 
@@ -1761,7 +1761,7 @@ public final class PowerArmorTests {
     public static void mindTargetRules(GameTestHelper helper) {
         PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 0);
         Player ownerPlayer = helper.makeMockPlayer(GameType.SURVIVAL);
-        suit.setOwnerId(ownerPlayer.getUUID());
+        suit.brain().setOwnerId(ownerPlayer.getUUID());
         var rules = (java.util.function.BiPredicate<net.minecraft.world.entity.Entity, Boolean>) (e, provoked) ->
                 dev.ajaczero.powerarmor.entity.ai.SuitTargets.canAttack(suit, e, provoked);
         var husk = statueHusk(helper, new Vec3(2.5, 2, 6.5));
@@ -1789,7 +1789,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = suitAt(helper, at);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.EM_PROJECTOR.get()));
-        suit.setHome(helper.absolutePos(at));
+        suit.brain().setHome(helper.absolutePos(at));
         return suit;
     }
 
@@ -1853,7 +1853,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = suitAt(helper, at);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 8));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, tool);
-        suit.setHome(helper.absolutePos(at));
+        suit.brain().setHome(helper.absolutePos(at));
         return suit;
     }
 
@@ -1888,7 +1888,7 @@ public final class PowerArmorTests {
                 left += helper.getBlockState(p).is(Blocks.STONE) && !kept.contains(p) ? 1 : 0;
             }
             helper.assertTrue(left == 0, "the hall should be clear, " + left + " stone left; suit at "
-                    + suit.position().subtract(helper.absoluteVec(Vec3.ZERO)) + " goals " + suit.runningGoalNames());
+                    + suit.position().subtract(helper.absoluteVec(Vec3.ZERO)) + " goals " + suit.brain().runningGoalNames());
         });
     }
 
@@ -1960,14 +1960,14 @@ public final class PowerArmorTests {
             var bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
             bolt.snapTo(suit.position());
             suit.thunderHit(helper.getLevel(), bolt);
-            helper.assertTrue(!suit.isRogue() && suit.getOwnerId() == null && suit.getHome() == null, "rebooted friendly, nobody's");
+            helper.assertTrue(!suit.isRogue() && suit.brain().getOwnerId() == null && suit.brain().getHome() == null, "rebooted friendly, nobody's");
             helper.assertTrue(suit.isStunned() && !suit.isPowered(), "knocked out first");
         });
         helper.runAfterDelay(PowerArmorConfig.LIGHTNING_STUN_TICKS.get() + 40, () -> {
             helper.assertTrue(suit.isAiDriven() && suit.hasHelmet(), "back up as a friendly mind on its last fuel, helmet still on");
             suit.clearFire();
             Player pilot = boardedPilot(helper, suit);
-            helper.assertTrue(pilot.getVehicle() == suit && pilot.getUUID().equals(suit.getOwnerId()), "the first pilot claims it");
+            helper.assertTrue(pilot.getVehicle() == suit && pilot.getUUID().equals(suit.brain().getOwnerId()), "the first pilot claims it");
             helper.succeed();
         });
     }
@@ -1977,7 +1977,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 100, batch = "rogue_lifetime")
     public static void rogueLeavesAfterItsTimeWhenUnwatched(GameTestHelper helper) {
         PowerArmorEntity suit = rogue(helper, SUIT_POS, true);
-        suit.setRogueAge(PowerArmorConfig.ROGUE_LIFETIME.get());
+        suit.brain().setRogueAge(PowerArmorConfig.ROGUE_LIFETIME.get());
         var watcher = mockServerPlayer(helper);
         Vec3 near = helper.absoluteVec(new Vec3(1.5, 2, 1.5));
         watcher.teleportTo(helper.getLevel(), near.x, near.y, near.z, java.util.Set.of(), 0F, 0F, true);
@@ -2768,7 +2768,7 @@ public final class PowerArmorTests {
         });
         helper.runAfterDelay(140, () -> {
             dismiss(helper, owner);
-            helper.assertTrue(suit.followsOwner(), "a flamethrower suit takes the chaingun's job");
+            helper.assertTrue(suit.brain().followsOwner(), "a flamethrower suit takes the chaingun's job");
             helper.assertTrue(suit.socket().getUses() > 0, "it sprayed");
             helper.assertTrue(husk.getHealth() < husk.getMaxHealth() || !husk.isAlive(), "the husk should be burnt, health " + husk.getHealth());
             helper.assertTrue(!fire[0], "a friendly mind sets no blocks on fire");
@@ -2947,7 +2947,7 @@ public final class PowerArmorTests {
         statueHusk(helper, new Vec3(4.5, 2, 7.5));
         helper.runAfterDelay(100, () -> {
             dismiss(helper, owner);
-            helper.assertTrue(!suit.followsOwner() && !suit.hasGun(), "the launcher is no weapon for the mind");
+            helper.assertTrue(!suit.brain().followsOwner() && !suit.brain().hasGun(), "the launcher is no weapon for the mind");
             helper.assertTrue(suit.socket().getUses() == 0 && ammoLeft(suit) == 8, "it never fired, uses " + suit.socket().getUses());
             helper.assertTrue(shellsInTest(helper).isEmpty(), "no rounds");
             helper.succeed();
@@ -3101,7 +3101,7 @@ public final class PowerArmorTests {
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.RAIL_CANNON.get()));
         suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.IRON_INGOT, ingots));
-        suit.setHome(helper.absolutePos(at));
+        suit.brain().setHome(helper.absolutePos(at));
         return suit;
     }
 
@@ -3115,8 +3115,8 @@ public final class PowerArmorTests {
             helper.assertTrue(suit.socket().getUses() >= 1, "it should have fired, uses " + suit.socket().getUses());
             helper.assertTrue(!husk.isAlive() || husk.getHealth() < husk.getMaxHealth(), "and hit the husk, health " + husk.getHealth());
             helper.assertTrue(ammoLeft(suit) == 4 - suit.socket().getUses(), "an ingot per shot, left " + ammoLeft(suit));
-            helper.assertTrue(!suit.isAwayFromHome(1.0), "from home");
-            helper.assertTrue(!suit.followsOwner() && suit.snipesFromHome(), "the rail guard job, not the chaingun's");
+            helper.assertTrue(!suit.brain().isAwayFromHome(1.0), "from home");
+            helper.assertTrue(!suit.brain().followsOwner() && suit.brain().snipesFromHome(), "the rail guard job, not the chaingun's");
             helper.succeed();
         });
     }
