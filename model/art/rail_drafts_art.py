@@ -286,15 +286,16 @@ backpack_kit.GLOW_LIT.update(m='2f9cff', n='a8f0ff', H='e6fbff')
 
 
 def core_flow(face, w, h, f, t):
-    """The flowing core: ring rows across the sides by distance from the base (three phases), dark glass edge columns,
-    the ends (up/down) plain body glass."""
+    """The flowing core: ring rows across the sides by distance from the base (three phases), the whole width of each
+    face (until 2026-10-26 the two edge columns were steady glass); the ends (up/down) plain body glass."""
     if face in ("up", "down"):
         return grid(w, h, 'F')
     g = []
     for y in range(h):
         r = int(BASE - (t[1] - y - 0.5))          # rows from the base end
         k = 'Hmn'[r % 3]
-        g.append(['E' if (x == 0 or x == w - 1) and w > 2 else k for x in range(w)])
+        # (user, 2026-10-26: the rings across the whole width, "the middle strip in particular": no dark edge columns)
+        g.append([k] * w)
     return g
 
 
