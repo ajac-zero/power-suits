@@ -129,15 +129,16 @@ def world(fn):
     return o
 
 
-def build(src_path, drafts, parent, origin, checkpoint):
+def build(src_path, drafts, parent, origin, checkpoint, own=("pk",)):
     """drafts: {group: {cube: (from, to, painter)}} -> plan for .scratch/helmets/apply.js (+ 'lit': the same texels in
     their lit colours, for review renders)."""
     src = json.load(open(src_path))
     model = src["model"]
     tex = Image.open(io.BytesIO(base64.b64decode(src["texture"].split(",", 1)[1]))).convert("RGBA")
-    # the reserved glow colours may only be on the drafts' own texels (cubes named pk*, or the cubes being rebuilt) so far
+    # the reserved glow colours may only be on the drafts' own texels (cubes named pk*, or with another prefix in own: a
+    # game part made from a draft, or the cubes being rebuilt) so far
     names = {n for g in drafts.values() for n in g}
-    mine = used_mask(dict(model, elements=[e for e in model["elements"] if e["name"].startswith("pk") or e["name"] in names]),
+    mine = used_mask(dict(model, elements=[e for e in model["elements"] if e["name"].startswith(tuple(own)) or e["name"] in names]),
                      Image.new("RGBA", tex.size, (0, 0, 0, 0)))
     have = {'%02x%02x%02x' % tex.getpixel((x, y))[:3] for x in range(tex.width) for y in range(tex.height)
             if tex.getpixel((x, y))[3] and not mine[y][x]}

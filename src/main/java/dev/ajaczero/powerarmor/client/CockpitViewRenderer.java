@@ -26,9 +26,12 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
     private static final DataTicket<Part> PART = DataTicket.create("powerarmor_view_part", Part.class);
     private static final DataTicket<String> TOOL_BONE = DataTicket.create("powerarmor_view_tool_bone", String.class);
     private static final DataTicket<Float> BARREL_ANGLE = DataTicket.create("powerarmor_view_barrel_angle", Float.class);
+    /** The rail cannon's charge and the time (ticks), for its shake. */
+    private static final DataTicket<float[]> RAIL_SHAKE = DataTicket.create("powerarmor_view_rail_shake", float[].class);
     private static final DataTicket<int[]> GLOW = DataTicket.create("powerarmor_view_glow", int[].class);
     /** The tool's lights, like on the suit (SuitGlowLayer): the chaingun's hot barrels, the EM projector's redstone. */
-    private static final Identifier[] MASKS = {SuitGlowLayer.HEAT, SuitGlowLayer.HEAT_BARREL, SuitGlowLayer.EM_CORE, SuitGlowLayer.EM_ARC, SuitGlowLayer.PILOT, SuitGlowLayer.RAIL};
+    private static final Identifier[] MASKS = {SuitGlowLayer.HEAT, SuitGlowLayer.HEAT_BARREL, SuitGlowLayer.EM_CORE, SuitGlowLayer.EM_ARC, SuitGlowLayer.PILOT, SuitGlowLayer.RAIL,
+            SuitGlowLayer.RAIL_FLOW[0], SuitGlowLayer.RAIL_FLOW[1], SuitGlowLayer.RAIL_FLOW[2]};
 
     CockpitViewRenderer() {
         super(new Model());
@@ -50,7 +53,11 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
                     SuitGlowLayer.tint(suit.getEmCoreGlow(time), 1F, 1F, 1F),
                     SuitGlowLayer.tint(suit.getEmArcGlow(time), 1F, 1F, 1F),
                     SuitGlowLayer.tint(suit.getPilotGlow(time), 1F, 1F, 1F),
-                    SuitGlowLayer.tint(suit.getRailGlow(time), 1F, 1F, 1F)});
+                    SuitGlowLayer.tint(suit.getRailGlow(time), 1F, 1F, 1F),
+                    SuitGlowLayer.tint(suit.getRailFlowGlow(0, partialTick), 1F, 1F, 1F),
+                    SuitGlowLayer.tint(suit.getRailFlowGlow(1, partialTick), 1F, 1F, 1F),
+                    SuitGlowLayer.tint(suit.getRailFlowGlow(2, partialTick), 1F, 1F, 1F)});
+            state.addGeckolibData(RAIL_SHAKE, new float[] {suit.getRailCharge(), time});
         }
     }
 
@@ -72,6 +79,10 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
         boolean bare = installed.isEmpty();
         bones.ifPresent("socket", b -> b.skipRender(!bare).skipChildrenRender(!bare));
         ToolRotors.pose(bones, info.getOrDefaultGeckolibData(BARREL_ANGLE, 0F)); // turns with the suit's spin
+        float[] shake = info.getGeckolibData(RAIL_SHAKE);
+        if (shake != null) {
+            ToolRotors.railShake(bones, shake[0], shake[1]);
+        }
     }
 
     /** Both faces, like GeckoLib's default: in this render path the cubes wind the other way, so culling hid them all. */

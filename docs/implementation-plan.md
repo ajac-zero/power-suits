@@ -224,7 +224,10 @@ Each tool: hidden `proto_*` drafts in Blockbench -> user picks -> game part (bon
   machine mind is a **long-range guard** (`SuitGoals.RailGuard`, `rail_guard_radius` 40). Model: DOOM (2016)'s gauss cannon,
   draft B5 of two rounds (`model/art/rail_drafts_art.py`) -> bone `rail_cannon`, core glowmask `rail`. `RailCannonItem`,
   `RailBeamEffects` + `client/RailBeamRenderer` (the beam: geometry via NeoForge's custom geometry hooks), HUD charge bar,
-  config, icon, recipe; 6 GameTests (132); `runAutopilotRail` (RailScene). Open: from the cockpit the core barely shows
+  config, icon, recipe; 6 GameTests (132); `runAutopilotRail` (RailScene, `ap_rail_close_*`: the charge up close).
+  Charge-up (user, same day): flowing core (3 phase masks), shake + prongs straining apart, tip sparks. Round 3 drafts
+  (user: "I like wide, but let's experiment with making it flat"): hidden `proto_rail_F4_flat4` / `F3_flat3` / `F2_slab` /
+  `F3o_open` (depth 4 / 3 / 2, core flush), awaiting a pick. Open: from the cockpit the core barely shows
   (seen edge-on between the prongs); the B5 band clips the thigh 0.65 px in jump_charge/jump (known arm/thigh clips there).
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)

@@ -39,8 +39,15 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
     static final Identifier PILOT = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_pilot.png");
     /** The rail cannon's core between its prongs (brightens as it charges). */
     static final Identifier RAIL = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_rail.png");
+    /** The core's rings, a third each (ring r is in mask r mod 3): lit in turn, the energy runs along the core. */
+    static final Identifier[] RAIL_FLOW = {flow(0), flow(1), flow(2)};
     /** The masks, in the order of the tints in SuitRenderData.GLOW. */
-    private static final Identifier[] MASKS = {FIRE, VISOR, HEAT, HEAT_BARREL, EM_CORE, EM_ARC, TIDAL, REACTOR, PILOT, RAIL};
+    private static final Identifier[] MASKS = {FIRE, VISOR, HEAT, HEAT_BARREL, EM_CORE, EM_ARC, TIDAL, REACTOR, PILOT, RAIL,
+            RAIL_FLOW[0], RAIL_FLOW[1], RAIL_FLOW[2]};
+
+    private static Identifier flow(int phase) {
+        return Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_rail_flow_" + phase + ".png");
+    }
 
     public SuitGlowLayer(GeoRenderer<PowerArmorEntity, Void, LivingEntityRenderState> renderer) {
         super(renderer);
@@ -65,7 +72,11 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
                 tint(suit.getTidalGlow(time), 1F, 1F, 1F),
                 tint(suit.getReactorGlow(time), 1F, 1F, 1F),
                 tint(suit.getPilotGlow(time), 1F, 1F, 1F),
-                tint(suit.getRailGlow(time), 1F, 1F, 1F)});
+                tint(suit.getRailGlow(time), 1F, 1F, 1F),
+                tint(suit.getRailFlowGlow(0, partialTick), 1F, 1F, 1F),
+                tint(suit.getRailFlowGlow(1, partialTick), 1F, 1F, 1F),
+                tint(suit.getRailFlowGlow(2, partialTick), 1F, 1F, 1F)});
+        state.addGeckolibData(SuitRenderData.RAIL_SHAKE, new float[] {suit.getRailCharge(), time});
     }
 
     /** Render: draw the model once per lit mask, after (on top of) the suit itself. */

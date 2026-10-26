@@ -272,13 +272,64 @@ def wide(pre):
     }
 
 
-DRAFTS = {"proto_rail_B_split": split("pkRB"), "proto_rail_B1_long": long_core("pkRB1"),
+ROUND2 = {"proto_rail_B_split": split("pkRB"), "proto_rail_B1_long": long_core("pkRB1"),
           "proto_rail_B2_fork": fork("pkRB2"), "proto_rail_B3_coils": coils("pkRB3"),
           "proto_rail_B4_bridged": bridged("pkRB4"), "proto_rail_B5_wide": wide("pkRB5")}
-REMOVED = ["proto_rail_A_doom", "proto_rail_C_shroud", "proto_rail_D_full"]
+# (user picked B5: the game bone rail_cannon since 2026-10-26)
+
+# round 3 (user, 2026-10-26: "I like wide, but let's experiment with making it flat", and the core should flow with
+# energy as it charges, DOOM's): B5's width (9 px across) with the depth (front to back of the suit at rest, top to bottom
+# raised) cut from 6 to 4, 3 or 2. The core is painted in rings of three reserved blues by position along it (H, m, n:
+# ring r is colour r mod 3): in game three glowmasks light the rings in turn, so the light runs toward the muzzle (flow).
+PAL.update(m='245079', n='26507b')
+backpack_kit.GLOW_LIT.update(m='2f9cff', n='a8f0ff', H='e6fbff')
+
+
+def core_flow(face, w, h, f, t):
+    """The flowing core: ring rows across the sides by distance from the base (three phases), dark glass edge columns,
+    the ends (up/down) plain body glass."""
+    if face in ("up", "down"):
+        return grid(w, h, 'F')
+    g = []
+    for y in range(h):
+        r = int(BASE - (t[1] - y - 0.5))          # rows from the base end
+        k = 'Hmn'[r % 3]
+        g.append(['E' if (x == 0 or x == w - 1) and w > 2 else k for x in range(w)])
+    return g
+
+
+MATERIALS.update(core_flow=core_flow)
+
+
+def flat(pre, depth, prong_w=2.5, core_w=3.0, core_depth=None, receiver=3, band=True):
+    """B5 made flat: prongs prong_w wide and depth deep at the outer edges of a 9 px span (x -16..-7), centred on the
+    socket's axis front to back; the core core_w wide between them (core_depth deep, default flush with the prongs: 0.1
+    less so its faces never share a plane with theirs), a slate receiver at the base filling the gap, a copper band."""
+    cd = depth - 0.1 if core_depth is None else core_depth
+    z0, z1 = CZ - depth / 2, CZ + depth / 2
+    x_out, x_in = -16 + prong_w, -7 - prong_w
+    d = {
+        f"{pre}_base": BASE_CUBE(),
+        f"{pre}_prong_out": ([-16, TIP, z0], [x_out, BASE, z1], prong(-16, x_out, z0, z1, TIP, inner=x_out)),
+        f"{pre}_prong_in": ([x_in, TIP, z0], [-7, BASE, z1], prong(x_in, -7, z0, z1, TIP, inner=x_in)),
+        f"{pre}_receiver": ([x_out - .05, BASE - receiver, z0 + .1], [x_in + .05, BASE - .05, z1 - .1], on('slate')),
+        f"{pre}_core": ([CX - core_w / 2, TIP + 1, CZ - cd / 2], [CX + core_w / 2, BASE - receiver, CZ + cd / 2], on('core_flow')),
+    }
+    if band:
+        d.update(bands(pre, [BASE - 2], -16.25, -6.75, z0 - .25, z1 + .25))
+    return d
+
+
+ROUND3 = {"proto_rail_F4_flat4": flat("pkRF4", 4, core_depth=3),
+          "proto_rail_F3_flat3": flat("pkRF3", 3),
+          "proto_rail_F2_slab": flat("pkRF2", 2, prong_w=3),
+          "proto_rail_F3o_open": flat("pkRF3o", 3, core_w=2)}
+DRAFTS = ROUND3
+REMOVED = ["proto_rail_B_split", "proto_rail_B1_long", "proto_rail_B2_fork", "proto_rail_B3_coils", "proto_rail_B4_bridged",
+           "proto_rail_B5_wide"]
 
 if __name__ == "__main__":
-    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before rail cannon round 2")
+    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before rail cannon round 3 (flat)", own=("pk", "rail_"))
     # free the texels of the drafts dropped (painted, but no cube uses them any more)
     import base64, io
     from PIL import Image

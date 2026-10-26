@@ -73,5 +73,30 @@ public final class RailBeamEffects {
         // (no firework flash at the muzzle: a block-sized blue square over the suit from behind, runAutopilotRail)
     }
 
+    /** Client, every tick: while it charges, sparks jump between the prong tips (more and more as it fills; a steady
+     *  crackle at full charge), like the gun can barely hold the charge in. Not right at the pilot's eye. */
+    static void chargeTick(PowerArmorEntity suit) {
+        float charge = suit.getRailCharge();
+        LivingEntity operator = suit.getControllingPassenger() instanceof LivingEntity p ? p : suit;
+        if (charge < 0.1F || suit.getRandom().nextFloat() > 0.15F + 0.75F * charge * charge) {
+            return;
+        }
+        RandomSource random = suit.getRandom();
+        Vec3 tip = SocketAim.visualMuzzle.apply(suit, operator);
+        Vec3 eye = operator.getEyePosition();
+        if (tip.distanceTo(eye) < 1.4) {
+            // the cockpit viewmodel's muzzle is under a block from the camera, where sparks turn into big stars on the
+            // glass: crackle a little further out along the view instead (it still reads as at the muzzle)
+            tip = tip.add(operator.getViewVector(1F).scale(1.4));
+        }
+        for (int i = 0; i < 1 + (charge >= 0.999F ? 2 : 0); i++) {
+            Vec3 p = tip.add(random.nextGaussian() * 0.15, random.nextGaussian() * 0.15, random.nextGaussian() * 0.15);
+            if (p.distanceToSqr(eye) > 0.9 * 0.9) {
+                suit.level().addParticle(ParticleTypes.ELECTRIC_SPARK, p.x, p.y, p.z,
+                        random.nextGaussian() * 0.06, random.nextGaussian() * 0.06, random.nextGaussian() * 0.06);
+            }
+        }
+    }
+
     private RailBeamEffects() {}
 }

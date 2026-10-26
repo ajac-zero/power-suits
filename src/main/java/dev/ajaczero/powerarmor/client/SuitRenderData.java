@@ -38,6 +38,8 @@ final class SuitRenderData {
     static final DataTicket<Consumer<Float>> HIP_SINK = DataTicket.create("powerarmor_hip_sink", (Class<Consumer<Float>>) (Class<?>) Consumer.class);
     /** The lights (SuitGlowLayer): one packed ARGB tint per glowmask, 0 = off. */
     static final DataTicket<int[]> GLOW = DataTicket.create("powerarmor_glow", int[].class);
+    /** The rail cannon's charge (0..1) and the time in ticks: the cannon shakes as it charges (ToolRotors.railShake). */
+    static final DataTicket<float[]> RAIL_SHAKE = DataTicket.create("powerarmor_rail_shake", float[].class);
 
     private SuitRenderData() {}
 }

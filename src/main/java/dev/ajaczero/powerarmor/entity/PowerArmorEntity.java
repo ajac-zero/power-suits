@@ -307,6 +307,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private float pilotGlow;
     /** Client: the rail cannon's core glow, 0..1 (the charge, a flash after each shot). */
     private float railGlow;
+    /** Client: how far the light running along the rail cannon's core has gone (in rings; faster as it charges). */
+    private float railFlow, railFlowO;
     /** Client: the tidal engine's / star reactor's glass, 0 (dark) .. 1 (running), eased like the fire. */
     private float engineGlow;
     private final float[] visorColor = {1F, 0.68F, 0.22F};
@@ -1676,6 +1678,13 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         boolean rail = powered && this.hasRailCannon();
         float railTarget = !rail ? 0F : 0.15F + 0.85F * this.getToolSpin();
         this.railGlow += (railTarget - this.railGlow) * (railTarget > this.railGlow ? 0.5F : 0.12F);
+        // The energy in the core runs toward the muzzle: slowly while idle, racing as the charge builds.
+        this.railFlowO = this.railFlow;
+        this.railFlow += 0.06F + 0.55F * this.getToolSpin();
+        if (this.railFlow > 300F) { // keep it small (a multiple of 3 rings: the pattern repeats every 3)
+            this.railFlow -= 300F;
+            this.railFlowO -= 300F;
+        }
         // The tidal engine's and the reactor's glass light up while they run (the firebox has its fire above).
         float engineTarget = powered && this.getEngine() != SuitEngine.FIREBOX ? 1F : 0F;
         this.engineGlow += (engineTarget - this.engineGlow) * (engineTarget > this.engineGlow ? 0.15F : 0.05F);
@@ -1722,6 +1731,23 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public float getRailGlow(float time) {
         boolean full = this.getToolSpin() >= 0.999F;
         return this.railGlow * (full ? 0.85F + 0.15F * Mth.sin(time * 2.7F + this.getId()) : 1F);
+    }
+
+    /** Client: one third of the core's rings (phase 0, 1, 2: ring r is phase r mod 3) at this moment, 0..1. A wave
+     *  runs along the core, so each phase brightens in turn after the one behind it: the light flows toward the muzzle.
+     *  Dim and lazy while idle, a bright fast pulse train while charging, all lit when it fires (the flash). */
+    public float getRailFlowGlow(int phase, float partial) {
+        float flow = Mth.lerp(partial, this.railFlowO, this.railFlow);
+        float wave = Mth.cos((flow - phase) * Mth.TWO_PI / 3F) * 0.5F + 0.5F;  // 1 when the crest is on this phase
+        float charge = this.getToolSpin();
+        float crest = wave * wave * wave;                                  // a narrow crest, so it reads as moving rings
+        float flash = Math.max(0F, this.railGlow - (0.15F + 0.85F * charge)); // what's left of a shot's flash: all rings lit
+        return Math.min(1F, this.railGlow * (0.3F + 0.7F * crest) + flash);
+    }
+
+    /** Client: the rail cannon's charge, 0..1 (synced tool spin), for the shake and the sparks. */
+    public float getRailCharge() {
+        return this.hasRailCannon() ? this.getToolSpin() : 0F;
     }
 
     /** Client: firebox glow, 0 (cold) .. 1 (roaring). */
@@ -2153,6 +2179,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             EmBeamEffects.tick(this);
             this.tickHandSwing();
             this.tickShotEffects();
+            RailBeamEffects.chargeTick(this);
             // Measure how fast we actually move (blocks/s) and smooth it to avoid flicker
             // between idle and walk.
             double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;

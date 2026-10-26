@@ -74,6 +74,7 @@ final class RailScene {
             case 196 -> { phase = "cockpit"; mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON);
                           DevUtil.hideGui(mc, false); aim(b, -1.5, 2.0, WALL_Z); }
             case 200 -> AutoPilot.hold(o.keyUse, true);
+            case 212, 220 -> AutoPilot.shot(mc, "rail_charging_fp_" + s);
             case 228 -> AutoPilot.shot(mc, "rail_charged_fp");
             case 234 -> AutoPilot.hold(o.keyUse, false);
             case 235, 236, 238, 242 -> AutoPilot.shot(mc, "rail_fire_fp_" + s);
@@ -83,9 +84,15 @@ final class RailScene {
             case 256 -> AutoPilot.hold(o.keyUse, true);
             case 276 -> AutoPilot.shot(mc, "rail_empty_fp");
             case 280 -> AutoPilot.hold(o.keyUse, false);
+            // up close while it charges: the core's light running toward the muzzle, the shake, the sparks
+            case 288 -> { phase = "close"; AutoPilot.onServer(mc, p -> { PowerArmorEntity x = suit; if (x != null) {
+                              x.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.IRON_INGOT, 4)); } });
+                          aim(b, 0.5, 1.6, WALL_Z); closeCamera(mc); }
+            case 292 -> AutoPilot.hold(o.keyUse, true);
+            case 340 -> AutoPilot.hold(o.keyUse, false);
             // the machine mind: the pilot climbs out (the suit's home is where it stands), ingots go back in, a husk
             // comes in off to the left: the mind charges, aims and fires
-            case 290 -> { phase = "mind"; AutoPilot.aimTarget = null; AutoPilot.onServer(mc, p -> {
+            case 360 -> { phase = "mind"; AutoPilot.aimTarget = null; AutoPilot.onServer(mc, p -> {
                               PowerArmorEntity x = suit;
                               BlockPos bb = base;
                               if (x == null || bb == null) {
@@ -96,10 +103,10 @@ final class RailScene {
                               x.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.IRON_INGOT, 4));
                               husk(p.level(), bb.getX() - 9 + 0.5, bb.getY(), bb.getZ() + 12.5); // (clear of the glass wall)
                           }); }
-            case 294 -> mindCamera(mc);
-            case 310, 320, 330, 340, 345, 350, 355, 360, 370, 380 -> AutoPilot.shot(mc, "rail_mind_" + s);
+            case 364 -> mindCamera(mc);
+            case 380, 390, 400, 410, 415, 420, 425, 430, 440, 450 -> AutoPilot.shot(mc, "rail_mind_" + s);
             // the menu, with the ammo slot
-            case 396 -> { phase = "menu"; mc.setCameraEntity(mc.player); DevUtil.hideGui(mc, false);
+            case 466 -> { phase = "menu"; mc.setCameraEntity(mc.player); DevUtil.hideGui(mc, false);
                           AutoPilot.onServer(mc, p -> {
                               PowerArmorEntity x = suit;
                               if (x != null) {
@@ -109,11 +116,14 @@ final class RailScene {
                                   x.interact(p, InteractionHand.MAIN_HAND, x.position());
                                   p.setShiftKeyDown(false);
                               } }); }
-            case 408 -> AutoPilot.shot(mc, "menu_rail");
-            case 412 -> { mc.player.closeContainer(); close(); return false; }
+            case 478 -> AutoPilot.shot(mc, "menu_rail");
+            case 482 -> { mc.player.closeContainer(); close(); return false; }
             default -> {}
         }
-        if (s >= 6 && s < 412) {
+        if (s >= 290 && s <= 346 && s % 2 == 0) {
+            AutoPilot.shot(mc, "rail_close_" + s);
+        }
+        if (s >= 6 && s < 482) {
             log(mc, s);
         }
         return true;
@@ -198,6 +208,19 @@ final class RailScene {
         Vec3 drop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         Vec3 at = c.position().add(0, 1.6, 6);
         AutoPilot.lookCamera(mc, at.add(11, 2.5, -3).subtract(drop), at.subtract(drop));
+    }
+
+    /** Close to the raised cannon on the suit's tool side, a little behind and above it: the core between the prongs. */
+    private static void closeCamera(Minecraft mc) {
+        PowerArmorEntity c = clientSuit(mc);
+        if (c == null) {
+            return;
+        }
+        mc.options.setCameraType(CameraType.FIRST_PERSON);
+        DevUtil.hideGui(mc, true);
+        Vec3 drop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        Vec3 gun = c.position().add(0.7, 2.15, 1.3);
+        AutoPilot.lookCamera(mc, gun.add(0.5, 1.7, -0.7).subtract(drop), gun.add(-0.1, 0, 0.5).subtract(drop));
     }
 
     /** Behind the suit and to its right, looking past it toward the husk off to the left. */

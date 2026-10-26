@@ -109,6 +109,10 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
             bones.ifPresent(ENGINE_BONES[i], bone -> bone.skipRender(hide).skipChildrenRender(hide));
         }
         ToolRotors.pose(bones, info.getOrDefaultGeckolibData(SuitRenderData.BARREL_ANGLE, 0F)); // turn (and coast) always
+        float[] shake = info.getGeckolibData(SuitRenderData.RAIL_SHAKE);
+        if (shake != null) {
+            ToolRotors.railShake(bones, shake[0], shake[1]);
+        }
         aim(info, bones);
     }
 
