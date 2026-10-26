@@ -37,7 +37,8 @@ def inset(x, y, w, h, inside):
 
 
 fill(7, 14, 169, 80, PANEL)                 # clear the furnace parts (keep the inventory label row)
-inset(7, 17, 54, 54, (0, 0, 0, 255))        # suit preview window
+inset(7, 17, 46, 54, (0, 0, 0, 255))        # suit preview window (46 wide since the ammo slot, 2026-10-25)
+inset(53, 35, 18, 18, SLOT)                 # ammo slot (item at 54,36), beside the socket it feeds
 inset(71, 17, 18, 18, SLOT)                 # helmet slot (item at 72,18)
 inset(71, 35, 18, 18, SLOT)                 # socket slot (item at 72,36)
 inset(71, 53, 18, 18, SLOT)                 # engine slot (item at 72,54), the backpack (2026-10-21)

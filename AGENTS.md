@@ -156,7 +156,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   `player.getEyePosition(partial)`.
 - **(GeckoLib 4 only) Never add to an unkeyed bone in `setCustomAnimations`**: GeckoLib 4 only reset bones the playing
   animation keyed, so a per-frame `+=` piled up and the bone flickered. GeckoLib 5's per-frame snapshots fixed that; code
-  offsets still go on bones no animation keys (the chaingun barrels: `ChaingunParts`), set every frame.
+  offsets still go on bones no animation keys (the chaingun barrels: `ToolRotors`), set every frame.
 - **The cockpit shows a viewmodel, not the suit's arms.** Looking at the external model from inside never lined up
   (hands raised where yours aren't, tools hidden behind their base, pads clipping), so in first person only the
   suit's legs are drawn and `CockpitHands` draws the tool + gauntlet in the hand pass (`geo/view`, rebuilt by
@@ -217,7 +217,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   negative, unlike vanilla arrows: after `YP(yRot - 90)`, `ZP(xRot)` the model's forward is -X (`BulletRenderer`; the
   rivet gun's first rivet rendered backwards, shank out of the wall).
 - **Variable-speed spinning parts are code-driven**: GeckoLib scales an animation's whole elapsed time by its speed,
-  so the chaingun's barrels turn by an angle each client accumulates from the synced spin (`ChaingunParts`, absolute
+  so the chaingun's barrels turn by an angle each client accumulates from the synced spin (`ToolRotors`, absolute
   set on an unkeyed bone). Rapid fire needs: hit immunity bypass (`target.invulnerableTime = 0`), the damage type in
   `minecraft:no_knockback` (vanilla's shove per hit launches mobs) and light particles per shot.
 - **Shoot from the eye, draw from the gun**: projectiles from an offset muzzle hit things the pilot can't see (parallax)

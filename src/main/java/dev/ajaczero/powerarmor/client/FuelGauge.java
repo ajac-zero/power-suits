@@ -4,6 +4,7 @@ import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
 import dev.ajaczero.powerarmor.item.ChaingunItem;
+import dev.ajaczero.powerarmor.item.TntLauncherItem;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -22,7 +23,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 /**
  * The fuel gauge next to the hotbar while you pilot a suit: a flame that shrinks as the current item
  * burns, the fuel slot's item and count, how long the fuel lasts at walking pace, and with the chaingun installed
- * how many bullets (iron nuggets) you carry and the barrels' heat.
+ * how many bullets (iron nuggets) you carry and the barrels' heat; with the TNT launcher the TNT left in the ammo slot.
  * It's a "GUI layer" (registered in ClientSetup), drawn every frame on top of the vanilla hotbar.
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
@@ -80,11 +81,20 @@ public final class FuelGauge {
                 graphics.fill(x + 36, y - 4, x + 60, y - 2, 0x80000000);
                 graphics.fill(x + 36, y - 4, x + 36 + w, y - 2, heat > 0.75F ? 0xFFFF3B1E : 0xFFFF9A2E);
             }
+        } else if (suit.getSocketStack().getItem() instanceof TntLauncherItem) {
+            // Rounds left (TNT in the suit's ammo slot), in the same place: red when the drum is empty.
+            int rounds = TntLauncherItem.countRounds(suit, mc.player);
+            if (tntIcon == null) {
+                tntIcon = new ItemStack(net.minecraft.world.item.Items.TNT);
+            }
+            graphics.item(tntIcon, x + 16, y - 18);
+            Component count = Component.literal(rounds < 0 ? "\u221e" : Integer.toString(rounds));
+            graphics.text(mc.font, count, x + 36, y - 14, rounds == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
         }
     }
 
     /** Made on first use: since 1.21.x an ItemStack can't be created before the game has loaded its item data. */
-    private static ItemStack bulletIcon;
+    private static ItemStack bulletIcon, tntIcon;
 
     /** Warning beep every 2 seconds while running on the last few seconds of fuel. */
     @SubscribeEvent

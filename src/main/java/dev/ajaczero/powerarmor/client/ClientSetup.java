@@ -22,6 +22,7 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.BULLET.get(), BulletRenderer::new);
         // The flame stream draws itself with particles (FlameJet.clientTick): nothing to render.
         event.registerEntityRenderer(ModEntities.FLAME_JET.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
+        event.registerEntityRenderer(ModEntities.TNT_SHELL.get(), TntShellRenderer::new);
     }
 
     /** Lets PilotView hide pilots: copies "sits in a suit" into every living thing's render state. */

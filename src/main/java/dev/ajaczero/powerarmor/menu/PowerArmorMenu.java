@@ -25,16 +25,18 @@ public class PowerArmorMenu extends AbstractContainerMenu {
     public static final int SOCKET_SLOT = PowerArmorEntity.SOCKET_SLOT;
     public static final int HELMET_SLOT = PowerArmorEntity.HELMET_SLOT;
     public static final int ENGINE_SLOT = PowerArmorEntity.ENGINE_SLOT;
-    /** Menu slot order: socket (0), fuel (1), helmet (2), engine (3), then the player's inventory. */
-    private static final int SUIT_SLOTS = 4;
+    public static final int AMMO_SLOT = PowerArmorEntity.AMMO_SLOT;
+    /** Menu slot order: socket (0), fuel (1), helmet (2), engine (3), ammo (4), then the player's inventory. */
+    private static final int SUIT_SLOTS = 5;
     private static final int INV_START = SUIT_SLOTS, HOTBAR_START = INV_START + 27, END = HOTBAR_START + 9;
     /** Button id sent by the "Pack up" button (vanilla's built-in menu button packet carries it). */
     public static final int BUTTON_PACK = 0;
 
     /** Slot positions in the 176x166 background (top-left of the 16x16 item area): a column ordered like the suit,
      *  helmet on top, the tool socket (arm), the engine (backpack) at the bottom with its fuel beside it
-     *  (tools/make-gui.py draws the frames). */
-    public static final int SLOT_X = 72, HELMET_Y = 18, SOCKET_Y = 36, ENGINE_Y = 54, FUEL_X = 90, FUEL_Y = 54;
+     *  (tools/make-gui.py draws the frames). The ammo sits beside the socket it feeds, on the left (the status display
+     *  takes the right; the suit preview got 8 px narrower for it). */
+    public static final int SLOT_X = 72, HELMET_Y = 18, SOCKET_Y = 36, ENGINE_Y = 54, FUEL_X = 90, FUEL_Y = 54, AMMO_X = 54;
 
     @Nullable
     private final PowerArmorEntity suit;
@@ -86,6 +88,12 @@ public class PowerArmorMenu extends AbstractContainerMenu {
                 return 1;
             }
         });
+        this.addSlot(new Slot(suitInventory, AMMO_SLOT, AMMO_X, SOCKET_Y) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return stack.is(PowerArmorEntity.AMMO);
+            }
+        });
         // Player inventory and hotbar, same place as in a furnace.
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -123,8 +131,8 @@ public class PowerArmorMenu extends AbstractContainerMenu {
         return false;
     }
 
-    /** Shift-click: suit slots -> player; player -> socket (tools), helmet slot (a helmet), engine slot (an engine) or
-     *  fuel slot (fuel). */
+    /** Shift-click: suit slots -> player; player -> socket (tools), helmet slot (a helmet), engine slot (an engine), ammo
+     *  slot (TNT) or fuel slot (fuel). */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         Slot slot = this.slots.get(index);
@@ -147,6 +155,10 @@ public class PowerArmorMenu extends AbstractContainerMenu {
             }
         } else if (this.slots.get(3).mayPlace(stack)) {
             if (!this.moveItemStackTo(stack, 3, 4, false)) {
+                return ItemStack.EMPTY;
+            }
+        } else if (this.slots.get(4).mayPlace(stack)) {
+            if (!this.moveItemStackTo(stack, 4, 5, false)) {
                 return ItemStack.EMPTY;
             }
         } else if (SuitFuel.fitsFuelSlot(stack) && !stack.is(net.minecraft.world.item.Items.BUCKET)

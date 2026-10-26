@@ -259,7 +259,7 @@ src/main/java/dev/ajaczero/powerarmor/
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
     SuitGlowLayer.java       firebox, visor, chaingun heat and EM redstone lights (glowmasks, tinted per frame)
     BulletRenderer.java      the glowing tracer streak
-    ChaingunParts.java       turns the chaingun's barrels with the synced spin (suit + cockpit viewmodel)
+    ToolRotors.java       turns the chaingun's barrels with the synced spin (suit + cockpit viewmodel)
     ClientSetup.java         registers the renderer
     PowerArmorClient.java    client-only @Mod entry: the in-game config screen
     SuitSounds.java          engine sounds now and then + tool loops (tickable sounds that follow the suit)
@@ -305,7 +305,7 @@ src/main/resources/
   The torso stops following the view while powered down. Spec: `model/anim/a_power.js`.
 - Socket: the left arm ends in an elbow socket and the installed tool is the forearm, carried at the hip (rest pose:
   upper arm 18 deg forward, elbow 62 deg); `socket` (coupling plate) shows when empty, the installed
-  tool's bone (`chaingun`, `em_projector`, `drill`, `chainsaw`) otherwise (`PowerArmorRenderer`). The EM push plays `tool_recoil` (0.5 s overlay, `a_tool_recoil.js`); the chaingun's barrels spin and its shots kick in code (`ChaingunParts`, `PowerArmorRenderer`), and `tool_recoil`
+  tool's bone (`chaingun`, `em_projector`, `drill`, `chainsaw`) otherwise (`PowerArmorRenderer`). The EM push plays `tool_recoil` (0.5 s overlay, `a_tool_recoil.js`); the chaingun's barrels spin and its shots kick in code (`ToolRotors`, `PowerArmorRenderer`), and `tool_recoil`
   is triggered per shot; it must stay shorter than the cooldown because GeckoLib won't restart a running one.
 - Mining tools: while a continuous tool runs, the suit syncs `TOOL_RUNNING` and a fourth controller (`tool`)
   loops the tool's own animation: `drill_run` spins the `drill_bit` 4 turns/s and buzzes the head,

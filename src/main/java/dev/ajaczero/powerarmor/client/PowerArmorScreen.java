@@ -69,7 +69,7 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, LIT_PROGRESS, 14, 14, 0, 14 - h, x + FLAME_X, y + FLAME_Y + 14 - h, 14, h);
         }
         // The suit itself, turning to follow the mouse (like the player in the inventory screen).
-        InventoryScreen.extractEntityInInventoryFollowsMouse(graphics, x + 8, y + 18, x + 60, y + 70, 15, 0.0F, mouseX, mouseY, suit);
+        InventoryScreen.extractEntityInInventoryFollowsMouse(graphics, x + 8, y + 18, x + 52, y + 70, 15, 0.0F, mouseX, mouseY, suit);
     }
 
     @Override
@@ -109,7 +109,8 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         }
         int index = this.menu.slots.indexOf(this.hoveredSlot);
         String key = index == 0 ? "gui.powerarmor.socket_slot" : index == 1 ? "gui.powerarmor.fuel_slot"
-                : index == 2 ? "gui.powerarmor.helmet_slot" : index == 3 ? "gui.powerarmor.engine_slot" : null;
+                : index == 2 ? "gui.powerarmor.helmet_slot" : index == 3 ? "gui.powerarmor.engine_slot"
+                : index == 4 ? "gui.powerarmor.ammo_slot" : null;
         if (key != null) {
             graphics.setComponentTooltipForNextFrame(this.font, List.of(Component.translatable(key),
                     Component.translatable(key + ".hint").withStyle(net.minecraft.ChatFormatting.GRAY)), mouseX, mouseY);

@@ -393,6 +393,24 @@ def flamethrower(ic):
     base(ic)
 
 
+def tnt_launcher(ic):
+    # a fat drum by the base (its front face showing the red ends of the TNT rounds round the barrel), the barrel off
+    # centre toward the upper left (on top, like a revolver's), a slate muzzle ring with the bore, the fork sight on top
+    ic.diag(4.5, 10.5, 8, 7, 9.0, 9.0, SLATE, 3)                      # drum
+    for x, y in ((4, 9), (6, 11), (7, 6)):                             # flutes
+        ic.set(x, y, SLATE[0])
+    for x, y in ((9, 9), (10, 8), (11, 7), (8, 10)):                   # its front face, dark, between the rounds
+        ic.set(x, y, SLATE[1])
+    for x, y in ((10, 9), (11, 8)):                                    # the red TNT ends of the rounds below the barrel
+        ic.set(x, y, RED[3])
+    ic.set(9, 10, RED[2])
+    ic.diag(7, 6, 12, 1, 4.4, 4.4, STEEL, 4)                           # barrel
+    ic.diag(12, 1, 13.2, -0.2, 5.4, 5.4, SLATE, 3)                     # muzzle ring
+    ic.set(14, 1, IRON[0]); ic.set(13, 1, IRON[1]); ic.set(14, 2, IRON[1])   # bore
+    ic.set(9, 1, SLATE[4]); ic.set(10, 0, SLATE[4])                    # the fork sight
+    base(ic)
+
+
 # ---- smithing templates: a stone tablet in the style's colour with the helmet's face cut into it ----------------------
 def tablet(ic, r):
     """Shaped like vanilla's templates: a slab with an uneven rim (corners broken off)."""
@@ -475,6 +493,7 @@ ICONS = {
     'chaingun': chaingun,
     'em_projector': em_projector,
     'flamethrower': flamethrower,
+    'tnt_launcher': tnt_launcher,
     'protector_template': template(tone('8a5a2b'), t_protector),
     'spartan_template': template(tone('5e7a2e'), t_spartan),
     'noble_template': template(tone('5a6470'), t_noble),

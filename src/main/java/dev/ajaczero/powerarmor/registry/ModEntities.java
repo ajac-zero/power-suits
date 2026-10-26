@@ -41,5 +41,12 @@ public final class ModEntities {
                     .clientTrackingRange(6)
                     .updateInterval(1));
 
+    /** The TNT launcher's round: a primed TNT block in flight (half a block wide). Updated every tick (it arcs). */
+    public static final DeferredHolder<EntityType<?>, EntityType<dev.ajaczero.powerarmor.entity.TntShell>> TNT_SHELL =
+            ENTITIES.registerEntityType("tnt_shell", dev.ajaczero.powerarmor.entity.TntShell::new, MobCategory.MISC, builder -> builder
+                    .sized(0.5F, 0.5F)
+                    .clientTrackingRange(8)
+                    .updateInterval(1));
+
     private ModEntities() {}
 }

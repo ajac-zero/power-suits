@@ -122,6 +122,21 @@ public final class PowerArmorConfig {
                     "lights campfires and candles. The machine mind only does either with the mob_griefing game rule on.").translation(key("flamethrower_ignites_blocks"))
             .define("ignites_blocks", true);
 
+    // ---- TNT launcher (Phase 11) ---------------------------------------------------------------------------
+    public static final ModConfigSpec.IntValue TNT_LAUNCHER_RELOAD = B.pop().translation(key("tnt_launcher")).push("tnt_launcher")
+            .comment("Ticks between shots (20 = one a second): a tap fires one, holding fires again each time it's reloaded.").translation(key("tnt_launcher_reload"))
+            .defineInRange("reload_ticks", 20, 1, 1200);
+    public static final ModConfigSpec.IntValue TNT_LAUNCHER_ENERGY = B
+            .comment("Fuel energy per shot on top of the TNT it uses up (0: the TNT is the cost; walking burns 1 per tick).").translation(key("tnt_launcher_energy"))
+            .defineInRange("energy_per_shot", 0, 0, 100_000);
+    public static final ModConfigSpec.DoubleValue TNT_LAUNCHER_POWER = B
+            .comment("Explosion strength of a shot (4 = a TNT block, 3 = a creeper).").translation(key("tnt_launcher_power"))
+            .defineInRange("explosion_power", 4.0, 0, 16);
+    public static final ModConfigSpec.BooleanValue TNT_LAUNCHER_BREAKS_BLOCKS = B
+            .comment("Shots break blocks like TNT does (the tnt_explodes game rule and protection mods still apply). Off: they",
+                    "only hurt and push what's near.").translation(key("tnt_launcher_breaks_blocks"))
+            .define("breaks_blocks", true);
+
     // ---- the suit itself ---------------------------------------------------------------------------
     public static final ModConfigSpec.DoubleValue SEAL_ENERGY_PER_DAMAGE = B.pop().translation(key("suit")).push("suit")
             .comment("Sealed suit: fire, frost, magma, cactus and effect damage cost this much energy per point of damage instead of",

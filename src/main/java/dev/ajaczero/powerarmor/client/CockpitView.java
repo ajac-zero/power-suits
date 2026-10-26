@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
  * The pilot's first-person "viewmodel": the socket tool on the left and the suit's gauntlet on the right, drawn in
  * front of the camera like vanilla's hands (CockpitHands) instead of looking at the suit's own arms from inside.
  * There is one per client. Its bones are named like the suit's (tools/extract-view-geo.py), so it plays the suit's
- * tool animations: the drill bit spins, the chain runs (the chaingun's barrels turn in code, ChaingunParts). Keys for bones it doesn't have
+ * tool animations: the drill bit spins, the chain runs (the chaingun's barrels turn in code, ToolRotors). Keys for bones it doesn't have
  * (the suit's arms) are skipped by GeckoLib.
  */
 final class CockpitView implements GeoAnimatable {

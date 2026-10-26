@@ -371,13 +371,13 @@ public final class PowerArmorTests {
         helper.assertTrue(!menu.getSlot(0).mayPlace(new ItemStack(Items.COAL)), "socket only takes power tools");
         helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(ModItems.CHAINGUN.get())), "socket takes the chaingun");
         player.getInventory().setItem(10, new ItemStack(ModItems.CHAINGUN.get()));
-        menu.quickMoveStack(player, 5); // menu slot 5 = player inventory slot 10 (menu: socket, fuel, helmet, engine, then the player's)
+        menu.quickMoveStack(player, 6); // menu slot 6 = player inventory slot 10 (menu: socket, fuel, helmet, engine, ammo, then the player's)
         helper.assertTrue(menu.getSlot(0).getItem().is(ModItems.CHAINGUN.get()), "shift-click should install the chaingun");
         helper.assertTrue(menu.getSlot(1).getItem().getCount() == 4, "menu shows the suit's fuel");
 
         // Shift-click coal from the player's inventory: it joins the coal in the fuel slot.
         player.getInventory().setItem(9, new ItemStack(Items.COAL, 10));
-        menu.quickMoveStack(player, 4); // menu slot 4 = player inventory slot 9
+        menu.quickMoveStack(player, 5); // menu slot 5 = player inventory slot 9
         helper.assertTrue(menu.getSlot(1).getItem().getCount() == 14, "shift-click should move coal into the fuel slot, got " + menu.getSlot(1).getItem());
 
         // The helmet slot (2026-10-19) takes only the suit's helmet, one; shift-click puts a helmet there.
@@ -386,7 +386,7 @@ public final class PowerArmorTests {
         menu.getSlot(2).set(ItemStack.EMPTY);
         helper.assertTrue(!suit.hasHelmet(), "taking it out of the menu takes it off the suit");
         player.getInventory().setItem(11, new ItemStack(ModItems.SUIT_HELMET.get()));
-        menu.quickMoveStack(player, 6); // menu slot 6 = player inventory slot 11
+        menu.quickMoveStack(player, 7); // menu slot 7 = player inventory slot 11
         helper.assertTrue(menu.getSlot(2).getItem().is(ModItems.SUIT_HELMET.get()) && suit.hasHelmet(), "shift-click should put the helmet on");
 
         Player pilot = boardedPilot(helper, suit);
@@ -2299,8 +2299,8 @@ public final class PowerArmorTests {
         menu.getSlot(3).set(ItemStack.EMPTY);
         player.getInventory().setItem(9, new ItemStack(ModItems.STAR_REACTOR.get()));
         player.getInventory().setItem(10, new ItemStack(Items.NETHER_STAR));
-        menu.quickMoveStack(player, 4); // menu slot 4 = player inventory slot 9
-        menu.quickMoveStack(player, 5);
+        menu.quickMoveStack(player, 5); // menu slot 5 = player inventory slot 9
+        menu.quickMoveStack(player, 6);
         helper.assertTrue(menu.getSlot(3).getItem().is(ModItems.STAR_REACTOR.get()), "shift-click installs the engine");
         helper.assertTrue(menu.getSlot(1).getItem().is(Items.NETHER_STAR), "shift-click puts the star in the fuel slot");
         helper.succeed();
@@ -2446,7 +2446,7 @@ public final class PowerArmorTests {
                 "the packed item carries its engine, got " + loadout);
         // A loadout's codec must keep "taken out" (an empty stack) apart from "from before the engines" (no field).
         var ops = helper.getLevel().registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
-        SuitLoadout noEngine = new SuitLoadout(ItemStack.EMPTY, ItemStack.EMPTY, 0, 0, 0, ItemStack.EMPTY, java.util.Optional.of(ItemStack.EMPTY));
+        SuitLoadout noEngine = new SuitLoadout(ItemStack.EMPTY, ItemStack.EMPTY, 0, 0, 0, ItemStack.EMPTY, java.util.Optional.of(ItemStack.EMPTY), ItemStack.EMPTY);
         SuitLoadout back = SuitLoadout.CODEC.parse(ops, SuitLoadout.CODEC.encodeStart(ops, noEngine).getOrThrow()).getOrThrow();
         helper.assertTrue(back.engine().isPresent() && back.engine().get().isEmpty(), "an empty engine slot survives the codec, got " + back);
         SuitLoadout before = SuitLoadout.CODEC.parse(ops, SuitLoadout.CODEC.encodeStart(ops, SuitLoadout.EMPTY).getOrThrow()).getOrThrow();
@@ -2772,6 +2772,184 @@ public final class PowerArmorTests {
             helper.assertTrue(suit.getToolUses() > 0, "it sprayed");
             helper.assertTrue(husk.getHealth() < husk.getMaxHealth() || !husk.isAlive(), "the husk should be burnt, health " + husk.getHealth());
             helper.assertTrue(!fire[0], "a friendly mind sets no blocks on fire");
+            helper.succeed();
+        });
+    }
+
+    // =========================================================================================
+    // TNT launcher and the ammo slot (Phase 11, 2026-10-25)
+    // =========================================================================================
+
+    /** A suit at (4, 2, 1) facing +Z with the TNT launcher, fuel, {@code tnt} blocks of TNT in its ammo slot and a
+     *  survival pilot looking at {@code target} (relative). */
+    private static Player tntPilot(GameTestHelper helper, PowerArmorEntity[] out, Vec3 target, int tnt) {
+        PowerArmorEntity suit = suitAt(helper, new BlockPos(4, 2, 1));
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 4));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.TNT_LAUNCHER.get()));
+        suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, tnt > 0 ? new ItemStack(Items.TNT, tnt) : ItemStack.EMPTY);
+        suit.setYRot(0);
+        suit.setYBodyRot(0);
+        Player pilot = boardedPilot(helper, suit);
+        suit.positionRider(pilot);
+        aim(helper, pilot, target);
+        out[0] = suit;
+        return pilot;
+    }
+
+    private static List<dev.ajaczero.powerarmor.entity.TntShell> shellsInTest(GameTestHelper helper) {
+        return helper.getLevel().getEntitiesOfClass(dev.ajaczero.powerarmor.entity.TntShell.class,
+                new AABB(helper.absolutePos(new BlockPos(4, 2, 4))).inflate(12));
+    }
+
+    private static int ammoLeft(PowerArmorEntity suit) {
+        return suit.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).getCount();
+    }
+
+    /** The ammo slot (menu slot 4) takes TNT only, shift-click puts TNT there, and the suit's item keeps it when packed. */
+    @SuitTest
+    public static void ammoSlotTakesTntAndPacksWithTheSuit(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 2));
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.snapTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
+        PowerArmorMenu menu = new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit);
+        helper.assertTrue(menu.getSlot(4).mayPlace(new ItemStack(Items.TNT)), "the ammo slot takes TNT");
+        helper.assertTrue(!menu.getSlot(4).mayPlace(new ItemStack(Items.GUNPOWDER)) && !menu.getSlot(4).mayPlace(new ItemStack(Items.COAL)),
+                "and nothing else");
+        player.getInventory().setItem(9, new ItemStack(Items.TNT, 16));
+        menu.quickMoveStack(player, 5); // menu slot 5 = player inventory slot 9
+        helper.assertTrue(ammoLeft(suit) == 16, "shift-click loads the TNT into the ammo slot, got " + suit.getInventory().getItem(PowerArmorEntity.AMMO_SLOT));
+        helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.COAL), "not into the fuel slot");
+        // A loadout from before the ammo slot (no "ammo" field) loads with it empty.
+        var ops = helper.getLevel().registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
+        var old = SuitLoadout.CODEC.parse(ops, new net.minecraft.nbt.CompoundTag()).getOrThrow();
+        helper.assertTrue(old.ammo().isEmpty(), "an old suit item has no ammo, got " + old.ammo());
+        suit.packUp(player);
+        SuitLoadout loadout = packedSuit(player).get(ModDataComponents.LOADOUT.get());
+        helper.assertTrue(loadout != null && loadout.ammo().is(Items.TNT) && loadout.ammo().getCount() == 16, "the packed suit keeps its TNT, got " + loadout);
+        PowerArmorEntity deployed = suitAt(helper, new BlockPos(4, 2, 1));
+        deployed.applyLoadout(loadout);
+        helper.assertTrue(ammoLeft(deployed) == 16 && deployed.getAmmoStack().getCount() == 16, "and gives it back when deployed (synced too)");
+        helper.succeed();
+    }
+
+    /** Without TNT the trigger only clicks: no round, nothing used. */
+    @SuitTest(timeoutTicks = 40)
+    public static void tntLauncherClicksWithoutTnt(GameTestHelper helper) {
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.5, 6.5), 0);
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(8, () -> {
+            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].getToolUses() == 0, "no TNT, no shot: " + suit[0].getToolUses());
+            helper.assertTrue(shellsInTest(helper).isEmpty(), "no round in the air");
+            helper.succeed();
+        });
+    }
+
+    /** A tap fires one round from the ammo slot; it flies to the floor 5 blocks ahead and blows a hole in it (credited
+     *  to the pilot), and the suit that fired it isn't the thing it hits. */
+    @SuitTest(timeoutTicks = 60, batch = "tnt")
+    public static void tntLauncherFiresARoundThatExplodesOnHit(GameTestHelper helper) {
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 6.5), 3);
+        BlockPos floor = new BlockPos(4, 1, 6);
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(3, () -> {
+            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].getToolUses() == 1, "a tap fires one round, got " + suit[0].getToolUses());
+            helper.assertTrue(ammoLeft(suit[0]) == 2, "using one TNT from the ammo slot, left " + ammoLeft(suit[0]));
+            helper.assertTrue(suit[0].getAmmoStack().getCount() == 2, "the synced copy (HUD) follows");
+        });
+        helper.runAfterDelay(20, () -> {
+            helper.assertTrue(shellsInTest(helper).isEmpty(), "the round has gone off");
+            if (PowerArmorConfig.TNT_LAUNCHER_BREAKS_BLOCKS.get()) {
+                helper.assertTrue(helper.getBlockState(floor).isAir(), "it blew a hole in the floor where it hit, found " + helper.getBlockState(floor));
+            }
+            helper.assertTrue(pilot.getHealth() == pilot.getMaxHealth(), "the suit shields its pilot");
+            helper.succeed();
+        });
+    }
+
+    /** Held, it fires again each time it has reloaded: in 2 reloads + a tick, 3 rounds. */
+    @SuitTest(timeoutTicks = 120, batch = "tnt")
+    public static void tntLauncherFiresOncePerReloadWhileHeld(GameTestHelper helper) {
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 7.5), 10);
+        int reload = PowerArmorConfig.TNT_LAUNCHER_RELOAD.get();
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(2 + 2 * reload + 1, () -> {
+            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].getToolUses() == 3, "3 rounds in two reloads, got " + suit[0].getToolUses());
+            helper.assertTrue(ammoLeft(suit[0]) == 7, "3 TNT used, left " + ammoLeft(suit[0]));
+            helper.succeed();
+        });
+    }
+
+    /** A round that hits a mob goes off on it, and the blast is the pilot's (kill credit). */
+    @SuitTest(timeoutTicks = 60, batch = "tnt")
+    public static void tntLauncherBlastIsThePilots(GameTestHelper helper) {
+        var husk = statueHusk(helper, new Vec3(4.5, 2, 6.5));
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 3, 6.5), 1);
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(3, () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(20, () -> {
+            helper.assertTrue(husk.getHealth() < husk.getMaxHealth() || !husk.isAlive(), "the husk took the blast, health " + husk.getHealth());
+            var src = husk.getLastDamageSource();
+            helper.assertTrue(src != null && src.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION), "explosion damage, got " + src);
+            helper.assertTrue(src.getEntity() == pilot, "credited to the pilot, got " + src.getEntity());
+            helper.succeed();
+        });
+    }
+
+    /** A creative pilot fires without TNT. */
+    @SuitTest(timeoutTicks = 40, batch = "tnt")
+    public static void tntLauncherIsFreeInCreative(GameTestHelper helper) {
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 7.5), 0);
+        pilot.getAbilities().instabuild = true;
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(3, () -> {
+            suit[0].setTriggerHeld(pilot, false);
+            helper.assertTrue(suit[0].getToolUses() == 1, "creative fires with an empty ammo slot, got " + suit[0].getToolUses());
+            helper.succeed();
+        });
+    }
+
+    /** With the tnt_explodes game rule off, a round is a dud: nothing breaks. Its own batch: the rule is world-wide. */
+    @SuitTest(timeoutTicks = 60, batch = "tntrule")
+    public static void tntLauncherObeysTheTntGameRule(GameTestHelper helper) {
+        var rules = helper.getLevel().getGameRules();
+        boolean before = rules.get(net.minecraft.world.level.gamerules.GameRules.TNT_EXPLODES);
+        rules.set(net.minecraft.world.level.gamerules.GameRules.TNT_EXPLODES, false, helper.getLevel().getServer());
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 6.5), 1);
+        helper.runAfterDelay(2, () -> suit[0].setTriggerHeld(pilot, true));
+        helper.runAfterDelay(3, () -> suit[0].setTriggerHeld(pilot, false));
+        helper.runAfterDelay(20, () -> {
+            rules.set(net.minecraft.world.level.gamerules.GameRules.TNT_EXPLODES, before, helper.getLevel().getServer());
+            helper.assertTrue(suit[0].getToolUses() == 1, "it still fires");
+            helper.assertTrue(shellsInTest(helper).isEmpty(), "the round is gone");
+            helper.assertTrue(helper.getBlockState(new BlockPos(4, 1, 6)).is(Blocks.SMOOTH_STONE), "but breaks nothing (the pad's smooth stone floor)");
+            helper.succeed();
+        });
+    }
+
+    /** The machine mind never fires it (user decision): a friendly suit with the launcher, TNT and a monster near its
+     *  owner doesn't shoot. */
+    @SuitTest(timeoutTicks = 120)
+    public static void tntLauncherMindNeverFires(GameTestHelper helper) {
+        PowerArmorEntity suit = suitAt(helper, new BlockPos(4, 2, 1));
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.TNT_LAUNCHER.get()));
+        suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.TNT, 8));
+        var owner = ownerAt(helper, suit, new Vec3(1.5, 2, 1.5));
+        statueHusk(helper, new Vec3(4.5, 2, 7.5));
+        helper.runAfterDelay(100, () -> {
+            dismiss(helper, owner);
+            helper.assertTrue(!suit.followsOwner() && !suit.hasGun(), "the launcher is no weapon for the mind");
+            helper.assertTrue(suit.getToolUses() == 0 && ammoLeft(suit) == 8, "it never fired, uses " + suit.getToolUses());
+            helper.assertTrue(shellsInTest(helper).isEmpty(), "no rounds");
             helper.succeed();
         });
     }

@@ -70,7 +70,7 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
         }
         boolean bare = installed.isEmpty();
         bones.ifPresent("socket", b -> b.skipRender(!bare).skipChildrenRender(!bare));
-        ChaingunParts.pose(bones, info.getOrDefaultGeckolibData(BARREL_ANGLE, 0F)); // turns with the suit's spin
+        ToolRotors.pose(bones, info.getOrDefaultGeckolibData(BARREL_ANGLE, 0F)); // turns with the suit's spin
     }
 
     /** Both faces, like GeckoLib's default: in this render path the cubes wind the other way, so culling hid them all. */

@@ -100,7 +100,7 @@ would replace them in `sounds.json` only.
 2b. Chaingun (DONE 2026-10-13): `chaingun` bone (motor housing + `chaingun_barrels`: 2 clamp plates, 4 barrels, axle;
    `muzzle` locator), `ChaingunItem` as a continuous tool (spin-up timing, nugget per bullet, overheat config), `Bullet`
    tracer (immunity bypass, no_knockback tag + own push), `BulletRenderer`, synced TOOL_SPIN/TOOL_HEAT/TOOL_SHOTS ->
-   code-driven barrel spin (`ChaingunParts`), recoil, muzzle burst, heat glowmask (suit + cockpit viewmodel), motor
+   code-driven barrel spin (`ToolRotors`), recoil, muzzle burst, heat glowmask (suit + cockpit viewmodel), motor
    whine loop with spin pitch (`PowerTool.runSoundPitch`), HUD bullets + heat bar; `rivet_shot` -> arm-only
    `tool_recoil` (EM push); item aliases plasma_cannon/rivet_gun -> chaingun. Tests: tap, spin-up/coast, nuggets,
    creative, immunity bypass, overheat (52).

@@ -159,6 +159,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public static final int FUEL_SLOT = 0, SOCKET_SLOT = 1, HELMET_SLOT = 2;
     /** The engine (the backpack, design sec. 4b, 2026-10-21): what powers the suit and what the fuel slot burns. */
     public static final int ENGINE_SLOT = 3;
+    /** Ammunition for the socket tool (2026-10-25, the TNT launcher's TNT; generic so later tools can draw from it too).
+     *  What fits is the item tag powerarmor:suit_ammo. Suits saved before it simply have it empty. */
+    public static final int AMMO_SLOT = 4;
+    /** What the ammo slot takes: data, so packs (and later tools) can add to it. */
+    public static final net.minecraft.tags.TagKey<net.minecraft.world.item.Item> AMMO = net.minecraft.tags.TagKey.create(
+            net.minecraft.core.registries.Registries.ITEM, net.minecraft.resources.Identifier.fromNamespaceAndPath(dev.ajaczero.powerarmor.PowerArmor.MODID, "suit_ammo"));
     /** Height above the suit's feet and distance behind its middle of the backpack's centre (backpack box y 31.6-38.6 px,
      *  z 6-11 px): water above that point covers the engine. */
     private static final double ENGINE_UP = 2.2, ENGINE_BACK = 0.53;
@@ -213,6 +219,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<ItemStack> SOCKET_ITEM =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
+    /** The ammo slot's contents: the HUD counts the TNT left. */
+    private static final EntityDataAccessor<ItemStack> AMMO_ITEM =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
     /** Is a helmet in its slot: clients draw it (or not) and know whether the suit is sealed. */
     private static final EntityDataAccessor<Boolean> HELMET =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
@@ -232,8 +241,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final EntityDataAccessor<Boolean> FREE_POWER =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
 
-    /** The suit's own slots: fuel, the left-arm socket, the helmet and the engine. Real contents only exist on the server. */
-    private final SimpleContainer inventory = new SimpleContainer(4) {
+    /** The suit's own slots: fuel, the left-arm socket, the helmet, the engine and the ammo. Real contents only exist on
+     *  the server. Old saves load fine with fewer: each saved item carries its slot number. */
+    private final SimpleContainer inventory = new SimpleContainer(5) {
         @Override
         public void setChanged() {
             super.setChanged();
@@ -277,8 +287,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private boolean toolWasActive;
     /** Client: the action controller was already playing a shot last tick (for the pilot's own muzzle burst). */
     private int seenShots;
-    /** Client: chaingun barrel angle (degrees, this and last tick) and the recoil kick (1 right after a shot, decays). */
-    private float barrelAngle, barrelAngleO, recoil, recoilO;
+    /** Client: chaingun barrel angle (degrees, this and last tick) and the recoil kick (1 right after a shot, decays). The
+     *  TNT launcher's drum uses the same angle (one tool at a time): drumTurn is how much of its quarter turns is left. */
+    private float barrelAngle, barrelAngleO, recoil, recoilO, drumTurn;
+    /** Degrees per tick the TNT launcher's drum turns after a shot (a quarter turn in 5 ticks). */
+    private static final float DRUM_SPEED = 18F;
     /** Client: 0..1, how much the torso follows the pilot's view (eases out on shutdown, in after startup). */
     private float aimBlend;
     /** Client: 0 = tool arm in its hip carry, 1 = raised to aim (follows TOOL_ACTIVE, like raising a shield). */
@@ -385,6 +398,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(TOOL_HEAT, 0F);
         builder.define(TOOL_SHOTS, 0);
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
+        builder.define(AMMO_ITEM, ItemStack.EMPTY);
         builder.define(HELMET, false);
         builder.define(HELMET_STYLE, (byte) -1);
         builder.define(STUNNED, false);
@@ -965,6 +979,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.entityData.set(FUEL_ENERGY, SuitFuel.energyOf(SuitEngine.of(this.inventory.getItem(ENGINE_SLOT)),
                     this.inventory.getItem(FUEL_SLOT), this.level()));
             this.entityData.set(SOCKET_ITEM, this.inventory.getItem(SOCKET_SLOT).copy());
+            this.entityData.set(AMMO_ITEM, this.inventory.getItem(AMMO_SLOT).copy());
             this.entityData.set(HELMET, !this.inventory.getItem(HELMET_SLOT).isEmpty());
             HelmetStyle style = SuitHelmetItem.style(this.inventory.getItem(HELMET_SLOT));
             this.entityData.set(HELMET_STYLE, (byte) (style == null ? -1 : style.ordinal()));
@@ -1014,6 +1029,22 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     public ItemStack getSocketStack() {
         return this.entityData.get(SOCKET_ITEM);
+    }
+
+    /** Both sides: the ammo slot's contents (a synced copy on clients). */
+    public ItemStack getAmmoStack() {
+        return this.entityData.get(AMMO_ITEM);
+    }
+
+    /** Server: use up one item of ammo that {@code fits} (from the ammo slot). False if there is none. */
+    public boolean takeAmmo(java.util.function.Predicate<ItemStack> fits) {
+        ItemStack ammo = this.inventory.getItem(AMMO_SLOT);
+        if (ammo.isEmpty() || !fits.test(ammo)) {
+            return false;
+        }
+        ammo.shrink(1);
+        this.inventory.setChanged(); // shrinking a stack in place doesn't tell the container: sync the HUD's count
+        return true;
     }
 
     /** Both sides: all energy on board, burning item + everything in the fuel slot. */
@@ -1211,13 +1242,14 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public SuitLoadout getLoadout() {
         return new SuitLoadout(this.inventory.getItem(FUEL_SLOT).copy(), this.inventory.getItem(SOCKET_SLOT).copy(),
                 Mth.ceil(this.burnLeft), this.burnTotal, this.getStoredNuggets(), this.inventory.getItem(HELMET_SLOT).copy(),
-                java.util.Optional.of(this.inventory.getItem(ENGINE_SLOT).copy()));
+                java.util.Optional.of(this.inventory.getItem(ENGINE_SLOT).copy()), this.inventory.getItem(AMMO_SLOT).copy());
     }
 
     public void applyLoadout(SuitLoadout loadout) {
         this.inventory.setItem(FUEL_SLOT, loadout.fuel().copy());
         this.inventory.setItem(SOCKET_SLOT, loadout.socket().copy());
         this.inventory.setItem(HELMET_SLOT, loadout.helmet().copy());
+        this.inventory.setItem(AMMO_SLOT, loadout.ammo().copy());
         // Items packed (or crafted) before the engines carry none: they had their firebox built in.
         this.inventory.setItem(ENGINE_SLOT, loadout.engine().map(ItemStack::copy)
                 .orElseGet(() -> new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get())));
@@ -2017,7 +2049,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         this.spawnAtLocation(level, new ItemStack(Items.IRON_INGOT, 4 + this.random.nextInt(5)));
         for (ItemStack stack : this.inventory.removeAllItems()) {
-            this.spawnAtLocation(level, stack); // the fuel, socket tool, helmet and engine survive the wreck
+            this.spawnAtLocation(level, stack); // the fuel, socket tool, helmet, engine and ammo survive the wreck
         }
         for (int left = this.getStoredNuggets(); left > 0; left -= 64) {
             this.spawnAtLocation(level, new ItemStack(Items.IRON_NUGGET, Math.min(64, left))); // and so does the ammo
@@ -2284,13 +2316,25 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     /** Client, every tick: follow the socket tool's synced spin and shots. The chaingun's barrels turn by the spin (up to
-     *  60 degrees a tick, ten turns a second); each new shot kicks the recoil (harder for the heavy slow shots) and, for our
-     *  own pilot only, puffs the muzzle burst at the muzzle on their screen (the cockpit viewmodel's in first person,
-     *  SocketAim.visualMuzzle). The server sends the burst to everyone else. */
+     *  60 degrees a tick, ten turns a second), the TNT launcher's drum a quarter turn after each shot; each new shot kicks
+     *  the recoil (harder for the heavy slow shots) and, for our own pilot only, puffs the muzzle burst at the muzzle on
+     *  their screen (the cockpit viewmodel's in first person, SocketAim.visualMuzzle). The server sends the burst to
+     *  everyone else. */
     private void tickShotEffects() {
         float spin = this.getToolSpin();
+        boolean launcher = this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.TntLauncherItem;
         this.barrelAngleO = this.barrelAngle;
         this.barrelAngle += 60F * spin;
+        if (this.drumTurn > 0F) {
+            float step = Math.min(DRUM_SPEED, this.drumTurn);
+            this.barrelAngle += step;
+            this.drumTurn -= step;
+            if (this.drumTurn <= 0F) {
+                // the next round drops into line with the barrel: a hard little click
+                this.level().playLocalSound(this.getX(), this.getY() + 1.5, this.getZ(), SoundEvents.IRON_TRAPDOOR_CLOSE,
+                        net.minecraft.sounds.SoundSource.PLAYERS, 0.35F, 1.7F, false);
+            }
+        }
         if (this.barrelAngle > 3600F) { // keep it small; a multiple of 90 so the square cluster doesn't jump
             this.barrelAngle -= 3600F;
             this.barrelAngleO -= 3600F;
@@ -2303,6 +2347,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         this.seenShots = shots;
         this.recoil = Math.max(this.recoil, 1F - 0.65F * spin);
+        if (launcher) {
+            this.drumTurn += 90F;
+        }
         if (this.getControllingPassenger() instanceof Player pilot && pilot.isLocalPlayer()) {
             Vec3 muzzle = dev.ajaczero.powerarmor.item.SocketAim.visualMuzzle.apply(this, pilot);
             boolean firstPerson = muzzle.distanceTo(pilot.getEyePosition()) < 1.4;
@@ -2311,13 +2358,18 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 // little further out along the shot, and without the steam (it covered the target).
                 muzzle = muzzle.add(pilot.getViewVector(1F).scale(1.4));
             }
-            dev.ajaczero.powerarmor.item.ChaingunItem.muzzleBurst((type, x, y, z, n, spread, speed) -> {
+            dev.ajaczero.powerarmor.item.ChaingunItem.Particles out = (type, x, y, z, n, spread, speed) -> {
                 for (int i = 0; i < n; i++) {
                     this.level().addParticle(type, x + this.random.nextGaussian() * spread, y + this.random.nextGaussian() * spread,
                             z + this.random.nextGaussian() * spread, this.random.nextGaussian() * speed,
                             this.random.nextGaussian() * speed, this.random.nextGaussian() * speed);
                 }
-            }, muzzle, spin, !firstPerson);
+            };
+            if (launcher) {
+                dev.ajaczero.powerarmor.item.TntLauncherItem.muzzlePuff(out, muzzle);
+            } else {
+                dev.ajaczero.powerarmor.item.ChaingunItem.muzzleBurst(out, muzzle, spin, !firstPerson);
+            }
         }
     }
 
