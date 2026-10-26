@@ -400,6 +400,11 @@ Comment the "why" for anything non-obvious; the user reads the code to learn.
 - **A cube's `down` face is mirrored front to back** (the export gives it a negative `uv_size`): a draft painter that
   places down-face texels by model coordinates must flip z there (`tnt_drafts_art.wf`), or a pattern lands mirrored (the
   TNT drum's chamber ends hid behind the barrel for four rounds). Symmetric paint (a centred bore) never shows it.
+- **Mirrored parts with fractional widths need mirrored UVs** (rail cannon, 2026-10-26): a 2.5 px face shows 2.5 texels
+  counted from its u-start edge (+x on a north face), so the half texel lands on the outer edge of one prong and the inner
+  edge of its twin: they "look different sizes" though the cubes mirror exactly. Give the twin its partner's texels with u
+  reversed (`rail_mirror_apply.js`), put texel edges on the features you centre (a fractional uv start) and check with a
+  mirror test of the faces as Blockbench draws them (`model/art/rail_symcheck.py`), not by reading cube coordinates.
 - **Draft cube prefixes must be new**: `pkTA_*` was already the tidal backpack's (2026-10-21) when the TNT drafts used it;
   the apply scripts only touch their own groups, but a name-based script would have hit both. Grep the model first.
 - **A killed mob stays in the world for its 20-tick death animation**: scene CSVs that count entities see a kill 20 ticks
