@@ -210,7 +210,13 @@ Each tool: hidden `proto_*` drafts in Blockbench -> user picks -> game part (bon
   rogues 1 in 5; 7 GameTests (118); `runAutopilotFlame` (FlameScene). Model: draft H -> bone `flamethrower` (design sec. 3).
 - [ ] Hydraulic ram (heavy punch, knockback, breaks blocks in a line)
 - [ ] Riot plate (blocks damage in front while held)
-- [ ] Grenade launcher (explosive shots)
+- [ ] TNT launcher (was "grenade launcher"), **decided 2026-10-25 (user)**: a new suit **ammo slot** in the menu (generic:
+  later tools may draw from it too) holding the TNT; each shot lobs a primed TNT block in an arc that **explodes on hit**
+  as real TNT (strength 4, breaks blocks; follows the TNT gamerule and claims, config switch); tap = one shot then ~1 s
+  reload, holding keeps firing once reloaded; the machine mind never fires it and rogues never carry it. Model: a revolver
+  drum, Team Fortress 2's grenade launcher as the inspiration. Round 1 drafts (hidden `proto_tnt_*`, rebuilt by
+  `model/art/tnt_drafts_art.py`): A demo (solid drum), B cage (open cylinder, four TNT rounds), C loaded (rounds in the
+  drum's corners), D wheel (drum magazine on the side); sheet `.scratch/tnt/round1_v2.jpg`.
 - [ ] Water cannon (extinguishes, pushes mobs, waters crops)
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
