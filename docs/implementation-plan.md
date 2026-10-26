@@ -227,7 +227,9 @@ Each tool: hidden `proto_*` drafts in Blockbench -> user picks -> game part (bon
   config, icon, recipe; 6 GameTests (132); `runAutopilotRail` (RailScene, `ap_rail_close_*`: the charge up close).
   Charge-up (user, same day): flowing core (3 phase masks), shake + prongs straining apart, tip sparks. Round 3 (user: "I
   like wide, but let's experiment with making it flat"): F3 picked (3 deep, core level with the prongs): the cockpit now
-  sees the core. The band clips the thigh 0.3-0.5 px in jump_charge/jump/land (B5: 0.65; known arm/thigh clips there).
+  sees the core. Then (user): the core see-through when off (energy, not LEDs: `make-glowmasks.py` SEE_THROUGH,
+  `SuitGlowLayer.energy`) and stepped, tapering prongs (round 4: T2 picked, 2.5 > 2 > 1.5 > a 1 px tip). The band clips the
+  thigh 0.3-0.5 px in jump_charge/jump/land (B5: 0.65; known arm/thigh clips there).
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint

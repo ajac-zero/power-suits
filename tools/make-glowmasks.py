@@ -62,7 +62,7 @@ GLOW = {
     H('16304a'): ('rail', H('1a5cc8')), H('1d3f5e'): ('rail', H('2f9cff')),
     H('254e73'): ('rail_flow_0', H('9ae8ff')), H('245079'): ('rail_flow_1', H('9ae8ff')), H('26507b'): ('rail_flow_2', H('9ae8ff')),
 }
-EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20, 'tidal': 4, 'reactor': 69, 'pilot': 6, 'rail': 246, 'rail_flow_0': 36, 'rail_flow_1': 36, 'rail_flow_2': 24}  # pixels per mask (fire: the backpack's painted firebox, 4 coals x 3 rows (backpack v3, 2026-10-20: the old firebox cube and its 8 vent slits are gone); the visor cube: 7x5 glass front + 59 on its
+EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20, 'tidal': 4, 'reactor': 69, 'pilot': 6, 'rail': 82, 'rail_flow_0': 12, 'rail_flow_1': 12, 'rail_flow_2': 8}  # pixels per mask (fire: the backpack's painted firebox, 4 coals x 3 rows (backpack v3, 2026-10-20: the old firebox cube and its 8 vent slits are gone); the visor cube: 7x5 glass front + 59 on its
 # other faces, plus 150 left in the texture from the old visor that no cube uses (2026-10-19 export: harmless, never drawn);
 # 2026-10-21 export: 540 = 236 of those + 304 on the hidden helmet drafts' faces (proto_helm_*: their visors are glass
 # too; since 2026-10-22 they're the helmet styles, helm_*, drawn when worn: their visors glow like the standard one; 8 old leftovers were painted over by the drafts); 2026-10-21 engine
@@ -73,8 +73,7 @@ EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core':
 # 2026-10-26 the rail cannon's drafts were packed over 6 never-drawn visor leftovers (441; checked: no texel a cube
 # draws changed);
 # rail (2026-10-26, flowing core; draft F3 since the same day, the drafts and the old core gone): the 3x8x3 core's edge
-# columns (4 x 16) and ends (18) = 82; rail_flow_*: its 4 x 8 ring texels by phase (12 / 12 / 8); x3 while the two
-# round-4 drafts (proto_rail_T1 / T2, tapered prongs) are in the texture;
+# columns (4 x 16) and ends (18) = 82; rail_flow_*: its 4 x 8 ring texels by phase (12 / 12 / 8) (prongs: draft T2);
 # pilot: the 1x1x1 tip of the flamethrower's pilot light, 6 faces;
 # tidal: the 2x2 porthole x 2 faces' worth (8); reactor: the core's ring + the canisters' glass strips (69);
 # 4 barrel sides x 2x2 tips; 4 barrel sides x 2x3 behind them + the front collar's 6x1x6 net, 96;

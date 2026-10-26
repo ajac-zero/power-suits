@@ -367,7 +367,7 @@ def tapered(pre, widths, depth=3, tip_w=1.0, tip_inset=.5, band_pad=.25):
 
 ROUND4 = {"proto_rail_T1_wide_base": tapered("pkRT1", [3.5, 2.5, 1.5]),
           "proto_rail_T2_taper": tapered("pkRT2", [2.5, 2.0, 1.5])}
-DRAFTS = ROUND4
+DRAFTS = ROUND4   # (user picked T2: its prongs are the game's since 2026-10-26, rail_prong_{out,in}_0..3)
 REMOVED = []
 
 if __name__ == "__main__":
