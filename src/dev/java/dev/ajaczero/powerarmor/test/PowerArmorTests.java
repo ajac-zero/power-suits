@@ -1535,11 +1535,11 @@ public final class PowerArmorTests {
     public static void visorShowsWhoIsInControl(GameTestHelper helper) {
         var friendly = dev.ajaczero.powerarmor.entity.SuitMind.FRIENDLY;
         var rogue = dev.ajaczero.powerarmor.entity.SuitMind.ROGUE;
-        float[] piloted = PowerArmorEntity.visorColorFor(true, friendly);
-        float[] green = PowerArmorEntity.visorColorFor(false, friendly);
-        float[] red = PowerArmorEntity.visorColorFor(false, rogue);
+        float[] piloted = dev.ajaczero.powerarmor.entity.SuitLights.visorColorFor(true, friendly);
+        float[] green = dev.ajaczero.powerarmor.entity.SuitLights.visorColorFor(false, friendly);
+        float[] red = dev.ajaczero.powerarmor.entity.SuitLights.visorColorFor(false, rogue);
         helper.assertTrue(piloted[0] > 0.9F && piloted[1] > 0.5F && piloted[2] < 0.4F, "piloted = amber");
-        helper.assertTrue(PowerArmorEntity.visorColorFor(true, rogue) == piloted, "a pilot's visor is amber, whatever the mind");
+        helper.assertTrue(dev.ajaczero.powerarmor.entity.SuitLights.visorColorFor(true, rogue) == piloted, "a pilot's visor is amber, whatever the mind");
         helper.assertTrue(green[1] > green[0] && green[1] > green[2], "friendly mind = green");
         helper.assertTrue(red[0] > 0.9F && red[1] < 0.3F, "rogue = red");
         helper.succeed();

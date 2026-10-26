@@ -115,9 +115,9 @@ final class GaitScene {
         Vec3 fwdDir = new Vec3(-Mth.sin(b), 0, Mth.cos(b));
         Vec3 rightDir = new Vec3(-Mth.cos(b), 0, -Mth.sin(b));
         double fwd = v.dot(fwdDir), lat = v.dot(rightDir);
-        String anim = suit.getMovementAnimationName();
-        double rate = suit.getMovementAnimationRate();
-        double expected = suit.getSteppedSpeed(); // the planted foot pushes the suit along the legs at this speed
+        String anim = suit.animator().getMovementAnimationName();
+        double rate = suit.animator().getMovementAnimationRate();
+        double expected = suit.animator().getSteppedSpeed(); // the planted foot pushes the suit along the legs at this speed
         double slip = Math.hypot(fwd - expected, lat);
         try {
             csv.write(String.format(Locale.ROOT, "%d,%s,%s,%s,%.3f,%b,%.1f,%.1f,%.1f,%.1f,%.3f,%.3f,%.3f,%.3f,%.3f%n", s, phase,

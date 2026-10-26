@@ -90,7 +90,7 @@ public final class SuitSounds {
         if (sound == null) {
             return;
         }
-        float load = Math.min(1F, suit.engineLoad()); // 0 standing .. 1 sprinting
+        float load = Math.min(1F, suit.animator().engineLoad()); // 0 standing .. 1 sprinting
         float chance = 1F / Mth.lerp(load, 140F, 60F);
         if (RANDOM.nextFloat() >= chance) {
             return;

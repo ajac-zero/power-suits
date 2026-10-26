@@ -144,7 +144,7 @@ public final class TerrainPilot {
             return;
         }
         float partial = (float) event.getPartialTick();
-        double model = Mth.lerp(partial, suit.yOld, suit.getY()) + suit.getStepOffset(partial);
+        double model = Mth.lerp(partial, suit.yOld, suit.getY()) + suit.animator().getStepOffset(partial);
         try {
             frames.write(String.format(Locale.ROOT, "%d,%.3f,%.4f,%.4f%n", tick, partial, mc.player.getEyePosition(partial).y - model, model));
         } catch (IOException e) {
@@ -162,7 +162,7 @@ public final class TerrainPilot {
         try {
             csv.write(String.format(Locale.ROOT, "%d,%s,%.2f,%.3f,%.2f,%.2f,%.2f,%b,%d,%s,%.2f,%b,%.3f%n", t, phase,
                     suit.getX(), suit.getY(), suit.getZ(), Math.hypot(dx, dz) * 20, dy * 20, suit.onGround(),
-                    suit.getAirTicks(), suit.getMovementAnimationName(), suit.getHipBob(), suit.horizontalCollision, Minecraft.getInstance().player.getEyeY()));
+                    suit.animator().getAirTicks(), suit.animator().getMovementAnimationName(), suit.animator().getHipBob(), suit.horizontalCollision, Minecraft.getInstance().player.getEyeY()));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[terrain] csv", e);
         }

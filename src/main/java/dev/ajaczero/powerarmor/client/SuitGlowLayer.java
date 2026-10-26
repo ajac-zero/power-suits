@@ -80,14 +80,14 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
     public void addRenderData(PowerArmorEntity suit, @Nullable Void ignored, LivingEntityRenderState state, float partialTick) {
         float time = (float) ClientUtil.getCurrentTick(partialTick);
         // Coals: a slow uneven flicker (two sines that never line up), deeper when the engine works hard.
-        float fire = suit.getFireGlow() * (0.86F + 0.08F * Mth.sin(time * 0.37F + suit.getId()) + 0.06F * Mth.sin(time * 1.31F));
-        float[] visor = suit.getVisorColor();
-        float on = suit.getVisorFlicker(time);
+        float fire = suit.lights().getFireGlow() * (0.86F + 0.08F * Mth.sin(time * 0.37F + suit.getId()) + 0.06F * Mth.sin(time * 1.31F));
+        float[] visor = suit.lights().getVisorColor();
+        float on = suit.lights().getVisorFlicker(time);
         int[] suitTints = {
                 tint(fire, 1F, 1F, 1F),
                 tint(on, visor[0], visor[1], visor[2]),
-                tint(suit.getTidalGlow(time), 1F, 1F, 1F),
-                tint(suit.getReactorGlow(time), 1F, 1F, 1F)};
+                tint(suit.lights().getTidalGlow(time), 1F, 1F, 1F),
+                tint(suit.lights().getReactorGlow(time), 1F, 1F, 1F)};
         int[] toolTints = toolTints(suit, time, partialTick);
         int[] tints = java.util.Arrays.copyOf(suitTints, suitTints.length + toolTints.length);
         System.arraycopy(toolTints, 0, tints, suitTints.length, toolTints.length);

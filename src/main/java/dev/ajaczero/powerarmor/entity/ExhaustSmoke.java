@@ -35,8 +35,8 @@ final class ExhaustSmoke {
             return; // only the firebox has exhausts (design sec. 4b)
         }
         RandomSource random = suit.getRandom();
-        boolean sprinting = suit.getControllingPassenger() instanceof Player pilot && pilot.isSprinting() && suit.getVisualSpeed() > 0.3;
-        boolean moving = suit.getVisualSpeed() > 0.3;
+        boolean sprinting = suit.getControllingPassenger() instanceof Player pilot && pilot.isSprinting() && suit.animator().getVisualSpeed() > 0.3;
+        boolean moving = suit.animator().getVisualSpeed() > 0.3;
         int interval = sprinting ? 1 : moving ? 2 : 7;
         if (suit.tickCount % interval != 0) {
             return;
@@ -65,7 +65,7 @@ final class ExhaustSmoke {
             return;
         }
         RandomSource random = suit.getRandom();
-        float load = Math.min(1F, suit.engineLoad());
+        float load = Math.min(1F, suit.animator().engineLoad());
         if (random.nextFloat() < 0.35F + 0.5F * load) {
             puff(suit, ParticleTypes.BUBBLE, 1, 0.06 + 0.06 * load, VALVE_UP);
         }
@@ -104,16 +104,16 @@ final class ExhaustSmoke {
             return; // (shared code: asks the client through ClientView, never Minecraft.getInstance() directly)
         }
         RandomSource random = suit.getRandom();
-        float load = Math.min(1F, suit.engineLoad());
+        float load = Math.min(1F, suit.animator().engineLoad());
         if (random.nextFloat() >= 0.4F + 0.3F * load) {
             return;
         }
-        float yaw = Mth.rotLerp(suit.getAimBlend(), suit.yBodyRot, suit.getYHeadRot()) * Mth.DEG_TO_RAD;
+        float yaw = Mth.rotLerp(suit.animator().getAimBlend(), suit.yBodyRot, suit.getYHeadRot()) * Mth.DEG_TO_RAD;
         Vec3 forward = new Vec3(-Mth.sin(yaw), 0, Mth.cos(yaw));
         Vec3 side = new Vec3(forward.z, 0, -forward.x);
         int which = random.nextBoolean() ? 1 : -1;
         // a point on a canister's glass (its outer side or its back), somewhere up its height
-        Vec3 glass = suit.position().add(0, GLASS_UP + suit.getStepOffset(1F) + (random.nextDouble() - 0.5) * 0.3, 0)
+        Vec3 glass = suit.position().add(0, GLASS_UP + suit.animator().getStepOffset(1F) + (random.nextDouble() - 0.5) * 0.3, 0)
                 .subtract(forward.scale(PIPE_BACK + random.nextDouble() * 0.12)).add(side.scale(which * (GLASS_SIDE - random.nextDouble() * 0.12)));
         // where the speck starts, relative to the glass: out to the side or back, and up (cancelling most of the 1 block)
         Vec3 out = side.scale(which * (0.15 + random.nextDouble() * 0.35)).subtract(forward.scale(random.nextDouble() * 0.3));
@@ -130,10 +130,10 @@ final class ExhaustSmoke {
         Level level = suit.level();
         RandomSource random = suit.getRandom();
         // The pipes are on the torso, which turns toward the pilot's view (yHeadRot) from the legs (yBodyRot).
-        float yaw = Mth.rotLerp(suit.getAimBlend(), suit.yBodyRot, suit.getYHeadRot()) * Mth.DEG_TO_RAD;
+        float yaw = Mth.rotLerp(suit.animator().getAimBlend(), suit.yBodyRot, suit.getYHeadRot()) * Mth.DEG_TO_RAD;
         Vec3 forward = new Vec3(-Mth.sin(yaw), 0, Mth.cos(yaw));
         Vec3 side = new Vec3(forward.z, 0, -forward.x);
-        Vec3 base = suit.position().add(0, up + suit.getStepOffset(1F), 0).subtract(forward.scale(PIPE_BACK));
+        Vec3 base = suit.position().add(0, up + suit.animator().getStepOffset(1F), 0).subtract(forward.scale(PIPE_BACK));
         Vec3 motion = suit.getDeltaMovement();
         for (int pipe = -1; pipe <= 1; pipe += 2) {
             Vec3 top = base.add(side.scale(pipe * sideDist));

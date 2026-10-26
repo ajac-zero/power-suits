@@ -92,7 +92,7 @@ public final class PilotView {
     public static void jumpCharge(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && mc.player.getVehicle() instanceof PowerArmorEntity suit) {
-            suit.setClientJumpCharge(mc.options.keyJump.isDown() ? Math.max(0.01F, mc.player.getJumpRidingScale()) : 0F);
+            suit.animator().setClientJumpCharge(mc.options.keyJump.isDown() ? Math.max(0.01F, mc.player.getJumpRidingScale()) : 0F);
         }
     }
 
@@ -104,7 +104,7 @@ public final class PilotView {
     @SubscribeEvent
     public static void speedFov(ComputeFovModifierEvent event) {
         if (event.getPlayer().getVehicle() instanceof PowerArmorEntity suit) {
-            float speed01 = (float) Mth.clamp(suit.getVisualSpeed() / 10.0, 0.0, 1.0);
+            float speed01 = (float) Mth.clamp(suit.animator().getVisualSpeed() / 10.0, 0.0, 1.0);
             event.setNewFovModifier(event.getNewFovModifier() * (1.0F + 0.08F * speed01));
         }
     }

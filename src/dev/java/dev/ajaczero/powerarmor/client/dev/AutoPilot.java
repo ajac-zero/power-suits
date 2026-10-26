@@ -401,7 +401,7 @@ public final class AutoPilot {
             waterCsv.write(String.format(java.util.Locale.ROOT, "%d,%.2f,%.3f,%.2f,%.2f,%b,%b,%b,%d,%.1f,%s,%.1f,%b,%s%n", t, suit.getZ() - waterStartZ,
                     suit.getY(), Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20, (suit.getY() - suit.yo) * 20,
                     suit.onGround(), suit.isInWater(), mc.player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER),
-                    mc.player.getAirSupply(), mc.player.getHealth(), suit.getMovementAnimationName(), suit.getHealth(), suit.isPowered(), suit.getEngine()));
+                    mc.player.getAirSupply(), mc.player.getHealth(), suit.animator().getMovementAnimationName(), suit.getHealth(), suit.isPowered(), suit.getEngine()));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] water csv", e);
         }
@@ -713,7 +713,7 @@ public final class AutoPilot {
             mineCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s%n", t,
                     net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(fuelSuit.getSocketStack().getItem()).getPath(),
                     fuelSuit.socket().getUses(), fuelSuit.power().getTotalEnergy(), face, logs, drops,
-                    mc.player.getVehicle() instanceof PowerArmorEntity s ? s.getMovementAnimationName() : "-", aimed, toolAnim, dev.ajaczero.powerarmor.client.SuitSounds.activeLoops()));
+                    mc.player.getVehicle() instanceof PowerArmorEntity s ? s.animator().getMovementAnimationName() : "-", aimed, toolAnim, dev.ajaczero.powerarmor.client.SuitSounds.activeLoops()));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] mine csv", e);
         }
@@ -765,7 +765,7 @@ public final class AutoPilot {
                 .reduce((a, b) -> a + "/" + b).orElse("");
         try {
             cannonCsv.write(String.format(java.util.Locale.ROOT, "%d,%d,%d,%b,%s,%s,%.2f,%.2f%n", t, fuelSuit.socket().getUses(), fuelSuit.power().getTotalEnergy(),
-                    fuelSuit.socket().isTriggerHeld(), health, mc.player.getVehicle() instanceof PowerArmorEntity s ? s.getMovementAnimationName() : "-",
+                    fuelSuit.socket().isTriggerHeld(), health, mc.player.getVehicle() instanceof PowerArmorEntity s ? s.animator().getMovementAnimationName() : "-",
                     fuelSuit.socket().getSpin(), fuelSuit.socket().getHeat()));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] cannon csv", e);
@@ -810,7 +810,7 @@ public final class AutoPilot {
         try {
             fuelCsv.write(String.format(java.util.Locale.ROOT, "%d,%d,%d,%s,%b,%b,%.2f,%s,%b%n", t, suit.power().getBurnLeft(), suit.power().getTotalEnergy(),
                     suit.getFuelStack().getCount() + "x" + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(suit.getFuelStack().getItem()).getPath(),
-                    suit.isPowered(), suit.canOperate(), Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20, suit.getMovementAnimationName(),
+                    suit.isPowered(), suit.canOperate(), Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20, suit.animator().getMovementAnimationName(),
                     suit.isPilotedBy(mc.player)));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] fuel csv", e);
@@ -1429,7 +1429,7 @@ public final class AutoPilot {
             faceLeft += mc.level.getBlockState(p).isAir() ? 0 : 1;
         }
         int drops = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(b).inflate(8)).size();
-        float[] visor = client.getVisorColor();
+        float[] visor = client.lights().getVisorColor();
         // What this client draws: the torso twists by (head - legs), clamped to +-90 (PowerArmorRenderer.aim), so the
         // torso faces drawnYaw. aimErr: how far that is from where the mind aims (its target point), degrees.
         float twist = net.minecraft.util.Mth.wrapDegrees(client.getYHeadRot() - client.yBodyRot);
@@ -1440,7 +1440,7 @@ public final class AutoPilot {
         try {
             mindCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%s,%.1f,%.1f,%.1f,%b,%.2f,%d,%d,%d,%.2f,%.2f,%.2f,%b,%s,%.2f,%s,%d,%d,%d,%.1f,%s,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%s%n",
                     m, mindPhase, server.getX() - (b.getX() + 0.5), server.getZ() - (b.getZ() + 0.5),
-                    Math.hypot(server.getX() - server.xo, server.getZ() - server.zo) * 20, server.isAiDriven(), client.getMovementAnimationName(),
+                    Math.hypot(server.getX() - server.xo, server.getZ() - server.zo) * 20, server.isAiDriven(), client.animator().getMovementAnimationName(),
                     server.getYHeadRot(), server.yBodyRot, server.getXRot(), server.socket().isActive(), client.socketVisuals().raise(1F), faceLeft, drops,
                     server.power().getTotalEnergy(), visor[0], visor[1], visor[2], server.getNavigation().isDone(),
                     server.runningGoalNames(), server.getOwner() == null ? -1F : server.distanceTo(server.getOwner()),
@@ -1620,7 +1620,7 @@ public final class AutoPilot {
             var last = server.getLastDamageSource();
             mechCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%b,%s,%b,%b,%b,%.1f,%b,%.1f,%b,%b,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%b,%s,%.1f,%.2f,%b,%d,%b,%s%n",
                     m, mechPhase, suit.getZ() - mechBase.getZ(), suit.getY() - mechBase.getY(), Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20,
-                    suit.onGround(), mc.player.isSprinting(), suit.getMovementAnimationName(), server.isPowered(), server.isStunned(), server.canOperate(),
+                    suit.onGround(), mc.player.isSprinting(), suit.animator().getMovementAnimationName(), server.isPowered(), server.isStunned(), server.canOperate(),
                     server.getHealth(), server.isOnFire(), pilot == null ? -1F : pilot.getHealth(), pilot != null && pilot.isOnFire(),
                     pilot != null && pilot.hasEffect(net.minecraft.world.effect.MobEffects.POISON), pilot == null ? -1 : pilot.getAirSupply(),
                     server.power().getTotalEnergy(), panes, leaves, glass, ice, snow, drops, server.lastStompVictims, mobs,

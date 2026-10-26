@@ -78,9 +78,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     // 10, but legs this long can't cover 5 blocks/s walking: the walk was really a run (both feet off the ground each
     // step) with the hips dropped 3.6 px and the knees bent to 128 degrees. From 2026-10-19 the game walked at the walk
     // animation's own speed (walk v6: 1.0 s cycle, 22 px stance = 2.218 blocks/s); since 2026-10-20 the step rate follows
-    // the real speed (movementAnimationRate), so the walk is a game choice: 3.0 (user: half a player's 4.3 was too slow to
+    // the real speed (SuitAnimator.movementAnimationRate), so the walk is a game choice: 3.0 (user: half a player's 4.3 was too slow to
     // get anywhere; the walk steps 1.35x its authored cadence). The sprint stays at the run's own 6.25.
-    private static final double WALK_ANIM_AUTHORED = 2.218;
     /** The walk on flat ground, blocks/s (tests compare against it). */
     public static final double WALK_BLOCKS_PER_SECOND = 3.0;
     private static final double WALK_SPEED = WALK_BLOCKS_PER_SECOND / BLOCKS_PER_SECOND_PER_SPEED; // 0.0695 (a player walks at 4.3)
@@ -89,28 +88,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Ground speed (blocks/s) between the walk and the sprint: the mind, which has no sprint key, runs above it. */
     static final double RUN_THRESHOLD = 4.5;
 
-    // The ground speed each Blockbench animation was authored for (blocks/s, measured from the
-    // planted foot). Playing them at (real speed along the legs) / authoredSpeed keeps the feet from sliding.
-    private static final double RUN_ANIM_AUTHORED = 6.249;
-    /** Step-rate limits: below, a near-stop would freeze mid-step; above, a walk would flail before the run takes over. */
-    private static final double MIN_STEP_RATE = 0.25, MAX_STEP_RATE = 2.2;
-    /** Smoothed speed along the legs below this (blocks/s, backwards) plays the walk in reverse. */
-    private static final double BACKING_UP_SPEED = -0.3;
-
-    /** Average hip height (model px) of the walk / run cycles: yHip mean in a_walk.js / a_run.js. */
-    private static final float WALK_HIP_MEAN = -0.29F;
-    private static final float RUN_HIP_MEAN = -0.3F;
-
     // ---- Terrain ----------------------------------------------------------------------------
     /** Walking off a ledge up to this high keeps the suit planted (steps down instead of falling).
      *  2 blocks: a 3-block-tall mech steps down mountain terraces; the step easing smooths it. */
-    private static final double STEP_DOWN = 2.1;
+    static final double STEP_DOWN = 2.1;
 
     // ---- Water (Fallout-style: the suit sinks and walks along the bottom) ----------------------
     /** Speed on the bottom relative to dry land. */
-    private static final float UNDERWATER_SPEED = 0.5F;
+    static final float UNDERWATER_SPEED = 0.5F;
     /** Lava is thicker: the suit wades through it (and its hull burns) at a third of its speed. */
-    private static final float LAVA_SPEED = 0.35F;
+    static final float LAVA_SPEED = 0.35F;
     /** Steering while sinking / rising, relative to UNDERWATER_SPEED. */
     private static final float UNDERWATER_AIR_CONTROL = 0.3F;
     /** Downward acceleration per tick and the vertical drag: terminal sink ~2.8 blocks/s. */
@@ -121,21 +108,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Jumps underwater are pushing off against water. */
     private static final double UNDERWATER_JUMP_SCALE = 0.6;
 
-    // ---- Airborne tuning (client-side animation only) ----------------------------------------
-    /** Ticks in the air before switching to the fall pose (stepping off one block shouldn't). */
-    private static final int FALL_POSE_AFTER_TICKS = 6;
-    /** Ticks in the air needed to play the heavy landing (a jump, or a drop of ~2+ blocks). */
-    private static final int LAND_AFTER_TICKS = 10;
-    /** Length of the land animation (0.6 s), and how much of it to keep when walking away. */
-    private static final int LAND_TICKS = 12;
-    private static final int LAND_TICKS_WHILE_MOVING = 5;
-
     // ---- Jumping ---------------------------------------------------------------------------
     /** Delay between releasing jump and leaving the ground, so the push-off in the jump animation
      *  (crouch -> legs extend at 0.1 s) happens while the feet are still on the ground. */
     private static final int LAUNCH_DELAY_TICKS = 2;
-    /** How long the jump animation is forced after release, covering the delay + takeoff. */
-    private static final int JUMP_ANIM_HOLD_TICKS = 6;
 
     // ---- Turning (legs vs torso) ---------------------------------------------------------------
     /** The torso can twist this far from the legs before the legs are dragged along. */
@@ -150,7 +126,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** Synced to every client: bumped by the server each time the pilot releases jump, so other
      *  players see the jump animation start at the same moment as the pilot does. */
-    private static final EntityDataAccessor<Integer> JUMP_COUNTER =
+    static final EntityDataAccessor<Integer> JUMP_COUNTER =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
 
     // ---- Fuel (works like a furnace, see SuitFuel) ---------------------------------------------
@@ -241,14 +217,18 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     static final EntityDataAccessor<Boolean> FREE_POWER =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
 
-    /** The suit's own slots: fuel, the left-arm socket, the helmet, the engine and the ammo. Real contents only exist on
-     *  the server. Old saves load fine with fewer: each saved item carries its slot number. */
     /** The engine and its energy (fuel, flooding, free power, the lightning knock-out): see SuitPower. */
     private final SuitPower power = new SuitPower(this);
     /** The socket tool as the suit works it (trigger, cooldown, synced spin/shots...): see SuitSocket. */
     private final SuitSocket socket = new SuitSocket(this);
     /** Client: how this client draws the socket tool (raise, recoil, the tool's ToolEffects): see SocketVisuals. */
     private final SocketVisuals socketVisuals = new SocketVisuals(this);
+    /** Client: motion bookkeeping and the animation choice (gaits, jumps, landings, step easing): see SuitAnimator. */
+    private final SuitAnimator animator = new SuitAnimator(this);
+    /** Client: the fire, the visor, the engines' glass, lightning sparks: see SuitLights. */
+    private final SuitLights lights = new SuitLights(this);
+    /** The suit's own slots: fuel, the left-arm socket, the helmet, the engine and the ammo. Real contents only exist on
+     *  the server. Old saves load fine with fewer: each saved item carries its slot number. */
     private final SimpleContainer inventory = new SimpleContainer(5) {
         @Override
         public void setChanged() {
@@ -263,15 +243,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** The suit was already off when we first saw it: hold the slumped pose instead of playing the slump. */
     private boolean wasOffWhenLoaded;
     private int startupTicks;
-    /** Client: the pilot's arm was mid-swing last tick (to catch the start of each swing). */
-    private boolean pilotWasSwinging;
-    /** Client: 0..1, how much the torso follows the pilot's view (eases out on shutdown, in after startup). */
-    private float aimBlend;
-    /** Client: the lights (SuitGlowLayer). Fire 0..1; visor brightness 0..1 and colour; ticks the visor stays red after a hit. */
-    private float fireGlow, visorLevel;
-    /** Client: the tidal engine's / star reactor's glass, 0 (dark) .. 1 (running), eased like the fire. */
-    private float engineGlow;
-    private final float[] visorColor = {1F, 0.68F, 0.22F};
     /** Server: the machine mind's owner (the last pilot, or who deployed it) and home (where the pilot got out). Not
      *  synced: only the server-side AI uses them. */
     @Nullable
@@ -282,38 +253,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private Vec3 aiAim;
     /** Server: when the seal last paid for keeping fire/frost out (SuitSeal: once per half second, like hit immunity). */
     public int lastSealTick = -100;
-    /** Client: ticks since the lightning knock-out began (sparks fly for the first second). */
-    private int sparkTicks = -1;
 
     /** Ticks to stay around after dying so the death animation (2.68 s) can finish. */
     private static final int DEATH_TICKS = 60;
-
-    // ---- Animations (names from the exported Blockbench animation file) --------------------
-    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.power_armor.idle");
-    private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.power_armor.walk");
-    /** The walk with its keys reversed in time (made in Blockbench from the walk): backing up steps backwards. */
-    private static final RawAnimation WALK_BACK = RawAnimation.begin().thenLoop("animation.power_armor.walk_back");
-    private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_armor.run");
-    private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.power_armor.death");
-    private static final RawAnimation HIT = RawAnimation.begin().thenPlay("animation.power_armor.hit");
-    // jump plays once (push-off + tuck) and flows straight into the airborne loop
-    private static final RawAnimation JUMP = RawAnimation.begin().thenPlay("animation.power_armor.jump").thenLoop("animation.power_armor.fall");
-    private static final RawAnimation FALL = RawAnimation.begin().thenLoop("animation.power_armor.fall");
-    private static final RawAnimation LAND = RawAnimation.begin().thenPlay("animation.power_armor.land");
-    private static final RawAnimation JUMP_CHARGE = RawAnimation.begin().thenPlayAndHold("animation.power_armor.jump_charge");
-    // Out of fuel: slump and hold. powered_off is the last frame of shutdown, for suits that were already off.
-    private static final RawAnimation SHUTDOWN = RawAnimation.begin().thenPlayAndHold("animation.power_armor.shutdown");
-    private static final RawAnimation POWERED_OFF = RawAnimation.begin().thenPlayAndHold("animation.power_armor.powered_off");
-    private static final RawAnimation STARTUP = RawAnimation.begin().thenPlay("animation.power_armor.startup");
-    // Struck by lightning: convulse (the electrified loop, played once) and then slump like an empty tank. thenPlay would
-    // use the JSON's loop setting ("loop": true for electrified) and convulse forever; PLAY_ONCE moves on to the slump.
-    private static final RawAnimation ZAPPED = RawAnimation.begin()
-            .then("animation.power_armor.electrified", com.geckolib.animation.object.LoopType.PLAY_ONCE)
-            .thenPlayAndHold("animation.power_armor.shutdown");
-    private static final RawAnimation TOOL_RECOIL = RawAnimation.begin().thenPlay("animation.power_armor.tool_recoil");
-    // Right hand (a_hand.js): carry pose while the pilot holds something, quick reach on every use.
-    private static final RawAnimation HOLD_ITEM = RawAnimation.begin().thenLoop("animation.power_armor.hold_item");
-    private static final RawAnimation USE_ITEM = RawAnimation.begin().thenPlay("animation.power_armor.use_item");
 
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
 
@@ -323,21 +265,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private int launchDelay;
     /** Legs are turning to catch up with the torso while standing still. */
     private boolean realigning;
-    /** Client only: smoothed horizontal speed in blocks per second, used to pick walk/run/idle. */
-    private double visualSpeed;
-    /** Client only: the same along the legs (where the boots point; negative = backing up), for the step rate. */
-    private double visualForward;
-    /** Client only: vertical offset (blocks) that eases the camera and model over step-ups/downs. */
-    private final StepSmoothing steps = new StepSmoothing(STEP_DOWN);
-    /** Client only: airborne bookkeeping for the jump / fall / land animations. */
-    private int airTicks;
-    private boolean jumped;
-    private int landTicks;
-    /** Client only: jump bar charge of the local pilot while holding space (set by PilotView). */
-    private float clientJumpCharge;
-    /** Client only: forces the jump animation for a few ticks after release. */
-    private int jumpAnimTicks;
-    private int lastJumpCounter;
 
     public PowerArmorEntity(EntityType<? extends PowerArmorEntity> type, Level level) {
         super(type, level);
@@ -707,6 +634,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.socketVisuals;
     }
 
+    /** Client: how the suit moves and animates on this client. */
+    public SuitAnimator animator() {
+        return this.animator;
+    }
+
+    /** Client: the suit's own lights. */
+    public SuitLights lights() {
+        return this.lights;
+    }
+
     /** Server, every tick: a rogue always wears a helmet and a backpack, whatever made it. */
     private void equipRogue() {
         if (this.isRogue() && this.inventory.getItem(HELMET_SLOT).isEmpty()) {
@@ -873,6 +810,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return true;
     }
 
+    /** Both sides: ticks left of the stand-up after power returns (the suit can't move yet). */
+    int startupTicks() {
+        return this.startupTicks;
+    }
+
+    /** Both sides: the suit was already off when this side first saw it (hold the slumped pose, don't play the slump). */
+    boolean wasOffWhenLoaded() {
+        return this.wasOffWhenLoaded;
+    }
+
     /** Both sides: watch the synced power flag change, to start the slump / stand-up animations. */
     private void tickPowerTransitions() {
         boolean powered = this.isPowered();
@@ -895,11 +842,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (!this.canOperate()) {
             this.pendingJump = 0;
         }
-    }
-
-    /** Client: 0..1 weight of the torso following the pilot's view. */
-    public float getAimBlend() {
-        return this.aimBlend;
     }
 
     /** Sneak + right-click on a parked suit: open its inventory. Server only. */
@@ -1192,131 +1134,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
     }
 
-    /** Client/dev: ticks spent airborne (animation bookkeeping). */
-    public int getAirTicks() {
-        return this.airTicks;
-    }
-
-    /** Client/dev: name of the animation the movement controller is playing, or "-". */
-    public String getMovementAnimationName() {
-        var manager = this.animationCache.getManagerForId(this.getId());
-        var controller = manager == null ? null : manager.getAnimationControllers().get("movement");
-        var current = controller == null ? null : controller.getCurrentAnimationPoint();
-        return current == null ? "-" : current.animation().name().replace("animation.power_armor.", "");
-    }
-
     // ---- Lights (client): the firebox and the visor, drawn by SuitGlowLayer -----------------------------
 
-    private static final float[] VISOR_GREEN = {0.35F, 1F, 0.45F}, VISOR_AMBER = {1F, 0.68F, 0.22F}, VISOR_RED = {1F, 0.12F, 0.08F};
-
-    /** Client, every tick: ease the lights toward what the suit is doing. The fire flares up quickly and dies down
-     *  slowly (embers); the visor shows who is in control: amber = a pilot (whatever they do), green = the friendly
-     *  machine mind, red = a rogue mind (only rogues: so a red visor always means danger), dark = powered off. */
-    private void tickLights() {
-        boolean powered = this.isPowered();
-        float fireTarget = powered ? (0.6F + 0.4F * Math.min(1F, this.engineLoad())) * (this.power.isLowOnFuel() ? 0.7F : 1F) : 0F;
-        this.fireGlow += (fireTarget - this.fireGlow) * (fireTarget > this.fireGlow ? 0.2F : 0.03F);
-        float[] target = visorColorFor(this.isVehicle(), this.getMind());
-        for (int i = 0; i < 3; i++) {
-            this.visorColor[i] += (target[i] - this.visorColor[i]) * 0.25F;
-        }
-        float levelTarget = powered ? 1F : 0F;
-        this.visorLevel += (levelTarget - this.visorLevel) * (powered ? 0.3F : 0.08F);
-        // The tidal engine's and the reactor's glass light up while they run (the firebox has its fire above).
-        float engineTarget = powered && this.getEngine() != SuitEngine.FIREBOX ? 1F : 0F;
-        this.engineGlow += (engineTarget - this.engineGlow) * (engineTarget > this.engineGlow ? 0.15F : 0.05F);
-    }
-
-    /** Client: the Heart of the Sea in the tidal engine's porthole: a slow shimmer, like light through water. */
-    public float getTidalGlow(float time) {
-        if (this.getEngine() != SuitEngine.TIDAL) {
-            return 0F;
-        }
-        return this.engineGlow * (0.82F + 0.1F * Mth.sin(time * 0.21F + this.getId()) + 0.08F * Mth.sin(time * 0.57F));
-    }
-
-    /** Client: the star reactor's energy: a slow, deep pulse that never quite goes out. */
-    public float getReactorGlow(float time) {
-        if (this.getEngine() != SuitEngine.REACTOR) {
-            return 0F;
-        }
-        float pulse = Mth.sin(time * 0.12F + this.getId());
-        return this.engineGlow * (0.78F + 0.22F * pulse * pulse);
-    }
-
-    /** Client: firebox glow, 0 (cold) .. 1 (roaring). */
-    public float getFireGlow() {
-        return this.fireGlow;
-    }
-
-    /** The visor colour each state eases toward: the pilot's amber beats the mind's colour. */
-    public static float[] visorColorFor(boolean piloted, SuitMind mind) {
-        return piloted ? VISOR_AMBER : mind == SuitMind.ROGUE ? VISOR_RED : VISOR_GREEN;
-    }
-
-    /** Client: the visor's colour (r, g, b, 0..1). */
-    public float[] getVisorColor() {
-        return this.visorColor;
-    }
-
-    /** Client: the visor's brightness at this moment: stutters while the engine starts or dies, and drops out now
-     *  and then when the fuel runs low (time in ticks, with the partial tick). */
-    public float getVisorFlicker(float time) {
-        float level = this.visorLevel;
-        boolean unsteady = this.startupTicks > 0 || (!this.isPowered() && level > 0.02F);
-        if (unsteady && Mth.sin(time * 2.1F + this.getId()) + Mth.sin(time * 3.7F) < -0.4F) {
-            return level * 0.2F;
-        }
-        if (this.isPowered() && this.power.isLowOnFuel() && Mth.sin(time * 0.9F) * Mth.sin(time * 2.3F) > 0.6F) {
-            return level * 0.3F;
-        }
-        return level;
-    }
-
-    /** Client: how hard the engine works, 0 idle .. 1 sprinting, +0.3 while a tool runs (engine sound). */
-    public float engineLoad() {
-        float load = this.isWalking() ? (this.isRunning() ? 1F : 0.55F) : 0F;
-        return this.socket.isRunning() ? load + 0.3F : load;
-    }
-
-    /** Client: smoothed ground speed in blocks/s (for camera effects). */
-    public double getVisualSpeed() {
-        return this.visualSpeed;
-    }
-
-    /** Client: how far the animated hips are below/above the gait's average this frame (model px). */
-    private float hipBob;
-    /** Client: when setHipHeight last ran (System.nanoTime), so the easing goes by time, not by frames. */
-    private long hipBobAt;
-
-    /**
-     * Client: called by the renderer every frame with the root bone's animated height (PowerArmorRenderer.aim). Only the
-     * walk and run cycles bob the cockpit viewmodel (CockpitHands.bob), measured against their own average hip height
-     * (from the specs).
-     *
-     * This is the one place where drawing writes back into the entity (GeckoLib 5 otherwise only reads a snapshot of it):
-     * the hip height exists only in the posed model, and nothing else needs it. The easing goes by elapsed time: it used
-     * to move 35% of the way per call, so it followed the hips faster at 144 fps than at 60 and jumped again whenever the
-     * suit was drawn twice in a frame (the menu's preview). Now 35% per 1/60 s, and a second call in a frame does nothing.
-     */
-    public void setHipHeight(float y) {
-        String anim = this.getMovementAnimationName();
-        float target = switch (anim) {
-            case "walk", "walk_back" -> y - WALK_HIP_MEAN;
-            case "run" -> y - RUN_HIP_MEAN;
-            default -> 0F;
-        };
-        long now = System.nanoTime();
-        // elapsed time in 60ths of a second (capped: after a pause or with the suit off screen, just catch up)
-        float frames = this.hipBobAt == 0L ? 1F : Math.min(30F, (now - this.hipBobAt) * 60F / 1.0E9F);
-        this.hipBobAt = now;
-        float ease = 1F - (float) Math.pow(0.65, frames);
-        this.hipBob += (target - this.hipBob) * ease; // eases in/out when the gait changes
-    }
-
-    public float getHipBob() {
-        return this.hipBob;
-    }
 
     /** Client: true while the legs are shuffling round to face the view (plays a step cycle). */
     public boolean isRealigning() {
@@ -1421,7 +1240,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (jumpPower > 0 && this.onGround()) {
             this.pendingJump = jumpPower >= 90 ? 1.0F : 0.4F + 0.6F * jumpPower / 90.0F;
             this.launchDelay = LAUNCH_DELAY_TICKS;
-            this.jumpAnimTicks = JUMP_ANIM_HOLD_TICKS;
+            this.animator.jumpStarted();
         }
     }
 
@@ -1441,11 +1260,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public void handleStartJump(int jumpPower) {
         this.entityData.set(JUMP_COUNTER, this.entityData.get(JUMP_COUNTER) + 1);
         this.power.consume(PowerArmorConfig.JUMP_ENERGY.get()); // nothing for a wet tidal engine or a reactor
-    }
-
-    /** Client: the local pilot's jump bar charge (0 = not charging). */
-    public void setClientJumpCharge(float charge) {
-        this.clientJumpCharge = charge;
     }
 
     @Override
@@ -1668,24 +1482,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.tickPowerTransitions();
         if (this.level().isClientSide()) {
             this.putOutFire(); // the pilot's client moved us (and maybe into fire) during super.tick()
-            // The torso follows the view of whoever drives: the pilot's, or the head of the mind (what it looks at).
-            float aimTarget = this.isDriven() && this.canOperate() ? 1F : 0F;
-            this.aimBlend += (aimTarget - this.aimBlend) * 0.2F;
-            this.tickLights();
-            this.tickSparks();
+            this.lights.tick();
             ExhaustSmoke.tick(this);
-            this.tickHandSwing();
             this.socketVisuals.tick(); // the tool arm's raise, recoil, and the tool's own looks (ToolEffects)
-            // Measure how fast we actually move (blocks/s) and smooth it to avoid flicker
-            // between idle and walk.
-            double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
-            double speed = Math.sqrt(dx * dx + dz * dz) * 20.0;
-            this.visualSpeed += (speed - this.visualSpeed) * 0.4;
-            float legs = this.yBodyRot * Mth.DEG_TO_RAD;
-            double forward = (dx * -Mth.sin(legs) + dz * Mth.cos(legs)) * 20.0;
-            this.visualForward += (forward - this.visualForward) * 0.4;
-            tickStepSmoothing();
-            tickAirborneAnimationState();
+            this.animator.tick();      // speed, steps, jumps and landings, the aim blend: what the animations follow
         }
     }
 
@@ -1704,217 +1504,16 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
     }
 
-    /** Step-ups (and snapped step-downs) move us a whole block in one tick: ease that (see StepSmoothing). */
-    private void tickStepSmoothing() {
-        this.steps.tick(this.getY() - this.yo, this.onGround());
-    }
-
-    /** Client: eased step offset in blocks for this frame. */
-    public float getStepOffset(float partialTick) {
-        return this.steps.at(partialTick);
-    }
-
     /** The pilot rides with the eased step offset, so the camera glides over steps. */
     @Override
     protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float partialTick) {
-        return super.getPassengerAttachmentPoint(passenger, dimensions, partialTick).add(0, this.steps.current(), 0);
+        return super.getPassengerAttachmentPoint(passenger, dimensions, partialTick).add(0, this.animator.stepNow(), 0);
     }
 
-    private void tickAirborneAnimationState() {
-        if (this.landTicks > 0) {
-            this.landTicks--;
-        }
-        if (this.jumpAnimTicks > 0) {
-            this.jumpAnimTicks--;
-        }
-        // Another player's suit jumped (the pilot's own client already started it in onPlayerJump).
-        int counter = this.entityData.get(JUMP_COUNTER);
-        if (this.tickCount < 5) {
-            this.lastJumpCounter = counter; // just came into view: don't replay an old jump
-        }
-        if (counter != this.lastJumpCounter) {
-            this.lastJumpCounter = counter;
-            if (!this.isLocalInstanceAuthoritative()) {
-                this.jumpAnimTicks = JUMP_ANIM_HOLD_TICKS;
-            }
-        }
-        if (!this.isVehicle()) {
-            this.clientJumpCharge = 0;
-        }
-        if (!this.onGround()) {
-            if (this.airTicks == 0) {
-                // Just left the ground. Rising fast means a jump (stepping up a block keeps us on the
-                // ground, so it never gets here).
-                this.jumped = this.getY() - this.yo > 0.15;
-            }
-            this.airTicks++;
-        } else {
-            if (this.airTicks >= LAND_AFTER_TICKS) {
-                this.landTicks = LAND_TICKS;
-                SuitStomp.landingDust(this, this.airTicks);
-            }
-            this.airTicks = 0;
-            this.jumped = false;
-        }
-    }
-
-    private boolean isRunning() {
-        if (this.getControllingPassenger() instanceof Player pilot) {
-            return pilot.isSprinting();
-        }
-        return this.visualSpeed > RUN_THRESHOLD; // the mind has no sprint key: between the walk and the sprint
-    }
-
-    private boolean isWalking() {
-        return this.visualSpeed > 0.3;
-    }
-
+    /** GeckoLib asks once which animation controllers the suit has: see SuitAnimator. */
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        // Controller 1: full-body locomotion. 5 ticks of blending between animations.
-        controllers.add(new AnimationController<>("movement", 5, this::movementAnimation));
-        // Controller 2: one-shot upper-body reactions, started from the server with triggerAnim().
-        // It is added after "movement", so for the bones it animates it wins; legs keep walking.
-        controllers.add(new AnimationController<PowerArmorEntity>("action", 2, state -> PlayState.STOP)
-                .triggerableAnim("hit", HIT)
-                .triggerableAnim("tool_recoil", TOOL_RECOIL)); // the EM projector's push
-        // Controller 3: the socket tool's own loop (drill spin, chainsaw chain) while it runs. It keys only
-        // the tool's bones, so the arm keeps following walk/run and the aim.
-        controllers.add(new AnimationController<>("tool", 3, this::toolAnimation));
-        // Controller 4: the right hand. Added last, so while it plays it owns the right arm (the gait's arm
-        // swing pauses, like a person carrying a torch). Stops when there's nothing to hold or no power.
-        controllers.add(new AnimationController<>("right_hand", 4, this::handAnimation)
-                .triggerableAnim("use_item", USE_ITEM));
-    }
-
-    private PlayState movementAnimation(AnimationTest<PowerArmorEntity> state) {
-        // GeckoLib 5 advances the animation by (time passed x speed) every frame, so the speed may change any time.
-        state.controller().setAnimationSpeed(this.movementAnimationRate());
-        if (this.isDeadOrDying()) {
-            return state.setAndContinue(DEATH);
-        }
-        if (!this.isPowered()) {
-            state.controller().setTransitionTicks(this.isStunned() ? 1 : 4); // a strike jolts, it doesn't ease in
-            return state.setAndContinue(this.wasOffWhenLoaded ? POWERED_OFF : this.isStunned() ? ZAPPED : SHUTDOWN);
-        }
-        if (this.startupTicks > 0) {
-            state.controller().setTransitionTicks(2);
-            return state.setAndContinue(STARTUP);
-        }
-        // Powered means driven: by the pilot, or by the machine mind (same gaits, picked from how fast it moves).
-        // Jump states blend fast (the charge crouch ends exactly where the jump starts).
-        boolean jumpState = this.jumpAnimTicks > 0 || this.jumped || (this.clientJumpCharge > 0 && this.onGround());
-        state.controller().setTransitionTicks(jumpState ? 2 : 5);
-        if (this.jumpAnimTicks > 0 || this.jumped) {
-            return state.setAndContinue(JUMP);
-        }
-        if (this.clientJumpCharge > 0 && this.onGround()) {
-            return state.setAndContinue(JUMP_CHARGE);
-        }
-        if (this.airTicks >= FALL_POSE_AFTER_TICKS) {
-            return state.setAndContinue(FALL);
-        }
-        boolean landing = this.landTicks > 0 && !(this.isWalking() && this.landTicks <= LAND_TICKS - LAND_TICKS_WHILE_MOVING);
-        if (landing) {
-            return state.setAndContinue(LAND);
-        }
-        if (this.isWalking() || this.realigning) {
-            return state.setAndContinue(this.isRunning() ? RUN : this.isBackingUp() ? WALK_BACK : WALK);
-        }
-        return state.setAndContinue(IDLE);
-    }
-
-    private PlayState toolAnimation(AnimationTest<PowerArmorEntity> state) {
-        if (this.socket.isRunning() && this.getSocketStack().getItem() instanceof PowerTool tool && tool.runAnimation() != null) {
-            return state.setAndContinue(tool.runAnimation());
-        }
-        return PlayState.STOP;
-    }
-
-    private PlayState handAnimation(AnimationTest<PowerArmorEntity> state) {
-        if (this.isDeadOrDying() || !this.canOperate() || !(this.getControllingPassenger() instanceof Player pilot)
-                || pilot.getMainHandItem().isEmpty()) {
-            return PlayState.STOP;
-        }
-        return state.setAndContinue(HOLD_ITEM);
-    }
-
-    /** Client: sparks crawl over the suit for the first second of a lightning knock-out (while it convulses). Only on the
-     *  legs and hips: particles near the cockpit camera turn into big blobs. */
-    private void tickSparks() {
-        if (!this.isStunned()) {
-            this.sparkTicks = -1;
-            return;
-        }
-        this.sparkTicks++;
-        if (this.sparkTicks > 24) {
-            return;
-        }
-        float yaw = this.yBodyRot * Mth.DEG_TO_RAD;
-        for (int i = 0; i < 3; i++) {
-            double side = (this.random.nextDouble() - 0.5) * 1.4, front = (this.random.nextDouble() - 0.5) * 0.8;
-            double x = this.getX() + side * Mth.cos(yaw) - front * Mth.sin(yaw);
-            double z = this.getZ() + side * Mth.sin(yaw) + front * Mth.cos(yaw);
-            double y = this.getY() + 0.2 + this.random.nextDouble() * 1.1;
-            this.level().addParticle(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, x, y, z,
-                    this.random.nextGaussian() * 0.15, this.random.nextGaussian() * 0.15, this.random.nextGaussian() * 0.15);
-        }
-        if (this.sparkTicks % 6 == 0) {
-            this.level().playLocalSound(this.getX(), this.getY() + 1, this.getZ(), SoundEvents.COPPER_BULB_TURN_OFF,
-                    net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 0.6F + this.random.nextFloat() * 0.6F, false);
-        }
-    }
-
-    /** Client: the pilot swung their hand (placed a block, used an item on something): reach with the suit's hand.
-     *  Swings of other players arrive as packets, so everyone sees it. */
-    private void tickHandSwing() {
-        boolean swinging = this.getControllingPassenger() instanceof Player pilot && pilot.isSwinging()
-                && pilot.getCurrentSwing() != null && pilot.getCurrentSwing().hand() == InteractionHand.MAIN_HAND;
-        if (swinging && !this.pilotWasSwinging && this.canOperate()) {
-            this.triggerAnim("right_hand", "use_item");
-        }
-        this.pilotWasSwinging = swinging;
-    }
-
-    /** Client/dev: the movement animation's playback rate this tick (the gait log compares it with the ground speed). */
-    public double getMovementAnimationRate() {
-        return this.movementAnimationRate();
-    }
-
-    /**
-     * The walk and run step at the speed the suit really moves along its legs, so a planted foot stays planted: strafing,
-     * diagonals, slowing down, slopes, water, walls and the mind's own speeds all change the ground speed, and a fixed
-     * rate slid the feet (runAutopilotGait measured 0.4-1.4 blocks/s of slide, 3.15 when backing up with the walk
-     * playing forwards: a moonwalk). Backing up plays walk_back at the backward speed.
-     */
-    private double movementAnimationRate() {
-        if (this.isDeadOrDying() || !this.isDriven() || !this.canOperate() || this.jumped || this.jumpAnimTicks > 0
-                || this.airTicks >= FALL_POSE_AFTER_TICKS || this.landTicks > 0) {
-            return 1.0;
-        }
-        if (!this.isWalking()) {
-            double water = this.isInWater() ? UNDERWATER_SPEED : this.isInLava() ? LAVA_SPEED : 1.0;
-            return (this.realigning ? 0.6 : 1.0) * water; // turning on the spot: a slower step cycle
-        }
-        double authored = this.isRunning() ? RUN_ANIM_AUTHORED : WALK_ANIM_AUTHORED;
-        return Mth.clamp(Math.abs(this.visualForward) / authored, MIN_STEP_RATE, MAX_STEP_RATE);
-    }
-
-    /** Client/dev: the ground speed along the legs (blocks/s, negative = backwards) the gait the suit picks this tick
-     *  steps at: a planted foot slides by the difference to the real speed (GaitScene). GeckoLib's controller still
-     *  names the previous animation during the 5-tick blend, so the log asks this instead. */
-    public double getSteppedSpeed() {
-        if (!this.isDriven() || !this.canOperate() || !(this.isWalking() || this.realigning) || this.jumped || this.jumpAnimTicks > 0
-                || this.airTicks >= FALL_POSE_AFTER_TICKS) {
-            return 0;
-        }
-        double authored = this.isRunning() ? RUN_ANIM_AUTHORED : this.isBackingUp() ? -WALK_ANIM_AUTHORED : WALK_ANIM_AUTHORED;
-        return authored * this.movementAnimationRate();
-    }
-
-    /** Client: moving backwards along the legs (the legs keep facing the view when the pilot backs up). */
-    private boolean isBackingUp() {
-        return this.visualForward < BACKING_UP_SPEED;
+        this.animator.registerControllers(controllers);
     }
 
     @Override

@@ -46,13 +46,13 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         state.addGeckolibData(SuitRenderData.HELMET_STYLE, suit.getHelmetStyle() == null ? -1 : suit.getHelmetStyle().ordinal());
         state.addGeckolibData(SuitRenderData.ENGINE, suit.getEngine() == null ? -1 : suit.getEngine().ordinal());
         state.addGeckolibData(SuitRenderData.PAINT, suit.getPaint() == null ? -1 : suit.getPaint().getId());
-        state.addGeckolibData(SuitRenderData.STEP_OFFSET, (float) suit.getStepOffset(partialTick));
+        state.addGeckolibData(SuitRenderData.STEP_OFFSET, (float) suit.animator().getStepOffset(partialTick));
         state.addGeckolibData(SuitRenderData.AIMING, suit.isDriven() && !suit.isDeadOrDying());
-        state.addGeckolibData(SuitRenderData.AIM_BLEND, suit.getAimBlend());
+        state.addGeckolibData(SuitRenderData.AIM_BLEND, suit.animator().getAimBlend());
         state.addGeckolibData(SuitRenderData.TOOL_RAISE, suit.socketVisuals().raise(partialTick));
         state.addGeckolibData(SuitRenderData.RECOIL, suit.socketVisuals().recoil(partialTick));
         state.addGeckolibData(SuitRenderData.BARREL_ANGLE, suit.socketVisuals().rotorAngle(partialTick));
-        state.addGeckolibData(SuitRenderData.HIP_SINK, suit::setHipHeight);
+        state.addGeckolibData(SuitRenderData.HIP_SINK, suit.animator()::setHipHeight);
     }
 
     /** True when we're drawing the suit the local player sits in, from inside (first person). */

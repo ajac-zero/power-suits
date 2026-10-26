@@ -112,7 +112,7 @@ public final class CockpitHands {
         if (!Minecraft.getInstance().options.bobView().get()) {
             return 0F;
         }
-        return suit.getHipBob() * 0.008F + Mth.sin((float) ClientUtil.getCurrentTick() * 0.07F) * 0.004F;
+        return suit.animator().getHipBob() * 0.008F + Mth.sin((float) ClientUtil.getCurrentTick() * 0.07F) * 0.004F;
     }
 
     /** Vanilla's right-arm transform (ItemInHandRenderer.renderPlayerArm + PlayerModel's right arm), then the gauntlet

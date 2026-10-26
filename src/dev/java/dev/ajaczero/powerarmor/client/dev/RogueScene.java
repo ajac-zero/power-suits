@@ -211,7 +211,7 @@ final class RogueScene {
         if (csv == null || r == null || f == null || player == null || base == null) {
             return;
         }
-        float[] visor = mc.level.getEntity(r.getId()) instanceof PowerArmorEntity client ? client.getVisorColor() : new float[3];
+        float[] visor = mc.level.getEntity(r.getId()) instanceof PowerArmorEntity client ? client.lights().getVisorColor() : new float[3];
         boolean emDropped = !player.level().getEntitiesOfClass(ItemEntity.class, new AABB(base).inflate(40),
                 e -> e.getItem().is(ModItems.EM_PROJECTOR.get())).isEmpty();
         try {
