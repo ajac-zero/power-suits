@@ -218,13 +218,13 @@ public class ChaingunItem extends Item implements PowerTool {
         out.add(ParticleTypes.SMOKE, at.x, at.y, at.z, 1, 0.05, 0.02);
     }
 
-    /** Use up one iron nugget (off hand first, like a bow's arrows). False if there is none. Creative: free. */
     /** One bullet for this operator: a pilot pays from their own inventory first, then from the suit's hidden store
      *  (decided 2026-10-13: what you loaded is never wasted); the machine mind only has the store. */
     public static boolean takeBullet(PowerArmorEntity suit, LivingEntity operator) {
         return operator instanceof Player player && takeBullet(player) || suit.takeStoredNugget();
     }
 
+    /** Use up one iron nugget (off hand first, like a bow's arrows). False if there is none. Creative: free. */
     public static boolean takeBullet(Player player) {
         if (player.hasInfiniteMaterials()) {
             return true;

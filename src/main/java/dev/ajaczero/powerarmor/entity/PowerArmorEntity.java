@@ -201,7 +201,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Where the rail cannon's last beam ended (world position): with the shot counter, every client draws the beam. */
     private static final EntityDataAccessor<org.joml.Vector3fc> RAIL_END =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.VECTOR3);
-    /** True while a lightning strike has knocked the suit out (it restarts by itself): the slump starts with sparks. */
     /** Who the machine mind works for (SuitMind ordinal): the visor shows it. */
     private static final EntityDataAccessor<Byte> MIND =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BYTE);
@@ -211,6 +210,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Held in another suit's EM field (synced: the pilot's client moves a piloted suit, so it must know). */
     private static final EntityDataAccessor<Boolean> FIELD_HELD =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
+    /** True while a lightning strike has knocked the suit out (it restarts by itself): the slump starts with sparks. */
     private static final EntityDataAccessor<Boolean> STUNNED =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     /** Copies of the two slots, so clients can show the fuel left and (Phase 2) draw the socket tool. */
@@ -1418,7 +1418,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     // ---- The hidden ammo store (no slot: one tool uses it) ------------------------------------------------
 
-    /** Right-click with iron nuggets: the whole stack goes into the store, up to its size (config). */
     /** Right-click with a helmet on a suit without one: put it on (the menu's helmet slot does the same). */
     private InteractionResult putOnHelmet(Player player, ItemStack held) {
         if (!this.level().isClientSide()) {
@@ -1430,6 +1429,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return InteractionResult.SUCCESS;
     }
 
+    /** Right-click with iron nuggets: the whole stack goes into the store, up to its size (config). */
     private InteractionResult loadNuggets(Player player, ItemStack held) {
         int room = PowerArmorConfig.NUGGET_STORE_MAX.get() - this.getStoredNuggets();
         if (room <= 0) {
@@ -1797,9 +1797,19 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** Client: how far the animated hips are below/above the gait's average this frame (model px). */
     private float hipBob;
+    /** Client: when setHipHeight last ran (System.nanoTime), so the easing goes by time, not by frames. */
+    private long hipBobAt;
 
-    /** Called by the model every frame with the root bone's animated height. Only the jog and run
-     *  cycles bob the camera, measured against their own average hip height (from the specs). */
+    /**
+     * Client: called by the renderer every frame with the root bone's animated height (PowerArmorRenderer.aim). Only the
+     * walk and run cycles bob the cockpit viewmodel (CockpitHands.bob), measured against their own average hip height
+     * (from the specs).
+     *
+     * This is the one place where drawing writes back into the entity (GeckoLib 5 otherwise only reads a snapshot of it):
+     * the hip height exists only in the posed model, and nothing else needs it. The easing goes by elapsed time: it used
+     * to move 35% of the way per call, so it followed the hips faster at 144 fps than at 60 and jumped again whenever the
+     * suit was drawn twice in a frame (the menu's preview). Now 35% per 1/60 s, and a second call in a frame does nothing.
+     */
     public void setHipHeight(float y) {
         String anim = this.getMovementAnimationName();
         float target = switch (anim) {
@@ -1807,7 +1817,12 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             case "run" -> y - RUN_HIP_MEAN;
             default -> 0F;
         };
-        this.hipBob += (target - this.hipBob) * 0.35F; // eases in/out when the gait changes
+        long now = System.nanoTime();
+        // elapsed time in 60ths of a second (capped: after a pause or with the suit off screen, just catch up)
+        float frames = this.hipBobAt == 0L ? 1F : Math.min(30F, (now - this.hipBobAt) * 60F / 1.0E9F);
+        this.hipBobAt = now;
+        float ease = 1F - (float) Math.pow(0.65, frames);
+        this.hipBob += (target - this.hipBob) * ease; // eases in/out when the gait changes
     }
 
     public float getHipBob() {
@@ -1819,11 +1834,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.realigning;
     }
 
-    /**
-     * Movement for the controlling client. After vanilla moves us, if we just walked off a small
-     * ledge (and aren't jumping), drop straight onto the ground below: stepping down instead of
-     * falling keeps full speed and avoids a fall pose on every block of a slope.
-     */
     /** Server: tick the suit was last held by an EM field (EmProjectorItem refreshes it every tick it holds us). */
     private int fieldHeldUntil;
 
@@ -1842,6 +1852,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** A suit held in an EM field crawls: a quarter of its speed. */
     private static final float FIELD_HELD_SPEED = 0.25F;
 
+    /**
+     * Movement for the controlling client. After vanilla moves us, if we just walked off a small
+     * ledge (and aren't jumping), drop straight onto the ground below: stepping down instead of
+     * falling keeps full speed and avoids a fall pose on every block of a slope.
+     */
     @Override
     public void travel(Vec3 travelVector) {
         if (!this.isVehicle() && !this.canOperate()) {
@@ -1971,9 +1986,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return damaged;
     }
 
-    /** Vanilla calls this on landing, with how far we fell. The suit takes no fall damage, but a big drop stomps:
-     *  everything around the landing spot gets hurt, friend or foe. Runs on the server (it moves the suit too, from the
-     *  pilot's position packets) and on the pilot's client, which only plays the sound. */
     /** Only a running suit flinches when hit. Switched off (empty, knocked out, still standing up) it can't react: and the
      *  flinch (on the "action" controller, which overrides the body's controller) would cut into the electrified
      *  convulsion, the slump or the startup, e.g. on every tick of fire after a lightning strike. */
@@ -1981,6 +1993,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.canOperate();
     }
 
+    /** Vanilla calls this on landing, with how far we fell. The suit takes no fall damage, but a big drop stomps:
+     *  everything around the landing spot gets hurt, friend or foe. Runs on the server (it moves the suit too, from the
+     *  pilot's position packets) and on the pilot's client, which only plays the sound. */
     @Override
     public boolean causeFallDamage(double fallDistance, float multiplier, DamageSource source) {
         if (fallDistance > 3) {

@@ -1,6 +1,7 @@
 package dev.ajaczero.powerarmor.client;
 
 import dev.ajaczero.powerarmor.PowerArmor;
+import dev.ajaczero.powerarmor.entity.ClientView;
 import dev.ajaczero.powerarmor.item.SocketAim;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModMenus;
@@ -18,6 +19,7 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         SocketAim.visualMuzzle = CockpitHands::visualMuzzle; // muzzle effects start at the cockpit viewmodel's muzzle
+        ClientView.inCockpit = PowerArmorRenderer::isCockpitView; // shared code asks the camera
         event.registerEntityRenderer(ModEntities.POWER_ARMOR.get(), PowerArmorRenderer::new);
         event.registerEntityRenderer(ModEntities.BULLET.get(), BulletRenderer::new);
         // The flame stream draws itself with particles (FlameJet.clientTick): nothing to render.

@@ -16,6 +16,8 @@ import net.minecraft.util.RandomSource;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.minecraft.client.sounds.SoundEngine;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
@@ -37,6 +39,8 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 public final class SuitSounds {
     /** Suits further away than this don't get loops started (they'd be inaudible anyway). */
     private static final double RANGE = 32;
+    /** The tool loops playing now, by suit entity id (one per suit). Each loop holds its suit, and the suit its whole
+     *  level: entries must go as soon as the loop stops playing, or a world left behind stays in memory. */
     private static final Map<Integer, Loop> TOOLS = new HashMap<>();
     private static final RandomSource RANDOM = RandomSource.create();
     /** Dev log: engine sounds played since the game started. */
@@ -48,7 +52,10 @@ public final class SuitSounds {
         if (mc.level == null || mc.player == null || mc.isPaused()) {
             return;
         }
-        TOOLS.values().removeIf(Loop::isStopped);
+        // Not only the loops that stopped themselves (faded out): the sound engine can drop a sound without telling it
+        // (it silences everything when you leave a world or change dimension, SoundEngine.stopAll). A loop it no longer
+        // plays is dead too; forgetting it lets the next tick start a fresh one if the tool still runs.
+        TOOLS.values().removeIf(loop -> loop.isStopped() || !mc.getSoundManager().isActive(loop));
         for (PowerArmorEntity suit : mc.level.getEntitiesOfClass(PowerArmorEntity.class, mc.player.getBoundingBox().inflate(RANGE))) {
             engineTick(mc, suit);
             SoundEvent toolSound = toolSound(suit);
@@ -59,8 +66,18 @@ public final class SuitSounds {
     }
 
     private static void start(Minecraft mc, Map<Integer, Loop> playing, PowerArmorEntity suit, Loop loop) {
-        playing.put(suit.getId(), loop);
-        mc.getSoundManager().play(loop);
+        // The engine may refuse a sound (all channels busy, sound turned off): only remember a loop that really plays,
+        // or the suit would never get its sound (the map says it has one).
+        if (mc.getSoundManager().play(loop) != SoundEngine.PlayResult.NOT_STARTED) {
+            playing.put(suit.getId(), loop);
+        }
+    }
+
+    /** Leaving a world: drop every loop (and with them the suits and the level they belong to). */
+    @SubscribeEvent
+    public static void loggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        TOOLS.values().forEach(Loop::stopNow);
+        TOOLS.clear();
     }
 
     /**
@@ -146,6 +163,10 @@ public final class SuitSounds {
             this.x = this.suit.getX();
             this.y = this.suit.getY() + 1.5;
             this.z = this.suit.getZ();
+        }
+
+        void stopNow() {
+            this.stop();
         }
 
         @Override

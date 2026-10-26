@@ -33,7 +33,8 @@ final class SuitRenderData {
     static final DataTicket<Float> RECOIL = DataTicket.create("powerarmor_recoil", Float.class);
     /** The chaingun barrels' angle, degrees. */
     static final DataTicket<Float> BARREL_ANGLE = DataTicket.create("powerarmor_barrel_angle", Float.class);
-    /** Hands the gait's hip height (model pixels) back to the suit when the model is posed (the cockpit camera bob). */
+    /** Hands the gait's hip height (model pixels) back to the suit when the model is posed, for the cockpit viewmodel's
+     *  bob. The only write-back from drawing into the entity (see PowerArmorEntity.setHipHeight); keep it the only one. */
     @SuppressWarnings("unchecked")
     static final DataTicket<Consumer<Float>> HIP_SINK = DataTicket.create("powerarmor_hip_sink", (Class<Consumer<Float>>) (Class<?>) Consumer.class);
     /** The lights (SuitGlowLayer): one packed ARGB tint per glowmask, 0 = off. */

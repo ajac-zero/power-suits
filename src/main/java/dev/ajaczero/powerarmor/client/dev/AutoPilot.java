@@ -557,7 +557,6 @@ public final class AutoPilot {
     // ---- mining scenario helpers -------------------------------------------------------------
 
     private static BlockPos mineBase = BlockPos.ZERO, treeBase = BlockPos.ZERO;
-    /** While set, the pilot keeps looking at this point. */
     /** The player looks here every tick (null: the yaw/pitch fields). Package-private: the scene classes aim too. */
     static Vec3 aimTarget;
     private static java.io.BufferedWriter mineCsv;
@@ -1056,7 +1055,6 @@ public final class AutoPilot {
         mc.setCameraEntity(sideCamera);
     }
 
-    /** A client-only camera 8 blocks to the side of the suit, looking at it. */
     /** A camera ~1.6 blocks out to the front-left of the tool arm, looking at the EM projector: raised (at the muzzle)
      *  or in its hip carry. */
     private static void emCloseCamera(Minecraft mc, boolean raised) {
@@ -1078,6 +1076,7 @@ public final class AutoPilot {
         lookCamera(mc, eye.subtract(drop), at.subtract(drop));
     }
 
+    /** A client-only camera 8 blocks to the side of the suit, looking at it. */
     private static void sideCamera(Minecraft mc) {
         var target = mc.player.getVehicle() != null ? mc.player.getVehicle()
                 : mc.level.getEntitiesOfClass(PowerArmorEntity.class, mc.player.getBoundingBox().inflate(8)).stream().findFirst().orElseThrow();

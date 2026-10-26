@@ -7,16 +7,18 @@ import org.jetbrains.annotations.Nullable;
 import com.geckolib.animation.RawAnimation;
 
 /**
- * A power tool for the suit's left-arm socket (chaingun, EM projector, drill, chainsaw).
+ * A power tool for the suit's left-arm socket (chaingun, EM projector, drill, chainsaw, flamethrower, TNT launcher, rail
+ * cannon).
  * Only items implementing this fit the socket slot. They do nothing on foot.
  *
  * Two kinds, both run by the suit on the server while its operator holds the trigger: the pilot (right click; see
  * ToolInput), or the suit itself while its machine mind drives it (PowerArmorEntity#toolOperator). The operator is
  * whoever aims (eye + view direction), pays the ammo and gets the credit; block breaking goes through
  * PowerArmorEntity#blockBreaker, a real or fake player.
- *  - repeating (none left; the chaingun times its own shots as a continuous tool): every time the tool is ready ({@link #cooldownTicks()} after the last use) and
+ *  - repeating (the TNT launcher): every time the tool is ready ({@link #cooldownTicks()} after the last use) and
  *    there's fuel for {@link #energyPerUse()}, the suit calls {@link #use};
- *  - continuous (EM projector, {@link #isContinuous()}): {@link #holdTick} every tick while held and
+ *  - continuous (all the others, {@link #isContinuous()}: tools that spin up, charge or time their own shots, like the
+ *    chaingun and the rail cannon, are continuous too): {@link #holdTick} every tick while held and
  *    {@link #release} when the button goes up or something interrupts (power, pilot gone, tool removed).
  *    These pay their own fuel through {@link PowerArmorEntity#tryUseEnergy}.
  */
@@ -39,13 +41,13 @@ public interface PowerTool {
     /** Server: one use (one shot, one block...). Return false if nothing happened (no fuel is charged). */
     boolean use(PowerArmorEntity suit, LivingEntity operator, ItemStack tool);
 
-    /** Continuous tools are driven by holdTick / release instead of use. */
     /** How far the barrel's centre line sits in front of the socket's axis, model pixels toward the suit's front. The
      *  cockpit view starts this tool's shots there (in third person it's too small to see). */
     default float barrelForwardPixels() {
         return 0F;
     }
 
+    /** Continuous tools are driven by holdTick / release instead of use. */
     default boolean isContinuous() {
         return false;
     }

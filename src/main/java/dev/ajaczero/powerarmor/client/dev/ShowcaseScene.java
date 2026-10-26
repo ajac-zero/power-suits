@@ -610,11 +610,6 @@ public final class ShowcaseScene {
     /** The block a set's tool works on (the rock face, the trunk), or null. */
     private static volatile Vec3 target;
 
-    /**
-     * Server: go to the pinned place, or find one in {@code biome} near spawn (open ground: a walkable dry stretch ahead, no trees between the
-     * third-person camera and 32 blocks ahead, landscape rising on the horizon) and put the player in a fresh suit there
-     * (firebox + coal, helmet, chaingun, nuggets, a lived-in hotbar). Sets {@code ready} when done.
-     */
     /** What a set's suit wears: its paint, engine and tool. */
     private record Loadout(DyeColor paint, Item engine, Item tool, @org.jetbrains.annotations.Nullable HelmetStyle helmet) {
         Loadout(DyeColor paint, Item engine, Item tool) {
@@ -630,6 +625,11 @@ public final class ShowcaseScene {
         return level -> new Spot(new BlockPos(x, y, z), yaw, 0, target);
     }
 
+    /**
+     * Server: go to the pinned place, or find one in {@code biome} near spawn (open ground: a walkable dry stretch ahead, no trees between the
+     * third-person camera and 32 blocks ahead, landscape rising on the horizon) and put the player in a fresh suit there
+     * (firebox + coal, helmet, chaingun, nuggets, a lived-in hotbar). Sets {@code ready} when done.
+     */
     private static void moveTo(Minecraft mc, String name, ResourceKey<Biome> biome, long time, java.util.function.Function<ServerLevel, Spot> where, Loadout loadout) {
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();

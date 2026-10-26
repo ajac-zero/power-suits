@@ -17,6 +17,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ExtractLevelRenderStateEvent;
 import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import org.joml.Quaternionf;
@@ -44,13 +45,21 @@ public final class RailBeamRenderer {
         }
         float now = event.getLevel().getGameTime() + event.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         List<Bar> bars = new ArrayList<>();
-        RailBeamEffects.BEAMS.removeIf(b -> now - b.firedAt() > RailBeamEffects.BEAM_TICKS);
+        // A beam from the future (fired at a later game time than now) belongs to another world: a world joined after
+        // leaving one has its own clock. Without the second test it was drawn at full brightness until the clock caught up.
+        RailBeamEffects.BEAMS.removeIf(b -> now - b.firedAt() > RailBeamEffects.BEAM_TICKS || now < b.firedAt() - 1);
         for (RailBeamEffects.Beam b : RailBeamEffects.BEAMS) {
             float t = Mth.clamp((now - b.firedAt()) / RailBeamEffects.BEAM_TICKS, 0F, 1F);
             bars.add(new Bar(b.from(), b.to(), 1F - t * t)); // bright for most of its life, then gone
         }
         event.getRenderState().setRenderData(BARS, bars);
         event.getRenderState().setRenderData(CAMERA, event.getCamera().position());
+    }
+
+    /** Leaving a world: its beams go with it. */
+    @SubscribeEvent
+    public static void loggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        RailBeamEffects.BEAMS.clear();
     }
 
     @SubscribeEvent

@@ -40,9 +40,9 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
     static final Identifier PILOT = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_pilot.png");
     /** The core's rings, a third each (ring r is in mask r mod 3): lit in turn, the energy runs along the core. */
     static final Identifier[] RAIL_FLOW = {flow(0), flow(1), flow(2)};
-    /** The masks, in the order of the tints in SuitRenderData.GLOW. */
     /** The emitter in the rail cannon's band, where the energy comes out (opaque: dark when off, lit with the charge). */
     static final Identifier RAIL_EMIT = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_rail_emit.png");
+    /** The masks, in the order of the tints in SuitRenderData.GLOW. */
     private static final Identifier[] MASKS = {FIRE, VISOR, HEAT, HEAT_BARREL, EM_CORE, EM_ARC, TIDAL, REACTOR, PILOT,
             RAIL_FLOW[0], RAIL_FLOW[1], RAIL_FLOW[2], RAIL_EMIT};
 

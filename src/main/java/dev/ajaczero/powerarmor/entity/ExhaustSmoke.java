@@ -100,9 +100,8 @@ final class ExhaustSmoke {
         if (!suit.isAlive() || !suit.isPowered()) {
             return;
         }
-        var mc = net.minecraft.client.Minecraft.getInstance();
-        if (suit.isPilotedBy(mc.player) && mc.options.getCameraType().isFirstPerson()) {
-            return;
+        if (ClientView.inCockpit.test(suit)) {
+            return; // (shared code: asks the client through ClientView, never Minecraft.getInstance() directly)
         }
         RandomSource random = suit.getRandom();
         float load = Math.min(1F, suit.engineLoad());
