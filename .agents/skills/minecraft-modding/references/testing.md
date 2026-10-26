@@ -1,8 +1,24 @@
 # Testing and verification
 
 Three layers, all used on every change: build, GameTests (logic, headless), autopilot (real client,
-screenshots + per-tick CSV). Example implementations: `src/main/java/dev/ajaczero/powerarmor/test/`
+screenshots + per-tick CSV). Example implementations: `src/dev/java/dev/ajaczero/powerarmor/test/`
 and `client/dev/` in `~/Developer/PowerArmor`.
+
+**Keep test and dev code out of the release jar**: a second source set (`src/dev/`) that compiles against main,
+loaded with main as one mod in every run. With ModDevGradle 2:
+```groovy
+sourceSets { dev { compileClasspath += sourceSets.main.output; runtimeClasspath += sourceSets.main.output } }
+configurations { devImplementation.extendsFrom implementation; devRuntimeOnly.extendsFrom runtimeOnly }
+tasks.named('check') { dependsOn tasks.named('devClasses') }   // build still compiles it
+neoForge {
+    addModdingDependenciesTo sourceSets.dev
+    runs { configureEach { sourceSet = sourceSets.dev } }
+    mods { "${mod_id}" { sourceSet(sourceSets.main); sourceSet(sourceSets.dev) } }
+}
+```
+The dev half needs its own entry point: a second `@Mod(MODID)` class (several per mod id are allowed) that registers
+the GameTests; `@EventBusSubscriber` classes there register themselves. Test structures go to `src/dev/resources`.
+Main must never reference dev classes (it can't: they aren't on its classpath, so the compiler enforces it).
 
 ## GameTests (headless server)
 **On 26.x** (since 1.21.5) a GameTest is two registry entries: a test *function* (`Registries.TEST_FUNCTION`, a
