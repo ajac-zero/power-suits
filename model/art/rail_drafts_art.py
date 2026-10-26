@@ -324,7 +324,7 @@ ROUND3 = {"proto_rail_F4_flat4": flat("pkRF4", 4, core_depth=3),
           "proto_rail_F3_flat3": flat("pkRF3", 3),
           "proto_rail_F2_slab": flat("pkRF2", 2, prong_w=3),
           "proto_rail_F3o_open": flat("pkRF3o", 3, core_w=2)}
-DRAFTS = ROUND3
+DRAFTS = ROUND3   # (user picked F3: the game bone rail_cannon since 2026-10-26, prongs in rail_fork_out / rail_fork_in)
 REMOVED = ["proto_rail_B_split", "proto_rail_B1_long", "proto_rail_B2_fork", "proto_rail_B3_coils", "proto_rail_B4_bridged",
            "proto_rail_B5_wide"]
 

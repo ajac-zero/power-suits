@@ -225,10 +225,9 @@ Each tool: hidden `proto_*` drafts in Blockbench -> user picks -> game part (bon
   draft B5 of two rounds (`model/art/rail_drafts_art.py`) -> bone `rail_cannon`, core glowmask `rail`. `RailCannonItem`,
   `RailBeamEffects` + `client/RailBeamRenderer` (the beam: geometry via NeoForge's custom geometry hooks), HUD charge bar,
   config, icon, recipe; 6 GameTests (132); `runAutopilotRail` (RailScene, `ap_rail_close_*`: the charge up close).
-  Charge-up (user, same day): flowing core (3 phase masks), shake + prongs straining apart, tip sparks. Round 3 drafts
-  (user: "I like wide, but let's experiment with making it flat"): hidden `proto_rail_F4_flat4` / `F3_flat3` / `F2_slab` /
-  `F3o_open` (depth 4 / 3 / 2, core flush), awaiting a pick. Open: from the cockpit the core barely shows
-  (seen edge-on between the prongs); the B5 band clips the thigh 0.65 px in jump_charge/jump (known arm/thigh clips there).
+  Charge-up (user, same day): flowing core (3 phase masks), shake + prongs straining apart, tip sparks. Round 3 (user: "I
+  like wide, but let's experiment with making it flat"): F3 picked (3 deep, core level with the prongs): the cockpit now
+  sees the core. The band clips the thigh 0.3-0.5 px in jump_charge/jump/land (B5: 0.65; known arm/thigh clips there).
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint
