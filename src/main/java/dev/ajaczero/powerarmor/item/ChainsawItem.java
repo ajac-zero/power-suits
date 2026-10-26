@@ -183,7 +183,7 @@ public class ChainsawItem extends Item implements PowerTool {
         }
         state.clear(level);
         int cost = this.energyPerUse();
-        if (!suit.hasEnergyFor(cost)) {
+        if (!suit.power().hasEnergyFor(cost)) {
             suit.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F);
             return;
         }
@@ -191,7 +191,7 @@ public class ChainsawItem extends Item implements PowerTool {
         List<BlockPos> tree = block.is(BlockTags.LOGS) ? treeAbove(level, pos) : List.of();
         Player breaker = suit.blockBreaker(operator);
         if (ToolMining.breakBlock(level, pos, breaker, new ItemStack(Items.DIAMOND_AXE))) {
-            suit.tryUseEnergy(cost);
+            suit.power().tryUseEnergy(cost);
             suit.countToolUse();
             suit.setToolCooldown(BREAK_DELAY);
             if (!tree.isEmpty()) {
@@ -228,13 +228,13 @@ public class ChainsawItem extends Item implements PowerTool {
             if (!level.getBlockState(pos).is(BlockTags.LOGS)) {
                 continue; // someone else took it meanwhile
             }
-            if (!suit.hasEnergyFor(cost)) {
+            if (!suit.power().hasEnergyFor(cost)) {
                 state.falling.clear();
                 suit.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F);
                 return;
             }
             if (ToolMining.breakBlock(level, pos, feller, axe)) {
-                suit.tryUseEnergy(cost);
+                suit.power().tryUseEnergy(cost);
             }
         }
     }

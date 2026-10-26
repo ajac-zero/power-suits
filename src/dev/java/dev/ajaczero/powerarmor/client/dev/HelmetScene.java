@@ -134,7 +134,7 @@ final class HelmetScene {
         AutoPilot.onServer(mc, player -> {
             try {
                 w.write(String.format(Locale.ROOT, "%d,%s,%b,%b,%b,%b,%b,%d,%d%n", s, p, x.hasHelmet(), x.isPowered(), x.isSealed(),
-                        x.isAiDriven(), x.isVehicle(), x.getBurnLeft(), x.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount()));
+                        x.isAiDriven(), x.isVehicle(), x.power().getBurnLeft(), x.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount()));
             } catch (IOException ignored) {
                 // the file was closed at the end of the scene
             }

@@ -142,7 +142,7 @@ public class ChaingunItem extends Item implements PowerTool {
     public void holdTick(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
         State s = state(suit);
         s.held = true;
-        if (s.overheated || !suit.tryUseEnergy(PowerArmorConfig.CHAINGUN_SPIN_ENERGY.get())) {
+        if (s.overheated || !suit.power().tryUseEnergy(PowerArmorConfig.CHAINGUN_SPIN_ENERGY.get())) {
             return; // overheated (or no fuel to turn the barrels): it can only coast
         }
         s.spin = Math.min(1F, s.spin + 1F / PowerArmorConfig.CHAINGUN_SPIN_UP.get());
@@ -151,9 +151,9 @@ public class ChaingunItem extends Item implements PowerTool {
         }
         s.timer = Math.max(1, Math.round(interval(s.spin)));
         Vec3 muzzle = SocketAim.muzzlePosition(suit, operator);
-        if (!suit.hasEnergyFor(this.energyPerUse()) || !takeBullet(suit, operator)) {
+        if (!suit.power().hasEnergyFor(this.energyPerUse()) || !takeBullet(suit, operator)) {
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.6F);
-            if (s.noAmmoMessage == 0 && suit.hasEnergyFor(this.energyPerUse())) {
+            if (s.noAmmoMessage == 0 && suit.power().hasEnergyFor(this.energyPerUse())) {
                 if (operator instanceof Player pilot) {
                     pilot.sendOverlayMessage(Component.translatable("message.powerarmor.no_bullets"));
                 }
@@ -161,7 +161,7 @@ public class ChaingunItem extends Item implements PowerTool {
             }
             return;
         }
-        suit.tryUseEnergy(this.energyPerUse());
+        suit.power().tryUseEnergy(this.energyPerUse());
         this.fire(level, suit, operator, muzzle, s);
     }
 

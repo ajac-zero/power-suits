@@ -149,14 +149,14 @@ public class DrillItem extends Item implements PowerTool {
         int broken = 0;
         Player breaker = suit.blockBreaker(operator);
         for (BlockPos p : blocks) {
-            if (!suit.hasEnergyFor(cost)) {
+            if (!suit.power().hasEnergyFor(cost)) {
                 suit.playSound(SoundEvents.DISPENSER_FAIL, 0.6F, 0.6F);
                 break;
             }
             // Loot tables check the tool: dig dirt "with a shovel" so e.g. snow layers drop snowballs.
             ItemStack as = level.getBlockState(p).is(BlockTags.MINEABLE_WITH_PICKAXE) ? bit : shovel;
             if (ToolMining.breakBlock(level, p, breaker, as)) {
-                suit.tryUseEnergy(cost);
+                suit.power().tryUseEnergy(cost);
                 broken++;
             }
         }

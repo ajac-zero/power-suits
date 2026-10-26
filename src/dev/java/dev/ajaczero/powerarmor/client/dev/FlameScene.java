@@ -211,7 +211,7 @@ final class FlameScene {
             var camp = level.getBlockState(b.offset(3, 0, 3));
             boolean lit = camp.hasProperty(CampfireBlock.LIT) && camp.getValue(CampfireBlock.LIT);
             try {
-                w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%d,%.1f,%d,%s,%b,%b,%b,%.2f%n", s, p, x.getToolUses(), x.getTotalEnergy(),
+                w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%d,%.1f,%d,%s,%b,%b,%b,%.2f%n", s, p, x.getToolUses(), x.power().getTotalEnergy(),
                         jets, burning, health, fire, beefState, ice, lit, running, glow));
             } catch (IOException ignored) {
                 // closed at the end of the scene

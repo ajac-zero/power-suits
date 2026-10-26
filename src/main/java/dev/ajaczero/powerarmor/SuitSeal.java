@@ -58,7 +58,7 @@ public final class SuitSeal {
             return true; // already paid for this half second
         }
         int cost = (int) Math.ceil(amount * PowerArmorConfig.SEAL_ENERGY_PER_DAMAGE.get());
-        if (!suit.tryUseEnergy(cost)) {
+        if (!suit.power().tryUseEnergy(cost)) {
             return false;
         }
         suit.lastSealTick = suit.tickCount;
@@ -120,7 +120,7 @@ public final class SuitSeal {
             return;
         }
         PowerArmorEntity suit = sealedSuit(entity);
-        if (suit != null && suit.tryUseEnergy(PowerArmorConfig.SEAL_EFFECT_ENERGY.get())) {
+        if (suit != null && suit.power().tryUseEnergy(PowerArmorConfig.SEAL_EFFECT_ENERGY.get())) {
             event.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
         }
     }

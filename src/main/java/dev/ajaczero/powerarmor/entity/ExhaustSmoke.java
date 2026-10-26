@@ -44,7 +44,7 @@ final class ExhaustSmoke {
         // Sprinting: a big dark puff every other tick, small ones in between (a thick but not opaque trail).
         ParticleOptions type = sprinting && suit.tickCount % 2 == 0 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.SMOKE;
         double lift = sprinting ? 0.12 : 0.07;
-        if (suit.isLowOnFuel()) {
+        if (suit.power().isLowOnFuel()) {
             // Running on fumes: the engine coughs. Long gaps, then a dark puff.
             if (random.nextFloat() < 0.55F) {
                 return;
@@ -61,7 +61,7 @@ final class ExhaustSmoke {
      * nothing to bubble through. Vanilla's bubble particle dies by itself once it leaves the water.
      */
     private static void tidalBubbles(PowerArmorEntity suit) {
-        if (!suit.isAlive() || !suit.isPowered() || !suit.isEngineUnderWater()) {
+        if (!suit.isAlive() || !suit.isPowered() || !suit.power().isEngineUnderWater()) {
             return;
         }
         RandomSource random = suit.getRandom();
@@ -76,7 +76,7 @@ final class ExhaustSmoke {
 
     /** A thick black cough when the engine starts. */
     static void startupBurst(PowerArmorEntity suit) {
-        if (suit.getEngine() == SuitEngine.TIDAL && suit.isEngineUnderWater()) {
+        if (suit.getEngine() == SuitEngine.TIDAL && suit.power().isEngineUnderWater()) {
             puff(suit, ParticleTypes.BUBBLE, 8, 0.15, VALVE_UP); // the pump kicks in
             return;
         }

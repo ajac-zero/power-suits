@@ -228,8 +228,8 @@ final class EngineScene {
         }
         String p = phase;
         var client = mc.level == null ? null : mc.level.getEntity(x.getId()) instanceof PowerArmorEntity c ? c : null;
-        boolean cPowered = client != null && client.isPowered(), cFree = client != null && client.hasFreePower();
-        boolean cFlooded = client != null && client.isFlooded();
+        boolean cPowered = client != null && client.isPowered(), cFree = client != null && client.power().hasFreePower();
+        boolean cFlooded = client != null && client.power().isFlooded();
         boolean riding = client != null && mc.player.getVehicle() == client;
         float yaw = mc.player.getYRot();
         String screen = mc.gui.screen() == null ? "-" : mc.gui.screen().getClass().getSimpleName();
@@ -238,8 +238,8 @@ final class EngineScene {
                 ItemStack fuel = x.getInventory().getItem(PowerArmorEntity.FUEL_SLOT);
                 SuitEngine engine = x.getEngine();
                 w.write(String.format(Locale.ROOT, "%d,%s,%s,%b,%b,%b,%b,%.1f,%s,%d,%.2f,%.2f,%b,%b,%b,%b,%b,%b,%.2f,%.0f,%s%n", s, p,
-                        engine == null ? "-" : engine.name().toLowerCase(Locale.ROOT), x.isPowered(), x.isFlooded(), x.isEngineUnderWater(),
-                        x.hasFreePower(), x.getBurnLeftExact(),
+                        engine == null ? "-" : engine.name().toLowerCase(Locale.ROOT), x.isPowered(), x.power().isFlooded(), x.power().isEngineUnderWater(),
+                        x.power().hasFreePower(), x.power().getBurnLeftExact(),
                         fuel.isEmpty() ? "-" : net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(fuel.getItem()).getPath(),
                         fuel.getCount(), x.getZ() - b.getZ() - 0.5, x.getY() - b.getY(), packRefused, cPowered, cFree, cFlooded,
                         x.isVehicle(), riding, x.getX() - b.getX() - 0.5, yaw, screen));

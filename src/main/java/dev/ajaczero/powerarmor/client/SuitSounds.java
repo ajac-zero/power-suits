@@ -110,7 +110,7 @@ public final class SuitSounds {
         return switch (suit.getEngine()) {
             case FIREBOX -> ModSounds.FIREBOX.get();
             // Bubbles need water round the pump; running on rain or buckets it has nothing to bubble through.
-            case TIDAL -> suit.isEngineUnderWater() ? ModSounds.TIDAL.get() : null;
+            case TIDAL -> suit.power().isEngineUnderWater() ? ModSounds.TIDAL.get() : null;
             case REACTOR -> ModSounds.REACTOR.get();
         };
     }

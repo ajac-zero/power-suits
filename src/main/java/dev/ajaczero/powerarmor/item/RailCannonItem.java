@@ -125,7 +125,7 @@ public class RailCannonItem extends Item implements PowerTool {
     /** Server: can this operator fire a shot now (ammo and fuel)? A creative pilot needs no ingot. */
     public boolean canPay(PowerArmorEntity suit, LivingEntity operator) {
         boolean ammo = operator instanceof Player p && p.hasInfiniteMaterials() || isRound(suit.getInventory().getItem(PowerArmorEntity.AMMO_SLOT));
-        return ammo && suit.hasEnergyFor(this.energyPerUse());
+        return ammo && suit.power().hasEnergyFor(this.energyPerUse());
     }
 
     /** Server: fully charged (the mind lets go then). */
@@ -176,7 +176,7 @@ public class RailCannonItem extends Item implements PowerTool {
                 Vec3 muzzle = SocketAim.muzzlePosition(suit, operator);
                 level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.4F);
                 if (operator instanceof Player pilot) {
-                    pilot.sendOverlayMessage(Component.translatable(suit.hasEnergyFor(this.energyPerUse())
+                    pilot.sendOverlayMessage(Component.translatable(suit.power().hasEnergyFor(this.energyPerUse())
                             ? "message.powerarmor.no_rail_ammo" : "message.powerarmor.rail_no_fuel"));
                 }
                 s.noAmmoMessage = 40;
@@ -200,11 +200,11 @@ public class RailCannonItem extends Item implements PowerTool {
         s.charge = 0;
         Vec3 muzzle = SocketAim.muzzlePosition(suit, operator);
         boolean free = operator instanceof Player p && p.hasInfiniteMaterials();
-        if (!suit.hasEnergyFor(this.energyPerUse()) || !free && !suit.takeAmmo(RailCannonItem::isRound)) {
+        if (!suit.power().hasEnergyFor(this.energyPerUse()) || !free && !suit.takeAmmo(RailCannonItem::isRound)) {
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.4F);
             return; // (the ingot or the fuel went while it charged)
         }
-        suit.tryUseEnergy(this.energyPerUse());
+        suit.power().tryUseEnergy(this.energyPerUse());
         s.lastShot = fire(level, suit, operator);
         s.cooldown = this.cooldownTicks();
         suit.countToolUse();

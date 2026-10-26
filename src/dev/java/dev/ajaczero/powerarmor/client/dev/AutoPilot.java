@@ -346,7 +346,7 @@ public final class AutoPilot {
             case 1644 -> shot(mc, "lights_parked");
             case 1646 -> boardNearestSuit(mc);                  // back in, to watch it run dry from the cockpit
             case 1650 -> onServer(mc, p -> p.level().getEntitiesOfClass(PowerArmorEntity.class, p.getBoundingBox().inflate(8)).forEach(s -> {
-                              s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, net.minecraft.world.item.ItemStack.EMPTY); s.setBurn(1, 1600); })); // out of fuel
+                              s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, net.minecraft.world.item.ItemStack.EMPTY); s.power().setBurn(1, 1600); })); // out of fuel
             case 1656, 1660, 1666 -> shot(mc, "lights_shutdown_" + t);
             case 1710 -> shot(mc, "lights_off");
             default -> {}
@@ -432,7 +432,7 @@ public final class AutoPilot {
             suit.snapTo(suit.getX() + 40, suit.getY(), suit.getZ() - 30, 0, 0);
             player.startRiding(suit, true, true);
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, net.minecraft.world.item.ItemStack.EMPTY);
-            suit.setBurn(80, 1600);
+            suit.power().setBurn(80, 1600);
         });
     }
 
@@ -536,7 +536,7 @@ public final class AutoPilot {
         var target = fuelSuit.getBeamTarget();
         try {
             emCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%d,%d,%d,%.2f,%.2f,%.1f,%b%n", t,
-                    target == null ? "-" : target.getType().toShortString(), fuelSuit.getTotalEnergy(),
+                    target == null ? "-" : target.getType().toShortString(), fuelSuit.power().getTotalEnergy(),
                     mc.player.getInventory().countItem(net.minecraft.world.item.Items.DIAMOND), fuelSuit.getToolUses(),
                     emPig == null ? -1 : emPig.distanceTo(fuelSuit), emPig == null ? 0 : emPig.getY() - fuelSuit.getY(),
                     emPig == null ? 0 : emPig.getHealth(), emPig != null && emPig.isNoGravity()));
@@ -712,7 +712,7 @@ public final class AutoPilot {
             }
             mineCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s%n", t,
                     net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(fuelSuit.getSocketStack().getItem()).getPath(),
-                    fuelSuit.getToolUses(), fuelSuit.getTotalEnergy(), face, logs, drops,
+                    fuelSuit.getToolUses(), fuelSuit.power().getTotalEnergy(), face, logs, drops,
                     mc.player.getVehicle() instanceof PowerArmorEntity s ? s.getMovementAnimationName() : "-", aimed, toolAnim, dev.ajaczero.powerarmor.client.SuitSounds.activeLoops()));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] mine csv", e);
@@ -764,7 +764,7 @@ public final class AutoPilot {
         String health = pigs.stream().map(p -> p.isAlive() ? String.format(java.util.Locale.ROOT, "%.0f", p.getHealth()) : "dead")
                 .reduce((a, b) -> a + "/" + b).orElse("");
         try {
-            cannonCsv.write(String.format(java.util.Locale.ROOT, "%d,%d,%d,%b,%s,%s,%.2f,%.2f%n", t, fuelSuit.getToolUses(), fuelSuit.getTotalEnergy(),
+            cannonCsv.write(String.format(java.util.Locale.ROOT, "%d,%d,%d,%b,%s,%s,%.2f,%.2f%n", t, fuelSuit.getToolUses(), fuelSuit.power().getTotalEnergy(),
                     fuelSuit.isTriggerHeld(), health, mc.player.getVehicle() instanceof PowerArmorEntity s ? s.getMovementAnimationName() : "-",
                     fuelSuit.getToolSpin(), fuelSuit.getToolHeat()));
         } catch (IOException e) {
@@ -808,7 +808,7 @@ public final class AutoPilot {
             return;
         }
         try {
-            fuelCsv.write(String.format(java.util.Locale.ROOT, "%d,%d,%d,%s,%b,%b,%.2f,%s,%b%n", t, suit.getBurnLeft(), suit.getTotalEnergy(),
+            fuelCsv.write(String.format(java.util.Locale.ROOT, "%d,%d,%d,%s,%b,%b,%.2f,%s,%b%n", t, suit.power().getBurnLeft(), suit.power().getTotalEnergy(),
                     suit.getFuelStack().getCount() + "x" + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(suit.getFuelStack().getItem()).getPath(),
                     suit.isPowered(), suit.canOperate(), Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20, suit.getMovementAnimationName(),
                     suit.isPilotedBy(mc.player)));
@@ -1442,7 +1442,7 @@ public final class AutoPilot {
                     m, mindPhase, server.getX() - (b.getX() + 0.5), server.getZ() - (b.getZ() + 0.5),
                     Math.hypot(server.getX() - server.xo, server.getZ() - server.zo) * 20, server.isAiDriven(), client.getMovementAnimationName(),
                     server.getYHeadRot(), server.yBodyRot, server.getXRot(), server.isToolActive(), client.getToolRaise(1F), faceLeft, drops,
-                    server.getTotalEnergy(), visor[0], visor[1], visor[2], server.getNavigation().isDone(),
+                    server.power().getTotalEnergy(), visor[0], visor[1], visor[2], server.getNavigation().isDone(),
                     server.runningGoalNames(), server.getOwner() == null ? -1F : server.distanceTo(server.getOwner()),
                     server.getTarget() == null ? "-" : server.getTarget().getType().toShortString(), server.getStoredNuggets(), server.getToolUses(),
                     mindMobs.stream().filter(e -> e.isAlive()).count(), mindMobs.stream().filter(e -> e.isAlive()).mapToDouble(e -> e.getHealth()).sum(),
@@ -1623,7 +1623,7 @@ public final class AutoPilot {
                     suit.onGround(), mc.player.isSprinting(), suit.getMovementAnimationName(), server.isPowered(), server.isStunned(), server.canOperate(),
                     server.getHealth(), server.isOnFire(), pilot == null ? -1F : pilot.getHealth(), pilot != null && pilot.isOnFire(),
                     pilot != null && pilot.hasEffect(net.minecraft.world.effect.MobEffects.POISON), pilot == null ? -1 : pilot.getAirSupply(),
-                    server.getTotalEnergy(), panes, leaves, glass, ice, snow, drops, server.lastStompVictims, mobs,
+                    server.power().getTotalEnergy(), panes, leaves, glass, ice, snow, drops, server.lastStompVictims, mobs,
                     pilot == null ? -1 : pilot.getRemainingFireTicks(), mc.player.isOnFire(), last == null ? "-" : last.getMsgId(),
                     pilot instanceof net.minecraft.world.entity.player.Player p ? p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) : -1D, // -1D: an int -1 is boxed as Integer (%f crashed)
                     pilot instanceof net.minecraft.world.entity.player.Player p2 ? p2.getAttackStrengthScale(0.5F) : -1F,

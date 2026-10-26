@@ -175,14 +175,14 @@ public class EmProjectorItem extends Item implements PowerTool {
             java.util.function.Predicate<Entity> grabbable = operator instanceof Player ? e -> canHold(suit, e)
                     : e -> e == suit.getTarget() && canHold(suit, e);
             Entity found = SocketAim.entityInView(suit, operator, PowerArmorConfig.EM_RANGE.get(), grabbable, 0.6F);
-            if (found != null && suit.tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
+            if (found != null && suit.power().tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
                 grab(suit, beam, found);
             }
             return;
         }
         Entity target = beam.target;
         if (!canHold(suit, target) || target.distanceTo(suit) > PowerArmorConfig.EM_RANGE.get() * KEEP_RANGE_FACTOR
-                || !suit.tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
+                || !suit.power().tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
             drop(suit, beam); // died, got away, or out of fuel
             return;
         }
@@ -237,7 +237,7 @@ public class EmProjectorItem extends Item implements PowerTool {
         if (target == null) {
             return;
         }
-        if (interrupted || operator == null || !suit.tryUseEnergy(PowerArmorConfig.EM_THROW_ENERGY.get())) {
+        if (interrupted || operator == null || !suit.power().tryUseEnergy(PowerArmorConfig.EM_THROW_ENERGY.get())) {
             drop(suit, beam);
             return;
         }

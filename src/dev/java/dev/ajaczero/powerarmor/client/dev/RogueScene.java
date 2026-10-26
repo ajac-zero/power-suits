@@ -82,7 +82,7 @@ final class RogueScene {
             case 520 -> { phase = "heavy"; AutoPilot.onServer(mc, p -> {
                               if (friend != null) {
                                   friend.getInventory().clearContent(); // the player's other suit sits this one out
-                                  friend.setBurn(0, 0);
+                                  friend.power().setBurn(0, 0);
                               }
                               if (rogue != null && rogue.isAlive() && base != null) {
                                   rogue.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, ItemStack.EMPTY);
@@ -217,7 +217,7 @@ final class RogueScene {
         try {
             csv.write(String.format(Locale.ROOT, "%d,%s,%.1f,%s,%.1f,%b,%b,%s,%d,%d,%.2f,%.2f,%.2f,%b,%s,%d,%d,%.2f,%.2f,%.1f,%s,%.1f,%s,%s,%b,%.2f,%.2f,%b,%.2f%n",
                     s, phase, spawnDistance, r.getMind(), r.getHealth(), r.isPowered(), r.isStunned(), name(r.getTarget()), r.getToolUses(),
-                    r.getTotalEnergy(), visor[0], visor[1], visor[2], player.getUUID().equals(r.getOwnerId()), name(f.getTarget()), f.getToolUses(),
+                    r.power().getTotalEnergy(), visor[0], visor[1], visor[2], player.getUUID().equals(r.getOwnerId()), name(f.getTarget()), f.getToolUses(),
                     cows.stream().filter(LivingEntity::isAlive).count(), player.getY() - base.getY(), player.getDeltaMovement().y,
                     player.getHealth(), player.getVehicle() == null ? "-" : player.getVehicle() == r ? "rebooted" : "other",
                     em == null ? -1F : em.getHealth(), em == null ? "-" : name(em.getTarget()),

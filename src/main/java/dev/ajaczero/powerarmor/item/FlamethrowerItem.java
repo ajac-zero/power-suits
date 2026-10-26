@@ -130,7 +130,7 @@ public class FlamethrowerItem extends Item implements PowerTool {
             }
             return;
         }
-        if (!suit.tryUseEnergy(this.energyPerUse())) {
+        if (!suit.power().tryUseEnergy(this.energyPerUse())) {
             if (held % 10 == 0) {
                 level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 0.6F);
             }

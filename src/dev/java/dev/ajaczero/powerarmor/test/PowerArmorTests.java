@@ -239,17 +239,17 @@ public final class PowerArmorTests {
         Player pilot = boardedPilot(helper, suit);
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 2, "one coal should be burning, two waiting");
-            float idle = fireboxEnergy(helper, Items.COAL) - suit.getBurnLeftExact();
+            float idle = fireboxEnergy(helper, Items.COAL) - suit.power().getBurnLeftExact();
             helper.assertTrue(near(idle, 20 * PowerArmorConfig.DRAIN_IDLE.get()), "idle should burn ~0.25/tick (5 in 20 ticks), burnt " + idle);
-            float before = suit.getBurnLeftExact();
+            float before = suit.power().getBurnLeftExact();
             pilot.zza = 1; // holding W
             helper.runAfterDelay(20, () -> {
-                float walk = before - suit.getBurnLeftExact();
+                float walk = before - suit.power().getBurnLeftExact();
                 helper.assertTrue(near(walk, 20 * PowerArmorConfig.DRAIN_WALK.get()), "walking should burn ~1/tick (20), burnt " + walk);
-                float before2 = suit.getBurnLeftExact();
+                float before2 = suit.power().getBurnLeftExact();
                 pilot.setSprinting(true);
                 helper.runAfterDelay(20, () -> {
-                    float sprint = before2 - suit.getBurnLeftExact();
+                    float sprint = before2 - suit.power().getBurnLeftExact();
                     helper.assertTrue(near(sprint, 20 * PowerArmorConfig.DRAIN_SPRINT.get()), "sprinting should burn ~2/tick (40), burnt " + sprint);
                     helper.assertTrue(suit.isPowered(), "suit should still be powered");
                     helper.succeed();
@@ -264,7 +264,7 @@ public final class PowerArmorTests {
         boardedPilot(helper, suit);
         helper.runAfterDelay(2, () -> {
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.BUCKET), "an empty bucket should stay in the fuel slot");
-            helper.assertTrue(suit.getBurnLeftExact() > fireboxEnergy(helper, Items.LAVA_BUCKET) - 10, "lava should give its energy, got " + suit.getBurnLeftExact());
+            helper.assertTrue(suit.power().getBurnLeftExact() > fireboxEnergy(helper, Items.LAVA_BUCKET) - 10, "lava should give its energy, got " + suit.power().getBurnLeftExact());
             helper.succeed();
         });
     }
@@ -272,7 +272,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 60)
     public static void emptyTankShutsDown(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
-        suit.setBurn(10, 1600); // half a second of walking left, nothing in the slot
+        suit.power().setBurn(10, 1600); // half a second of walking left, nothing in the slot
         Player pilot = boardedPilot(helper, suit);
         pilot.zza = 1;
         helper.runAfterDelay(2, () -> helper.assertTrue(suit.isPowered(), "should still run on the last bit of fuel"));
@@ -293,13 +293,13 @@ public final class PowerArmorTests {
         helper.runAfterDelay(2, () -> {
             helper.assertTrue(!suit.isPowered(), "a suit without fuel is off");
             helper.assertTrue(!suit.isAiDriven() && suit.toolOperator() == null, "an unpowered suit has no mind at work");
-            suit.setBurn(500, 1600);
+            suit.power().setBurn(500, 1600);
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 2));
         });
         helper.runAfterDelay(4, () -> helper.assertTrue(suit.isPowered(), "fuel should power it back on"));
         helper.runAfterDelay(44, () -> {
             double idle = PowerArmorConfig.DRAIN_IDLE.get();
-            float used = 500 - suit.getBurnLeftExact();
+            float used = 500 - suit.power().getBurnLeftExact();
             helper.assertTrue(used > idle * 30 && used < idle * 45, "the mind's suit burns the idle rate (~40 ticks), used " + used);
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 2, "no new coal needed yet");
             helper.succeed();
@@ -310,14 +310,14 @@ public final class PowerArmorTests {
     public static void saveAndLoadKeepFuelAndSocket(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.CHARCOAL, 5));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(Items.STICK)); // stand-in tool
-        suit.setBurn(123.5F, 1600);
+        suit.power().setBurn(123.5F, 1600);
         CompoundTag saved = saveTag(helper, suit);
 
         PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
         loadTag(helper, loaded, saved);
         helper.assertTrue(loaded.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 5, "fuel slot should survive saving");
         helper.assertTrue(loaded.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(Items.STICK), "socket should survive saving");
-        helper.assertTrue(loaded.getBurnLeftExact() == 123.5F && loaded.getBurnTotal() == 1600, "burning item should survive saving");
+        helper.assertTrue(loaded.power().getBurnLeftExact() == 123.5F && loaded.power().getBurnTotal() == 1600, "burning item should survive saving");
         helper.assertTrue(loaded.isPowered(), "a loaded suit with fuel is powered");
         helper.succeed();
     }
@@ -326,7 +326,7 @@ public final class PowerArmorTests {
     public static void packAndDeployKeepLoadout(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 7));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(Items.STICK));
-        suit.setBurn(900, 1600);
+        suit.power().setBurn(900, 1600);
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         suit.packUp(player);
         ItemStack packed = packedSuit(player);
@@ -341,7 +341,7 @@ public final class PowerArmorTests {
         PowerArmorEntity deployed = suitsInTest(helper).stream().filter(s -> s != suit).findFirst().orElseThrow();
         helper.assertTrue(deployed.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 7, "deployed suit should get its coal back");
         helper.assertTrue(deployed.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(Items.STICK), "deployed suit should get its tool back");
-        helper.assertTrue(deployed.getBurnLeftExact() == 900, "deployed suit should keep its half-burnt coal");
+        helper.assertTrue(deployed.power().getBurnLeftExact() == 900, "deployed suit should keep its half-burnt coal");
         helper.succeed();
     }
 
@@ -437,7 +437,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(suit.getToolUses() == 1, "a tap fires exactly one shot, got " + suit.getToolUses());
             helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 63, "one nugget used");
-            int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit.getTotalEnergy(), shot = PowerArmorConfig.CHAINGUN_ENERGY.get();
+            int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit.power().getTotalEnergy(), shot = PowerArmorConfig.CHAINGUN_ENERGY.get();
             helper.assertTrue(used >= shot && used < shot + 10, "one bullet costs " + shot + " energy (+ spin, idle), used " + used);
             helper.succeed();
         });
@@ -475,7 +475,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(60, () -> {
             helper.assertTrue(suit.getToolUses() == 3, "three nuggets, three bullets, got " + suit.getToolUses());
             helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 0, "all nuggets used");
-            int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit.getTotalEnergy();
+            int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit.power().getTotalEnergy();
             int most = 3 * PowerArmorConfig.CHAINGUN_ENERGY.get() + 61 * PowerArmorConfig.CHAINGUN_SPIN_ENERGY.get() + 20;
             helper.assertTrue(used <= most, "only three bullets (+ spin, idle) cost fuel: at most " + most + ", used " + used);
             helper.succeed();
@@ -551,7 +551,7 @@ public final class PowerArmorTests {
     public static void shotLightsTheNextFuelItem(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.COAL, 1));
         int start = PowerArmorConfig.CHAINGUN_ENERGY.get() / 2;
-        suit.setBurn(start, 1600); // not enough for a bullet by itself
+        suit.power().setBurn(start, 1600); // not enough for a bullet by itself
         Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
         suit.setTriggerHeld(pilot, true);
@@ -791,13 +791,13 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = emSuit(helper);
         var item = helper.spawnItem(Items.DIAMOND, 4.5F, 2.2F, 7.5F);
         Player pilot = emPilotLookingAt(helper, suit, item.position());
-        int before = suit.getTotalEnergy();
+        int before = suit.power().getTotalEnergy();
         suit.setTriggerHeld(pilot, true);
         helper.runAfterDelay(2, () -> helper.assertTrue(suit.getBeamTarget() == item, "the beam should lock onto the diamond"));
         helper.runAfterDelay(60, () -> {
             helper.assertTrue(item.isRemoved(), "the diamond should have been collected");
             helper.assertTrue(pilot.getInventory().countItem(Items.DIAMOND) == 1, "the diamond should be in the pilot's inventory");
-            int used = before - suit.getTotalEnergy();
+            int used = before - suit.power().getTotalEnergy();
             int max = 60 * (PowerArmorConfig.EM_HOLD_ENERGY.get() + 1);
             helper.assertTrue(used > 0 && used < max, "pulling costs energy per tick (+ idle), used " + used);
             helper.succeed();
@@ -814,11 +814,11 @@ public final class PowerArmorTests {
             helper.assertTrue(suit.getBeamTarget() == pig && pig.isNoGravity(), "the pig should float in the beam");
             helper.assertTrue(pig.distanceTo(suit) < 5.5, "the pig should be pulled in close, distance " + pig.distanceTo(suit));
             pilot.setXRot(0); // look straight ahead, then let go
-            int before = suit.getTotalEnergy();
+            int before = suit.power().getTotalEnergy();
             suit.setTriggerHeld(pilot, false);
             helper.runAfterDelay(1, () -> {
                 helper.assertTrue(suit.getBeamTarget() == null && !pig.isNoGravity(), "released: gravity back on");
-                helper.assertTrue(before - suit.getTotalEnergy() >= PowerArmorConfig.EM_THROW_ENERGY.get(), "a throw costs the throw energy");
+                helper.assertTrue(before - suit.power().getTotalEnergy() >= PowerArmorConfig.EM_THROW_ENERGY.get(), "a throw costs the throw energy");
                 helper.assertTrue(suit.getToolUses() == 1, "one throw");
                 helper.succeed();
             });
@@ -987,7 +987,7 @@ public final class PowerArmorTests {
         helper.setBlock(new BlockPos(4, 3, 6), Blocks.OBSIDIAN); // behind: slow, so it's still there when we check
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
-        int before = suit.getTotalEnergy();
+        int before = suit.power().getTotalEnergy();
         suit.setTriggerHeld(pilot, true);
         helper.runAfterDelay(4, () -> helper.assertTrue(wallLeft(helper) == 9, "stone takes 6 ticks with a diamond tool, not instant"));
         helper.runAfterDelay(25, () -> {
@@ -995,7 +995,7 @@ public final class PowerArmorTests {
             helper.assertTrue(wallLeft(helper) == 0, "all 9 blocks of the face should be gone, left " + wallLeft(helper));
             helper.assertBlockPresent(Blocks.OBSIDIAN, new BlockPos(4, 3, 6));
             helper.assertTrue(dropped(helper, Items.COBBLESTONE) == 9, "9 cobblestone should drop, got " + dropped(helper, Items.COBBLESTONE));
-            int used = before - suit.getTotalEnergy(), face = 9 * PowerArmorConfig.DRILL_ENERGY.get();
+            int used = before - suit.power().getTotalEnergy(), face = 9 * PowerArmorConfig.DRILL_ENERGY.get();
             helper.assertTrue(used >= face && used < face + 40, "9 blocks' fuel (+ idle), used " + used);
             helper.succeed();
         });
@@ -1072,7 +1072,7 @@ public final class PowerArmorTests {
         }
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.CHAINSAW.get()), new Vec3(4.5, 2.5, 5));
-        int before = suit.getTotalEnergy();
+        int before = suit.power().getTotalEnergy();
         suit.setTriggerHeld(pilot, true);
         helper.runAfterDelay(30, () -> {
             suit.setTriggerHeld(pilot, false);
@@ -1080,7 +1080,7 @@ public final class PowerArmorTests {
                 helper.assertBlockNotPresent(Blocks.OAK_LOG, new BlockPos(4, y, 5));
             }
             helper.assertTrue(dropped(helper, Items.OAK_LOG) == 5, "5 logs should drop, got " + dropped(helper, Items.OAK_LOG));
-            int used = before - suit.getTotalEnergy(), tree = 5 * PowerArmorConfig.CHAINSAW_ENERGY.get();
+            int used = before - suit.power().getTotalEnergy(), tree = 5 * PowerArmorConfig.CHAINSAW_ENERGY.get();
             helper.assertTrue(used >= tree && used < tree + 30, "fuel per log x 5 (+ idle), used " + used);
             helper.succeed();
         });
@@ -1194,15 +1194,15 @@ public final class PowerArmorTests {
         Player pilot = boardedPilot(helper, suit);
         helper.runAfterDelay(5, () -> {
             var sources = helper.getLevel().damageSources();
-            float before = suit.getBurnLeftExact();
+            float before = suit.power().getBurnLeftExact();
             pilot.hurt(sources.onFire(), 1F); // redirected to the suit (PilotProtection), where the seal pays for it
-            float paid = before - suit.getBurnLeftExact();
+            float paid = before - suit.power().getBurnLeftExact();
             helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "fire must not hurt a powered suit, health " + suit.getHealth());
             helper.assertTrue(pilot.getHealth() == pilot.getMaxHealth(), "nor its pilot");
             helper.assertTrue(Math.abs(paid - PowerArmorConfig.SEAL_ENERGY_PER_DAMAGE.get()) < 0.01, "one point of fire should cost its energy, paid " + paid);
-            float before2 = suit.getBurnLeftExact();
+            float before2 = suit.power().getBurnLeftExact();
             suit.hurt(sources.inFire(), 1F); // the next tick of fire within the half second is already paid for
-            helper.assertTrue(suit.getBurnLeftExact() == before2, "fire within the half-second immunity is free");
+            helper.assertTrue(suit.power().getBurnLeftExact() == before2, "fire within the half-second immunity is free");
             suit.hurt(sources.lava(), 4F);
             helper.assertTrue(suit.getHealth() < suit.getMaxHealth(), "lava still eats the hull");
             suit.igniteForSeconds(5);   // a flaming arrow, say
@@ -1246,10 +1246,10 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
         helper.runAfterDelay(2, () -> {
-            float before = suit.getBurnLeftExact();
+            float before = suit.power().getBurnLeftExact();
             pilot.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 100));
             helper.assertTrue(!pilot.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "poison should be kept out");
-            helper.assertTrue(Math.abs(before - suit.getBurnLeftExact() - PowerArmorConfig.SEAL_EFFECT_ENERGY.get()) < 0.01, "and cost fuel");
+            helper.assertTrue(Math.abs(before - suit.power().getBurnLeftExact() - PowerArmorConfig.SEAL_EFFECT_ENERGY.get()) < 0.01, "and cost fuel");
             pilot.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, 100));
             helper.assertTrue(pilot.hasEffect(net.minecraft.world.effect.MobEffects.REGENERATION), "good effects get through");
             var breathe = new net.neoforged.neoforge.event.entity.living.LivingBreatheEvent(pilot, false, 1, 4);
@@ -1404,7 +1404,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(2, () -> {
             helper.assertTrue(player.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "the poison came in with the pilot");
             // A poison tick (NeoForge's own damage type, neoforge:poison), then a wither tick.
-            float fuel = suit.getBurnLeftExact();
+            float fuel = suit.power().getBurnLeftExact();
             var types = helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE);
             player.damageCooldownTime = 0;
             player.hurt(new net.minecraft.world.damagesource.DamageSource(types.getOrThrow(net.neoforged.neoforge.common.NeoForgeMod.POISON_DAMAGE)), 1F);
@@ -1416,7 +1416,7 @@ public final class PowerArmorTests {
                     + (suit.getLastDamageSource() == null ? "-" : suit.getLastDamageSource().getMsgId()));
             helper.assertTrue(player.getLastDamageSource() != null && player.getLastDamageSource().is(net.minecraft.world.damagesource.DamageTypes.WITHER),
                     "the wither tick reached the pilot");
-            helper.assertTrue(suit.getBurnLeftExact() == fuel, "and costs no fuel");
+            helper.assertTrue(suit.power().getBurnLeftExact() == fuel, "and costs no fuel");
             helper.succeed();
         });
     }
@@ -1933,7 +1933,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(3, () -> helper.assertTrue(suit.isPowered() && suit.isAiDriven(), "a rogue needs no fuel"));
         helper.succeedWhen(() -> {
             helper.assertTrue(!cow.isAlive(), "the cow should be shot");
-            helper.assertTrue(suit.getTotalEnergy() == 0 && suit.getStoredNuggets() == 0 && suit.getToolUses() > 0,
+            helper.assertTrue(suit.power().getTotalEnergy() == 0 && suit.getStoredNuggets() == 0 && suit.getToolUses() > 0,
                     "fired without fuel or nuggets");
         });
     }
@@ -2175,7 +2175,7 @@ public final class PowerArmorTests {
         suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, ItemStack.EMPTY);
         helper.runAfterDelay(10, () -> {
             helper.assertTrue(!suit.hasHelmet() && !suit.isPowered() && !suit.isAiDriven(), "no helmet: powered down, no mind");
-            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 3 && suit.getBurnLeft() == 0,
+            helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 3 && suit.power().getBurnLeft() == 0,
                     "and it burns nothing");
             Player player = helper.makeMockPlayer(GameType.SURVIVAL);
             player.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
@@ -2184,7 +2184,7 @@ public final class PowerArmorTests {
             helper.assertTrue(suit.hasHelmet() && player.getMainHandItem().isEmpty(), "right-click with the helmet puts it on");
             helper.assertTrue(player.getVehicle() == null, "and doesn't climb in");
         });
-        helper.runAfterDelay(20, () -> helper.assertTrue(suit.isPowered() && suit.getBurnLeft() > 0, "with its helmet on it runs"));
+        helper.runAfterDelay(20, () -> helper.assertTrue(suit.isPowered() && suit.power().getBurnLeft() > 0, "with its helmet on it runs"));
         helper.runAfterDelay(60, () -> {
             helper.assertTrue(suit.isAiDriven(), "and its mind drives it");
             SuitLoadout packed = suit.getLoadout();
@@ -2262,14 +2262,14 @@ public final class PowerArmorTests {
         helper.assertTrue(bare.getInventory().getItem(PowerArmorEntity.ENGINE_SLOT).isEmpty(), "a new suit has no engine");
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         helper.runAfterDelay(3, () -> {
-            helper.assertTrue(suit.isPowered() && suit.getBurnLeftExact() > 0, "the firebox burns its coal");
+            helper.assertTrue(suit.isPowered() && suit.power().getBurnLeftExact() > 0, "the firebox burns its coal");
             helper.assertTrue(!bare.isPowered() && bare.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 4,
                     "no engine: the coal just sits there");
             suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, ItemStack.EMPTY);
         });
         helper.runAfterDelay(6, () -> {
             helper.assertTrue(!suit.isPowered() && suit.getEngine() == null, "no engine, no power");
-            helper.assertTrue(suit.getBurnLeftExact() == 0, "the half-burnt coal went out with the engine, " + suit.getBurnLeftExact());
+            helper.assertTrue(suit.power().getBurnLeftExact() == 0, "the half-burnt coal went out with the engine, " + suit.power().getBurnLeftExact());
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 3, "the coal in the slot stays");
             suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.FIREBOX.get()));
         });
@@ -2313,21 +2313,21 @@ public final class PowerArmorTests {
         pool(helper, false);
         PowerArmorEntity suit = suitWithEngine(helper, SUIT_POS, new ItemStack(ModItems.FIREBOX.get()), new ItemStack(Items.COAL, 4));
         helper.runAfterDelay(3, () -> {
-            helper.assertTrue(suit.isPowered() && !suit.isFlooded(), "a dry firebox runs");
+            helper.assertTrue(suit.isPowered() && !suit.power().isFlooded(), "a dry firebox runs");
             pool(helper, true);
         });
         helper.runAfterDelay(6, () -> {
-            helper.assertTrue(suit.isEngineUnderWater() && suit.isFlooded(), "5 blocks of water cover the backpack");
+            helper.assertTrue(suit.power().isEngineUnderWater() && suit.power().isFlooded(), "5 blocks of water cover the backpack");
             helper.assertTrue(!suit.isPowered(), "a flooded firebox shuts the suit down");
-            helper.assertTrue(suit.getBurnLeftExact() == 0, "the burning coal is lost, " + suit.getBurnLeftExact());
+            helper.assertTrue(suit.power().getBurnLeftExact() == 0, "the burning coal is lost, " + suit.power().getBurnLeftExact());
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 3, "the coal in the slot can't light under water");
             Player player = helper.makeMockPlayer(GameType.SURVIVAL);
             helper.assertTrue(!suit.packUp(player) && !suit.isRemoved() && packedSuit(player).isEmpty(), "no pack-up while flooded");
-            helper.assertTrue(!suit.hasEnergyFor(1), "no energy for tools either");
+            helper.assertTrue(!suit.power().hasEnergyFor(1), "no energy for tools either");
             pool(helper, false); // drain it
         });
         helper.runAfterDelay(10, () -> {
-            helper.assertTrue(!suit.isFlooded() && suit.isPowered(), "drained, the firebox lights again");
+            helper.assertTrue(!suit.power().isFlooded() && suit.isPowered(), "drained, the firebox lights again");
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 2, "with its next coal");
             helper.succeed();
         });
@@ -2346,7 +2346,7 @@ public final class PowerArmorTests {
         }
         PowerArmorEntity suit = suitWithEngine(helper, SUIT_POS, new ItemStack(ModItems.FIREBOX.get()), new ItemStack(Items.COAL, 4));
         helper.runAfterDelay(10, () -> {
-            helper.assertTrue(suit.isInWater() && !suit.isEngineUnderWater(), "the suit stands in the water, its backpack above it");
+            helper.assertTrue(suit.isInWater() && !suit.power().isEngineUnderWater(), "the suit stands in the water, its backpack above it");
             helper.assertTrue(suit.isPowered(), "a firebox above the water keeps running");
             helper.succeed();
         });
@@ -2359,19 +2359,19 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = suitWithEngine(helper, SUIT_POS, new ItemStack(ModItems.TIDAL_ENGINE.get()), ItemStack.EMPTY);
         int grace = PowerArmorConfig.TIDAL_DRY_GRACE.get();
         helper.runAfterDelay(30, () -> {
-            helper.assertTrue(suit.isPowered() && suit.hasFreePower(), "under water the tidal engine runs on nothing");
-            helper.assertTrue(suit.getBurnLeftExact() == 0 && suit.hasEnergyFor(100_000), "and pays for anything");
+            helper.assertTrue(suit.isPowered() && suit.power().hasFreePower(), "under water the tidal engine runs on nothing");
+            helper.assertTrue(suit.power().getBurnLeftExact() == 0 && suit.power().hasEnergyFor(100_000), "and pays for anything");
             pool(helper, false);
         });
         helper.runAfterDelay(30 + grace / 2, () -> helper.assertTrue(suit.isPowered(), "a short grace out of the water"));
         helper.runAfterDelay(30 + grace + 5, () -> {
-            helper.assertTrue(!suit.isPowered() && !suit.hasFreePower(), "dry and nothing to drink: off");
+            helper.assertTrue(!suit.isPowered() && !suit.power().hasFreePower(), "dry and nothing to drink: off");
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.WATER_BUCKET));
         });
         helper.runAfterDelay(30 + grace + 8, () -> {
             helper.assertTrue(suit.isPowered(), "a water bucket runs it on land");
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.BUCKET), "the empty bucket stays");
-            float left = suit.getBurnLeftExact();
+            float left = suit.power().getBurnLeftExact();
             helper.assertTrue(left > PowerArmorConfig.WATER_BUCKET_ENERGY.get() - 10 && left < PowerArmorConfig.WATER_BUCKET_ENERGY.get(),
                     "it drinks the bucket's energy, " + left);
             helper.succeed();
@@ -2387,11 +2387,11 @@ public final class PowerArmorTests {
         helper.runAfterDelay(3, () -> {
             helper.assertTrue(tidal.isPowered() && tidal.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.GLASS_BOTTLE),
                     "the tidal engine drinks the bottle and leaves the glass");
-            helper.assertTrue(tidal.getBurnTotal() == PowerArmorConfig.WATER_BOTTLE_ENERGY.get(), "a bottle's worth, " + tidal.getBurnTotal());
+            helper.assertTrue(tidal.power().getBurnTotal() == PowerArmorConfig.WATER_BOTTLE_ENERGY.get(), "a bottle's worth, " + tidal.power().getBurnTotal());
             helper.assertTrue(!fire.isPowered() && fire.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.WATER_BUCKET),
                     "a firebox can't burn water: it just sits in the slot");
             tidal.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL));
-            tidal.setBurn(0, 0);
+            tidal.power().setBurn(0, 0);
         });
         helper.runAfterDelay(6, () -> {
             helper.assertTrue(!tidal.isPowered() && tidal.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.COAL),
@@ -2408,10 +2408,10 @@ public final class PowerArmorTests {
         pilot.zza = 1;
         pilot.setSprinting(true);
         helper.runAfterDelay(30, () -> {
-            helper.assertTrue(suit.isPowered() && suit.hasFreePower(), "the reactor runs");
-            helper.assertTrue(suit.getBurnLeftExact() == 0 && suit.tryUseEnergy(100_000), "it burns nothing and pays for any tool");
+            helper.assertTrue(suit.isPowered() && suit.power().hasFreePower(), "the reactor runs");
+            helper.assertTrue(suit.power().getBurnLeftExact() == 0 && suit.power().tryUseEnergy(100_000), "it burns nothing and pays for any tool");
             helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.NETHER_STAR), "the star stays");
-            helper.assertTrue(!suit.isLowOnFuel(), "it never runs low");
+            helper.assertTrue(!suit.power().isLowOnFuel(), "it never runs low");
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 4));
         });
         helper.runAfterDelay(33, () -> {
@@ -2474,7 +2474,7 @@ public final class PowerArmorTests {
         helper.succeedWhen(() -> {
             helper.assertTrue(helper.getLevel().isRaining(), "waiting for rain");
             BlockPos top = BlockPos.containing(tidal.getX(), tidal.getBoundingBox().maxY, tidal.getZ());
-            helper.assertTrue(tidal.isPowered() && tidal.hasFreePower(), "the tidal engine runs in the rain (rain level "
+            helper.assertTrue(tidal.isPowered() && tidal.power().hasFreePower(), "the tidal engine runs in the rain (rain level "
                     + helper.getLevel().getRainLevel(1F) + ", sky " + helper.getLevel().canSeeSky(top) + ", raining at its top "
                     + helper.getLevel().isRainingAt(top) + ", biome " + helper.getLevel().getBiome(top).getRegisteredName() + ")");
             helper.assertTrue(fire.isPowered(), "a firebox runs in the rain too");
@@ -2638,7 +2638,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(2 + hold, () -> suit[0].setTriggerHeld(pilot, false));
         helper.runAfterDelay(2 + hold + 2, () -> {
             helper.assertTrue(near(suit[0].getToolUses(), hold), "a gob a tick: " + suit[0].getToolUses() + " in " + hold + " ticks");
-            int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit[0].getTotalEnergy();
+            int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit[0].power().getTotalEnergy();
             int expected = hold * PowerArmorConfig.FLAMETHROWER_ENERGY.get();
             helper.assertTrue(used >= expected * 0.85 && used < expected * 1.15 + 15, "fuel per tick of flame: used " + used + ", expected ~" + expected);
             helper.assertTrue(pig.getHealth() < pig.getMaxHealth(), "the pig should be burnt, health " + pig.getHealth());
@@ -2983,7 +2983,7 @@ public final class PowerArmorTests {
         int full = PowerArmorConfig.RAIL_CHARGE.get();
         int[] energy = new int[1];
         helper.runAfterDelay(2, () -> {
-            energy[0] = suit[0].getTotalEnergy();
+            energy[0] = suit[0].power().getTotalEnergy();
             suit[0].setTriggerHeld(pilot, true);
         });
         helper.runAfterDelay(2 + full - 5, () -> {
@@ -3003,7 +3003,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(2 + 2 * full + 17, () -> {
             helper.assertTrue(suit[0].getToolUses() == 1, "let go at full charge: one shot, got " + suit[0].getToolUses());
             helper.assertTrue(ammoLeft(suit[0]) == 2 && suit[0].getAmmoStack().getCount() == 2, "one ingot used, left " + ammoLeft(suit[0]));
-            int used = energy[0] - suit[0].getTotalEnergy(), shot = PowerArmorConfig.RAIL_ENERGY.get();
+            int used = energy[0] - suit[0].power().getTotalEnergy(), shot = PowerArmorConfig.RAIL_ENERGY.get();
             helper.assertTrue(used >= shot && used < shot + 40, "a shot costs " + shot + " energy (+ idle), used " + used);
             helper.assertTrue(suit[0].getToolSpin() == 0F, "the charge is spent");
             helper.succeed();

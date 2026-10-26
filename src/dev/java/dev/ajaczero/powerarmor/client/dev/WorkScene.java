@@ -199,7 +199,7 @@ final class WorkScene {
                     server.getX() - home.getX() - 0.5, server.getZ() - home.getZ() - 0.5, server.runningGoalNames(),
                     server.getTarget() == null ? "-" : server.getTarget().getType().toShortString(), rock, ores, lavaWalls, hole, ceiling,
                     player.getInventory().countItem(Items.COAL), player.getInventory().countItem(Items.RAW_IRON), onGround, items.size(),
-                    logs, server.getTotalEnergy()));
+                    logs, server.power().getTotalEnergy()));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] work csv", e);
         }

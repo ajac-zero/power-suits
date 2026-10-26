@@ -61,11 +61,11 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
             return;
         }
         // Burning flame, shrinking as the current fuel item burns down (same sprite as the furnace).
-        if (suit.hasFreePower() && suit.isPowered()) {
+        if (suit.power().hasFreePower() && suit.isPowered()) {
             // a wet tidal engine or a star reactor: burning nothing, never running down
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, LIT_PROGRESS, 14, 14, 0, 0, x + FLAME_X, y + FLAME_Y, 14, 14);
-        } else if (suit.getBurnLeft() > 0 && suit.getBurnTotal() > 0) {
-            int h = Mth.ceil(Mth.clamp(suit.getBurnLeft() / (float) suit.getBurnTotal(), 0F, 1F) * 13F) + 1;
+        } else if (suit.power().getBurnLeft() > 0 && suit.power().getBurnTotal() > 0) {
+            int h = Mth.ceil(Mth.clamp(suit.power().getBurnLeft() / (float) suit.power().getBurnTotal(), 0F, 1F) * 13F) + 1;
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, LIT_PROGRESS, 14, 14, 0, 14 - h, x + FLAME_X, y + FLAME_Y + 14 - h, 14, h);
         }
         // The suit itself, turning to follow the mouse (like the player in the inventory screen).
@@ -81,18 +81,18 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         }
         int hull = Mth.ceil(suit.getHealth());
         int max = Mth.ceil(suit.getMaxHealth());
-        int energy = suit.getTotalEnergy();
+        int energy = suit.power().getTotalEnergy();
         int hullColour = hull < max / 4 ? RED : hull < max / 2 ? AMBER : GREEN;
-        int fuelColour = energy == 0 ? RED : suit.isLowOnFuel() ? AMBER : GREEN;
+        int fuelColour = energy == 0 ? RED : suit.power().isLowOnFuel() ? AMBER : GREEN;
         graphics.text(this.font, Component.translatable("gui.powerarmor.hull", hull, max), DISPLAY_X, DISPLAY_Y, hullColour, false);
         // A wet tidal engine or a star reactor burns nothing: its range is endless.
-        Component range = suit.hasFreePower() ? Component.translatable("gui.powerarmor.range_free")
+        Component range = suit.power().hasFreePower() ? Component.translatable("gui.powerarmor.range_free")
                 : Component.translatable("gui.powerarmor.range", PowerArmorItem.formatWalkTime(energy));
-        graphics.text(this.font, range, DISPLAY_X, DISPLAY_Y + LINE, suit.hasFreePower() ? GREEN : fuelColour, false);
+        graphics.text(this.font, range, DISPLAY_X, DISPLAY_Y + LINE, suit.power().hasFreePower() ? GREEN : fuelColour, false);
         // Say why a suit stands down: no engine, a flooded firebox, or (parked) no helmet: its mind needs the helmet.
-        boolean warn = suit.getEngine() == null || suit.isFlooded() || !suit.hasHelmet();
+        boolean warn = suit.getEngine() == null || suit.power().isFlooded() || !suit.hasHelmet();
         Component status = Component.translatable(suit.getEngine() == null ? "gui.powerarmor.no_engine"
-                : suit.isFlooded() ? "gui.powerarmor.flooded"
+                : suit.power().isFlooded() ? "gui.powerarmor.flooded"
                 : !suit.hasHelmet() ? "gui.powerarmor.no_helmet"
                 : suit.isPowered() ? "gui.powerarmor.online" : "gui.powerarmor.offline");
         graphics.text(this.font, status, DISPLAY_X, DISPLAY_Y + 2 * LINE, warn ? AMBER : suit.isPowered() ? GREEN : RED, false);
