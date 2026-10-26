@@ -45,7 +45,9 @@ committed, and the user got a short explanation (teach the concepts as you go). 
 Blockbench -> the user picks -> game part (bone, code, icon, recipe, autopilot scene, tests).
 
 ## Layout
-- `src/` the mod; `tools/` export / art / test helpers; `docs/guide.md` player guide + file map; `run/` dev game (not in git).
+- `src/main/` the mod (what ships); `src/dev/` the GameTests, autopilot scenes, multiplayer script and `test_pad`: a
+  separate source set that sees the mod but isn't in the jar (entry `dev/PowerArmorDev`; every run loads both). New dev
+  or test code goes there; `./gradlew build` compiles it. `tools/` export / art / test helpers; `docs/guide.md` player guide + file map; `run/` dev game (not in git).
 - `model/` the Blockbench source: `power_armor.bbmodel`, `anim/` procedural animation specs (bake with
   `.agents/skills/blockbench-mcp/scripts/run.mjs`, see `model/anim/README.md`), `art/` one-off texture/part scripts.
 - `site/` the mod's web page (GitHub Pages, https://ajac-zero.github.io/power-suits/). A template: `tools/build-site.py`
@@ -78,7 +80,7 @@ Mojang's names are official since 26.1 (no Parchment). Porting primers: `neoforg
 | Command | Use |
 |---|---|
 | `./gradlew build` | compile + jar |
-| `./gradlew runGameTestServer` | headless GameTests in `src/main/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
+| `./gradlew runGameTestServer` | headless GameTests in `src/dev/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
 | `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, chaingun range, right hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
 | `./gradlew runAutopilotMech` | only the autopilot's last scenes (~3 min): smashing blocks, stomp, lightning, punch, lava + poison (`ap_mech_*.png`, `run/autopilot_mech.csv`), then the machine mind: walk home, drill, chaingun follow/defend/fists, EM guard (`ap_ai_*`, `run/autopilot_mind.csv`), the workers (`client/dev/WorkScene`: `ap_work_*`, `run/autopilot_work.csv`), rogues (`RogueScene`) and the helmet (`HelmetScene`: `ap_helmet_*`, `ap_menu_helmet`, `run/autopilot_helmet.csv`) |
 | `./gradlew runAutopilotPose` | ~30 s pose check (`client/dev/PoseScene`): side shots looking level / down 40 / up 30 / tool raised, top shots with the view at yaw +40 (gold block) / -40 (redstone): looking down must lean forward, the torso and raised tool must face the shot's block (`ap_pose_*.png`, `run/autopilot_pose.csv`) |

@@ -290,8 +290,13 @@ src/main/java/dev/ajaczero/powerarmor/
     PowerArmorClient.java    client-only @Mod entry: the in-game config screen
     SuitSounds.java          engine sounds now and then + tool loops (tickable sounds that follow the suit)
     FuelTooltip.java         "Power Armor fuel: 1:20 of walking" on every fuel
-    dev/AutoPilot.java       scripted screenshot test drive (only with -Dpowerarmor.autopilot)
+src/dev/java/dev/ajaczero/powerarmor/   development tools: compiled against the mod, NOT in the jar players get
+  dev/PowerArmorDev.java     their @Mod entry point (dev runs load src/main + src/dev as one mod, see build.gradle)
   test/PowerArmorTests.java  GameTests (@SuitTest methods, registered by test/SuitTests.java)
+  client/dev/AutoPilot.java  scripted screenshot test drive (only with -Dpowerarmor.autopilot); *Scene.java: its scenes,
+                             TerrainPilot (real terrain), ShowcaseScene (the mod page's pictures)
+  dev/MultiplayerScript.java + client/dev/MultiplayerScene.java   the scripted multiplayer check
+src/dev/resources/data/powerarmor/structure/test_pad.nbt   floor used by the GameTests (9x11x9, floor on its second layer)
 src/main/resources/
   assets/powerarmor/geckolib/models|animations/entity/, textures/entity/   exported from Blockbench
   assets/powerarmor/textures/gui/power_armor.png      suit menu background (tools/make-gui.py)
@@ -302,7 +307,6 @@ src/main/resources/
   data/powerarmor/damage_type/bullet.json             "shredded" damage type (+ minecraft is_projectile, no_knockback, bypasses_cooldown tags)
   data/powerarmor/damage_type/em_slam.json            "slammed into a wall" (EM throws)
   data/powerarmor/recipe/*.json                       crafting recipes (suit parts, suit + 4 tools)
-  data/powerarmor/structure/test_pad.nbt              floor used by the GameTests (9x11x9, floor on its second layer)
 ```
 
 ## Notes

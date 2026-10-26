@@ -26,6 +26,24 @@ sourceSets.main.resources {
     exclude("src/generated/**/.cache") // datagen cache files
 }
 
+// Development tools: src/dev/ holds the GameTests, the autopilot scenes, the multiplayer script and the test_pad
+// structure. A second source set: it compiles against the mod (main) but isn't packed into the jar players download
+// (`jar` only takes main). The runs below load main + dev together as one mod (neoForge.mods), so every dev run
+// (runClient, runGameTestServer, runAutopilot...) has them. Entry point: dev/PowerArmorDev.
+sourceSets {
+    dev {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations {
+    devImplementation.extendsFrom implementation // GeckoLib etc.
+    devRuntimeOnly.extendsFrom runtimeOnly
+}
+// `./gradlew build` compiles the dev tools too (`check` runs as part of build), so a change that breaks the GameTests
+// or the autopilot fails the build, not the next test run.
+tasks.named('check') { dependsOn tasks.named('devClasses') }
+
 repositories {
     // GeckoLib lives in its own Maven repository
     maven {
@@ -45,6 +63,9 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 neoForge {
     // Specify the version of NeoForge to use.
     version = project.neo_version
+
+    // Minecraft + NeoForge on the dev source set's classpath too (main gets them by default).
+    addModdingDependenciesTo sourceSets.dev
 
     // This line is optional. Access Transformers are automatically detected
     // accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
@@ -190,6 +211,9 @@ neoForge {
 
         // applies to all the run configs above
         configureEach {
+            // Every run starts from the dev source set's classpath (main + dev + their libraries): the GameTests and the
+            // autopilot are there. The jar players get has none of it.
+            sourceSet = sourceSets.dev
             // Recommended logging data for a userdev environment
             // The markers can be added/remove as needed separated by commas.
             // "SCAN": For mods scan.
@@ -210,6 +234,7 @@ neoForge {
         // multi mod projects should define one per mod
         "${mod_id}" {
             sourceSet(sourceSets.main)
+            sourceSet(sourceSets.dev) // one mod in dev runs: the dev tools' @Mod / @EventBusSubscriber classes are found
         }
     }
 }
@@ -220,6 +245,7 @@ neoForge {
 // "optional", meaning it will not be pulled by dependents of this mod.
 configurations {
     runtimeClasspath.extendsFrom localRuntime
+    devRuntimeClasspath.extendsFrom localRuntime
 }
 
 dependencies {

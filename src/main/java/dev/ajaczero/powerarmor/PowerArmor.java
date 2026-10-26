@@ -39,8 +39,7 @@ public class PowerArmor {
         modBus.addListener(PowerArmor::addToCreativeTab);
         // Network messages (client -> server: socket tool button (right click) pressed/released).
         modBus.addListener(dev.ajaczero.powerarmor.network.ToolTriggerPayload::register);
-        // GameTests (dev runs only): see test/SuitTests.
-        dev.ajaczero.powerarmor.test.SuitTests.register(modBus);
+        // GameTests and the autopilot live in src/dev/ (not shipped): they register from dev/PowerArmorDev.
     }
 
     private static void registerAttributes(EntityAttributeCreationEvent event) {
