@@ -219,7 +219,13 @@ Each tool: hidden `proto_*` drafts in Blockbench -> user picks -> game part (bon
   bone `tnt_launcher` + `tnt_launcher_drum` (a quarter turn per shot, `ToolRotors`). 8 GameTests (126); `runAutopilotTnt` (TntScene).
 - [ ] Water cannon (extinguishes, pushes mobs, waters crops)
 - [ ] Rail cannon (added 2026-10-26, user): the chaingun's opposite: slow, one shot at a time, critical damage (the chaingun
-  is rapid-fire damage per second, the rail cannon is the single big hit). Details to decide before the drafts.
+  is rapid-fire damage per second, the rail cannon is the single big hit). Decided (user, 2026-10-26): **hold to charge**, it
+  fires **only at full charge** (fixed damage, no partial shots); an **instant beam** along the crosshair that **pierces every
+  mob** on the line and **breaks the blocks a sprinting suit smashes through** (`powerarmor:suit_smashes_sprinting`: glass,
+  panes, leaves, ice...; via `ToolMining.breakBlock`), stopping at anything solid; costs **an iron ingot (ammo slot) + fuel**
+  per shot; **no rogues**; the machine mind uses it as a **long-range guard**. Model inspired by DOOM (2016)'s gauss cannon
+  (twin rails over a glowing blue core, `.scratch/rail/doom_gauss_ref.png`). Numbers to tune (proposal): 30-tick charge,
+  40 damage, 64 blocks, ~100 fuel per shot.
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint
