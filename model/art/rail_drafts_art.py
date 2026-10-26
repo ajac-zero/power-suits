@@ -1,5 +1,5 @@
 """Rail cannon drafts (2026-10-26, Phase 11). Hidden proto_rail_* groups under left_forearm, like the other tools: the
-standard 7x1x7 socket base (x -15..-8, z -5..2, y 19.625..20.625) and the tool hanging from it (the muzzle points down at
+standard socket base (7x1x7, x -15..-8, z -5..2, y 19.625..20.625; 5x1x5, x -14..-9, z -4..1, since 2026-10-26) and the tool hanging from it (the muzzle points down at
 rest; raised, the front (-z) faces up, the back (+z) down; -x is the suit's outer side). Simple boxes, detail painted.
 User's pick of inspiration: DOOM (2016)'s gauss cannon (.scratch/rail/doom_gauss_ref.png): two long steel rails with
 a glowing blue core between them, a receiver behind with copper coil bands. 12 px long (the chaingun is 9, the
@@ -112,7 +112,7 @@ _SOCKET = []
 def BASE_CUBE():
     """The standard socket base (one shared painter: each socket_base() call claims new palette keys)."""
     if not _SOCKET: _SOCKET.append(fl.socket_base())
-    return ([-15, BASE, -5], [-8, BASE + 1, 2], _SOCKET[0])
+    return ([-14, BASE, -4], [-9, BASE + 1, 1], _SOCKET[0])   # 5x5 since 2026-10-26 (tool_bases_5_apply.js)
 CX, CZ = -11.5, -1.5
 
 

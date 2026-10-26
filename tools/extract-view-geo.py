@@ -4,7 +4,7 @@ with Blockbench:
     python3 tools/extract-view-geo.py        (after node tools/export-model.mjs)
 
 Two roots, each moved so its joint sits on the origin (CockpitHands places them in front of the camera):
-  view_tool      the tool arm's forearm (the shared gauntlet, always shown), every socket tool (its own 7x1x7 socket
+  view_tool      the tool arm's forearm (the shared gauntlet, always shown), every socket tool (its own 5x1x5 socket
                  base + head, with its moving parts: drill_bit, chainsaw_chain, the chaingun's barrels); the empty
                  socket is the coupling painted on the gauntlet's underside (the socket bone is empty). Hangs down -Y
                  from the socket like on the suit.
@@ -36,7 +36,7 @@ def below_elbow(bone):
 
 
 ROOTS = {
-    # The tools: each brings its own 7x1x7 socket base (in its bone); none of the shared forearm (it would fill the
+    # The tools: each brings its own 5x1x5 socket base (7x1x7 until 2026-10-26) (in its bone); none of the shared forearm (it would fill the
     # screen corner the tool reaches in from).
     'view_tool': ('left_forearm', lambda bone: (lambda c: False), None, ['socket', 'chaingun', 'em_projector', 'drill', 'chainsaw', 'flamethrower', 'tnt_launcher', 'rail_cannon'], 'socket'),
     # The empty main hand: the forearm armour + fist, not the elbow joint.

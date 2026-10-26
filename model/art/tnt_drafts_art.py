@@ -1,5 +1,5 @@
 """TNT launcher drafts (2026-10-25, Phase 11: the "grenade launcher"). Hidden proto_tnt_* groups under left_forearm, like
-the other tools: the standard 7x1x7 socket base (x -15..-8, z -5..2, y 19.625..20.625) and the tool hanging from it to
+the other tools: the standard socket base (7x1x7, x -15..-8, z -5..2, y 19.625..20.625; 5x1x5, x -14..-9, z -4..1, since 2026-10-26) and the tool hanging from it to
 y ~9.6 (the muzzle points down at rest; the arm raises it when used, then the front (-z) faces up and the back (+z) down).
 User's pick: a revolver drum, Team Fortress 2's grenade launcher as the inspiration (all metal here, no wooden stock).
 Like a revolver, the barrel lines up with the top chamber (-z), so the drum's axis sits behind it (the socket's centre).
@@ -114,7 +114,7 @@ def barrel(pre, cx, cz, size, y0, y1, ring=True, bore=True):
     return d
 
 
-BASE_CUBE = lambda: ([-15, BASE, -5], [-8, BASE + 1, 2], fl.socket_base())
+BASE_CUBE = lambda: ([-14, BASE, -4], [-9, BASE + 1, 1], fl.socket_base())   # 5x5 since 2026-10-26 (tool_bases_5_apply.js)
 CX, CZ = -11.5, -1.5                    # the drum's axis = the socket's
 TOP = (CX, CZ - 2)                      # the chamber in line with the barrel (front)
 CH = [(CX - 2, CZ), (CX + 2, CZ), (CX, CZ + 2)]   # the other three

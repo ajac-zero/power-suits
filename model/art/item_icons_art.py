@@ -318,7 +318,7 @@ def star_reactor(ic):
 
 # ---- tools (diagonal like vanilla tools: socket base bottom left, head top right) -------------------------------------
 def base(ic):
-    ic.box(1, 10, 5, 14, SLATE, 4)               # the socket base (7x1x7 slate on the suit)
+    ic.box(1, 10, 5, 14, SLATE, 4)               # the socket base (5x1x5 slate on the suit since 2026-10-26)
     ic.rect(2, 12, 4, 12, SLATE[1])
 
 

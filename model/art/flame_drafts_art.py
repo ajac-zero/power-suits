@@ -1,5 +1,5 @@
 """Flamethrower drafts (2026-10-23, Phase 11: more power tools). Hidden proto_flame_* groups under left_forearm, like the
-other tools: a 7x1x7 slate base (x -15..-8, z -5..2, y 19.625..20.625, the socket's) and the tool hanging from it down to
+other tools: a 7x1x7 slate base (x -15..-8, z -5..2, y 19.625..20.625, the socket's; 5x1x5, x -14..-9, z -4..1, since 2026-10-26) and the tool hanging from it down to
 y ~10 (the muzzle points down at rest; the arm raises it when used). Back of the suit = +z. Simple boxes, detail painted.
 
   A tanks + wand   two upright fuel tanks on the outer half, a slim nozzle on the inner half with a flame cup
@@ -422,7 +422,7 @@ def flamer_h(pre, pattern="shift"):
 
 
 def socket_base(donor="drill_base"):
-    """The standard tool socket every power tool's 7x1x7 base wears (slate sides, a two-tone underside, a steel top with
+    """The standard tool socket every power tool's base wears (7x1x7, 5x1x5 since 2026-10-26) (slate sides, a two-tone underside, a steel top with
     cyan contacts): a painter copying the donor base's faces pixel for pixel from the live texture (each tool owns a copy
     of it; user, 2026-10-25: the flamethrower's plain iron base broke the set)."""
     import base64, io
@@ -456,7 +456,7 @@ def flamer_slim(pre, glow=True, skin=None):
     # (2026-10-25, user after seeing it in Blockbench: no valve wheel; no neck: the barrel and tank take its pixel, up to
     # the base's underside, and the pair is centred under the 7x7 base, x -13..-10, z -4..1)
     d = {}
-    d[f"{pre}_base"] = ([-15, BASE, -5], [-8, BASE + 1, 2], socket_base())   # the standard socket, like every tool
+    d[f"{pre}_base"] = ([-14, BASE, -4], [-9, BASE + 1, 1], socket_base())   # the standard socket, like every tool (5x5 since 2026-10-26)
     d.update(shroud(pre, -13, -10, -4, -1, 10.625, BASE, 0, black=True, checker=True,
                     skin=skin and (lambda x0, z0, y1: barrel_skin(skin, x0, z0, y1))))
     d[f"{pre}_core"] = ([-12, 10.625, -3], [-11, BASE, -2], on('iron', **{k: lambda w, h, f, t: ['K' * w] * h
