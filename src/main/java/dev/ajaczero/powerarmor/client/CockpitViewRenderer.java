@@ -20,7 +20,7 @@ import org.jspecify.annotations.Nullable;
 final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, GeoRenderState> {
     enum Part { TOOL, GAUNTLET }
 
-    static final String[] TOOL_BONES = {"chaingun", "em_projector", "drill", "chainsaw", "flamethrower", "tnt_launcher"};
+    static final String[] TOOL_BONES = {"chaingun", "em_projector", "drill", "chainsaw", "flamethrower", "tnt_launcher", "rail_cannon"};
 
     // Copied from CockpitView / its suit when the frame is extracted (the model is posed and drawn later).
     private static final DataTicket<Part> PART = DataTicket.create("powerarmor_view_part", Part.class);

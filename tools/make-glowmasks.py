@@ -17,6 +17,7 @@ which adds nothing (SuitGlowLayer draws the masks full-bright and additively, ti
   power_armor_glow_tidal.png    the tidal engine's Heart of the Sea in the pump's porthole (teal)
   power_armor_glow_reactor.png  the star reactor's core and the energy in its canisters' glass strips (violet -> white)
   power_armor_glow_pilot.png    the flamethrower's pilot light, the tip of the slate rod by its nozzle (blue)
+  power_armor_glow_rail.png     the rail cannon's core between its prongs (blue -> white rings; brightens as it charges)
 The script refuses to run if a reserved colour turns up outside the expected amount (someone painted with it).
 """
 from pathlib import Path
@@ -53,8 +54,10 @@ GLOW = {
     H('2b2238'): ('reactor', H('7a4fd0')), H('362a47'): ('reactor', H('c39bff')), H('433556'): ('reactor', H('fff6ff')),
     # the flamethrower's pilot light (2026-10-25, model/art/flame_drafts_art.py): dark blue when off, lit like the EM tips
     H('1b2638'): ('pilot', H('2a6cff')), H('22304a'): ('pilot', H('8ec2ff')),
+    # the rail cannon's core glass between its prongs (edge, body, hot rings): lit by the charge
+    H('16304a'): ('rail', H('1a5cc8')), H('1d3f5e'): ('rail', H('2f9cff')), H('254e73'): ('rail', H('a8f0ff')),
 }
-EXPECTED = {'fire': 12, 'visor': 447, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20, 'tidal': 4, 'reactor': 69, 'pilot': 6}  # pixels per mask (fire: the backpack's painted firebox, 4 coals x 3 rows (backpack v3, 2026-10-20: the old firebox cube and its 8 vent slits are gone); the visor cube: 7x5 glass front + 59 on its
+EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20, 'tidal': 4, 'reactor': 69, 'pilot': 6, 'rail': 114}  # pixels per mask (fire: the backpack's painted firebox, 4 coals x 3 rows (backpack v3, 2026-10-20: the old firebox cube and its 8 vent slits are gone); the visor cube: 7x5 glass front + 59 on its
 # other faces, plus 150 left in the texture from the old visor that no cube uses (2026-10-19 export: harmless, never drawn);
 # 2026-10-21 export: 540 = 236 of those + 304 on the hidden helmet drafts' faces (proto_helm_*: their visors are glass
 # too; since 2026-10-22 they're the helmet styles, helm_*, drawn when worn: their visors glow like the standard one; 8 old leftovers were painted over by the drafts); 2026-10-21 engine
@@ -62,6 +65,9 @@ EXPECTED = {'fire': 12, 'visor': 447, 'heat': 16, 'heat_barrel': 120, 'em_core':
 # 2026-10-22 the hunter helmet style (helm_hunter): 527 = + its visor's 42 glass texels - 13 never-drawn leftovers its faces reused;
 # 2026-10-25 the flamethrower's faces were packed over 80 never-drawn visor leftovers (447) and 4 never-drawn tidal
 # texels (4 left: the porthole's drawn faces; checked against the texture and model before, no drawn texel changed);
+# 2026-10-26 the rail cannon's drafts were packed over 6 never-drawn visor leftovers (441; checked: no texel a cube
+# draws changed);
+# rail: the 3x8x3 core, all six faces (114);
 # pilot: the 1x1x1 tip of the flamethrower's pilot light, 6 faces;
 # tidal: the 2x2 porthole x 2 faces' worth (8); reactor: the core's ring + the canisters' glass strips (69);
 # 4 barrel sides x 2x2 tips; 4 barrel sides x 2x3 behind them + the front collar's 6x1x6 net, 96;

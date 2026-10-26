@@ -38,7 +38,7 @@ def below_elbow(bone):
 ROOTS = {
     # The tools: each brings its own 7x1x7 socket base (in its bone); none of the shared forearm (it would fill the
     # screen corner the tool reaches in from).
-    'view_tool': ('left_forearm', lambda bone: (lambda c: False), None, ['socket', 'chaingun', 'em_projector', 'drill', 'chainsaw', 'flamethrower', 'tnt_launcher'], 'socket'),
+    'view_tool': ('left_forearm', lambda bone: (lambda c: False), None, ['socket', 'chaingun', 'em_projector', 'drill', 'chainsaw', 'flamethrower', 'tnt_launcher', 'rail_cannon'], 'socket'),
     # The empty main hand: the forearm armour + fist, not the elbow joint.
     'view_gauntlet': ('right_forearm', below_elbow, None, ['right_hand'], 'right_forearm'),
 }
