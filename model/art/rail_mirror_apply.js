@@ -17,8 +17,12 @@
 // z 0 / -3): copper rim, a 4 x 3 dark hole, the 2 x 1 emitter in its middle (x -12.5..-10.5, z -2..-1), same colours.
 // The receiver's visible row was shaded light-to-dark across (lit from one side, 4.1 texels wide): 4 texels stretched
 // over its 4.1 px, light edges both sides.
+// The prongs' sides (east / west faces) had a light row at the start of each segment (the steel recipe's lit top row):
+// across the raised rail they read as light vertical bars (user, same day: "remove the vertical light grey bars in the
+// sides of the rails, so their horizontal lines are continuous all the way through"). That row now repeats the row under
+// it, so the three stripes run the whole length. The inner prong shares the outer one's texels, so both change.
 const B = tools.mcp__blockbench__risky_eval;
-await tools.mcp__blockbench__save_checkpoint({name: "before rail cannon symmetry"});
+await tools.mcp__blockbench__save_checkpoint({name: "before rail cannon fixups"});
 const code = `(() => {
  const C = n => Cube.all.find(c => c.name === n);
  const rev = uv => [uv[2], uv[1], uv[0], uv[3]];
@@ -40,6 +44,8 @@ const code = `(() => {
      ctx.fillStyle = emit ? Z : hole ? D : CU; ctx.fillRect(240 + k, 121 + r, 1, 1); }
    [[204, 64], [133, 70]].forEach(([u, v]) => ['#5d666b', '#434b4f', '#434b4f', '#5d666b'].forEach((col, k) => {
      ctx.fillStyle = col; ctx.fillRect(u + k, v, 1, 1); }));
+   outs.forEach(o => ['east', 'west'].forEach(f => { const uv = o.faces[f].uv, u0 = Math.min(uv[0], uv[2]), v0 = Math.min(uv[1], uv[3]);
+     const w = Math.ceil(Math.abs(uv[2] - uv[0])), row = ctx.getImageData(u0, v0 + 1, w, 1); ctx.putImageData(row, u0, v0); }));
    return canvas; }, {edit_name: 'rail cannon symmetric texels'});
  Undo.initEdit({elements: [...ins, ...bands, rec]});
  ins.forEach((n, i) => { const o = outs[i].faces;
