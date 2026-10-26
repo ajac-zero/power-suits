@@ -229,12 +229,35 @@ def demo_low(pre):
 # round 3 (user: neither; "close the round magazine": the loading slot on the drum's back, which showed a round through
 # it): A with the drum solid all round (the red chamber ends on its front stay)
 ROUND3 = {"proto_tnt_A_demo": demo("pkTA", with_slot=False)}
-# round 4: demo_low
-DRAFTS = {"proto_tnt_A_demo": demo_low("pkTA")}
+ROUND4 = {"proto_tnt_A_demo": demo_low("pkTA")}
+
+
+def demo_short(pre, drum=3):
+    """Round 5 (user: "too long overall, reduce the drum size to pull it back without making the barrel shorter", and
+    "make the barrel spin like real grenade launchers": on those the drum turns a chamber per shot, the barrel stays):
+    the drum 3 px long instead of 5, the barrel (5 px out, as before) and sight moved back with it: 9 px from the socket
+    base to the muzzle (was 11; the chaingun is 10). The chamber ends are laid out evenly round the DRUM's axis (x -11.5,
+    z -1.5) at 90 deg steps, so a quarter turn per shot lands on the same picture: left 2x3, right 2x3, below 3x2, and
+    the fourth (above) behind the barrel. Octagon and flutes are already symmetric about that axis. In game the drum's
+    cubes go in a child bone pivoting on it (turned by code, like the chaingun's barrels)."""
+    cz, y0 = -2.75, BASE - drum
+    up = y0 - (BASE - 5)                     # how far everything below the drum moves back (2 px for a 3 px drum)
+    return {
+        f"{pre}_base": BASE_CUBE(),
+        **octagon(pre, y0, BASE, on('slate', **wf(first(rects([(-15, -13, -3, 0), (-10, -8, -3, 0), (-13, -10, 0, 2),
+                                                                (-13, -10, -5, -3)]), flutes)))),
+        **barrel(pre, CX, cz, 4, 9.625 + up, y0 + .5),
+        f"{pre}_sight_l": ([-13, 10.625 + up, -5.5], [-12, 12.625 + up, -4.75], on('slate')),
+        f"{pre}_sight_r": ([-11, 10.625 + up, -5.5], [-10, 12.625 + up, -4.75], on('slate')),
+    }
+
+
+# round 5: demo_short
+DRAFTS = {"proto_tnt_A_demo": demo_short("pkTA")}
 REMOVED = ["proto_tnt_A1_closed", "proto_tnt_A2_long"]
 
 if __name__ == "__main__":
-    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before TNT launcher round 4")
+    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before TNT launcher round 5")
     # free the texels of the drafts dropped (painted, but no cube uses them any more)
     import base64, io
     from PIL import Image
