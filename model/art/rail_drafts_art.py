@@ -504,7 +504,9 @@ def emitter_plan():
 # ---- three segments per prong (user, 2026-10-26: the 1 px tip cubes flickered against the segment behind them: "remove
 # rail_prong_in_3"; then "I asked you to remove the prongs_3, but you also painted the prongs_2, which I didn't want,
 # revert it"): the tips are gone and the front segment is as it was (y 8.625..11.625, plain polished steel). Rebuilt as
-# the bones' cubes (apply with .scratch/flame/apply.js: it replaces the cubes in groups of these names).
+# the bones' cubes (apply with .scratch/flame/apply.js: it replaces the cubes in groups of these names). Then run
+# rail_mirror_apply.js: it makes the inner prong the outer one's mirror image texel for texel (half texels on 2.5 / 1.5 px
+# faces otherwise land on opposite edges and the prongs look different widths) and centres the band's emitter.
 def fork_segments(side):
     edge = GAP_EDGE[side]
     sign = -1 if side == "out" else 1           # outward from the slot
