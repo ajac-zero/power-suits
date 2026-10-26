@@ -25,7 +25,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * are both in, it directs a scripted story and logs the server's truth to run/mp_server.csv each tick:
  * board (red suit) -> paint blue -> fuel pulled (suit dies) -> fuel back -> driver climbs out.
  * Everything the suit shows the other player (paint, power, passenger) must reach the watcher's client; the watcher
- * logs what it sees to run-mp-watch/mp_client.csv and the two are compared by tools/mp-report.py.
+ * logs what it sees to run/mp-watch/mp_client.csv; compare the two side by side (there is no report script yet).
  */
 @EventBusSubscriber(modid = PowerArmor.MODID)
 public final class MultiplayerScript {

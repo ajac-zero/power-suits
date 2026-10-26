@@ -18,7 +18,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  * DEV TOOL, inert unless started with -Dpowerarmor.mp=driver|watch (./gradlew runMpDriver / runMpWatch, against
  * runServerMp). Both clients log what THEY see of the suit each tick to mp_client.csv (own game directory); the driver
  * also walks forward once seated. The watcher takes screenshots at the phase changes (ap_mp_*.png).
- * Compare with the server's run/mp_server.csv: tools/mp-report.py.
+ * Compare with the server's run/mp_server.csv (by hand: there is no report script yet).
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class MultiplayerScene {

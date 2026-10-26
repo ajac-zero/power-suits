@@ -144,8 +144,9 @@ neoForge {
         }
 
 
-        // Dev tools: multiplayer check. Start runServerMp first, then runMpDriver and runMpWatch (own game dirs, same
-        // machine); the server scripts the story and stops itself. Compare with tools/mp-report.py.
+        // Dev tools: multiplayer check. Start runServerMp first, then runMpDriver and runMpWatch (own game dirs inside run/,
+        // same machine); the server scripts the story and stops itself. Compare run/mp_server.csv with
+        // run/mp-watch/mp_client.csv (there is no report script yet).
         serverMp {
             server()
             programArgument '--nogui'
@@ -153,13 +154,13 @@ neoForge {
         }
         mpDriver {
             client()
-            gameDirectory = project.file('run-mp-driver')
+            gameDirectory = project.file('run/mp-driver')
             systemProperty 'powerarmor.mp', 'driver'
             programArguments.addAll '--username', 'Driver', '--quickPlayMultiplayer', 'localhost:25565', '--width', '640', '--height', '360'
         }
         mpWatch {
             client()
-            gameDirectory = project.file('run-mp-watch')
+            gameDirectory = project.file('run/mp-watch')
             systemProperty 'powerarmor.mp', 'watch'
             programArguments.addAll '--username', 'Watcher', '--quickPlayMultiplayer', 'localhost:25565', '--width', '960', '--height', '540'
         }
