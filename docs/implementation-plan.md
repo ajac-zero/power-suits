@@ -230,7 +230,7 @@ Each tool: hidden `proto_*` drafts in Blockbench -> user picks -> game part (bon
   sees the core. Then (user): the core see-through when off (energy, not LEDs: `make-glowmasks.py` SEE_THROUGH,
   `SuitGlowLayer.energy`) and stepped, tapering prongs (round 4: T2 picked, 2.5 > 2 > 1.5 > a 1 px tip). The band clips the
   thigh 0.4-0.5 px in jump_charge/jump/land (B5: 0.65; known arm/thigh clips there). Then two copper bands and plate
-  seams + rivets on the rails' tops (option B of three).
+  seams + rivets on the rails' tops (option B of three), then polished like the sides instead (B was busy in game).
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint

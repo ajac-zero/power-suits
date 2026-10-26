@@ -410,6 +410,7 @@ if __name__ == "__main__":
 #   vents   a lit lip along the slot, shaded outer edge, dark vent slots across the root and mid segments (F3 had vents)
 #   panels  plate seams just before each step, rivets at the seams, a groove down the middle of the wide segments
 #   worn    the flamethrower barrel's worn steel (mixed greys, glints) with a copper conduit along the slot edge
+# The user picked panels, then (in game: "a little busy") polished: the steel sides' recipe on the top and bottom.
 GAP_EDGE = {"out": -13.5, "in": -9.5}
 
 
@@ -425,6 +426,14 @@ def rail_skin(style, side):
         w = [2.5, 2.0, 1.5, 1.0][seg]
         outer = u > w - 1.0
         lip = u < 1.0                        # the texel along the slot (half a texel on the inner prong: 2.5 px faces)
+        if style == "polished":
+            # (user, 2026-10-26: B "a little busy", "a more polished look: the sides look great, make the front match"):
+            # the steel sides' recipe across the top: a highlight row where each step begins, a lit column along the
+            # slot, the mid tone, a shaded outer column
+            top = [BASE, 15.625, 11.625, 8.625][seg]
+            if top - y < 1: return 'W'
+            if lip: return 'G'
+            return 'S' if outer else 't'
         if style == "vents":
             if lip: return 'G'
             if outer: return 'T' if seg < 3 else '5'
