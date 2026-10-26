@@ -2,10 +2,10 @@ package dev.ajaczero.powerarmor.item;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Optional;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import java.util.Optional;
 import net.minecraft.world.item.ItemStack;
 
 /**

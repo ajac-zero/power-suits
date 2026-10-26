@@ -15,12 +15,17 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.inventory.SmithingMenu;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Autopilot scene for the helmet styles (design sec. 4c, 2026-10-22): six running suits in a row (no AI: statues) (the standard helmet,
@@ -103,12 +108,12 @@ final class StyleScene {
             DevUtil.setTime(level, 6000);
             player.stopRiding();
             int x = player.getBlockX() - 100, z = player.getBlockZ();
-            int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
             base = new BlockPos(x, y, z);
             player.setGameMode(GameType.SURVIVAL);
             player.teleportTo(x + 0.5 + SPACING * (NAMES.length - 1) / 2, y, z - 40.5); // out of the pictures
             for (int i = 0; i < NAMES.length; i++) {
-                PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.COMMAND);
                 ItemStack helmet = new ItemStack(ModItems.SUIT_HELMET.get());
                 if (i > 0) {
                     helmet.set(ModDataComponents.HELMET_STYLE.get(), HelmetStyle.values()[i - 1]);
@@ -156,7 +161,7 @@ final class StyleScene {
             BlockPos table = p.blockPosition().north(2);
             level.setBlockAndUpdate(table, Blocks.SMITHING_TABLE.defaultBlockState());
             p.openMenu(Blocks.SMITHING_TABLE.defaultBlockState().getMenuProvider(level, table));
-            if (p.containerMenu instanceof net.minecraft.world.inventory.SmithingMenu menu) {
+            if (p.containerMenu instanceof SmithingMenu menu) {
                 menu.getSlot(0).set(new ItemStack(ModItems.SPARTAN_TEMPLATE.get()));
                 menu.getSlot(1).set(new ItemStack(ModItems.SUIT_HELMET.get()));
                 menu.getSlot(2).set(new ItemStack(Items.TOTEM_OF_UNDYING));
@@ -195,13 +200,13 @@ final class StyleScene {
         DevUtil.hideGui(mc, true);
         Vec3 at = Vec3.atBottomCenterOf(b);
         // the camera is an armor stand's eye: place the stand that much lower (as PaintScene does)
-        Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        Vec3 drop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         AutoPilot.lookCamera(mc, at.add(from).subtract(drop), at.add(to).subtract(drop));
     }
 
     private static void open() {
         try {
-            csv = Files.newBufferedWriter(net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().resolve("autopilot_style.csv"));
+            csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_style.csv"));
             csv.write("tick,phase,server_styles,client_styles,paint,smithed\n");
         } catch (IOException e) {
             PowerArmor.LOGGER.error("style csv", e);

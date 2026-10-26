@@ -22,6 +22,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.event.EventHooks;
 
 /**
  * The TNT launcher's round (Phase 11, 2026-10-25): a primed block of TNT that flies in an arc and goes off the moment
@@ -104,7 +105,7 @@ public class TntShell extends Projectile {
         }
         super.tick();
         HitResult hit = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity);
-        if (hit.getType() != HitResult.Type.MISS && !net.neoforged.neoforge.event.EventHooks.onProjectileImpact(this, hit)) {
+        if (hit.getType() != HitResult.Type.MISS && !EventHooks.onProjectileImpact(this, hit)) {
             this.hitTargetOrDeflectSelf(hit);
             if (this.isRemoved()) {
                 return;

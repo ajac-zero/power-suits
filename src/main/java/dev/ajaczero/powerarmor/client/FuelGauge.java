@@ -2,8 +2,9 @@ package dev.ajaczero.powerarmor.client;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
-import dev.ajaczero.powerarmor.item.PowerArmorItem;
 import dev.ajaczero.powerarmor.item.ChaingunItem;
+import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import dev.ajaczero.powerarmor.item.RailCannonItem;
 import dev.ajaczero.powerarmor.item.TntLauncherItem;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -15,6 +16,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -70,7 +72,7 @@ public final class FuelGauge {
             // Bullets left (iron nuggets carried), just above the fuel: red when there are none.
             int bullets = mc.player.hasInfiniteMaterials() ? -1 : ChaingunItem.countBullets(mc.player);
             if (bulletIcon == null) {
-                bulletIcon = new ItemStack(net.minecraft.world.item.Items.IRON_NUGGET);
+                bulletIcon = new ItemStack(Items.IRON_NUGGET);
             }
             graphics.item(bulletIcon, x + 16, y - 18);
             Component count = Component.literal(bullets < 0 ? "\u221e" : Integer.toString(bullets));
@@ -86,17 +88,17 @@ public final class FuelGauge {
             // Rounds left (TNT in the suit's ammo slot), in the same place: red when the drum is empty.
             int rounds = TntLauncherItem.countRounds(suit, mc.player);
             if (tntIcon == null) {
-                tntIcon = new ItemStack(net.minecraft.world.item.Items.TNT);
+                tntIcon = new ItemStack(Items.TNT);
             }
             graphics.item(tntIcon, x + 16, y - 18);
             Component count = Component.literal(rounds < 0 ? "\u221e" : Integer.toString(rounds));
             graphics.text(mc.font, count, x + 36, y - 14, rounds == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
-        } else if (suit.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.RailCannonItem) {
+        } else if (suit.getSocketStack().getItem() instanceof RailCannonItem) {
             // Shots left (iron ingots in the ammo slot), red when there are none; under the count, the charge as a thin
             // blue bar that turns white when it's full (let go!).
-            int rounds = dev.ajaczero.powerarmor.item.RailCannonItem.countRounds(suit, mc.player);
+            int rounds = RailCannonItem.countRounds(suit, mc.player);
             if (ingotIcon == null) {
-                ingotIcon = new ItemStack(net.minecraft.world.item.Items.IRON_INGOT);
+                ingotIcon = new ItemStack(Items.IRON_INGOT);
             }
             graphics.item(ingotIcon, x + 16, y - 18);
             Component count = Component.literal(rounds < 0 ? "\u221e" : Integer.toString(rounds));

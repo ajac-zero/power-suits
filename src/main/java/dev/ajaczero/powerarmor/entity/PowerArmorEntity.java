@@ -1,63 +1,78 @@
 package dev.ajaczero.powerarmor.entity;
 
-import dev.ajaczero.powerarmor.item.EmProjectorItem;
-import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import com.geckolib.animatable.GeoEntity;
+import com.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.geckolib.animatable.manager.AnimatableManager;
+import com.geckolib.util.GeckoLibUtil;
+import dev.ajaczero.powerarmor.PilotHands;
+import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
-import dev.ajaczero.powerarmor.item.PowerTool;
+import dev.ajaczero.powerarmor.SuitSeal;
+import dev.ajaczero.powerarmor.entity.ai.SuitGoals;
+import dev.ajaczero.powerarmor.item.HelmetStyle;
+import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import dev.ajaczero.powerarmor.item.SuitHelmetItem;
 import dev.ajaczero.powerarmor.item.SuitLoadout;
 import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
+import dev.ajaczero.powerarmor.registry.ModItems;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.ContainerHelper;
-import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
-import net.minecraft.world.entity.ai.attributes.Attribute;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import java.util.Map;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.util.Mth;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.Mth;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MoverType;
-import net.neoforged.neoforge.fluids.FluidType;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PlayerRideableJumping;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.DismountHelper;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.fluids.FluidType;
 import org.jetbrains.annotations.Nullable;
-import dev.ajaczero.powerarmor.item.HelmetStyle;
-import dev.ajaczero.powerarmor.item.SuitHelmetItem;
-import com.geckolib.animatable.GeoEntity;
-import com.geckolib.animatable.instance.AnimatableInstanceCache;
-import com.geckolib.animatable.manager.AnimatableManager;
-import com.geckolib.animation.AnimationController;
-import com.geckolib.animation.RawAnimation;
-import com.geckolib.animation.object.PlayState;
-import com.geckolib.animation.state.AnimationTest;
-import com.geckolib.util.GeckoLibUtil;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 /**
  * The power armor suit. It is a living entity (it has health and armor and can die) that a player
@@ -139,8 +154,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      *  What fits is the item tag powerarmor:suit_ammo. Suits saved before it simply have it empty. */
     public static final int AMMO_SLOT = 4;
     /** What the ammo slot takes: data, so packs (and later tools) can add to it. */
-    public static final net.minecraft.tags.TagKey<net.minecraft.world.item.Item> AMMO = net.minecraft.tags.TagKey.create(
-            net.minecraft.core.registries.Registries.ITEM, net.minecraft.resources.Identifier.fromNamespaceAndPath(dev.ajaczero.powerarmor.PowerArmor.MODID, "suit_ammo"));
+    public static final TagKey<Item> AMMO = TagKey.create(
+            Registries.ITEM, Identifier.fromNamespaceAndPath(PowerArmor.MODID, "suit_ammo"));
     // Drain per tick (idle / walking / sprinting), energy per jump and the low-fuel warning level are balance
     // knobs in PowerArmorConfig. Walking = 1 per tick, so SuitFuel values read as ticks of walking.
     /** Length of the startup animation (1.4 s): the suit can't move until it has stood up. */
@@ -172,7 +187,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     static final EntityDataAccessor<Integer> TOOL_SHOTS =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     /** Where the rail cannon's last beam ended (world position): with the shot counter, every client draws the beam. */
-    static final EntityDataAccessor<org.joml.Vector3fc> RAIL_END =
+    static final EntityDataAccessor<Vector3fc> RAIL_END =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.VECTOR3);
     /** Who the machine mind works for (SuitMind ordinal): the visor shows it. */
     private static final EntityDataAccessor<Byte> MIND =
@@ -281,7 +296,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(TOOL_SPIN, 0F);
         builder.define(TOOL_HEAT, 0F);
         builder.define(TOOL_SHOTS, 0);
-        builder.define(RAIL_END, new org.joml.Vector3f());
+        builder.define(RAIL_END, new Vector3f());
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
         builder.define(AMMO_ITEM, ItemStack.EMPTY);
         builder.define(HELMET, false);
@@ -299,7 +314,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** The machine mind's goals (see SuitGoals). Vanilla calls this once, from Mob's constructor. */
     @Override
     protected void registerGoals() {
-        dev.ajaczero.powerarmor.entity.ai.SuitGoals.register(this, this.goalSelector, this.targetSelector);
+        SuitGoals.register(this, this.goalSelector, this.targetSelector);
     }
 
     /** Base stats. The single source of truth: also re-applied to suits loaded from old saves. */
@@ -338,7 +353,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         ContainerHelper.loadAllItems(tag.childOrEmpty("Inventory"), this.inventory.getItems());
         if (!tag.getBooleanOr("HasEngineSlot", false) && this.inventory.getItem(ENGINE_SLOT).isEmpty()) {
             // Saved before the engines (2026-10-21): it was running on its built-in firebox all along.
-            this.inventory.setItem(ENGINE_SLOT, new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get()));
+            this.inventory.setItem(ENGINE_SLOT, new ItemStack(ModItems.FIREBOX.get()));
         }
         this.power.load(tag); // burn, tidal state (loading isn't an engine swap: the half-burnt item stays)
         this.setMind(SuitMind.byName(tag.getStringOr("Mind", ""))); // suits from before the AI: "" -> friendly
@@ -447,10 +462,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     @Override
     protected void updateControlFlags() {
         boolean ai = this.isAiDriven();
-        this.goalSelector.setControlFlag(net.minecraft.world.entity.ai.goal.Goal.Flag.MOVE, ai);
-        this.goalSelector.setControlFlag(net.minecraft.world.entity.ai.goal.Goal.Flag.JUMP, ai);
-        this.goalSelector.setControlFlag(net.minecraft.world.entity.ai.goal.Goal.Flag.LOOK, ai);
-        this.targetSelector.setControlFlag(net.minecraft.world.entity.ai.goal.Goal.Flag.TARGET, ai);
+        this.goalSelector.setControlFlag(Goal.Flag.MOVE, ai);
+        this.goalSelector.setControlFlag(Goal.Flag.JUMP, ai);
+        this.goalSelector.setControlFlag(Goal.Flag.LOOK, ai);
+        this.targetSelector.setControlFlag(Goal.Flag.TARGET, ai);
     }
 
     // =========================================================================================
@@ -488,7 +503,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     /** The mind's goals (for SuitBrain's dev log). */
-    net.minecraft.world.entity.ai.goal.GoalSelector goals() {
+    GoalSelector goals() {
         return this.goalSelector;
     }
 
@@ -506,7 +521,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      * server player's xxa / zza, only its "last client input" (keys pressed). GameTests' mock players set xxa / zza.
      */
     public static Vec3 pilotInput(Player pilot) {
-        if (pilot instanceof net.minecraft.server.level.ServerPlayer sp) {
+        if (pilot instanceof ServerPlayer sp) {
             var keys = sp.getLastClientInput();
             float strafe = keys.left() == keys.right() ? 0F : keys.left() ? 1F : -1F;
             float forward = keys.forward() == keys.backward() ? 0F : keys.forward() ? 1F : -1F;
@@ -572,7 +587,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     /** Server: use up one item of ammo that {@code fits} (from the ammo slot). False if there is none. */
-    public boolean takeAmmo(java.util.function.Predicate<ItemStack> fits) {
+    public boolean takeAmmo(Predicate<ItemStack> fits) {
         ItemStack ammo = this.inventory.getItem(AMMO_SLOT);
         if (ammo.isEmpty() || !fits.test(ammo)) {
             return false;
@@ -602,7 +617,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public SuitLoadout getLoadout() {
         return new SuitLoadout(this.inventory.getItem(FUEL_SLOT).copy(), this.inventory.getItem(SOCKET_SLOT).copy(),
                 Mth.ceil(this.power.getBurnLeftExact()), this.power.getBurnTotal(), this.getStoredNuggets(), this.inventory.getItem(HELMET_SLOT).copy(),
-                java.util.Optional.of(this.inventory.getItem(ENGINE_SLOT).copy()), this.inventory.getItem(AMMO_SLOT).copy());
+                Optional.of(this.inventory.getItem(ENGINE_SLOT).copy()), this.inventory.getItem(AMMO_SLOT).copy());
     }
 
     public void applyLoadout(SuitLoadout loadout) {
@@ -612,7 +627,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.inventory.setItem(AMMO_SLOT, loadout.ammo().copy());
         // Items packed (or crafted) before the engines carry none: they had their firebox built in.
         this.inventory.setItem(ENGINE_SLOT, loadout.engine().map(ItemStack::copy)
-                .orElseGet(() -> new ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get())));
+                .orElseGet(() -> new ItemStack(ModItems.FIREBOX.get())));
         this.power.slotsRestored(); // not a swap: keep the half-burnt item
         this.power.setBurn(loadout.burnLeft(), loadout.burnTotal());
         this.setStoredNuggets(loadout.nuggets());
@@ -623,7 +638,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      *  firebox is flooded (design sec. 4b): drain the water or swap the engine first. Returns whether it packed. */
     public boolean packUp(Player player) {
         if (this.power.isFlooded()) {
-            player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.flooded_pack"));
+            player.sendOverlayMessage(Component.translatable("message.powerarmor.flooded_pack"));
             this.playSound(SoundEvents.IRON_DOOR_CLOSE, 0.6F, 0.5F);
             return false;
         }
@@ -690,7 +705,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             return InteractionResult.PASS; // a rogue mind won't open up: no boarding, no menu
         }
         ItemStack held = player.getItemInHand(hand);
-        DyeColor dye = held.get(net.minecraft.core.component.DataComponents.DYE);
+        DyeColor dye = held.get(DataComponents.DYE);
         if (dye != null && !player.isSecondaryUseActive()) {
             return this.paintWith(player, held, dye); // like dyeing a sheep: a dye in hand paints, it doesn't climb in
         }
@@ -700,7 +715,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (held.is(Items.IRON_NUGGET) && !player.isSecondaryUseActive()) {
             return this.loadNuggets(player, held); // feeding it ammo, like feeding a horse: no climbing in
         }
-        if (held.is(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()) && !player.isSecondaryUseActive() && !this.hasHelmet()) {
+        if (held.is(ModItems.SUIT_HELMET.get()) && !player.isSecondaryUseActive() && !this.hasHelmet()) {
             return this.putOnHelmet(player, held); // like saddling a horse: right-click it with the helmet
         }
         if (!this.level().isClientSide()) {
@@ -737,7 +752,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             return InteractionResult.SUCCESS; // nothing to do, but holding a dye still never climbs in
         }
         // playSound(player, ...) plays for everyone near except that player, whose own client plays it right away.
-        this.level().playSound(player, this, SoundEvents.DYE_USE, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 0.9F);
+        this.level().playSound(player, this, SoundEvents.DYE_USE, SoundSource.PLAYERS, 1.0F, 0.9F);
         if (!this.level().isClientSide()) {
             this.setPaint(dye);
             held.consume(1, player); // consume() leaves creative players' stacks alone
@@ -750,11 +765,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (this.getPaint() == null) {
             return InteractionResult.SUCCESS;
         }
-        this.level().playSound(player, this, SoundEvents.BUCKET_EMPTY, net.minecraft.sounds.SoundSource.PLAYERS, 0.8F, 1.3F);
+        this.level().playSound(player, this, SoundEvents.BUCKET_EMPTY, SoundSource.PLAYERS, 0.8F, 1.3F);
         if (this.level() instanceof ServerLevel server) {
             this.setPaint(null);
             // a splash on the plates (server particles reach every client near the suit)
-            server.sendParticles(net.minecraft.core.particles.ParticleTypes.SPLASH, this.getX(), this.getY() + 1.6, this.getZ(),
+            server.sendParticles(ParticleTypes.SPLASH, this.getX(), this.getY() + 1.6, this.getZ(),
                     40, 0.5, 0.6, 0.5, 0.1);
         }
         return InteractionResult.SUCCESS;
@@ -778,7 +793,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         int room = PowerArmorConfig.NUGGET_STORE_MAX.get() - this.getStoredNuggets();
         if (room <= 0) {
             if (!this.level().isClientSide()) {
-                player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.nuggets_full",
+                player.sendOverlayMessage(Component.translatable("message.powerarmor.nuggets_full",
                         this.getStoredNuggets()));
             }
             return InteractionResult.SUCCESS;
@@ -791,7 +806,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             }
             this.playSound(SoundEvents.ARMOR_EQUIP_CHAIN.value(), 1.0F, 0.8F);
             this.playSound(SoundEvents.CHAIN_PLACE, 0.8F, 0.7F);
-            player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.nuggets_loaded",
+            player.sendOverlayMessage(Component.translatable("message.powerarmor.nuggets_loaded",
                     n, this.getStoredNuggets()));
         }
         return InteractionResult.SUCCESS;
@@ -1105,7 +1120,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     @Override
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
-        if (dev.ajaczero.powerarmor.SuitSeal.absorbs(this, source, amount)) {
+        if (SuitSeal.absorbs(this, source, amount)) {
             return false; // fire, frost & co. kept out by the seal, paid in fuel
         }
         boolean damaged = super.hurtServer(level, source, amount);
@@ -1142,7 +1157,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Struck by lightning (vanilla sets us on fire and hurts us first): the electrics trip. A suit with fuel shuts down,
      *  convulsing, and restarts by itself after a few seconds; until then it can't move, fight or keep fire out. */
     @Override
-    public void thunderHit(ServerLevel level, net.minecraft.world.entity.LightningBolt lightning) {
+    public void thunderHit(ServerLevel level, LightningBolt lightning) {
         boolean wasPowered = this.isPowered();
         if (this.isRogue() && this.isAlive()) {
             // The rogue mind reboots friendly (design sec. 8): nobody's (the first pilot claims it), no home, and only the
@@ -1152,7 +1167,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.setTarget(null);
             this.power.setBurn(1600, 1600);
             for (Player near : level.getEntitiesOfClass(Player.class, this.getBoundingBox().inflate(32))) {
-                near.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("message.powerarmor.rogue_rebooted"));
+                near.sendOverlayMessage(Component.translatable("message.powerarmor.rogue_rebooted"));
             }
         }
         // Knock it out first, so the strike's damage below finds it already off: no flinch over the convulsion.
@@ -1173,8 +1188,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** Death messages and the like say "Rogue Power Armor" for a rogue (synced mind: right on both sides). */
     @Override
-    protected net.minecraft.network.chat.Component getTypeName() {
-        return this.isRogue() ? net.minecraft.network.chat.Component.translatable("entity.powerarmor.power_armor.rogue") : super.getTypeName();
+    protected Component getTypeName() {
+        return this.isRogue() ? Component.translatable("entity.powerarmor.power_armor.rogue") : super.getTypeName();
     }
 
     /** Both sides: knocked out by lightning (synced). */
@@ -1270,7 +1285,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             }
             this.putOutFire();
             if (this.getControllingPassenger() instanceof Player pilot) {
-                dev.ajaczero.powerarmor.PilotHands.refreshBonuses(pilot);
+                PilotHands.refreshBonuses(pilot);
                 if (this.canOperate()) {
                     SuitSmash.tick(this, pilot);
                 }

@@ -13,10 +13,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.features.TreeFeatures;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.animal.allay.Allay;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -25,6 +29,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -80,7 +85,7 @@ final class WorkScene {
             player.setGameMode(GameType.CREATIVE);
             player.getInventory().clearContent();
             int x = player.getBlockX() + 60, z = player.getBlockZ();
-            int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
             BlockPos home = new BlockPos(x, y, z);
             var random = level.getRandom();
             for (BlockPos p : BlockPos.betweenClosed(home.offset(X0, 0, Z0), home.offset(X1, 2, Z1))) {
@@ -91,8 +96,8 @@ final class WorkScene {
             level.setBlock(home.offset(LAVA), Blocks.LAVA.defaultBlockState(), 3);
             level.setBlock(home.offset(HOLE), Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(home.offset(HOLE).below(), Blocks.AIR.defaultBlockState(), 3);
-            PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            DevUtil.firebox(s); s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16)); s.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
+            PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.COMMAND);
+            DevUtil.firebox(s); s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16)); s.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
             s.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.DRILL.get()));
             s.snapTo(x + 0.5, y, z + 0.5, 0, 0);
             s.brain().setOwnerId(player.getUUID());
@@ -101,9 +106,9 @@ final class WorkScene {
             player.teleportTo(x - 6.5, y, z - 3.5);
             allays.clear();
             for (Item item : new Item[] {Items.COAL, Items.RAW_IRON}) {
-                Allay allay = net.minecraft.world.entity.EntityTypes.ALLAY.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                Allay allay = EntityTypes.ALLAY.create(level, EntitySpawnReason.COMMAND);
                 allay.snapTo(x - 4.5, y + 2, z - 2.5);
-                allay.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(item));
+                allay.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(item));
                 allay.getBrain().setMemory(MemoryModuleType.LIKED_PLAYER, player.getUUID()); // what giving it the item does
                 allay.setPersistenceRequired();
                 level.addFreshEntity(allay);
@@ -122,7 +127,7 @@ final class WorkScene {
             }
             ServerLevel level = player.level();
             BlockPos home = drillHome.offset(0, 0, -30);
-            int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, home.getX(), home.getZ());
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, home.getX(), home.getZ());
             home = new BlockPos(home.getX(), y, home.getZ());
             var oak = level.registryAccess().lookupOrThrow(Registries.FEATURE).get(TreeFeatures.OAK);
             for (int[] t : new int[][] {{-4, 6}, {3, 5}, {0, 10}}) {
@@ -145,7 +150,7 @@ final class WorkScene {
         }
         mc.options.setCameraType(CameraType.FIRST_PERSON);
         DevUtil.hideGui(mc, true);
-        Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0); // lookCamera places the stand's feet
+        Vec3 drop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0); // lookCamera places the stand's feet
         AutoPilot.lookCamera(mc, Vec3.atBottomCenterOf(base).add(from).subtract(drop), Vec3.atBottomCenterOf(base).add(at).subtract(drop));
     }
 
@@ -179,7 +184,7 @@ final class WorkScene {
         }
         BlockPos lava = home.offset(LAVA);
         int lavaWalls = 0;
-        for (var d : net.minecraft.core.Direction.values()) {
+        for (var d : Direction.values()) {
             lavaWalls += level.getBlockState(lava.relative(d)).isAir() ? 0 : 1;
         }
         int hole = 0;
@@ -191,7 +196,7 @@ final class WorkScene {
         int logs = 0;
         if (sawHome != null) {
             for (BlockPos p : BlockPos.betweenClosed(sawHome.offset(-8, 0, 0), sawHome.offset(8, 12, 14))) {
-                logs += level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS) ? 1 : 0;
+                logs += level.getBlockState(p).is(BlockTags.LOGS) ? 1 : 0;
             }
         }
         try {

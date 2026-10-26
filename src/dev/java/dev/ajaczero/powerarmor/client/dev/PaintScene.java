@@ -11,13 +11,18 @@ import java.util.Locale;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Autopilot scene for the paint (2026-10-20): a running suit (fuel + helmet: its mind keeps it standing, looking at
@@ -74,11 +79,11 @@ final class PaintScene {
             DevUtil.setTime(level, 6000);
             player.stopRiding();
             int x = player.getBlockX() + 100, z = player.getBlockZ();
-            int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
             base = new BlockPos(x, y, z);
             player.setGameMode(GameType.SURVIVAL);
             player.teleportTo(x + 0.5, y, z - 4.5); // north of the suit: it looks at the player, its back to the camera
-            PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+            PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.COMMAND);
             DevUtil.firebox(s); s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
             s.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
             s.snapTo(x + 0.5, y, z + 0.5, 180, 0);
@@ -124,13 +129,13 @@ final class PaintScene {
         DevUtil.hideGui(mc, true);
         Vec3 at = Vec3.atBottomCenterOf(b);
         // the camera is an armor stand's eye: place the stand that much lower (as HelmetScene does)
-        Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        Vec3 drop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         AutoPilot.lookCamera(mc, at.add(from).subtract(drop), at.add(to).subtract(drop));
     }
 
     private static void open() {
         try {
-            csv = Files.newBufferedWriter(net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().resolve("autopilot_paint.csv"));
+            csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_paint.csv"));
             csv.write("tick,phase,server_paint,client_paint,held,held_count\n");
         } catch (IOException e) {
             PowerArmor.LOGGER.error("paint csv", e);
@@ -151,7 +156,7 @@ final class PaintScene {
             try {
                 ItemStack held = player.getMainHandItem();
                 w.write(String.format(Locale.ROOT, "%d,%s,%s,%s,%s,%d%n", s, p, x.getPaint(), clientPaint,
-                        held.isEmpty() ? "-" : net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(held.getItem()).getPath(), held.getCount()));
+                        held.isEmpty() ? "-" : BuiltInRegistries.ITEM.getKey(held.getItem()).getPath(), held.getCount()));
             } catch (IOException ignored) {
                 // the file was closed at the end of the scene
             }

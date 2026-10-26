@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor.client.dev;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.RailCannonItem;
+import dev.ajaczero.powerarmor.item.ToolLight;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import java.io.BufferedWriter;
@@ -13,15 +14,19 @@ import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.monster.zombie.Husk;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Autopilot scene for the rail cannon (Phase 11): a suit with the cannon and 6 iron ingots in its ammo slot on flat grass
@@ -151,11 +156,11 @@ final class RailScene {
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
             // monsters vanish at once in the autopilot's peaceful world: the husks need a difficulty first
-            level.getServer().setDifficulty(net.minecraft.world.Difficulty.NORMAL, true);
+            level.getServer().setDifficulty(Difficulty.NORMAL, true);
             DevUtil.setTime(level, 6000);
             player.stopRiding();
             int x = player.getBlockX() + 120, z = player.getBlockZ();
-            int g = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+            int g = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
             BlockPos b = new BlockPos(x, g, z);
             base = b;
             for (int dx = -12; dx <= 12; dx++) {
@@ -187,7 +192,7 @@ final class RailScene {
             level.addFreshEntity(s);
             suit = s;
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY); // the hand would take the right click
-            player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL); // the ingots really run out
+            player.setGameMode(GameType.SURVIVAL); // the ingots really run out
             player.setShiftKeyDown(false);
             player.teleportTo(x + 0.5, g, z - 1.5);
             player.startRiding(s, true, true);
@@ -251,7 +256,7 @@ final class RailScene {
 
     private static void open() {
         try {
-            csv = Files.newBufferedWriter(net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().resolve("autopilot_rail.csv"));
+            csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_rail.csv"));
             csv.write("tick,phase,tool_uses,ammo,client_ammo,charge,client_charge,husks,glass,wall,last_hits,last_broken,last_len,"
                     + "client_recoil,client_raise,client_glow,goals\n");
         } catch (IOException e) {
@@ -272,7 +277,7 @@ final class RailScene {
         float clientCharge = client == null ? -1F : client.socket().getSpin();
         float recoil = client == null ? 0F : client.socketVisuals().recoil(0F);
         float raise = client == null ? 0F : client.socketVisuals().raise(0F);
-        float glow = client == null ? 0F : client.socketVisuals().light(dev.ajaczero.powerarmor.item.ToolLight.RAIL_EMIT, client.tickCount);
+        float glow = client == null ? 0F : client.socketVisuals().light(ToolLight.RAIL_EMIT, client.tickCount);
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
             AABB area = new AABB(b).inflate(24);

@@ -5,11 +5,13 @@ import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
 import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
 import java.util.List;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -39,7 +41,7 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         this.addRenderableWidget(Button.builder(Component.translatable("gui.powerarmor.pack_up"),
                         b -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_PACK))
                 .bounds(this.leftPos + 126, this.topPos + 54, 44, 16)
-                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("gui.powerarmor.pack_up.tooltip")))
+                .tooltip(Tooltip.create(Component.translatable("gui.powerarmor.pack_up.tooltip")))
                 .build());
     }
 
@@ -113,7 +115,7 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
                 : index == 4 ? "gui.powerarmor.ammo_slot" : null;
         if (key != null) {
             graphics.setComponentTooltipForNextFrame(this.font, List.of(Component.translatable(key),
-                    Component.translatable(key + ".hint").withStyle(net.minecraft.ChatFormatting.GRAY)), mouseX, mouseY);
+                    Component.translatable(key + ".hint").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
         }
     }
 }

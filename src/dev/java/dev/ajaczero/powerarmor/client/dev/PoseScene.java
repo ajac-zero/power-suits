@@ -11,9 +11,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Autopilot scene for the code-driven pose (2026-10-20, ./gradlew runAutopilotPose, ~30 s): the torso lean with the view
@@ -69,7 +71,7 @@ final class PoseScene {
             }
         });
         try {
-            csv = Files.newBufferedWriter(net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().resolve("autopilot_pose.csv"));
+            csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_pose.csv"));
             csv.write("shot,viewYaw,viewPitch,suitYaw,suitPitch,bodyYaw,twist,toolRaise\n");
         } catch (IOException e) {
             PowerArmor.LOGGER.error("pose csv", e);
@@ -79,14 +81,14 @@ final class PoseScene {
     /** From the suit's left side (+X), level, so forward/back lean shows as a tilt left/right in the picture. */
     private static void side(Minecraft mc) {
         mc.options.setCameraType(CameraType.FIRST_PERSON);
-        Vec3 eyeDrop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        Vec3 eyeDrop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         AutoPilot.lookCamera(mc, home.add(6.5, 1.5, 0).subtract(eyeDrop), home.add(0, 1.5, 0).subtract(eyeDrop));
     }
 
     /** Straight down from above (camera yaw 0: the top of the picture is +Z, where the legs face). */
     private static void top(Minecraft mc) {
         mc.options.setCameraType(CameraType.FIRST_PERSON);
-        Vec3 eyeDrop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        Vec3 eyeDrop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         AutoPilot.lookCamera(mc, home.add(0, 9, 0).subtract(eyeDrop), home.add(0, 0, 0.001).subtract(eyeDrop));
     }
 

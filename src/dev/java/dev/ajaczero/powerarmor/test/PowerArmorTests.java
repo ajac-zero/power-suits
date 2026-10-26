@@ -1,42 +1,109 @@
 package dev.ajaczero.powerarmor.test;
 
+import dev.ajaczero.powerarmor.PilotHands;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.Bullet;
+import dev.ajaczero.powerarmor.entity.FlameJet;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.RogueSpawner;
 import dev.ajaczero.powerarmor.entity.StepSmoothing;
+import dev.ajaczero.powerarmor.entity.SuitEngine;
 import dev.ajaczero.powerarmor.entity.SuitFuel;
+import dev.ajaczero.powerarmor.entity.SuitLights;
+import dev.ajaczero.powerarmor.entity.SuitMind;
+import dev.ajaczero.powerarmor.entity.SuitSmash;
+import dev.ajaczero.powerarmor.entity.TntShell;
+import dev.ajaczero.powerarmor.entity.ai.SuitTargets;
+import dev.ajaczero.powerarmor.item.ChaingunItem;
+import dev.ajaczero.powerarmor.item.EmProjectorItem;
+import dev.ajaczero.powerarmor.item.HelmetStyle;
+import dev.ajaczero.powerarmor.item.HelmetTemplateItem;
 import dev.ajaczero.powerarmor.item.PowerTool;
+import dev.ajaczero.powerarmor.item.RailCannonItem;
+import dev.ajaczero.powerarmor.item.SuitHelmetItem;
 import dev.ajaczero.powerarmor.item.SuitLoadout;
 import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
 import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.TagParser;
+import net.minecraft.network.ConnectionProtocol;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.commands.FillBiomeCommand;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.util.Mth;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.util.TriState;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntitySpawnRequest;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.zombie.Husk;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SmithingRecipeInput;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.world.level.storage.loot.BuiltInLootTables;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.CommonHooks;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.common.NeoForgeMod;
+import net.neoforged.neoforge.event.entity.living.LivingBreatheEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+import net.neoforged.neoforge.network.registration.ChannelAttributes;
 
 /**
  * Automated in-game tests. Run them headless with:  ./gradlew runGameTestServer
@@ -166,7 +233,7 @@ public final class PowerArmorTests {
         old.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.036); // the v1 speed
         CompoundTag saved = saveTag(helper, old);
 
-        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, loaded, saved);
         double speed = loaded.getAttributeBaseValue(Attributes.MOVEMENT_SPEED);
         helper.assertTrue(Math.abs(speed - current) < 1e-9, "loaded suit should get the current speed " + current + ", got " + speed);
@@ -209,9 +276,9 @@ public final class PowerArmorTests {
     @SuitTest
     public static void fireboxBurnsWhatAFurnaceBurns(GameTestHelper helper) {
         var level = helper.getLevel();
-        var firebox = dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX;
+        var firebox = SuitEngine.FIREBOX;
         int[] expected = {1600, 1600, 20000, 2400, 300, 100, 16000};
-        net.minecraft.world.item.Item[] items = {Items.COAL, Items.CHARCOAL, Items.LAVA_BUCKET, Items.BLAZE_ROD, Items.OAK_PLANKS,
+        Item[] items = {Items.COAL, Items.CHARCOAL, Items.LAVA_BUCKET, Items.BLAZE_ROD, Items.OAK_PLANKS,
                 Items.STICK, Items.COAL_BLOCK};
         for (int i = 0; i < items.length; i++) {
             int energy = SuitFuel.energyOf(firebox, new ItemStack(items[i]), level);
@@ -223,8 +290,8 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    private static int fireboxEnergy(GameTestHelper helper, net.minecraft.world.item.Item item) {
-        return SuitFuel.energyOf(dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX, new ItemStack(item), helper.getLevel());
+    private static int fireboxEnergy(GameTestHelper helper, Item item) {
+        return SuitFuel.energyOf(SuitEngine.FIREBOX, new ItemStack(item), helper.getLevel());
     }
 
     /** Within 10% (+-1): tick timing in tests is a tick or so off either way. */
@@ -313,7 +380,7 @@ public final class PowerArmorTests {
         suit.power().setBurn(123.5F, 1600);
         CompoundTag saved = saveTag(helper, suit);
 
-        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, loaded, saved);
         helper.assertTrue(loaded.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).getCount() == 5, "fuel slot should survive saving");
         helper.assertTrue(loaded.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(Items.STICK), "socket should survive saving");
@@ -332,7 +399,7 @@ public final class PowerArmorTests {
         ItemStack packed = packedSuit(player);
         SuitLoadout loadout = packed.get(ModDataComponents.LOADOUT.get());
         helper.assertTrue(loadout != null && loadout.fuel().getCount() == 7 && loadout.burnLeft() == 900, "item should carry the fuel, got " + loadout);
-        helper.assertTrue(helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+        helper.assertTrue(helper.getLevel().getEntitiesOfClass(ItemEntity.class,
                 new AABB(helper.absolutePos(SUIT_POS)).inflate(4)).isEmpty(), "packing must not drop the fuel on the floor");
 
         player.getInventory().removeItem(packed);
@@ -603,7 +670,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = armedSuit(helper, new BlockPos(4, 2, 1), new ItemStack(Items.COAL, 4));
         suit.setYRot(0); // facing +Z (south), toward the pig
         suit.setYBodyRot(0);
-        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 7));
+        Pig pig = helper.spawn(EntityTypes.PIG, new BlockPos(4, 2, 7));
         pig.setNoAi(true);
         Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
@@ -626,7 +693,7 @@ public final class PowerArmorTests {
     /** Bullets ignore the half-second hit immunity: two bullets a tick apart both hurt. */
     @SuitTest(timeoutTicks = 30)
     public static void bulletsIgnoreHitImmunity(GameTestHelper helper) {
-        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 6));
+        Pig pig = helper.spawn(EntityTypes.PIG, new BlockPos(4, 2, 6));
         pig.setNoAi(true);
         Vec3 from = helper.absoluteVec(new Vec3(4.5, 2.5, 1.5));
         float start = pig.getHealth();
@@ -661,7 +728,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
         pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
-        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 6));
+        Pig pig = helper.spawn(EntityTypes.PIG, new BlockPos(4, 2, 6));
         helper.runAfterDelay(5, () -> {
             helper.assertTrue(suit.canOperate(), "suit should be running");
             pilot.attack(pig);
@@ -678,8 +745,8 @@ public final class PowerArmorTests {
         BlockPos block = helper.absolutePos(new BlockPos(4, 1, 6));
         helper.runAfterDelay(5, () -> {
             helper.assertTrue(suit.canOperate() && suit.onGround(), "suit should be running and standing");
-            var event = net.neoforged.neoforge.common.CommonHooks.onLeftClickBlock(pilot, block, Direction.UP,
-                    net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK);
+            var event = CommonHooks.onLeftClickBlock(pilot, block, Direction.UP,
+                    ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK);
             helper.assertTrue(!event.isCanceled(), "mining from inside a running suit is allowed");
             var state = helper.getLevel().getBlockState(block);
             float bare = pilot.getInventory().getSelectedItem().getDestroySpeed(state); // what the empty hand digs at, before penalties
@@ -694,13 +761,13 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY); // no fuel: powered down
         Player pilot = boardedPilot(helper, suit);
         pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
-        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 6));
+        Pig pig = helper.spawn(EntityTypes.PIG, new BlockPos(4, 2, 6));
         BlockPos block = helper.absolutePos(new BlockPos(4, 1, 6));
         helper.runAfterDelay(2, () -> {
             pilot.attack(pig);
             helper.assertTrue(pig.getHealth() == pig.getMaxHealth(), "a powered-down hand doesn't swing, pig health " + pig.getHealth());
-            var event = net.neoforged.neoforge.common.CommonHooks.onLeftClickBlock(pilot, block, Direction.UP,
-                    net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK);
+            var event = CommonHooks.onLeftClickBlock(pilot, block, Direction.UP,
+                    ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK);
             helper.assertTrue(event.isCanceled(), "a powered-down hand doesn't mine");
             helper.succeed();
         });
@@ -714,9 +781,9 @@ public final class PowerArmorTests {
         BlockPos block = helper.absolutePos(new BlockPos(4, 1, 6));
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(block).add(0, 0.5, 0), Direction.UP, block, false);
         helper.runAfterDelay(5, () -> {
-            helper.assertTrue(net.neoforged.neoforge.common.CommonHooks.onRightClickBlock(pilot, InteractionHand.OFF_HAND, block, hit).isCanceled(),
+            helper.assertTrue(CommonHooks.onRightClickBlock(pilot, InteractionHand.OFF_HAND, block, hit).isCanceled(),
                     "off-hand use is cancelled while piloting");
-            helper.assertTrue(!net.neoforged.neoforge.common.CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, block, hit).isCanceled(),
+            helper.assertTrue(!CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, block, hit).isCanceled(),
                     "the main hand still uses things");
             helper.succeed();
         });
@@ -729,13 +796,13 @@ public final class PowerArmorTests {
         BlockPos block = helper.absolutePos(new BlockPos(4, 1, 6));
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(block).add(0, 0.5, 0), Direction.UP, block, false);
         helper.runAfterDelay(2, () -> {
-            helper.assertTrue(net.neoforged.neoforge.common.CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, block, hit).isCanceled(),
+            helper.assertTrue(CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, block, hit).isCanceled(),
                     "a powered-down suit's hand can't use things");
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL));
         });
         helper.runAfterDelay(35, () -> { // fuel -> startup (1.4 s) -> hand works
             helper.assertTrue(suit.canOperate(), "suit should be running again");
-            helper.assertTrue(!net.neoforged.neoforge.common.CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, block, hit).isCanceled(),
+            helper.assertTrue(!CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, block, hit).isCanceled(),
                     "a running suit's hand uses items normally");
             helper.succeed();
         });
@@ -749,9 +816,9 @@ public final class PowerArmorTests {
         player.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
         suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
         helper.assertTrue(player.getVehicle() == suit, "should be inside");
-        helper.assertTrue(Math.abs(player.blockInteractionRange() - blocks - dev.ajaczero.powerarmor.PilotHands.EXTRA_REACH) < 1e-6,
+        helper.assertTrue(Math.abs(player.blockInteractionRange() - blocks - PilotHands.EXTRA_REACH) < 1e-6,
                 "block reach should grow by 1.5, got " + player.blockInteractionRange());
-        helper.assertTrue(Math.abs(player.entityInteractionRange() - entities - dev.ajaczero.powerarmor.PilotHands.EXTRA_REACH) < 1e-6,
+        helper.assertTrue(Math.abs(player.entityInteractionRange() - entities - PilotHands.EXTRA_REACH) < 1e-6,
                 "entity reach should grow by 1.5");
         player.stopRiding();
         helper.assertTrue(player.blockInteractionRange() == blocks && player.entityInteractionRange() == entities, "climbing out removes the bonus");
@@ -783,7 +850,7 @@ public final class PowerArmorTests {
 
     /** A normal pig (with AI: Minecraft only moves mobs by velocity while their AI runs). */
     private static Pig floatingPigTarget(GameTestHelper helper) {
-        return helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 7));
+        return helper.spawn(EntityTypes.PIG, new BlockPos(4, 2, 7));
     }
 
     @SuitTest(timeoutTicks = 100)
@@ -838,7 +905,7 @@ public final class PowerArmorTests {
         });
         helper.runAfterDelay(40, () -> {
             helper.assertTrue(!pig.isAlive() || pig.getHealth() < pig.getMaxHealth(), "the slam should hurt, health " + pig.getHealth());
-            helper.assertTrue(pig.getLastDamageSource() != null && pig.getLastDamageSource().is(dev.ajaczero.powerarmor.item.EmProjectorItem.EM_SLAM),
+            helper.assertTrue(pig.getLastDamageSource() != null && pig.getLastDamageSource().is(EmProjectorItem.EM_SLAM),
                     "damage should be em_slam, got " + pig.getLastDamageSource());
             helper.succeed();
         });
@@ -847,7 +914,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 40)
     public static void emTapShovesAMobAway(GameTestHelper helper) {
         PowerArmorEntity suit = emSuit(helper);
-        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 4)); // room to fly before the pad's wall
+        Pig pig = helper.spawn(EntityTypes.PIG, new BlockPos(4, 2, 4)); // room to fly before the pad's wall
         double startZ = pig.getZ();
         Player pilot = emPilotLookingAt(helper, suit, pig.position().add(0, 0.45, 0));
         suit.socket().setTriggerHeld(pilot, true);
@@ -881,32 +948,32 @@ public final class PowerArmorTests {
     @SuitTest
     public static void emGrabRules(GameTestHelper helper) {
         var level = helper.getLevel();
-        java.util.function.Predicate<net.minecraft.world.entity.Entity> grab = dev.ajaczero.powerarmor.item.EmProjectorItem::canGrab;
-        java.util.function.Predicate<net.minecraft.world.entity.Entity> heavy = dev.ajaczero.powerarmor.item.EmProjectorItem::isHeavy;
+        Predicate<Entity> grab = EmProjectorItem::canGrab;
+        Predicate<Entity> heavy = EmProjectorItem::isHeavy;
         helper.assertTrue(grab.test(helper.spawnItem(Items.DIAMOND, 2, 2, 2)), "dropped items: yes");
-        helper.assertTrue(grab.test(helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(2, 2, 6))), "pigs: yes");
-        var golem = helper.spawn(net.minecraft.world.entity.EntityTypes.IRON_GOLEM, new BlockPos(6, 2, 6));
+        helper.assertTrue(grab.test(helper.spawn(EntityTypes.PIG, new BlockPos(2, 2, 6))), "pigs: yes");
+        var golem = helper.spawn(EntityTypes.IRON_GOLEM, new BlockPos(6, 2, 6));
         helper.assertTrue(grab.test(golem) && heavy.test(golem), "iron golems: heavy");
-        var warden = net.minecraft.world.entity.EntityTypes.WARDEN.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        var warden = EntityTypes.WARDEN.create(level, EntitySpawnReason.LOAD);
         helper.assertTrue(grab.test(warden) && heavy.test(warden), "wardens: heavy (thin, but no beam lifts a warden)");
-        helper.assertTrue(!heavy.test(net.minecraft.world.entity.EntityTypes.ZOMBIE.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD)) && !heavy.test(net.minecraft.world.entity.EntityTypes.COW.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD)), "ordinary mobs: light");
+        helper.assertTrue(!heavy.test(EntityTypes.ZOMBIE.create(level, EntitySpawnReason.LOAD)) && !heavy.test(EntityTypes.COW.create(level, EntitySpawnReason.LOAD)), "ordinary mobs: light");
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         helper.assertTrue(grab.test(player) && !heavy.test(player), "players: yes");
         helper.assertTrue(!grab.test(helper.makeMockPlayer(GameType.CREATIVE)), "creative players: no");
-        var wither = net.minecraft.world.entity.EntityTypes.WITHER.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD);
-        var ravager = net.minecraft.world.entity.EntityTypes.RAVAGER.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        var wither = EntityTypes.WITHER.create(level, EntitySpawnReason.LOAD);
+        var ravager = EntityTypes.RAVAGER.create(level, EntitySpawnReason.LOAD);
         PowerArmorEntity other = spawnSuit(helper);
         helper.assertTrue(grab.test(wither) && heavy.test(wither), "bosses: heavy");
         helper.assertTrue(grab.test(ravager) && heavy.test(ravager), "ravagers: heavy");
         helper.assertTrue(grab.test(other) && heavy.test(other), "other suits: heavy");
-        Pig statue = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(6, 2, 2));
+        Pig statue = helper.spawn(EntityTypes.PIG, new BlockPos(6, 2, 2));
         statue.setNoAi(true);
         helper.assertTrue(!grab.test(statue), "no-AI mobs (map statues): never");
         PowerArmorEntity em = emSuit(helper);
-        boolean pvp = level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.PVP);
-        helper.assertTrue(dev.ajaczero.powerarmor.item.EmProjectorItem.canHold(em, player) == pvp, "a pilot holds players only with PvP on");
-        dev.ajaczero.powerarmor.entity.RogueSpawner.makeRogue(em, false);
-        helper.assertTrue(dev.ajaczero.powerarmor.item.EmProjectorItem.canHold(em, player), "a rogue doesn't ask");
+        boolean pvp = level.getGameRules().get(GameRules.PVP);
+        helper.assertTrue(EmProjectorItem.canHold(em, player) == pvp, "a pilot holds players only with PvP on");
+        RogueSpawner.makeRogue(em, false);
+        helper.assertTrue(EmProjectorItem.canHold(em, player), "a rogue doesn't ask");
         helper.succeed();
     }
 
@@ -938,7 +1005,7 @@ public final class PowerArmorTests {
         static volatile BlockPos pos;
 
         @SubscribeEvent
-        public static void veto(net.neoforged.neoforge.event.level.block.BreakBlockEvent event) {
+        public static void veto(BreakBlockEvent event) {
             if (event.getPos().equals(pos)) {
                 event.setCanceled(true);
             }
@@ -953,7 +1020,7 @@ public final class PowerArmorTests {
     }
 
     /** Fills the 3x3 wall x 3..5, y 2..4 at z=5 (relative) with a block. */
-    private static void wall(GameTestHelper helper, net.minecraft.world.level.block.Block block) {
+    private static void wall(GameTestHelper helper, Block block) {
         for (int x = 3; x <= 5; x++) {
             for (int y = 2; y <= 4; y++) {
                 helper.setBlock(new BlockPos(x, y, 5), block);
@@ -971,8 +1038,8 @@ public final class PowerArmorTests {
         return n;
     }
 
-    private static int dropped(GameTestHelper helper, net.minecraft.world.item.Item item) {
-        return helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+    private static int dropped(GameTestHelper helper, Item item) {
+        return helper.getLevel().getEntitiesOfClass(ItemEntity.class,
                         new AABB(helper.absolutePos(new BlockPos(4, 3, 5))).inflate(4))
                 .stream().filter(e -> e.getItem().is(item)).mapToInt(e -> e.getItem().getCount()).sum();
     }
@@ -1043,7 +1110,7 @@ public final class PowerArmorTests {
         ProtectedBlock.pos = center;
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
-        var handBreak = new net.neoforged.neoforge.event.level.block.BreakBlockEvent(helper.getLevel(), helper.absolutePos(new BlockPos(3, 2, 5)), Blocks.STONE.defaultBlockState(), pilot);
+        var handBreak = new BreakBlockEvent(helper.getLevel(), helper.absolutePos(new BlockPos(3, 2, 5)), Blocks.STONE.defaultBlockState(), pilot);
         NeoForge.EVENT_BUS.post(handBreak);
         helper.assertTrue(handBreak.isCanceled(), "a pilot's own (hand) break must still be cancelled");
         suit.socket().setTriggerHeld(pilot, true);
@@ -1091,7 +1158,7 @@ public final class PowerArmorTests {
         for (int y = 2; y <= 4; y++) {
             helper.setBlock(new BlockPos(4, y, 5), Blocks.OAK_LOG); // a log wall: no leaves
         }
-        helper.setBlock(new BlockPos(4, 5, 5), Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
+        helper.setBlock(new BlockPos(4, 5, 5), Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true));
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.CHAINSAW.get()), new Vec3(4.5, 2.5, 5));
         suit.socket().setTriggerHeld(pilot, true);
@@ -1232,9 +1299,9 @@ public final class PowerArmorTests {
         helper.runAfterDelay(2, () -> {
             pilot.hurt(helper.getLevel().damageSources().onFire(), 2F);
             helper.assertTrue(suit.getHealth() < suit.getMaxHealth(), "without power, fire hurts the hull");
-            pilot.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 100));
-            helper.assertTrue(pilot.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "without power, poison reaches the pilot");
-            var breathe = new net.neoforged.neoforge.event.entity.living.LivingBreatheEvent(pilot, false, 1, 4);
+            pilot.addEffect(new MobEffectInstance(MobEffects.POISON, 100));
+            helper.assertTrue(pilot.hasEffect(MobEffects.POISON), "without power, poison reaches the pilot");
+            var breathe = new LivingBreatheEvent(pilot, false, 1, 4);
             NeoForge.EVENT_BUS.post(breathe);
             helper.assertTrue(!breathe.canBreathe(), "without power, the pilot can't breathe under water");
             helper.succeed();
@@ -1247,12 +1314,12 @@ public final class PowerArmorTests {
         Player pilot = boardedPilot(helper, suit);
         helper.runAfterDelay(2, () -> {
             float before = suit.power().getBurnLeftExact();
-            pilot.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 100));
-            helper.assertTrue(!pilot.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "poison should be kept out");
+            pilot.addEffect(new MobEffectInstance(MobEffects.POISON, 100));
+            helper.assertTrue(!pilot.hasEffect(MobEffects.POISON), "poison should be kept out");
             helper.assertTrue(Math.abs(before - suit.power().getBurnLeftExact() - PowerArmorConfig.SEAL_EFFECT_ENERGY.get()) < 0.01, "and cost fuel");
-            pilot.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, 100));
-            helper.assertTrue(pilot.hasEffect(net.minecraft.world.effect.MobEffects.REGENERATION), "good effects get through");
-            var breathe = new net.neoforged.neoforge.event.entity.living.LivingBreatheEvent(pilot, false, 1, 4);
+            pilot.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 100));
+            helper.assertTrue(pilot.hasEffect(MobEffects.REGENERATION), "good effects get through");
+            var breathe = new LivingBreatheEvent(pilot, false, 1, 4);
             NeoForge.EVENT_BUS.post(breathe);
             helper.assertTrue(breathe.canBreathe(), "a powered suit feeds its pilot air");
             helper.succeed();
@@ -1266,7 +1333,7 @@ public final class PowerArmorTests {
         int stun = PowerArmorConfig.LIGHTNING_STUN_TICKS.get();
         helper.runAfterDelay(5, () -> {
             helper.assertTrue(suit.canOperate(), "suit should be running");
-            var bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
+            var bolt = EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), EntitySpawnReason.TRIGGERED);
             bolt.snapTo(suit.position());
             suit.thunderHit(helper.getLevel(), bolt);
             helper.assertTrue(suit.isStunned() && !suit.isPowered() && !suit.canOperate(), "a strike knocks the suit out");
@@ -1288,7 +1355,7 @@ public final class PowerArmorTests {
     public static void lightningOnAnEmptyTankDoesNotStun(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY);
         helper.runAfterDelay(2, () -> {
-            var bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
+            var bolt = EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), EntitySpawnReason.TRIGGERED);
             suit.thunderHit(helper.getLevel(), bolt);
             helper.assertTrue(!suit.isStunned(), "nothing to knock out without fuel");
             helper.succeed();
@@ -1299,8 +1366,8 @@ public final class PowerArmorTests {
     public static void stompHurtsEverythingAroundButThePilot(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player pilot = boardedPilot(helper, suit);
-        Pig near = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 6));   // 2 blocks from the suit's centre
-        Pig far = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 8));    // 4 blocks: outside the shock wave
+        Pig near = helper.spawn(EntityTypes.PIG, new BlockPos(4, 2, 6));   // 2 blocks from the suit's centre
+        Pig far = helper.spawn(EntityTypes.PIG, new BlockPos(4, 2, 8));    // 4 blocks: outside the shock wave
         helper.runAfterDelay(3, () -> {
             var fall = helper.getLevel().damageSources().fall();
             suit.causeFallDamage(2.3F, 1F, fall); // a jump on flat ground: just a thud
@@ -1346,17 +1413,17 @@ public final class PowerArmorTests {
         helper.setBlock(glass, Blocks.GLASS);
         helper.setBlock(wall, Blocks.GLASS_PANE); // out of reach
         helper.runAfterDelay(2, () -> {
-            helper.assertTrue(dev.ajaczero.powerarmor.entity.SuitSmash.tick(suit, pilot) == 0, "standing still breaks nothing");
+            helper.assertTrue(SuitSmash.tick(suit, pilot) == 0, "standing still breaks nothing");
             pilot.zza = 1;
-            dev.ajaczero.powerarmor.entity.SuitSmash.tick(suit, pilot);
+            SuitSmash.tick(suit, pilot);
             helper.assertBlockNotPresent(Blocks.GLASS_PANE, pane);
             helper.assertBlockNotPresent(Blocks.OAK_LEAVES, leaves);
             helper.assertBlockPresent(Blocks.GLASS, glass); // full glass needs a sprint
             helper.assertBlockPresent(Blocks.GLASS_PANE, wall);
             pilot.setSprinting(true);
-            dev.ajaczero.powerarmor.entity.SuitSmash.tick(suit, pilot);
+            SuitSmash.tick(suit, pilot);
             helper.assertBlockNotPresent(Blocks.GLASS, glass);
-            helper.assertTrue(helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+            helper.assertTrue(helper.getLevel().getEntitiesOfClass(ItemEntity.class,
                     new AABB(helper.absolutePos(glass)).inflate(4)).isEmpty(), "smashed blocks drop nothing");
             helper.succeed();
         });
@@ -1372,19 +1439,19 @@ public final class PowerArmorTests {
             for (ItemStack stack : List.of(new ItemStack(Items.BREAD), new ItemStack(Items.POTION), new ItemStack(Items.MILK_BUCKET),
                     new ItemStack(Items.HONEY_BOTTLE), new ItemStack(Items.SUSPICIOUS_STEW))) {
                 pilot.setItemInHand(InteractionHand.MAIN_HAND, stack);
-                var result = net.neoforged.neoforge.common.CommonHooks.onItemRightClick(pilot, InteractionHand.MAIN_HAND);
+                var result = CommonHooks.onItemRightClick(pilot, InteractionHand.MAIN_HAND);
                 helper.assertTrue(result == InteractionResult.FAIL, stack + " should be refused (and passed on), got " + result);
                 pilot.startUsingItem(InteractionHand.MAIN_HAND);
                 helper.assertTrue(!pilot.isUsingItem(), "the pilot must not start eating/drinking " + stack);
             }
             pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
-            helper.assertTrue(net.neoforged.neoforge.common.CommonHooks.onItemRightClick(pilot, InteractionHand.MAIN_HAND) == null,
+            helper.assertTrue(CommonHooks.onItemRightClick(pilot, InteractionHand.MAIN_HAND) == null,
                     "other items are used as normal");
             BlockPos cake = helper.absolutePos(new BlockPos(4, 2, 6));
             helper.setBlock(new BlockPos(4, 2, 6), Blocks.CAKE);
             var hit = new BlockHitResult(Vec3.atCenterOf(cake), Direction.UP, cake, false);
-            var event = net.neoforged.neoforge.common.CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, cake, hit);
-            helper.assertTrue(event.getUseBlock() == net.minecraft.util.TriState.FALSE, "no cake from inside either");
+            var event = CommonHooks.onRightClickBlock(pilot, InteractionHand.MAIN_HAND, cake, hit);
+            helper.assertTrue(event.getUseBlock() == TriState.FALSE, "no cake from inside either");
             pilot.stopRiding();
             pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BREAD));
             pilot.startUsingItem(InteractionHand.MAIN_HAND);
@@ -1398,23 +1465,23 @@ public final class PowerArmorTests {
     public static void poisonAlreadyInsideHurtsThePilot(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 200)); // ate a spider eye
+        player.addEffect(new MobEffectInstance(MobEffects.POISON, 200)); // ate a spider eye
         player.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
         suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
         helper.runAfterDelay(2, () -> {
-            helper.assertTrue(player.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "the poison came in with the pilot");
+            helper.assertTrue(player.hasEffect(MobEffects.POISON), "the poison came in with the pilot");
             // A poison tick (NeoForge's own damage type, neoforge:poison), then a wither tick.
             float fuel = suit.power().getBurnLeftExact();
-            var types = helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE);
+            var types = helper.getLevel().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE);
             player.damageCooldownTime = 0;
-            player.hurt(new net.minecraft.world.damagesource.DamageSource(types.getOrThrow(net.neoforged.neoforge.common.NeoForgeMod.POISON_DAMAGE)), 1F);
+            player.hurt(new DamageSource(types.getOrThrow(NeoForgeMod.POISON_DAMAGE)), 1F);
             helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "poison must not reach the suit");
             player.damageCooldownTime = 0;
             player.hurt(helper.getLevel().damageSources().wither(), 1F);
             helper.assertTrue(player.getHealth() < player.getMaxHealth(), "poison hurts the pilot, health " + player.getHealth());
             helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "not the suit, health " + suit.getHealth() + " from "
                     + (suit.getLastDamageSource() == null ? "-" : suit.getLastDamageSource().getMsgId()));
-            helper.assertTrue(player.getLastDamageSource() != null && player.getLastDamageSource().is(net.minecraft.world.damagesource.DamageTypes.WITHER),
+            helper.assertTrue(player.getLastDamageSource() != null && player.getLastDamageSource().is(DamageTypes.WITHER),
                     "the wither tick reached the pilot");
             helper.assertTrue(suit.power().getBurnLeftExact() == fuel, "and costs no fuel");
             helper.succeed();
@@ -1455,18 +1522,18 @@ public final class PowerArmorTests {
     @SuitTest
     public static void mindOwnerAndHomeSurviveSaving(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
-        java.util.UUID owner = java.util.UUID.randomUUID();
-        suit.setMind(dev.ajaczero.powerarmor.entity.SuitMind.ROGUE);
+        UUID owner = UUID.randomUUID();
+        suit.setMind(SuitMind.ROGUE);
         suit.brain().setOwnerId(owner);
         suit.brain().setHome(new BlockPos(10, 64, -3));
         CompoundTag saved = saveTag(helper, suit);
-        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, loaded, saved);
         helper.assertTrue(loaded.isRogue() && owner.equals(loaded.brain().getOwnerId()) && new BlockPos(10, 64, -3).equals(loaded.brain().getHome()),
                 "mind, owner and home should survive saving");
         CompoundTag old = saveTag(helper, spawnSuit(helper)); // a suit saved before the AI existed: friendly, nobody's, no home
         old.remove("Mind");
-        PowerArmorEntity legacy = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        PowerArmorEntity legacy = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, legacy, old);
         helper.assertTrue(!legacy.isRogue() && legacy.brain().getOwnerId() == null && legacy.brain().getHome() == null, "old saves load as friendly, unowned, homeless");
         helper.succeed();
@@ -1523,7 +1590,7 @@ public final class PowerArmorTests {
     @SuitTest
     public static void rogueLetsNobodyIn(GameTestHelper helper) {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 2));
-        suit.setMind(dev.ajaczero.powerarmor.entity.SuitMind.ROGUE);
+        suit.setMind(SuitMind.ROGUE);
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         helper.assertTrue(!suit.interact(player, InteractionHand.MAIN_HAND, suit.position()).consumesAction() && player.getVehicle() == null,
                 "a rogue can't be boarded");
@@ -1533,13 +1600,13 @@ public final class PowerArmorTests {
     /** Amber whenever piloted (no more red for tool use or hits), green for the friendly mind, red only for a rogue. */
     @SuitTest
     public static void visorShowsWhoIsInControl(GameTestHelper helper) {
-        var friendly = dev.ajaczero.powerarmor.entity.SuitMind.FRIENDLY;
-        var rogue = dev.ajaczero.powerarmor.entity.SuitMind.ROGUE;
-        float[] piloted = dev.ajaczero.powerarmor.entity.SuitLights.visorColorFor(true, friendly);
-        float[] green = dev.ajaczero.powerarmor.entity.SuitLights.visorColorFor(false, friendly);
-        float[] red = dev.ajaczero.powerarmor.entity.SuitLights.visorColorFor(false, rogue);
+        var friendly = SuitMind.FRIENDLY;
+        var rogue = SuitMind.ROGUE;
+        float[] piloted = SuitLights.visorColorFor(true, friendly);
+        float[] green = SuitLights.visorColorFor(false, friendly);
+        float[] red = SuitLights.visorColorFor(false, rogue);
         helper.assertTrue(piloted[0] > 0.9F && piloted[1] > 0.5F && piloted[2] < 0.4F, "piloted = amber");
-        helper.assertTrue(dev.ajaczero.powerarmor.entity.SuitLights.visorColorFor(true, rogue) == piloted, "a pilot's visor is amber, whatever the mind");
+        helper.assertTrue(SuitLights.visorColorFor(true, rogue) == piloted, "a pilot's visor is amber, whatever the mind");
         helper.assertTrue(green[1] > green[0] && green[1] > green[2], "friendly mind = green");
         helper.assertTrue(red[0] > 0.9F && red[1] < 0.3F, "rogue = red");
         helper.succeed();
@@ -1549,10 +1616,10 @@ public final class PowerArmorTests {
     @EventBusSubscriber(modid = PowerArmor.MODID)
     public static final class BreakWatch {
         static volatile BlockPos pos;
-        static volatile java.util.UUID breaker;
+        static volatile UUID breaker;
 
         @SubscribeEvent
-        public static void seen(net.neoforged.neoforge.event.level.block.BreakBlockEvent event) {
+        public static void seen(BreakBlockEvent event) {
             if (event.getPos().equals(pos)) {
                 breaker = event.getPlayer().getUUID();
             }
@@ -1570,7 +1637,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = toolSuit(helper);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.DRILL.get()));
-        java.util.UUID owner = java.util.UUID.randomUUID();
+        UUID owner = UUID.randomUUID();
         suit.brain().setOwnerId(owner);
         suit.brain().setHome(suit.blockPosition()); // the mind only drills its hall round home (the wall is in it)
         helper.runAfterDelay(2, () -> { // once the engine runs (an unpowered mind forgets its aim and trigger)
@@ -1629,7 +1696,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = spawnSuit(helper);
         suit.setStoredNuggets(100);
         CompoundTag saved = saveTag(helper, suit);
-        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, loaded, saved);
         helper.assertTrue(loaded.getStoredNuggets() == 100, "saved with the suit");
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
@@ -1655,7 +1722,7 @@ public final class PowerArmorTests {
         Player pilot = helper.makeMockPlayer(GameType.SURVIVAL);
         pilot.getInventory().setItem(3, new ItemStack(Items.IRON_NUGGET, 1));
         for (int i = 0; i < 3; i++) {
-            helper.assertTrue(dev.ajaczero.powerarmor.item.ChaingunItem.takeBullet(suit, pilot), "a bullet each time");
+            helper.assertTrue(ChaingunItem.takeBullet(suit, pilot), "a bullet each time");
         }
         helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 0 && suit.getStoredNuggets() == 3,
                 "1 from the pocket, then 2 from the store; store " + suit.getStoredNuggets());
@@ -1664,21 +1731,21 @@ public final class PowerArmorTests {
 
     /** An owner who is really in the level (the mind looks its owner up by UUID): a creative mock server player. */
     @SuppressWarnings("removal")
-    private static net.minecraft.server.level.ServerPlayer ownerAt(GameTestHelper helper, PowerArmorEntity suit, Vec3 at) {
-        net.minecraft.server.level.ServerPlayer owner = mockServerPlayer(helper);
+    private static ServerPlayer ownerAt(GameTestHelper helper, PowerArmorEntity suit, Vec3 at) {
+        ServerPlayer owner = mockServerPlayer(helper);
         Vec3 abs = helper.absoluteVec(at);
-        owner.teleportTo(helper.getLevel(), abs.x, abs.y, abs.z, java.util.Set.of(), 0F, 0F, true);
+        owner.teleportTo(helper.getLevel(), abs.x, abs.y, abs.z, Set.of(), 0F, 0F, true);
         suit.brain().setOwnerId(owner.getUUID());
         return owner;
     }
 
-    private static void dismiss(GameTestHelper helper, net.minecraft.server.level.ServerPlayer player) {
+    private static void dismiss(GameTestHelper helper, ServerPlayer player) {
         helper.getLevel().getServer().getPlayerList().remove(player);
     }
 
     /** A husk that stands still (no AI) and doesn't burn by day: a monster target that stays where it was put. */
-    private static net.minecraft.world.entity.monster.zombie.Husk statueHusk(GameTestHelper helper, Vec3 at) {
-        var husk = helper.spawn(net.minecraft.world.entity.EntityTypes.HUSK, at);
+    private static Husk statueHusk(GameTestHelper helper, Vec3 at) {
+        var husk = helper.spawn(EntityTypes.HUSK, at);
         husk.setNoAi(true);
         return husk;
     }
@@ -1713,7 +1780,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 64);
         var owner = ownerAt(helper, suit, new Vec3(4.5, 2, 3.5));
         var husk = statueHusk(helper, new Vec3(4.5, 2, 6.5));
-        helper.assertTrue(!dev.ajaczero.powerarmor.entity.ai.SuitTargets.lineOfFireClear(suit, husk, husk.getBoundingBox().getCenter()),
+        helper.assertTrue(!SuitTargets.lineOfFireClear(suit, husk, husk.getBoundingBox().getCenter()),
                 "the owner blocks the line");
         boolean[] blockedShot = {false};
         helper.onEachTick(() -> blockedShot[0] |= suit.socket().getUses() > 0 && suit.tickCount <= 6);
@@ -1721,7 +1788,7 @@ public final class PowerArmorTests {
             helper.assertTrue(suit.getTarget() == husk, "it has picked the husk");
             helper.assertTrue(!blockedShot[0] && husk.getHealth() == husk.getMaxHealth(), "but must not fire through its owner");
             Vec3 aside = helper.absoluteVec(new Vec3(1.5, 2, 3.5));
-            owner.teleportTo(helper.getLevel(), aside.x, aside.y, aside.z, java.util.Set.of(), 0F, 0F, true);
+            owner.teleportTo(helper.getLevel(), aside.x, aside.y, aside.z, Set.of(), 0F, 0F, true);
         });
         helper.runAfterDelay(50, () -> {
             dismiss(helper, owner);
@@ -1762,16 +1829,16 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 0);
         Player ownerPlayer = helper.makeMockPlayer(GameType.SURVIVAL);
         suit.brain().setOwnerId(ownerPlayer.getUUID());
-        var rules = (java.util.function.BiPredicate<net.minecraft.world.entity.Entity, Boolean>) (e, provoked) ->
-                dev.ajaczero.powerarmor.entity.ai.SuitTargets.canAttack(suit, e, provoked);
+        var rules = (BiPredicate<Entity, Boolean>) (e, provoked) ->
+                SuitTargets.canAttack(suit, e, provoked);
         var husk = statueHusk(helper, new Vec3(2.5, 2, 6.5));
-        var villager = helper.spawn(net.minecraft.world.entity.EntityTypes.VILLAGER, new Vec3(6.5, 2, 6.5));
-        var cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, new Vec3(1.5, 2, 4.5));
-        var wolf = helper.spawn(net.minecraft.world.entity.EntityTypes.WOLF, new Vec3(7.5, 2, 4.5));
+        var villager = helper.spawn(EntityTypes.VILLAGER, new Vec3(6.5, 2, 6.5));
+        var cow = helper.spawn(EntityTypes.COW, new Vec3(1.5, 2, 4.5));
+        var wolf = helper.spawn(EntityTypes.WOLF, new Vec3(7.5, 2, 4.5));
         wolf.tame(ownerPlayer);
         PowerArmorEntity friend = suitAt(helper, new BlockPos(7, 2, 1));
         PowerArmorEntity rogue = suitAt(helper, new BlockPos(1, 2, 7));
-        rogue.setMind(dev.ajaczero.powerarmor.entity.SuitMind.ROGUE);
+        rogue.setMind(SuitMind.ROGUE);
         helper.assertTrue(rules.test(husk, false), "monsters: always");
         helper.assertTrue(!rules.test(cow, false) && rules.test(cow, true), "animals: only if they started it");
         helper.assertTrue(!rules.test(villager, true), "villagers: never");
@@ -1798,7 +1865,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 100)
     public static void emMindLiftsAndFlingsAMonster(GameTestHelper helper) {
         PowerArmorEntity suit = emGuard(helper, new BlockPos(4, 2, 2));
-        var husk = helper.spawn(net.minecraft.world.entity.EntityTypes.HUSK, new Vec3(4.5, 2, 6.5));
+        var husk = helper.spawn(EntityTypes.HUSK, new Vec3(4.5, 2, 6.5));
         boolean[] caught = {false};
         double[] highest = {0};
         helper.onEachTick(() -> {
@@ -1817,8 +1884,8 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 60)
     public static void emMindLeavesAnimalsAndVillagersAlone(GameTestHelper helper) {
         PowerArmorEntity suit = emGuard(helper, new BlockPos(4, 2, 2));
-        helper.spawn(net.minecraft.world.entity.EntityTypes.COW, new Vec3(2.5, 2, 6.5));
-        helper.spawn(net.minecraft.world.entity.EntityTypes.VILLAGER, new Vec3(6.5, 2, 6.5));
+        helper.spawn(EntityTypes.COW, new Vec3(2.5, 2, 6.5));
+        helper.spawn(EntityTypes.VILLAGER, new Vec3(6.5, 2, 6.5));
         boolean[] grabbed = {false};
         helper.onEachTick(() -> grabbed[0] |= suit.socket().getBeamTarget() != null || suit.socket().isAiTriggerHeld());
         helper.runAfterDelay(50, () -> {
@@ -1831,7 +1898,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 100)
     public static void emMindThrowsCreepersAwayFromHome(GameTestHelper helper) {
         PowerArmorEntity suit = emGuard(helper, new BlockPos(4, 2, 1));
-        var creeper = helper.spawn(net.minecraft.world.entity.EntityTypes.CREEPER, new Vec3(4.5, 2, 5.5));
+        var creeper = helper.spawn(EntityTypes.CREEPER, new Vec3(4.5, 2, 5.5));
         double[] furthest = {0};
         helper.onEachTick(() -> {
             if (suit.socket().getUses() > 0) {
@@ -1921,7 +1988,7 @@ public final class PowerArmorTests {
 
     private static PowerArmorEntity rogue(GameTestHelper helper, BlockPos at, boolean chaingun) {
         PowerArmorEntity suit = suitAt(helper, at);
-        dev.ajaczero.powerarmor.entity.RogueSpawner.makeRogue(suit, chaingun);
+        RogueSpawner.makeRogue(suit, chaingun);
         return suit;
     }
 
@@ -1929,7 +1996,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 120)
     public static void rogueRunsOnNothingAndShootsAnyMob(GameTestHelper helper) {
         PowerArmorEntity suit = rogue(helper, new BlockPos(4, 2, 1), true);
-        var cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, new Vec3(4.5, 2, 6.5));
+        var cow = helper.spawn(EntityTypes.COW, new Vec3(4.5, 2, 6.5));
         helper.runAfterDelay(3, () -> helper.assertTrue(suit.isPowered() && suit.isAiDriven(), "a rogue needs no fuel"));
         helper.succeedWhen(() -> {
             helper.assertTrue(!cow.isAlive(), "the cow should be shot");
@@ -1957,7 +2024,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = rogue(helper, SUIT_POS, true);
         helper.runAfterDelay(3, () -> {
             helper.assertTrue(suit.isRogue() && suit.isPowered(), "a running rogue");
-            var bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
+            var bolt = EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), EntitySpawnReason.TRIGGERED);
             bolt.snapTo(suit.position());
             suit.thunderHit(helper.getLevel(), bolt);
             helper.assertTrue(!suit.isRogue() && suit.brain().getOwnerId() == null && suit.brain().getHome() == null, "rebooted friendly, nobody's");
@@ -1980,7 +2047,7 @@ public final class PowerArmorTests {
         suit.brain().setRogueAge(PowerArmorConfig.ROGUE_LIFETIME.get());
         var watcher = mockServerPlayer(helper);
         Vec3 near = helper.absoluteVec(new Vec3(1.5, 2, 1.5));
-        watcher.teleportTo(helper.getLevel(), near.x, near.y, near.z, java.util.Set.of(), 0F, 0F, true);
+        watcher.teleportTo(helper.getLevel(), near.x, near.y, near.z, Set.of(), 0F, 0F, true);
         helper.runAfterDelay(40, () -> {
             helper.assertTrue(!suit.isRemoved(), "not while a player watches");
             dismiss(helper, watcher);
@@ -2008,9 +2075,9 @@ public final class PowerArmorTests {
     /** The /summon line in the README makes a chaingun rogue. */
     @SuitTest
     public static void readmeSummonMakesARogue(GameTestHelper helper) throws Exception {
-        CompoundTag tag = net.minecraft.nbt.TagParser.parseCompoundFully(
+        CompoundTag tag = TagParser.parseCompoundFully(
                 "{id:\"powerarmor:power_armor\",Mind:\"ROGUE\",Inventory:{Items:[{Slot:1b,id:\"powerarmor:chaingun\",count:1}]}}");
-        var entity = EntityType.loadEntityRecursive(tag, helper.getLevel(), new net.minecraft.world.entity.EntitySpawnRequest(net.minecraft.world.entity.EntitySpawnReason.COMMAND, false), e -> e);
+        var entity = EntityType.loadEntityRecursive(tag, helper.getLevel(), new EntitySpawnRequest(EntitySpawnReason.COMMAND, false), e -> e);
         helper.assertTrue(entity instanceof PowerArmorEntity suit && suit.isRogue()
                 && suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(ModItems.CHAINGUN.get()), "a chaingun rogue");
         PowerArmorEntity rogue = (PowerArmorEntity) entity;
@@ -2030,10 +2097,10 @@ public final class PowerArmorTests {
      * them: GeckoLib's animation triggers (the EM projector's recoil, a flinch) crashed the test server. Tell the
      * connection it speaks GeckoLib's entity packets, as a real client with GeckoLib would.
      */
-    private static net.minecraft.server.level.ServerPlayer mockServerPlayer(GameTestHelper helper) {
+    private static ServerPlayer mockServerPlayer(GameTestHelper helper) {
         var player = helper.makeMockServerPlayerInLevel();
-        var channels = net.neoforged.neoforge.network.registration.ChannelAttributes.getOrCreateCommonChannels(
-                player.connection.getConnection(), net.minecraft.network.ConnectionProtocol.PLAY);
+        var channels = ChannelAttributes.getOrCreateCommonChannels(
+                player.connection.getConnection(), ConnectionProtocol.PLAY);
         for (String id : new String[] {"entity_anim_trigger", "stop_triggered_entity_anim", "stateless_entity_play_anim", "stateless_entity_stop_anim"}) {
             channels.add(Identifier.fromNamespaceAndPath("geckolib", id));
         }
@@ -2041,16 +2108,16 @@ public final class PowerArmorTests {
     }
 
     /** An entity's save data, as the world would write it (since 1.21.6 entities save through ValueOutput). */
-    private static CompoundTag saveTag(GameTestHelper helper, net.minecraft.world.entity.Entity entity) {
-        var out = net.minecraft.world.level.storage.TagValueOutput.createWithContext(net.minecraft.util.ProblemReporter.DISCARDING,
+    private static CompoundTag saveTag(GameTestHelper helper, Entity entity) {
+        var out = TagValueOutput.createWithContext(ProblemReporter.DISCARDING,
                 helper.getLevel().registryAccess());
         entity.saveWithoutId(out);
         return out.buildResult();
     }
 
     /** Loads save data into an entity, as the world would. */
-    private static void loadTag(GameTestHelper helper, net.minecraft.world.entity.Entity entity, CompoundTag tag) {
-        entity.load(net.minecraft.world.level.storage.TagValueInput.create(net.minecraft.util.ProblemReporter.DISCARDING,
+    private static void loadTag(GameTestHelper helper, Entity entity, CompoundTag tag) {
+        entity.load(TagValueInput.create(ProblemReporter.DISCARDING,
                 helper.getLevel().registryAccess(), tag));
     }
 
@@ -2112,20 +2179,20 @@ public final class PowerArmorTests {
         player.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DYE.red(), 3));
         helper.assertTrue(suit.interact(player, InteractionHand.MAIN_HAND, suit.position()).consumesAction(), "the suit takes the dye");
-        helper.assertTrue(suit.getPaint() == net.minecraft.world.item.DyeColor.RED && player.getMainHandItem().getCount() == 2,
+        helper.assertTrue(suit.getPaint() == DyeColor.RED && player.getMainHandItem().getCount() == 2,
                 "red dye paints it red and is used up, got " + suit.getPaint() + " / " + player.getMainHandItem());
         suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
         helper.assertTrue(player.getMainHandItem().getCount() == 2, "the same colour again keeps the dye");
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DYE.blue()));
         suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
-        helper.assertTrue(suit.getPaint() == net.minecraft.world.item.DyeColor.BLUE && player.getMainHandItem().isEmpty(), "blue paints over red");
+        helper.assertTrue(suit.getPaint() == DyeColor.BLUE && player.getMainHandItem().isEmpty(), "blue paints over red");
 
         Player creative = helper.makeMockPlayer(GameType.CREATIVE);
         creative.getAbilities().instabuild = true; // mock players don't get their game mode's abilities
         creative.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
         creative.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DYE.yellow()));
         suit.interact(creative, InteractionHand.MAIN_HAND, suit.position());
-        helper.assertTrue(suit.getPaint() == net.minecraft.world.item.DyeColor.YELLOW && creative.getMainHandItem().getCount() == 1,
+        helper.assertTrue(suit.getPaint() == DyeColor.YELLOW && creative.getMainHandItem().getCount() == 1,
                 "creative paints without using the dye");
 
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WET_SPONGE));
@@ -2139,23 +2206,23 @@ public final class PowerArmorTests {
     @SuitTest
     public static void paintSurvivesSavingAndPacking(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
-        suit.setPaint(net.minecraft.world.item.DyeColor.LIME);
-        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        suit.setPaint(DyeColor.LIME);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, loaded, saveTag(helper, suit));
-        helper.assertTrue(loaded.getPaint() == net.minecraft.world.item.DyeColor.LIME, "saved paint, got " + loaded.getPaint());
-        PowerArmorEntity bare = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        helper.assertTrue(loaded.getPaint() == DyeColor.LIME, "saved paint, got " + loaded.getPaint());
+        PowerArmorEntity bare = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, bare, saveTag(helper, spawnSuitAtCorner(helper)));
         helper.assertTrue(bare.getPaint() == null, "a bare suit loads bare");
 
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         suit.packUp(player);
         ItemStack packed = packedSuit(player);
-        helper.assertTrue(packed.get(ModDataComponents.PAINT.get()) == net.minecraft.world.item.DyeColor.LIME, "the packed suit keeps its paint");
+        helper.assertTrue(packed.get(ModDataComponents.PAINT.get()) == DyeColor.LIME, "the packed suit keeps its paint");
         player.getInventory().removeItem(packed);
         player.setItemInHand(InteractionHand.MAIN_HAND, packed);
         useOnFloor(helper, player, packed, new BlockPos(4, 1, 4));
         PowerArmorEntity deployed = suitsInTest(helper).stream().filter(s -> s != suit && s.getPaint() != null).findFirst().orElseThrow();
-        helper.assertTrue(deployed.getPaint() == net.minecraft.world.item.DyeColor.LIME, "and comes back painted");
+        helper.assertTrue(deployed.getPaint() == DyeColor.LIME, "and comes back painted");
         helper.succeed();
     }
 
@@ -2189,7 +2256,7 @@ public final class PowerArmorTests {
             helper.assertTrue(suit.isAiDriven(), "and its mind drives it");
             SuitLoadout packed = suit.getLoadout();
             helper.assertTrue(packed.helmet().is(ModItems.SUIT_HELMET.get()), "a packed suit keeps its helmet");
-            PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+            PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
             loadTag(helper, loaded, saveTag(helper, suit));
             helper.assertTrue(loaded.getInventory().getItem(PowerArmorEntity.HELMET_SLOT).is(ModItems.SUIT_HELMET.get()) && loaded.hasHelmet(),
                     "the helmet survives saving");
@@ -2206,10 +2273,10 @@ public final class PowerArmorTests {
         pilot.getFoodData().setFoodLevel(10);
         helper.runAfterDelay(3, () -> {
             helper.assertTrue(suit.isPowered() && !suit.isSealed(), "piloted it runs, unsealed");
-            pilot.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 100));
-            helper.assertTrue(pilot.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "no seal: the poison reaches the pilot");
+            pilot.addEffect(new MobEffectInstance(MobEffects.POISON, 100));
+            helper.assertTrue(pilot.hasEffect(MobEffects.POISON), "no seal: the poison reaches the pilot");
             pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BREAD));
-            helper.assertTrue(net.neoforged.neoforge.common.CommonHooks.onItemRightClick(pilot, InteractionHand.MAIN_HAND) == null,
+            helper.assertTrue(CommonHooks.onItemRightClick(pilot, InteractionHand.MAIN_HAND) == null,
                     "bread isn't refused");
             pilot.startUsingItem(InteractionHand.MAIN_HAND);
             helper.assertTrue(pilot.isUsingItem(), "no helmet: the pilot can eat");
@@ -2218,12 +2285,12 @@ public final class PowerArmorTests {
     }
 
     private static ItemStack craft(GameTestHelper helper, int w, int h, List<ItemStack> grid) {
-        net.minecraft.world.item.crafting.CraftingInput input = net.minecraft.world.item.crafting.CraftingInput.of(w, h, grid);
-        return helper.getLevel().recipeAccess().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, input, helper.getLevel())
+        CraftingInput input = CraftingInput.of(w, h, grid);
+        return helper.getLevel().recipeAccess().getRecipeFor(RecipeType.CRAFTING, input, helper.getLevel())
                 .map(r -> r.value().assemble(input)).orElse(ItemStack.EMPTY);
     }
 
-    private static void checkCraft(GameTestHelper helper, int w, int h, List<ItemStack> grid, net.minecraft.world.item.Item expected) {
+    private static void checkCraft(GameTestHelper helper, int w, int h, List<ItemStack> grid, Item expected) {
         ItemStack out = craft(helper, w, h, grid);
         helper.assertTrue(out.is(expected), "expected " + expected + " from " + grid + ", got " + out);
     }
@@ -2291,7 +2358,7 @@ public final class PowerArmorTests {
         helper.assertTrue(menu.getSlot(3).mayPlace(new ItemStack(ModItems.TIDAL_ENGINE.get())), "engine slot takes a tidal engine");
         helper.assertTrue(!menu.getSlot(3).mayPlace(new ItemStack(Items.FURNACE)), "engine slot refuses a furnace");
         for (ItemStack fuel : List.of(new ItemStack(Items.COAL), new ItemStack(Items.WATER_BUCKET), new ItemStack(Items.NETHER_STAR),
-                net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION, net.minecraft.world.item.alchemy.Potions.WATER),
+                PotionContents.createItemStack(Items.POTION, Potions.WATER),
                 new ItemStack(Items.BUCKET), new ItemStack(Items.GLASS_BOTTLE))) {
             helper.assertTrue(menu.getSlot(1).mayPlace(fuel), "fuel slot should take " + fuel);
         }
@@ -2381,7 +2448,7 @@ public final class PowerArmorTests {
     /** A water bottle is a smaller drink, and leaves its glass. A firebox can't use water, and a tidal engine no coal. */
     @SuitTest(timeoutTicks = 40)
     public static void eachEngineBurnsOnlyItsOwnFuel(GameTestHelper helper) {
-        ItemStack bottle = net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION, net.minecraft.world.item.alchemy.Potions.WATER);
+        ItemStack bottle = PotionContents.createItemStack(Items.POTION, Potions.WATER);
         PowerArmorEntity tidal = suitWithEngine(helper, new BlockPos(2, 2, 4), new ItemStack(ModItems.TIDAL_ENGINE.get()), bottle);
         PowerArmorEntity fire = suitWithEngine(helper, new BlockPos(6, 2, 4), new ItemStack(ModItems.FIREBOX.get()), new ItemStack(Items.WATER_BUCKET));
         helper.runAfterDelay(3, () -> {
@@ -2424,19 +2491,19 @@ public final class PowerArmorTests {
     @SuitTest
     public static void enginesSurviveSavesAndPacking(GameTestHelper helper) {
         PowerArmorEntity suit = suitWithEngine(helper, SUIT_POS, new ItemStack(ModItems.TIDAL_ENGINE.get()), new ItemStack(Items.WATER_BUCKET));
-        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, loaded, saveTag(helper, suit));
-        helper.assertTrue(loaded.getEngine() == dev.ajaczero.powerarmor.entity.SuitEngine.TIDAL, "the engine survives saving");
+        helper.assertTrue(loaded.getEngine() == SuitEngine.TIDAL, "the engine survives saving");
 
         suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, ItemStack.EMPTY);
         CompoundTag taken = saveTag(helper, suit);
-        PowerArmorEntity emptied = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        PowerArmorEntity emptied = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, emptied, taken);
         helper.assertTrue(emptied.getEngine() == null, "an engine taken out stays out after loading");
         taken.remove("HasEngineSlot"); // as saved before the engines
-        PowerArmorEntity old = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        PowerArmorEntity old = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, old, taken);
-        helper.assertTrue(old.getEngine() == dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX, "a suit from before the engines has its firebox");
+        helper.assertTrue(old.getEngine() == SuitEngine.FIREBOX, "a suit from before the engines has its firebox");
 
         suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.STAR_REACTOR.get()));
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
@@ -2445,15 +2512,15 @@ public final class PowerArmorTests {
         helper.assertTrue(loadout != null && loadout.engine().isPresent() && loadout.engine().get().is(ModItems.STAR_REACTOR.get()),
                 "the packed item carries its engine, got " + loadout);
         // A loadout's codec must keep "taken out" (an empty stack) apart from "from before the engines" (no field).
-        var ops = helper.getLevel().registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
-        SuitLoadout noEngine = new SuitLoadout(ItemStack.EMPTY, ItemStack.EMPTY, 0, 0, 0, ItemStack.EMPTY, java.util.Optional.of(ItemStack.EMPTY), ItemStack.EMPTY);
+        var ops = helper.getLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE);
+        SuitLoadout noEngine = new SuitLoadout(ItemStack.EMPTY, ItemStack.EMPTY, 0, 0, 0, ItemStack.EMPTY, Optional.of(ItemStack.EMPTY), ItemStack.EMPTY);
         SuitLoadout back = SuitLoadout.CODEC.parse(ops, SuitLoadout.CODEC.encodeStart(ops, noEngine).getOrThrow()).getOrThrow();
         helper.assertTrue(back.engine().isPresent() && back.engine().get().isEmpty(), "an empty engine slot survives the codec, got " + back);
         SuitLoadout before = SuitLoadout.CODEC.parse(ops, SuitLoadout.CODEC.encodeStart(ops, SuitLoadout.EMPTY).getOrThrow()).getOrThrow();
         helper.assertTrue(before.engine().isEmpty(), "no field stays no field");
-        PowerArmorEntity deployed = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        PowerArmorEntity deployed = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         deployed.applyLoadout(SuitLoadout.EMPTY);
-        helper.assertTrue(deployed.getEngine() == dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX, "a suit item from before the engines deploys with a firebox");
+        helper.assertTrue(deployed.getEngine() == SuitEngine.FIREBOX, "a suit item from before the engines deploys with a firebox");
         deployed.applyLoadout(noEngine);
         helper.assertTrue(deployed.getEngine() == null, "one packed without an engine deploys without one");
         helper.succeed();
@@ -2464,9 +2531,9 @@ public final class PowerArmorTests {
     public static void tidalEngineRunsInTheRain(GameTestHelper helper) {
         // Tests are placed at random spots of a world with real biomes: it doesn't rain in a desert (or snows in the
         // cold). Make the pad plains, as /fillbiome would.
-        var plains = helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.BIOME)
-                .getOrThrow(net.minecraft.world.level.biome.Biomes.PLAINS);
-        net.minecraft.server.commands.FillBiomeCommand.fill(helper.getLevel(), helper.absolutePos(new BlockPos(0, 0, 0)),
+        var plains = helper.getLevel().registryAccess().lookupOrThrow(Registries.BIOME)
+                .getOrThrow(Biomes.PLAINS);
+        FillBiomeCommand.fill(helper.getLevel(), helper.absolutePos(new BlockPos(0, 0, 0)),
                 helper.absolutePos(new BlockPos(8, 10, 8)), plains);
         PowerArmorEntity tidal = suitWithEngine(helper, new BlockPos(2, 2, 4), new ItemStack(ModItems.TIDAL_ENGINE.get()), ItemStack.EMPTY);
         PowerArmorEntity fire = suitWithEngine(helper, new BlockPos(6, 2, 4), new ItemStack(ModItems.FIREBOX.get()), new ItemStack(Items.COAL, 2));
@@ -2483,7 +2550,7 @@ public final class PowerArmorTests {
 
     // ---- helmet styles (design sec. 4c) -----------------------------------------------------------------------------
 
-    private static ItemStack styled(dev.ajaczero.powerarmor.item.HelmetStyle style) {
+    private static ItemStack styled(HelmetStyle style) {
         ItemStack helmet = new ItemStack(ModItems.SUIT_HELMET.get());
         helmet.set(ModDataComponents.HELMET_STYLE.get(), style);
         return helmet;
@@ -2491,53 +2558,53 @@ public final class PowerArmorTests {
 
     /** What the smithing table makes of (template, base, addition), or EMPTY when no recipe matches. */
     private static ItemStack smith(GameTestHelper helper, ItemStack template, ItemStack base, ItemStack addition) {
-        var input = new net.minecraft.world.item.crafting.SmithingRecipeInput(template, base, addition);
-        return helper.getLevel().recipeAccess().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.SMITHING, input, helper.getLevel())
+        var input = new SmithingRecipeInput(template, base, addition);
+        return helper.getLevel().recipeAccess().getRecipeFor(RecipeType.SMITHING, input, helper.getLevel())
                 .map(r -> r.value().assemble(input)).orElse(ItemStack.EMPTY);
     }
 
     /** Each template + a helmet + its style object gives the styled helmet (keeping its name); iron takes a style off. */
     @SuitTest
     public static void helmetStylesComeFromTheSmithingTable(GameTestHelper helper) {
-        var objects = java.util.Map.of(
-                dev.ajaczero.powerarmor.item.HelmetStyle.PROTECTOR, new ItemStack(Items.TURTLE_HELMET),
-                dev.ajaczero.powerarmor.item.HelmetStyle.SPARTAN, new ItemStack(Items.TOTEM_OF_UNDYING),
-                dev.ajaczero.powerarmor.item.HelmetStyle.NOBLE, new ItemStack(Items.PHANTOM_MEMBRANE),
-                dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, new ItemStack(Items.MUSIC_DISC_CAT),
-                dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER, new ItemStack(Items.SLIME_BALL));
-        var templates = java.util.Map.of(
-                dev.ajaczero.powerarmor.item.HelmetStyle.PROTECTOR, ModItems.PROTECTOR_TEMPLATE.get(),
-                dev.ajaczero.powerarmor.item.HelmetStyle.SPARTAN, ModItems.SPARTAN_TEMPLATE.get(),
-                dev.ajaczero.powerarmor.item.HelmetStyle.NOBLE, ModItems.NOBLE_TEMPLATE.get(),
-                dev.ajaczero.powerarmor.item.HelmetStyle.ROBOT, ModItems.ROBOT_TEMPLATE.get(),
-                dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER, ModItems.HUNTER_TEMPLATE.get());
+        var objects = Map.of(
+                HelmetStyle.PROTECTOR, new ItemStack(Items.TURTLE_HELMET),
+                HelmetStyle.SPARTAN, new ItemStack(Items.TOTEM_OF_UNDYING),
+                HelmetStyle.NOBLE, new ItemStack(Items.PHANTOM_MEMBRANE),
+                HelmetStyle.ROBOT, new ItemStack(Items.MUSIC_DISC_CAT),
+                HelmetStyle.HUNTER, new ItemStack(Items.SLIME_BALL));
+        var templates = Map.of(
+                HelmetStyle.PROTECTOR, ModItems.PROTECTOR_TEMPLATE.get(),
+                HelmetStyle.SPARTAN, ModItems.SPARTAN_TEMPLATE.get(),
+                HelmetStyle.NOBLE, ModItems.NOBLE_TEMPLATE.get(),
+                HelmetStyle.ROBOT, ModItems.ROBOT_TEMPLATE.get(),
+                HelmetStyle.HUNTER, ModItems.HUNTER_TEMPLATE.get());
         ItemStack named = new ItemStack(ModItems.SUIT_HELMET.get());
-        named.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal("Bucket"));
-        for (var style : dev.ajaczero.powerarmor.item.HelmetStyle.values()) {
+        named.set(DataComponents.CUSTOM_NAME, Component.literal("Bucket"));
+        for (var style : HelmetStyle.values()) {
             ItemStack out = smith(helper, new ItemStack(templates.get(style)), named, objects.get(style));
-            helper.assertTrue(dev.ajaczero.powerarmor.item.SuitHelmetItem.style(out) == style, style + ": got " + out);
-            helper.assertTrue(out.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME), style + ": the helmet keeps its name");
+            helper.assertTrue(SuitHelmetItem.style(out) == style, style + ": got " + out);
+            helper.assertTrue(out.has(DataComponents.CUSTOM_NAME), style + ": the helmet keeps its name");
             // and a styled helmet can be restyled
-            ItemStack again = smith(helper, new ItemStack(templates.get(style)), styled(dev.ajaczero.powerarmor.item.HelmetStyle.NOBLE), objects.get(style));
-            helper.assertTrue(dev.ajaczero.powerarmor.item.SuitHelmetItem.style(again) == style, style + ": restyling, got " + again);
+            ItemStack again = smith(helper, new ItemStack(templates.get(style)), styled(HelmetStyle.NOBLE), objects.get(style));
+            helper.assertTrue(SuitHelmetItem.style(again) == style, style + ": restyling, got " + again);
             // the template copies like vanilla's trims: 7 diamonds round the template and the style object
             ItemStack d = new ItemStack(Items.DIAMOND);
-            var grid = net.minecraft.world.item.crafting.CraftingInput.of(3, 3, java.util.List.of(
+            var grid = CraftingInput.of(3, 3, List.of(
                     d, new ItemStack(templates.get(style)), d, d, objects.get(style), d, d, d, d));
-            ItemStack copies = helper.getLevel().recipeAccess().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, grid, helper.getLevel())
+            ItemStack copies = helper.getLevel().recipeAccess().getRecipeFor(RecipeType.CRAFTING, grid, helper.getLevel())
                     .map(r -> r.value().assemble(grid)).orElse(ItemStack.EMPTY);
             helper.assertTrue(copies.is(templates.get(style)) && copies.getCount() == 2, style + ": copying the template, got " + copies);
         }
         helper.assertTrue(named.getHoverName().getString().equals("Bucket"), "an anvil name still wins over the style's");
-        ItemStack spartan = styled(dev.ajaczero.powerarmor.item.HelmetStyle.SPARTAN);
-        helper.assertTrue(spartan.getHoverName().getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents t
+        ItemStack spartan = styled(HelmetStyle.SPARTAN);
+        helper.assertTrue(spartan.getHoverName().getContents() instanceof TranslatableContents t
                 && t.getKey().equals("item.powerarmor.suit_helmet.spartan"), "a styled helmet is named after its style, got " + spartan.getHoverName());
         helper.assertTrue(smith(helper, new ItemStack(ModItems.SPARTAN_TEMPLATE.get()), new ItemStack(ModItems.SUIT_HELMET.get()),
                 new ItemStack(Items.TURTLE_HELMET)).isEmpty(), "a template only takes its own style object");
         helper.assertTrue(smith(helper, new ItemStack(ModItems.SPARTAN_TEMPLATE.get()), new ItemStack(Items.IRON_HELMET),
                 new ItemStack(Items.TOTEM_OF_UNDYING)).isEmpty(), "templates are for the suit's helmet only");
         ItemStack plain = smith(helper, ItemStack.EMPTY, spartan, new ItemStack(Items.IRON_BLOCK));
-        helper.assertTrue(plain.is(ModItems.SUIT_HELMET.get()) && dev.ajaczero.powerarmor.item.SuitHelmetItem.style(plain) == null,
+        helper.assertTrue(plain.is(ModItems.SUIT_HELMET.get()) && SuitHelmetItem.style(plain) == null,
                 "helmet + iron block (no template) gives the standard helmet back, got " + plain);
         helper.succeed();
     }
@@ -2547,36 +2614,36 @@ public final class PowerArmorTests {
     public static void helmetStyleShowsOnTheSuitAndSurvivesPacking(GameTestHelper helper) {
         PowerArmorEntity suit = suitAt(helper, SUIT_POS);
         helper.assertTrue(suit.hasHelmet() && suit.getHelmetStyle() == null, "the standard helmet has no style");
-        suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, styled(dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER));
-        helper.assertTrue(suit.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER, "a styled helmet shows its style");
-        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, styled(HelmetStyle.HUNTER));
+        helper.assertTrue(suit.getHelmetStyle() == HelmetStyle.HUNTER, "a styled helmet shows its style");
+        PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, loaded, saveTag(helper, suit));
-        helper.assertTrue(loaded.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER, "the style survives saving");
+        helper.assertTrue(loaded.getHelmetStyle() == HelmetStyle.HUNTER, "the style survives saving");
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         helper.assertTrue(suit.packUp(player), "the suit packs up");
         SuitLoadout loadout = packedSuit(player).get(ModDataComponents.LOADOUT.get());
-        helper.assertTrue(loadout != null && dev.ajaczero.powerarmor.item.SuitHelmetItem.style(loadout.helmet()) == dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER,
+        helper.assertTrue(loadout != null && SuitHelmetItem.style(loadout.helmet()) == HelmetStyle.HUNTER,
                 "the packed suit keeps the styled helmet, got " + loadout);
-        PowerArmorEntity deployed = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        PowerArmorEntity deployed = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         deployed.applyLoadout(loadout);
-        helper.assertTrue(deployed.getHelmetStyle() == dev.ajaczero.powerarmor.item.HelmetStyle.HUNTER, "and deploys with it");
+        helper.assertTrue(deployed.getHelmetStyle() == HelmetStyle.HUNTER, "and deploys with it");
         helper.succeed();
     }
 
     /** The templates turn up in the chests of their structures (loot modifiers), about one chest in ten. */
     @SuitTest
     public static void helmetTemplatesHideInStructureChests(GameTestHelper helper) {
-        var chests = java.util.Map.of(
-                net.minecraft.world.level.storage.loot.BuiltInLootTables.UNDERWATER_RUIN_SMALL, ModItems.PROTECTOR_TEMPLATE.get(),
-                net.minecraft.world.level.storage.loot.BuiltInLootTables.SHIPWRECK_TREASURE, ModItems.PROTECTOR_TEMPLATE.get(),
-                net.minecraft.world.level.storage.loot.BuiltInLootTables.TRIAL_CHAMBERS_REWARD, ModItems.SPARTAN_TEMPLATE.get(),
-                net.minecraft.world.level.storage.loot.BuiltInLootTables.END_CITY_TREASURE, ModItems.NOBLE_TEMPLATE.get(),
-                net.minecraft.world.level.storage.loot.BuiltInLootTables.ANCIENT_CITY, ModItems.ROBOT_TEMPLATE.get(),
-                net.minecraft.world.level.storage.loot.BuiltInLootTables.DESERT_PYRAMID, ModItems.HUNTER_TEMPLATE.get(),
-                net.minecraft.world.level.storage.loot.BuiltInLootTables.JUNGLE_TEMPLE, ModItems.HUNTER_TEMPLATE.get());
-        var params = new net.minecraft.world.level.storage.loot.LootParams.Builder(helper.getLevel())
-                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN, helper.absoluteVec(Vec3.ZERO))
-                .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.CHEST);
+        var chests = Map.of(
+                BuiltInLootTables.UNDERWATER_RUIN_SMALL, ModItems.PROTECTOR_TEMPLATE.get(),
+                BuiltInLootTables.SHIPWRECK_TREASURE, ModItems.PROTECTOR_TEMPLATE.get(),
+                BuiltInLootTables.TRIAL_CHAMBERS_REWARD, ModItems.SPARTAN_TEMPLATE.get(),
+                BuiltInLootTables.END_CITY_TREASURE, ModItems.NOBLE_TEMPLATE.get(),
+                BuiltInLootTables.ANCIENT_CITY, ModItems.ROBOT_TEMPLATE.get(),
+                BuiltInLootTables.DESERT_PYRAMID, ModItems.HUNTER_TEMPLATE.get(),
+                BuiltInLootTables.JUNGLE_TEMPLE, ModItems.HUNTER_TEMPLATE.get());
+        var params = new LootParams.Builder(helper.getLevel())
+                .withParameter(LootContextParams.ORIGIN, helper.absoluteVec(Vec3.ZERO))
+                .create(LootContextParamSets.CHEST);
         int rolls = 400;
         for (var chest : chests.entrySet()) {
             var table = helper.getLevel().getServer().reloadableRegistries().getLootTable(chest.getKey());
@@ -2585,7 +2652,7 @@ public final class PowerArmorTests {
                 for (ItemStack stack : table.getRandomItems(params)) {
                     if (stack.is(chest.getValue())) {
                         found++;
-                    } else if (stack.getItem() instanceof dev.ajaczero.powerarmor.item.HelmetTemplateItem) {
+                    } else if (stack.getItem() instanceof HelmetTemplateItem) {
                         others++;
                     }
                 }
@@ -2629,7 +2696,7 @@ public final class PowerArmorTests {
      *  flamethrower damage (credited to the pilot) and set alight. */
     @SuitTest(timeoutTicks = 80)
     public static void flamethrowerSetsAMobAlight(GameTestHelper helper) {
-        Pig pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(4, 2, 5));
+        Pig pig = helper.spawn(EntityTypes.PIG, new BlockPos(4, 2, 5));
         pig.setNoAi(true);
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = flamePilot(helper, suit, new Vec3(4.5, 2.5, 5.5), new ItemStack(Items.BLAZE_ROD, 2));
@@ -2644,7 +2711,7 @@ public final class PowerArmorTests {
             helper.assertTrue(pig.getHealth() < pig.getMaxHealth(), "the pig should be burnt, health " + pig.getHealth());
             helper.assertTrue(pig.isOnFire(), "and burning");
             var src = pig.getLastDamageSource();
-            helper.assertTrue(src != null && (src.is(dev.ajaczero.powerarmor.entity.FlameJet.FLAMETHROWER) || src.is(net.minecraft.tags.DamageTypeTags.IS_FIRE)),
+            helper.assertTrue(src != null && (src.is(FlameJet.FLAMETHROWER) || src.is(DamageTypeTags.IS_FIRE)),
                     "fire damage, got " + src);
             helper.assertTrue(suit[0].getHealth() == suit[0].getMaxHealth(), "the stream must not burn its own suit");
             helper.assertTrue(!pilot.isOnFire(), "nor its pilot");
@@ -2655,7 +2722,7 @@ public final class PowerArmorTests {
     /** Fire-proof mobs (a blaze) shrug the flame off. */
     @SuitTest(timeoutTicks = 60)
     public static void flamethrowerSparesFireproofMobs(GameTestHelper helper) {
-        var blaze = helper.spawn(net.minecraft.world.entity.EntityTypes.BLAZE, new BlockPos(4, 2, 5));
+        var blaze = helper.spawn(EntityTypes.BLAZE, new BlockPos(4, 2, 5));
         blaze.setNoAi(true);
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = flamePilot(helper, suit, new Vec3(4.5, 3.0, 5.5), new ItemStack(Items.BLAZE_ROD, 2));
@@ -2680,7 +2747,7 @@ public final class PowerArmorTests {
             suit[0].socket().setTriggerHeld(pilot, false);
             helper.assertTrue(suit[0].isPowered(), "the tidal engine runs under water");
             helper.assertTrue(suit[0].socket().getUses() == 0, "no flame under water, got " + suit[0].socket().getUses());
-            helper.assertTrue(helper.getLevel().getEntitiesOfClass(dev.ajaczero.powerarmor.entity.FlameJet.class,
+            helper.assertTrue(helper.getLevel().getEntitiesOfClass(FlameJet.class,
                     new AABB(helper.absolutePos(BlockPos.ZERO)).inflate(16)).isEmpty(), "and no gobs");
             helper.succeed();
         });
@@ -2699,7 +2766,7 @@ public final class PowerArmorTests {
         boolean[] fire = {false};
         helper.onEachTick(() -> {
             for (BlockPos p : BlockPos.betweenClosed(helper.absolutePos(new BlockPos(2, 2, 3)), helper.absolutePos(new BlockPos(6, 6, 7)))) {
-                fire[0] |= helper.getLevel().getBlockState(p).is(net.minecraft.tags.BlockTags.FIRE);
+                fire[0] |= helper.getLevel().getBlockState(p).is(BlockTags.FIRE);
             }
         });
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
@@ -2716,7 +2783,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 80)
     public static void flamethrowerMeltsIceAndLightsCampfires(GameTestHelper helper) {
         helper.setBlock(new BlockPos(4, 2, 5), Blocks.ICE);
-        helper.setBlock(new BlockPos(5, 2, 4), Blocks.CAMPFIRE.defaultBlockState().setValue(net.minecraft.world.level.block.CampfireBlock.LIT, false));
+        helper.setBlock(new BlockPos(5, 2, 4), Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, false));
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = flamePilot(helper, suit, new Vec3(4.5, 2.9, 5.2), new ItemStack(Items.BLAZE_ROD, 2));
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
@@ -2726,7 +2793,7 @@ public final class PowerArmorTests {
         });
         helper.runAfterDelay(50, () -> {
             suit[0].socket().setTriggerHeld(pilot, false);
-            helper.assertTrue(helper.getBlockState(new BlockPos(5, 2, 4)).getValue(net.minecraft.world.level.block.CampfireBlock.LIT),
+            helper.assertTrue(helper.getBlockState(new BlockPos(5, 2, 4)).getValue(CampfireBlock.LIT),
                     "the campfire should be lit");
             helper.succeed();
         });
@@ -2736,7 +2803,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 100)
     public static void flamethrowerCooksDroppedFood(GameTestHelper helper) {
         Vec3 at = helper.absoluteVec(new Vec3(4.5, 2.1, 4.5));
-        var beef = new net.minecraft.world.entity.item.ItemEntity(helper.getLevel(), at.x, at.y, at.z, new ItemStack(Items.BEEF, 3));
+        var beef = new ItemEntity(helper.getLevel(), at.x, at.y, at.z, new ItemStack(Items.BEEF, 3));
         beef.setDeltaMovement(Vec3.ZERO);
         helper.getLevel().addFreshEntity(beef);
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
@@ -2763,7 +2830,7 @@ public final class PowerArmorTests {
         boolean[] fire = {false};
         helper.onEachTick(() -> {
             for (BlockPos p : BlockPos.betweenClosed(helper.absolutePos(new BlockPos(0, 2, 0)), helper.absolutePos(new BlockPos(8, 4, 8)))) {
-                fire[0] |= helper.getLevel().getBlockState(p).is(net.minecraft.tags.BlockTags.FIRE);
+                fire[0] |= helper.getLevel().getBlockState(p).is(BlockTags.FIRE);
             }
         });
         helper.runAfterDelay(140, () -> {
@@ -2796,8 +2863,8 @@ public final class PowerArmorTests {
         return pilot;
     }
 
-    private static List<dev.ajaczero.powerarmor.entity.TntShell> shellsInTest(GameTestHelper helper) {
-        return helper.getLevel().getEntitiesOfClass(dev.ajaczero.powerarmor.entity.TntShell.class,
+    private static List<TntShell> shellsInTest(GameTestHelper helper) {
+        return helper.getLevel().getEntitiesOfClass(TntShell.class,
                 new AABB(helper.absolutePos(new BlockPos(4, 2, 4))).inflate(12));
     }
 
@@ -2820,8 +2887,8 @@ public final class PowerArmorTests {
         helper.assertTrue(ammoLeft(suit) == 16, "shift-click loads the TNT into the ammo slot, got " + suit.getInventory().getItem(PowerArmorEntity.AMMO_SLOT));
         helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.COAL), "not into the fuel slot");
         // A loadout from before the ammo slot (no "ammo" field) loads with it empty.
-        var ops = helper.getLevel().registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
-        var old = SuitLoadout.CODEC.parse(ops, new net.minecraft.nbt.CompoundTag()).getOrThrow();
+        var ops = helper.getLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE);
+        var old = SuitLoadout.CODEC.parse(ops, new CompoundTag()).getOrThrow();
         helper.assertTrue(old.ammo().isEmpty(), "an old suit item has no ammo, got " + old.ammo());
         suit.packUp(player);
         SuitLoadout loadout = packedSuit(player).get(ModDataComponents.LOADOUT.get());
@@ -2896,7 +2963,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(husk.getHealth() < husk.getMaxHealth() || !husk.isAlive(), "the husk took the blast, health " + husk.getHealth());
             var src = husk.getLastDamageSource();
-            helper.assertTrue(src != null && src.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION), "explosion damage, got " + src);
+            helper.assertTrue(src != null && src.is(DamageTypeTags.IS_EXPLOSION), "explosion damage, got " + src);
             helper.assertTrue(src.getEntity() == pilot, "credited to the pilot, got " + src.getEntity());
             helper.succeed();
         });
@@ -2920,14 +2987,14 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 60, batch = "tntrule")
     public static void tntLauncherObeysTheTntGameRule(GameTestHelper helper) {
         var rules = helper.getLevel().getGameRules();
-        boolean before = rules.get(net.minecraft.world.level.gamerules.GameRules.TNT_EXPLODES);
-        rules.set(net.minecraft.world.level.gamerules.GameRules.TNT_EXPLODES, false, helper.getLevel().getServer());
+        boolean before = rules.get(GameRules.TNT_EXPLODES);
+        rules.set(GameRules.TNT_EXPLODES, false, helper.getLevel().getServer());
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 6.5), 1);
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(3, () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(20, () -> {
-            rules.set(net.minecraft.world.level.gamerules.GameRules.TNT_EXPLODES, before, helper.getLevel().getServer());
+            rules.set(GameRules.TNT_EXPLODES, before, helper.getLevel().getServer());
             helper.assertTrue(suit[0].socket().getUses() == 1, "it still fires");
             helper.assertTrue(shellsInTest(helper).isEmpty(), "the round is gone");
             helper.assertTrue(helper.getBlockState(new BlockPos(4, 1, 6)).is(Blocks.SMOOTH_STONE), "but breaks nothing (the pad's smooth stone floor)");
@@ -3021,14 +3088,14 @@ public final class PowerArmorTests {
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(4 + PowerArmorConfig.RAIL_CHARGE.get(), () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(6 + PowerArmorConfig.RAIL_CHARGE.get(), () -> {
-            var shot = dev.ajaczero.powerarmor.item.RailCannonItem.lastShot(suit[0]);
+            var shot = RailCannonItem.lastShot(suit[0]);
             helper.assertTrue(shot != null && shot.hit().size() == 2, "both husks on the beam, got " + (shot == null ? null : shot.hit()));
             for (var husk : List.of(near, far)) {
                 float expected = PowerArmorConfig.RAIL_DAMAGE.get().floatValue();
                 helper.assertTrue(expected >= husk.getMaxHealth() ? !husk.isAlive() || husk.getHealth() <= 0 : husk.getHealth() <= husk.getMaxHealth() - expected + 0.01F,
                         "each takes the whole hit, health " + husk.getHealth());
                 var src = husk.getLastDamageSource();
-                helper.assertTrue(src != null && src.is(dev.ajaczero.powerarmor.item.RailCannonItem.RAIL), "rail damage, got " + src);
+                helper.assertTrue(src != null && src.is(RailCannonItem.RAIL), "rail damage, got " + src);
                 helper.assertTrue(src.getEntity() == pilot, "credited to the pilot, got " + src.getEntity());
             }
             helper.assertTrue(pilot.getHealth() == pilot.getMaxHealth() && suit[0].getHealth() == suit[0].getMaxHealth(), "the shooter isn't hit");
@@ -3058,7 +3125,7 @@ public final class PowerArmorTests {
                     stone += helper.getBlockState(new BlockPos(x, y, 6)).is(Blocks.STONE) ? 1 : 0;
                 }
             }
-            var shot = dev.ajaczero.powerarmor.item.RailCannonItem.lastShot(suit[0]);
+            var shot = RailCannonItem.lastShot(suit[0]);
             helper.assertTrue(suit[0].socket().getUses() == 1 && shot != null, "it fired");
             if (PowerArmorConfig.RAIL_BREAKS_BLOCKS.get()) {
                 helper.assertTrue(glass >= 18 && glass <= 19 && shot.blocksBroken() == 20 - glass, "it broke the glass it went through, left " + glass);
@@ -3127,7 +3194,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = railGuard(helper, new BlockPos(4, 2, 1), 4);
         statueHusk(helper, new Vec3(4.5, 2, 5.5));
         // right behind it: the beam aimed down at the husk would reach the floor further back, past a villager there
-        var villager = helper.spawn(net.minecraft.world.entity.EntityTypes.VILLAGER, new Vec3(4.5, 2, 6.7));
+        var villager = helper.spawn(EntityTypes.VILLAGER, new Vec3(4.5, 2, 6.7));
         villager.setNoAi(true);
         helper.runAfterDelay(120, () -> {
             helper.assertTrue(suit.socket().getUses() == 0, "no shot through a villager, uses " + suit.socket().getUses());

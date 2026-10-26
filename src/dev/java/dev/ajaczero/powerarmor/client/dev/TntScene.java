@@ -13,15 +13,19 @@ import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.monster.zombie.Husk;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Autopilot scene for the TNT launcher (Phase 11): a suit with the launcher and 8 TNT in its ammo slot on flat grass by
@@ -121,11 +125,11 @@ final class TntScene {
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
             // monsters vanish at once in the autopilot's peaceful world: the husks need a difficulty first
-            level.getServer().setDifficulty(net.minecraft.world.Difficulty.NORMAL, true);
+            level.getServer().setDifficulty(Difficulty.NORMAL, true);
             DevUtil.setTime(level, 6000);
             player.stopRiding();
             int x = player.getBlockX() + 120, z = player.getBlockZ();
-            int g = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+            int g = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
             BlockPos b = new BlockPos(x, g, z);
             base = b;
             for (int dx = -10; dx <= 10; dx++) {
@@ -161,7 +165,7 @@ final class TntScene {
             level.addFreshEntity(s);
             suit = s;
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY); // the hand would take the right click
-            player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL); // the TNT really runs out
+            player.setGameMode(GameType.SURVIVAL); // the TNT really runs out
             player.setShiftKeyDown(false);
             player.teleportTo(x + 0.5, g, z - 1.5);
             player.startRiding(s, true, true);
@@ -201,7 +205,7 @@ final class TntScene {
 
     private static void open() {
         try {
-            csv = Files.newBufferedWriter(net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().resolve("autopilot_tnt.csv"));
+            csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_tnt.csv"));
             csv.write("tick,phase,tool_uses,ammo,client_ammo,shells,husks,wall_blocks,client_drum,client_recoil,client_raise\n");
         } catch (IOException e) {
             PowerArmor.LOGGER.error("tnt csv", e);

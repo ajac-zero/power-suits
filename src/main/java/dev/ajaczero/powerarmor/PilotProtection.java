@@ -6,6 +6,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
 /**
@@ -26,7 +27,7 @@ public final class PilotProtection {
         // neoforge:is_poison; vanilla used "magic"): food poisoning from before climbing in, or an effect that got
         // through while the suit had no power. The seal keeps new effects out (SuitSeal); what's in is yours.
         if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || source.is(DamageTypes.STARVE) || source.is(DamageTypes.DROWN)
-                || source.is(net.neoforged.neoforge.common.Tags.DamageTypes.IS_POISON) || source.is(DamageTypes.MAGIC)
+                || source.is(Tags.DamageTypes.IS_POISON) || source.is(DamageTypes.MAGIC)
                 || source.is(DamageTypes.WITHER)) {
             return;
         }

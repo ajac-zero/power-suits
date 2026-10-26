@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor.client.dev;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.registry.ModEntities;
+import dev.ajaczero.powerarmor.registry.ModItems;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,9 +16,17 @@ import net.minecraft.client.CameraType;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.BackupConfirmScreen;
+import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -63,8 +72,8 @@ public final class TerrainPilot {
                 lastScreen = screen;
                 PowerArmor.LOGGER.info("[terrain] screen: {} \"{}\" buttons {}", screen, mc.gui.screen() == null ? "" : mc.gui.screen().getTitle().getString(),
                         mc.gui.screen() == null ? "" : mc.gui.screen().children().stream()
-                                .filter(w -> w instanceof net.minecraft.client.gui.components.Button)
-                                .map(w -> ((net.minecraft.client.gui.components.Button) w).getMessage().getString()).toList());
+                                .filter(w -> w instanceof Button)
+                                .map(w -> ((Button) w).getMessage().getString()).toList());
             }
             if (!worldRequested && mc.gui.screen() instanceof TitleScreen) {
                 worldRequested = true;
@@ -72,20 +81,20 @@ public final class TerrainPilot {
             }
             // 26.3 then upgrades the files and asks "Upgrading World Completed": open it now? Yes (without this the
             // run sat on that screen and no terrain was ever driven, 2026-10-19).
-            if (mc.gui.screen() instanceof net.minecraft.client.gui.screens.ConfirmScreen done
-                    && done.getTitle().equals(net.minecraft.network.chat.Component.translatable("upgradeWorld.done"))) {
+            if (mc.gui.screen() instanceof ConfirmScreen done
+                    && done.getTitle().equals(Component.translatable("upgradeWorld.done"))) {
                 done.children().stream()
-                        .filter(w -> w instanceof net.minecraft.client.gui.components.Button b
-                                && b.getMessage().equals(net.minecraft.network.chat.CommonComponents.GUI_YES))
-                        .findFirst().ifPresent(b -> ((net.minecraft.client.gui.components.Button) b).onPress(null));
+                        .filter(w -> w instanceof Button b
+                                && b.getMessage().equals(CommonComponents.GUI_YES))
+                        .findFirst().ifPresent(b -> ((Button) b).onPress(null));
             }
             // A world saved by an older Minecraft asks whether to back it up before upgrading it. This is our throwaway
             // copy (the original is never opened): press "Load without backup".
-            if (mc.gui.screen() instanceof net.minecraft.client.gui.screens.BackupConfirmScreen confirm) {
+            if (mc.gui.screen() instanceof BackupConfirmScreen confirm) {
                 confirm.children().stream()
-                        .filter(w -> w instanceof net.minecraft.client.gui.components.Button b
-                                && b.getMessage().equals(net.minecraft.network.chat.Component.translatable("selectWorld.backupJoinSkipButton")))
-                        .findFirst().ifPresent(b -> ((net.minecraft.client.gui.components.Button) b).onPress(null));
+                        .filter(w -> w instanceof Button b
+                                && b.getMessage().equals(Component.translatable("selectWorld.backupJoinSkipButton")))
+                        .findFirst().ifPresent(b -> ((Button) b).onPress(null));
             }
             return;
         }
@@ -203,9 +212,9 @@ public final class TerrainPilot {
             }
             var level = player.level();
             level.getGameRules().set(GameRules.SPAWN_MOBS, false, server);
-            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+            PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.COMMAND);
             // A full stack of blaze rods (~4 hours of walking): enough for any scripted drive.
-            DevUtil.firebox(suit); suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
+            DevUtil.firebox(suit); suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
             suit.snapTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 0);
             level.addFreshEntity(suit);
             player.startRiding(suit);
@@ -221,7 +230,7 @@ public final class TerrainPilot {
         server.execute(() -> {
             ServerPlayer player = server.getPlayerList().getPlayer(uuid);
             if (player != null && player.getVehicle() instanceof PowerArmorEntity suit) {
-                DevUtil.firebox(suit); suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get()));
+                DevUtil.firebox(suit); suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 64)); suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
             }
         });
     }

@@ -11,13 +11,17 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -41,11 +45,10 @@ import net.minecraft.world.level.block.IceBlock;
 import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -140,7 +143,7 @@ public class FlameJet extends Projectile {
                 return;
             }
             if (hitsBlock) {
-                boolean water = level.getFluidState(hit.getBlockPos()).is(net.minecraft.tags.FluidTags.WATER);
+                boolean water = level.getFluidState(hit.getBlockPos()).is(FluidTags.WATER);
                 if (water) {
                     this.fizzle(server, end);
                 } else {
@@ -182,7 +185,7 @@ public class FlameJet extends Projectile {
             // (projectile, shooter): vanilla's own order despite the parameter names, see Bullet.
             DamageSource source = this.damageSources().source(FLAMETHROWER, this, owner);
             living.hurtServer(level, source, PowerArmorConfig.FLAMETHROWER_DAMAGE.get().floatValue());
-            if (!living.hasEffect(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE)) {
+            if (!living.hasEffect(MobEffects.FIRE_RESISTANCE)) {
                 living.igniteForSeconds(PowerArmorConfig.FLAMETHROWER_BURN_SECONDS.get().floatValue());
             }
         }
@@ -235,7 +238,7 @@ public class FlameJet extends Projectile {
         }
         if (state.is(Blocks.ICE) || state.is(Blocks.FROSTED_ICE)) {
             // What a torch's light does to ice in time (IceBlock.melt): water, or nothing in the Nether.
-            if (level.environmentAttributes().getValue(net.minecraft.world.attribute.EnvironmentAttributes.WATER_EVAPORATES, pos)) {
+            if (level.environmentAttributes().getValue(EnvironmentAttributes.WATER_EVAPORATES, pos)) {
                 level.removeBlock(pos, false);
             } else {
                 level.setBlockAndUpdate(pos, IceBlock.meltsInto());

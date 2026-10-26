@@ -6,12 +6,17 @@ import java.util.Comparator;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.entity.animal.golem.SnowGolem;
 import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.monster.Ghast;
+import net.minecraft.world.entity.monster.Phantom;
 import net.minecraft.world.entity.npc.villager.AbstractVillager;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -110,7 +115,7 @@ public final class SuitTargets {
         if (best != null) {
             return best;
         }
-        return suit.level().getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box, e -> e != suit && e.isAlive()
+        return suit.level().getEntitiesOfClass(Mob.class, box, e -> e != suit && e.isAlive()
                         && !(e instanceof PowerArmorEntity other && (other.isRogue() || other.isVehicle())) && !e.isUnderWater()
                         && e.distanceToSqr(suit) < ROGUE_SIGHT * ROGUE_SIGHT && suit.getSensing().hasLineOfSight(e))
                 .stream().min(Comparator.comparingDouble(e -> e.distanceToSqr(suit))).map(e -> (LivingEntity) e).orElse(null);
@@ -179,8 +184,8 @@ public final class SuitTargets {
             return false;
         }
         Vec3 eye = suit.getEyePosition();
-        Vec3 end = level.clip(new net.minecraft.world.level.ClipContext(eye, eye.add(dir.scale(range)),
-                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, suit)).getLocation();
+        Vec3 end = level.clip(new ClipContext(eye, eye.add(dir.scale(range)),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, suit)).getLocation();
         for (Entity e : level.getEntities(suit, new AABB(eye, end).inflate(1.5), e -> e instanceof LivingEntity && e.isAlive()
                 && !e.isSpectator() && !suit.hasPassenger(e))) {
             if (canAttack(suit, e, false)) {
@@ -198,13 +203,13 @@ public final class SuitTargets {
 
     /** Server: the world's pvp game rule (players may hurt each other). */
     public static boolean pvpAllowed(PowerArmorEntity suit) {
-        return suit.level() instanceof net.minecraft.server.level.ServerLevel level
-                && level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.PVP);
+        return suit.level() instanceof ServerLevel level
+                && level.getGameRules().get(GameRules.PVP);
     }
 
     /** Mobs that fly instead of walking (ghasts, phantoms): they're never "on the ground", so the EM guard may grab
      *  them in the air. (1.21.1 had a FlyingMob class for these; 1.21.6 removed it.) */
     public static boolean isFlyer(LivingEntity e) {
-        return e instanceof net.minecraft.world.entity.monster.Ghast || e instanceof net.minecraft.world.entity.monster.Phantom;
+        return e instanceof Ghast || e instanceof Phantom;
     }
 }

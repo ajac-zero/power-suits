@@ -2,7 +2,9 @@ package dev.ajaczero.powerarmor.menu;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.SuitFuel;
+import dev.ajaczero.powerarmor.item.EngineItem;
 import dev.ajaczero.powerarmor.item.PowerTool;
+import dev.ajaczero.powerarmor.registry.ModItems;
 import dev.ajaczero.powerarmor.registry.ModMenus;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.Container;
@@ -12,6 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -69,7 +72,7 @@ public class PowerArmorMenu extends AbstractContainerMenu {
         this.addSlot(new Slot(suitInventory, HELMET_SLOT, SLOT_X, HELMET_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.is(dev.ajaczero.powerarmor.registry.ModItems.SUIT_HELMET.get());
+                return stack.is(ModItems.SUIT_HELMET.get());
             }
 
             @Override
@@ -80,7 +83,7 @@ public class PowerArmorMenu extends AbstractContainerMenu {
         this.addSlot(new Slot(suitInventory, ENGINE_SLOT, SLOT_X, ENGINE_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.getItem() instanceof dev.ajaczero.powerarmor.item.EngineItem;
+                return stack.getItem() instanceof EngineItem;
             }
 
             @Override
@@ -161,8 +164,8 @@ public class PowerArmorMenu extends AbstractContainerMenu {
             if (!this.moveItemStackTo(stack, 4, 5, false)) {
                 return ItemStack.EMPTY;
             }
-        } else if (SuitFuel.fitsFuelSlot(stack) && !stack.is(net.minecraft.world.item.Items.BUCKET)
-                && !stack.is(net.minecraft.world.item.Items.GLASS_BOTTLE)) {
+        } else if (SuitFuel.fitsFuelSlot(stack) && !stack.is(Items.BUCKET)
+                && !stack.is(Items.GLASS_BOTTLE)) {
             if (!this.moveItemStackTo(stack, 1, 2, false)) {
                 return ItemStack.EMPTY;
             }

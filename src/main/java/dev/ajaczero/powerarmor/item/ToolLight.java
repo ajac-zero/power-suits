@@ -1,5 +1,7 @@
 package dev.ajaczero.powerarmor.item;
 
+
+
 /**
  * The socket tools' lights: each is a glowmask texture (client/SuitGlowLayer maps them to their files, made by
  * tools/make-glowmasks.py from the reserved colours) drawn full-bright over the tool by the suit and the cockpit

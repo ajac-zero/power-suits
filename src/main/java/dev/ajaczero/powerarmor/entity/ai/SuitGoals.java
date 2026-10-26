@@ -1,18 +1,32 @@
 package dev.ajaczero.powerarmor.entity.ai;
 
+import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
-import java.util.EnumSet;
 import dev.ajaczero.powerarmor.item.ChaingunItem;
+import dev.ajaczero.powerarmor.item.EmProjectorItem;
 import dev.ajaczero.powerarmor.item.FlamethrowerItem;
+import dev.ajaczero.powerarmor.item.RailCannonItem;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.goal.target.TargetGoal;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.target.TargetGoal;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The suit's machine mind, built from vanilla's goal system: a mob holds a list of goals ("walk home", "look at that
@@ -168,7 +182,7 @@ public final class SuitGoals {
 
         /** A target that was provoked stays fair game for the rest of the fight (a wolf that bit the owner once). */
         private boolean provokedAtStart(LivingEntity target) {
-            return target == this.targetMob && !(target instanceof net.minecraft.world.entity.player.Player);
+            return target == this.targetMob && !(target instanceof Player);
         }
 
         @Override
@@ -339,7 +353,7 @@ public final class SuitGoals {
             if (--this.recheck <= 0) {
                 this.recheck = 20;
                 LivingEntity better = SuitTargets.pickRogue(this.suit);
-                if (better != null && better != this.suit.getTarget() && !(this.suit.getTarget() instanceof net.minecraft.world.entity.player.Player)) {
+                if (better != null && better != this.suit.getTarget() && !(this.suit.getTarget() instanceof Player)) {
                     this.targetMob = better;
                     this.suit.setTarget(better);
                 }
@@ -408,11 +422,11 @@ public final class SuitGoals {
                 away = away.lengthSqr() < 1.0E-4 ? this.suit.getLookAngle().multiply(1, 0, 1) : away;
                 this.suit.brain().setAim(this.suit.getEyePosition().add(away.normalize().scale(10)).add(0, 4, 0));
                 // Something heavy (a suit, a boss) can't be lifted: pin it down for a couple of seconds before the shove.
-                this.suit.socket().setAiTrigger(++this.lift < (dev.ajaczero.powerarmor.item.EmProjectorItem.isHeavy(target) ? 40 : LIFT_TICKS));
+                this.suit.socket().setAiTrigger(++this.lift < (EmProjectorItem.isHeavy(target) ? 40 : LIFT_TICKS));
                 return;
             }
             this.lift = 0;
-            if (dev.ajaczero.powerarmor.item.EmProjectorItem.canHold(this.suit, target)) {
+            if (EmProjectorItem.canHold(this.suit, target)) {
                 // Only from the ground (or water): re-catching a thrown one mid-flight would juggle it and spare it the landing.
                 boolean landed = target.onGround() || target.isInLiquid() || SuitTargets.isFlyer(target);
                 boolean inReach = sees && landed && this.suit.distanceTo(target) < REACH;
@@ -470,7 +484,7 @@ public final class SuitGoals {
             }
             var random = this.suit.getRandom();
             int x = this.suit.getBlockX() + random.nextInt(25) - 12, z = this.suit.getBlockZ() + random.nextInt(25) - 12;
-            int y = this.suit.level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            int y = this.suit.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
             return Math.abs(y - this.suit.getBlockY()) < 6 && this.suit.getNavigation().moveTo(x + 0.5, y, z + 0.5, 1.0);
         }
 
@@ -499,7 +513,7 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            net.minecraft.world.entity.player.Player owner = this.suit.brain().getOwner();
+            Player owner = this.suit.brain().getOwner();
             if (!this.suit.isAiDriven() || !this.suit.brain().followsOwner() || owner == null || owner.isSpectator()) {
                 return false;
             }
@@ -509,7 +523,7 @@ public final class SuitGoals {
 
         @Override
         public boolean canContinueToUse() {
-            net.minecraft.world.entity.player.Player owner = this.suit.brain().getOwner();
+            Player owner = this.suit.brain().getOwner();
             if (!this.suit.isAiDriven() || !this.suit.brain().followsOwner() || owner == null || owner.isSpectator()) {
                 return false;
             }
@@ -524,7 +538,7 @@ public final class SuitGoals {
 
         @Override
         public void tick() {
-            net.minecraft.world.entity.player.Player owner = this.suit.brain().getOwner();
+            Player owner = this.suit.brain().getOwner();
             if (owner != null && --this.repath <= 0) {
                 this.repath = 10;
                 this.suit.getNavigation().moveTo(owner, owner.distanceTo(this.suit) > SPRINT ? PowerArmorEntity.SPRINT_MULTIPLIER : 1.0);
@@ -549,7 +563,7 @@ public final class SuitGoals {
         /** Give up on a monster the beam hasn't caught after this long (out of sight, behind something). */
         private static final int SEEK_TICKS = 60;
         private final PowerArmorEntity suit;
-        @org.jetbrains.annotations.Nullable
+        @Nullable
         private LivingEntity target;
         private boolean lifting, thrown;
         private int ticks;
@@ -570,24 +584,24 @@ public final class SuitGoals {
         }
 
         /** The monster nearest home that the beam could catch from here. */
-        @org.jetbrains.annotations.Nullable
+        @Nullable
         private LivingEntity pick() {
             BlockPos home = this.suit.brain().getHome();
             if (home == null) {
                 return null;
             }
             Vec3 centre = Vec3.atBottomCenterOf(home);
-            double radius = dev.ajaczero.powerarmor.PowerArmorConfig.EM_GUARD_RADIUS.get();
-            double reach = dev.ajaczero.powerarmor.PowerArmorConfig.EM_RANGE.get();
-            return this.suit.level().getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(centre, centre).inflate(radius, 8, radius),
+            double radius = PowerArmorConfig.EM_GUARD_RADIUS.get();
+            double reach = PowerArmorConfig.EM_RANGE.get();
+            return this.suit.level().getEntitiesOfClass(LivingEntity.class, new AABB(centre, centre).inflate(radius, 8, radius),
                             // standing (or swimming, or a flyer): one it threw is left alone until it lands (catching it
                             // mid-fall reset its fall and the zombie survived the 30-block drop)
-                            e -> e instanceof net.minecraft.world.entity.monster.Enemy && e.distanceToSqr(centre) < radius * radius
+                            e -> e instanceof Enemy && e.distanceToSqr(centre) < radius * radius
                                     && (e.onGround() || e.isInLiquid() || SuitTargets.isFlyer(e))
-                                    && e.distanceTo(this.suit) < reach - 1 && dev.ajaczero.powerarmor.item.EmProjectorItem.canGrab(e)
-                                    && !dev.ajaczero.powerarmor.item.EmProjectorItem.isHeavy(e) // can't be lifted: no fling
+                                    && e.distanceTo(this.suit) < reach - 1 && EmProjectorItem.canGrab(e)
+                                    && !EmProjectorItem.isHeavy(e) // can't be lifted: no fling
                                     && SuitTargets.canAttack(this.suit, e, false) && this.suit.getSensing().hasLineOfSight(e))
-                    .stream().min(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(centre))).orElse(null);
+                    .stream().min(Comparator.comparingDouble(e -> e.distanceToSqr(centre))).orElse(null);
         }
 
         @Override
@@ -641,7 +655,7 @@ public final class SuitGoals {
             Vec3 out = this.target.position().subtract(home == null ? this.suit.position() : Vec3.atBottomCenterOf(home)).multiply(1, 0, 1);
             out = out.lengthSqr() < 1.0E-4 ? this.suit.getLookAngle().multiply(1, 0, 1) : out;
             out = out.lengthSqr() < 1.0E-4 ? new Vec3(0, 0, 1) : out.normalize();
-            return this.target instanceof net.minecraft.world.entity.monster.Creeper ? eye.add(out.scale(10)).add(0, 4.5, 0)
+            return this.target instanceof Creeper ? eye.add(out.scale(10)).add(0, 4.5, 0)
                     : eye.add(out.scale(0.6)).add(0, 10, 0);
         }
 
@@ -668,7 +682,7 @@ public final class SuitGoals {
         /** Fire only with the head within this many degrees of the target (the beam is a hand wide). */
         private static final double MAX_AIM_ERROR = 2.0;
         private final PowerArmorEntity suit;
-        @org.jetbrains.annotations.Nullable
+        @Nullable
         private LivingEntity target;
         private int ticks;
         private boolean fired;
@@ -678,16 +692,16 @@ public final class SuitGoals {
             this.setFlags(EnumSet.of(Flag.LOOK));
         }
 
-        @org.jetbrains.annotations.Nullable
-        private dev.ajaczero.powerarmor.item.RailCannonItem cannon() {
-            return this.suit.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.RailCannonItem c ? c : null;
+        @Nullable
+        private RailCannonItem cannon() {
+            return this.suit.getSocketStack().getItem() instanceof RailCannonItem c ? c : null;
         }
 
         @Override
         public boolean canUse() {
             var cannon = this.cannon();
             if (cannon == null || !this.suit.isAiDriven() || !this.suit.brain().snipesFromHome() || this.suit.brain().getHome() == null
-                    || dev.ajaczero.powerarmor.item.RailCannonItem.isCoolingDown(this.suit) || !cannon.canPay(this.suit, this.suit)) {
+                    || RailCannonItem.isCoolingDown(this.suit) || !cannon.canPay(this.suit, this.suit)) {
                 return false;
             }
             this.target = this.pick();
@@ -695,28 +709,28 @@ public final class SuitGoals {
         }
 
         /** Provoked attackers first (the owner's, then the suit's own), else the monster nearest home. */
-        @org.jetbrains.annotations.Nullable
+        @Nullable
         private LivingEntity pick() {
             BlockPos home = this.suit.brain().getHome();
             if (home == null) {
                 return null;
             }
             Vec3 centre = Vec3.atBottomCenterOf(home);
-            double radius = dev.ajaczero.powerarmor.PowerArmorConfig.RAIL_GUARD_RADIUS.get();
-            double reach = dev.ajaczero.powerarmor.PowerArmorConfig.RAIL_RANGE.get() - 1;
-            java.util.function.Predicate<LivingEntity> shootable = e -> e.distanceToSqr(centre) < radius * radius
+            double radius = PowerArmorConfig.RAIL_GUARD_RADIUS.get();
+            double reach = PowerArmorConfig.RAIL_RANGE.get() - 1;
+            Predicate<LivingEntity> shootable = e -> e.distanceToSqr(centre) < radius * radius
                     && e.distanceTo(this.suit) < reach && this.suit.getSensing().hasLineOfSight(e);
-            net.minecraft.world.entity.player.Player owner = this.suit.brain().getOwner();
+            Player owner = this.suit.brain().getOwner();
             for (LivingEntity provoked : new LivingEntity[] {owner == null ? null : owner.getLastHurtByMob(), this.suit.getLastHurtByMob()}) {
                 if (provoked != null && SuitTargets.isProvoked(this.suit, provoked) && SuitTargets.canAttack(this.suit, provoked, true)
                         && shootable.test(provoked)) {
                     return provoked;
                 }
             }
-            return this.suit.level().getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(centre, centre).inflate(radius, 16, radius),
-                            e -> (e instanceof net.minecraft.world.entity.monster.Enemy || e instanceof PowerArmorEntity other && other.isRogue())
+            return this.suit.level().getEntitiesOfClass(LivingEntity.class, new AABB(centre, centre).inflate(radius, 16, radius),
+                            e -> (e instanceof Enemy || e instanceof PowerArmorEntity other && other.isRogue())
                                     && SuitTargets.canAttack(this.suit, e, false) && shootable.test(e))
-                    .stream().min(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(centre))).orElse(null);
+                    .stream().min(Comparator.comparingDouble(e -> e.distanceToSqr(centre))).orElse(null);
         }
 
         @Override
@@ -746,14 +760,14 @@ public final class SuitGoals {
             Vec3 aim = this.target.getBoundingBox().getCenter();
             this.suit.brain().setAim(aim);
             this.suit.socket().setAiTrigger(true); // charge (it holds a full charge as long as the trigger stays down)
-            if (!dev.ajaczero.powerarmor.item.RailCannonItem.isCharged(this.suit) || !this.suit.getSensing().hasLineOfSight(this.target)) {
+            if (!RailCannonItem.isCharged(this.suit) || !this.suit.getSensing().hasLineOfSight(this.target)) {
                 return;
             }
             Vec3 eye = this.suit.getEyePosition();
             Vec3 view = this.suit.getViewVector(1F);
             Vec3 want = aim.subtract(eye).normalize();
-            double error = Math.toDegrees(Math.acos(net.minecraft.util.Mth.clamp(view.dot(want), -1, 1)));
-            if (error <= MAX_AIM_ERROR && SuitTargets.beamClear(this.suit, view, dev.ajaczero.powerarmor.PowerArmorConfig.RAIL_RANGE.get())) {
+            double error = Math.toDegrees(Math.acos(Mth.clamp(view.dot(want), -1, 1)));
+            if (error <= MAX_AIM_ERROR && SuitTargets.beamClear(this.suit, view, PowerArmorConfig.RAIL_RANGE.get())) {
                 this.suit.socket().setAiTrigger(false); // let go: it fires this tick, after the goals (PowerArmorEntity.tickTool)
                 this.fired = true;
             }
@@ -762,7 +776,7 @@ public final class SuitGoals {
         @Override
         public void stop() {
             if (!this.fired) {
-                dev.ajaczero.powerarmor.item.RailCannonItem.disarm(this.suit); // let go without firing
+                RailCannonItem.disarm(this.suit); // let go without firing
             }
             this.suit.socket().setAiTrigger(false);
             this.suit.brain().setAim(null);
@@ -783,8 +797,8 @@ public final class SuitGoals {
         /** Give up on a block after this long (walking + working), and skip it for a minute. */
         private static final int GIVE_UP_TICKS = 200, SKIP_FOR = 1200;
         protected final PowerArmorEntity suit;
-        private final java.util.Set<BlockPos> skip = new java.util.HashSet<>();
-        @org.jetbrains.annotations.Nullable
+        private final Set<BlockPos> skip = new HashSet<>();
+        @Nullable
         protected BlockPos target;
         private int ticks, repath, nextScan, forgetSkipsAt;
 
@@ -795,8 +809,8 @@ public final class SuitGoals {
 
         abstract boolean hasJob();
 
-        @org.jetbrains.annotations.Nullable
-        abstract BlockPos findTarget(java.util.Set<BlockPos> skip);
+        @Nullable
+        abstract BlockPos findTarget(Set<BlockPos> skip);
 
         /** Still something to do at the target? */
         abstract boolean stillWork(BlockPos target);
@@ -908,7 +922,7 @@ public final class SuitGoals {
         }
 
         @Override
-        BlockPos findTarget(java.util.Set<BlockPos> skip) {
+        BlockPos findTarget(Set<BlockPos> skip) {
             return SuitWork.nextDigTarget(this.suit, skip);
         }
 
@@ -936,13 +950,13 @@ public final class SuitGoals {
         }
 
         @Override
-        BlockPos findTarget(java.util.Set<BlockPos> skip) {
+        BlockPos findTarget(Set<BlockPos> skip) {
             return SuitWork.nextTrunk(this.suit, skip);
         }
 
         @Override
         boolean stillWork(BlockPos target) {
-            return this.suit.level().getBlockState(target).is(net.minecraft.tags.BlockTags.LOGS);
+            return this.suit.level().getBlockState(target).is(BlockTags.LOGS);
         }
 
         @Override

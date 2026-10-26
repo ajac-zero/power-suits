@@ -12,12 +12,20 @@ import java.util.Locale;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Autopilot scene for the engines (Phase 9, design sec. 4b): the player pilots a firebox suit up a few steps and into a
@@ -114,11 +122,11 @@ final class EngineScene {
             DevUtil.setTime(level, 6000);
             player.stopRiding();
             int x = player.getBlockX(), z = player.getBlockZ() - 100;
-            int g = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+            int g = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
             BlockPos b = new BlockPos(x, g, z);
             base = b;
             buildPool(level, b);
-            PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+            PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.COMMAND);
             DevUtil.firebox(s); s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 8)); // with a firebox
             s.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
             s.snapTo(x + 0.5, g, z + 0.5, 0, 0);
@@ -129,7 +137,7 @@ final class EngineScene {
             suit = s;
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             // creative: a flooded suit loses its seal and the pilot's air (the earlier scenes leave the player in survival)
-            player.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+            player.setGameMode(GameType.CREATIVE);
             player.setShiftKeyDown(false);
             player.teleportTo(x + 0.5, g, z - 1.5);
             player.startRiding(s, true, true); // forced, as the fuel scene does: a plain startRiding can be refused here
@@ -165,7 +173,7 @@ final class EngineScene {
     }
 
     /** Swap the engine and/or the fuel slot on the server (the menu's job in the game; a null leaves it as it is). */
-    private static void engine(Minecraft mc, net.minecraft.world.item.Item engine, ItemStack fuel) {
+    private static void engine(Minecraft mc, Item engine, ItemStack fuel) {
         AutoPilot.onServer(mc, p -> {
             PowerArmorEntity x = suit;
             if (x == null) {
@@ -188,7 +196,7 @@ final class EngineScene {
         }
         mc.options.setCameraType(CameraType.FIRST_PERSON);
         DevUtil.hideGui(mc, true);
-        Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        Vec3 drop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         Vec3 at = c.position().add(0, 2.0, 0);
         AutoPilot.lookCamera(mc, at.add(6, 1.2, 3).subtract(drop), at.subtract(drop));
     }
@@ -201,9 +209,9 @@ final class EngineScene {
         }
         mc.options.setCameraType(CameraType.FIRST_PERSON);
         DevUtil.hideGui(mc, true);
-        Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
-        float yaw = c.yBodyRot * net.minecraft.util.Mth.DEG_TO_RAD;
-        Vec3 back = new Vec3(net.minecraft.util.Mth.sin(yaw), 0, -net.minecraft.util.Mth.cos(yaw)); // forward is (-sin, cos)
+        Vec3 drop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        float yaw = c.yBodyRot * Mth.DEG_TO_RAD;
+        Vec3 back = new Vec3(Mth.sin(yaw), 0, -Mth.cos(yaw)); // forward is (-sin, cos)
         Vec3 at = c.position().add(0, 2.3, 0);
         Vec3 from = high ? at.add(back.scale(2.5)).add(0, 3.6, 0) : at.add(back.scale(3.5)).add(0, 0.8, 0);
         AutoPilot.lookCamera(mc, from.subtract(drop), at.subtract(drop));
@@ -211,7 +219,7 @@ final class EngineScene {
 
     private static void open() {
         try {
-            csv = Files.newBufferedWriter(net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().resolve("autopilot_engine.csv"));
+            csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_engine.csv"));
             csv.write("tick,phase,engine,powered,flooded,engine_under_water,free,burn_left,fuel,fuel_count,dz,dy,pack_refused,"
                     + "client_powered,client_free,client_flooded,piloted,client_riding,dx,yaw,screen\n");
         } catch (IOException e) {
@@ -240,7 +248,7 @@ final class EngineScene {
                 w.write(String.format(Locale.ROOT, "%d,%s,%s,%b,%b,%b,%b,%.1f,%s,%d,%.2f,%.2f,%b,%b,%b,%b,%b,%b,%.2f,%.0f,%s%n", s, p,
                         engine == null ? "-" : engine.name().toLowerCase(Locale.ROOT), x.isPowered(), x.power().isFlooded(), x.power().isEngineUnderWater(),
                         x.power().hasFreePower(), x.power().getBurnLeftExact(),
-                        fuel.isEmpty() ? "-" : net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(fuel.getItem()).getPath(),
+                        fuel.isEmpty() ? "-" : BuiltInRegistries.ITEM.getKey(fuel.getItem()).getPath(),
                         fuel.getCount(), x.getZ() - b.getZ() - 0.5, x.getY() - b.getY(), packRefused, cPowered, cFree, cFlooded,
                         x.isVehicle(), riding, x.getX() - b.getX() - 0.5, yaw, screen));
             } catch (IOException ignored) {

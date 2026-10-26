@@ -1,6 +1,8 @@
 package dev.ajaczero.powerarmor.entity;
 
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 
 /**
@@ -68,12 +70,12 @@ public final class SuitLights {
             double x = this.suit.getX() + side * Mth.cos(yaw) - front * Mth.sin(yaw);
             double z = this.suit.getZ() + side * Mth.sin(yaw) + front * Mth.cos(yaw);
             double y = this.suit.getY() + 0.2 + this.suit.getRandom().nextDouble() * 1.1;
-            this.suit.level().addParticle(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, x, y, z,
+            this.suit.level().addParticle(ParticleTypes.ELECTRIC_SPARK, x, y, z,
                     this.suit.getRandom().nextGaussian() * 0.15, this.suit.getRandom().nextGaussian() * 0.15, this.suit.getRandom().nextGaussian() * 0.15);
         }
         if (this.sparkTicks % 6 == 0) {
             this.suit.level().playLocalSound(this.suit.getX(), this.suit.getY() + 1, this.suit.getZ(), SoundEvents.COPPER_BULB_TURN_OFF,
-                    net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 0.6F + this.suit.getRandom().nextFloat() * 0.6F, false);
+                    SoundSource.NEUTRAL, 1.0F, 0.6F + this.suit.getRandom().nextFloat() * 0.6F, false);
         }
     }
     /** Client: the Heart of the Sea in the tidal engine's porthole: a slow shimmer, like light through water. */

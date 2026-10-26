@@ -11,6 +11,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Autopilot scene for foot slip and leg turning (2026-10-20, ./gradlew runAutopilotGait, ~45 s): the pilot walks
@@ -90,7 +91,7 @@ final class GaitScene {
 
     private static void open() {
         try {
-            csv = Files.newBufferedWriter(net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().resolve("autopilot_gait.csv"));
+            csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_gait.csv"));
             csv.write("tick,phase,keys,anim,rate,realigning,viewYaw,bodyYaw,twist,legTurn,speed,fwd,lat,expected,slip\n");
         } catch (IOException e) {
             PowerArmor.LOGGER.error("gait csv", e);

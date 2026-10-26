@@ -1,15 +1,21 @@
 package dev.ajaczero.powerarmor.item;
 
-import dev.ajaczero.powerarmor.entity.ai.ToolUse;
+import com.geckolib.animation.RawAnimation;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.ai.SuitWork;
+import dev.ajaczero.powerarmor.entity.ai.ToolUse;
+import dev.ajaczero.powerarmor.registry.ModSounds;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
@@ -20,12 +26,12 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
-import com.geckolib.animation.RawAnimation;
 
 /**
  * Third power tool: a diamond-tipped 3x3 mining drill.
@@ -105,8 +111,8 @@ public class DrillItem extends Item implements PowerTool {
     }
 
     @Override
-    public net.minecraft.sounds.SoundEvent runSound() {
-        return dev.ajaczero.powerarmor.registry.ModSounds.DRILL.get();
+    public SoundEvent runSound() {
+        return ModSounds.DRILL.get();
     }
 
     @Override
@@ -129,8 +135,8 @@ public class DrillItem extends Item implements PowerTool {
         BlockPos center = hit.getBlockPos();
         state.retarget(level, center, hit.getDirection());
         // The machine mind only digs its hall (home level, 3 high, no liquids next door, floor below): SuitWork.mayDig.
-        java.util.function.Predicate<BlockPos> allowed = operator instanceof Player ? p -> canDrill(level.getBlockState(p), level, p)
-                : p -> dev.ajaczero.powerarmor.entity.ai.SuitWork.mayDig(suit, p);
+        Predicate<BlockPos> allowed = operator instanceof Player ? p -> canDrill(level.getBlockState(p), level, p)
+                : p -> SuitWork.mayDig(suit, p);
         if (!allowed.test(center)) {
             if (state.ticks % 10 == 0) { // wood, bedrock...: the bit just skids
                 suit.playSound(SoundEvents.ANVIL_LAND, 0.25F, 1.8F);
@@ -191,8 +197,8 @@ public class DrillItem extends Item implements PowerTool {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
-            java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
+            Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.drill.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.drill.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));

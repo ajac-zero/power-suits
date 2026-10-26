@@ -4,6 +4,7 @@ import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.Bullet;
 import dev.ajaczero.powerarmor.entity.FlameJet;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.TntShell;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.phys.Vec3;
@@ -42,8 +43,8 @@ public final class ModEntities {
                     .updateInterval(1));
 
     /** The TNT launcher's round: a primed TNT block in flight (half a block wide). Updated every tick (it arcs). */
-    public static final DeferredHolder<EntityType<?>, EntityType<dev.ajaczero.powerarmor.entity.TntShell>> TNT_SHELL =
-            ENTITIES.registerEntityType("tnt_shell", dev.ajaczero.powerarmor.entity.TntShell::new, MobCategory.MISC, builder -> builder
+    public static final DeferredHolder<EntityType<?>, EntityType<TntShell>> TNT_SHELL =
+            ENTITIES.registerEntityType("tnt_shell", TntShell::new, MobCategory.MISC, builder -> builder
                     .sized(0.5F, 0.5F)
                     .clientTrackingRange(8)
                     .updateInterval(1));

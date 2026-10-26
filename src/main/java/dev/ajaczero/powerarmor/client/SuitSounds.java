@@ -6,9 +6,12 @@ import dev.ajaczero.powerarmor.item.PowerTool;
 import dev.ajaczero.powerarmor.registry.ModSounds;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.client.sounds.SoundEngine;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -16,7 +19,6 @@ import net.minecraft.util.RandomSource;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.minecraft.client.sounds.SoundEngine;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
@@ -130,11 +132,11 @@ public final class SuitSounds {
     /** A loop that follows its suit, eases toward its target volume / pitch, and fades out when it should stop. */
     private static final class Loop extends AbstractTickableSoundInstance {
         private final PowerArmorEntity suit;
-        private final java.util.function.Predicate<PowerArmorEntity> keepPlaying;
-        private final java.util.function.ToDoubleFunction<PowerArmorEntity> targetVolume, targetPitch;
+        private final Predicate<PowerArmorEntity> keepPlaying;
+        private final ToDoubleFunction<PowerArmorEntity> targetVolume, targetPitch;
 
-        Loop(SoundEvent sound, PowerArmorEntity suit, java.util.function.Predicate<PowerArmorEntity> keepPlaying,
-             java.util.function.ToDoubleFunction<PowerArmorEntity> targetVolume, java.util.function.ToDoubleFunction<PowerArmorEntity> targetPitch) {
+        Loop(SoundEvent sound, PowerArmorEntity suit, Predicate<PowerArmorEntity> keepPlaying,
+             ToDoubleFunction<PowerArmorEntity> targetVolume, ToDoubleFunction<PowerArmorEntity> targetPitch) {
             super(sound, SoundSource.NEUTRAL, SoundInstance.createUnseededRandom());
             this.suit = suit;
             this.keepPlaying = keepPlaying;

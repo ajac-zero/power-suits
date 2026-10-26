@@ -9,6 +9,8 @@ import com.geckolib.util.ClientUtil;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.ToolLight;
+import java.util.Arrays;
+import java.util.stream.Stream;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -36,10 +38,10 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
     private static final Identifier REACTOR = mask("reactor");
     private static final Identifier[] SUIT_MASKS = {FIRE, VISOR, TIDAL, REACTOR};
     /** The socket tools' lights, indexed by ToolLight.ordinal() (also drawn on the cockpit viewmodel). */
-    static final Identifier[] TOOL_MASKS = java.util.Arrays.stream(ToolLight.values()).map(SuitGlowLayer::mask).toArray(Identifier[]::new);
+    static final Identifier[] TOOL_MASKS = Arrays.stream(ToolLight.values()).map(SuitGlowLayer::mask).toArray(Identifier[]::new);
     /** All masks, in the order of the tints in SuitRenderData.GLOW: the suit's, then the tool's. */
-    private static final Identifier[] MASKS = java.util.stream.Stream.concat(java.util.Arrays.stream(SUIT_MASKS),
-            java.util.Arrays.stream(TOOL_MASKS)).toArray(Identifier[]::new);
+    private static final Identifier[] MASKS = Stream.concat(Arrays.stream(SUIT_MASKS),
+            Arrays.stream(TOOL_MASKS)).toArray(Identifier[]::new);
 
     private static Identifier mask(String name) {
         return Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_" + name + ".png");
@@ -89,7 +91,7 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
                 tint(suit.lights().getTidalGlow(time), 1F, 1F, 1F),
                 tint(suit.lights().getReactorGlow(time), 1F, 1F, 1F)};
         int[] toolTints = toolTints(suit, time, partialTick);
-        int[] tints = java.util.Arrays.copyOf(suitTints, suitTints.length + toolTints.length);
+        int[] tints = Arrays.copyOf(suitTints, suitTints.length + toolTints.length);
         System.arraycopy(toolTints, 0, tints, suitTints.length, toolTints.length);
         state.addGeckolibData(SuitRenderData.GLOW, tints);
         state.addGeckolibData(SuitRenderData.RAIL_SHAKE, new float[] {suit.socketVisuals().effects().shake(suit), time});

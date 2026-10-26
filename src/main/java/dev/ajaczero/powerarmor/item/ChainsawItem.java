@@ -1,8 +1,11 @@
 package dev.ajaczero.powerarmor.item;
 
-import dev.ajaczero.powerarmor.entity.ai.ToolUse;
+import com.geckolib.animation.RawAnimation;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.ai.SuitWork;
+import dev.ajaczero.powerarmor.entity.ai.ToolUse;
+import dev.ajaczero.powerarmor.registry.ModSounds;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -10,11 +13,13 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
@@ -25,13 +30,13 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
-import com.geckolib.animation.RawAnimation;
 
 /**
  * Fourth power tool: a chainsaw. Hold use (right click) on a wooden block (anything an axe is for) or leaves to cut it,
@@ -144,8 +149,8 @@ public class ChainsawItem extends Item implements PowerTool {
     }
 
     @Override
-    public net.minecraft.sounds.SoundEvent runSound() {
-        return dev.ajaczero.powerarmor.registry.ModSounds.CHAINSAW.get();
+    public SoundEvent runSound() {
+        return ModSounds.CHAINSAW.get();
     }
 
     @Override
@@ -174,7 +179,7 @@ public class ChainsawItem extends Item implements PowerTool {
         BlockState block = level.getBlockState(pos);
         state.retarget(level, pos, hit.getDirection());
         // The machine mind only saws natural trees (never a log cabin wall the aim happens to cross); a pilot cuts anything.
-        if (!canCut(block, level, pos) || !(operator instanceof Player) && !dev.ajaczero.powerarmor.entity.ai.SuitWork.mayCut(level, pos, block)) {
+        if (!canCut(block, level, pos) || !(operator instanceof Player) && !SuitWork.mayCut(level, pos, block)) {
             if (state.ticks % 10 == 0) { // stone, metal: the chain skids off
                 suit.playSound(SoundEvents.GRINDSTONE_USE, 0.4F, 1.6F);
             }
@@ -256,8 +261,8 @@ public class ChainsawItem extends Item implements PowerTool {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
-            java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
+            Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.chainsaw.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.chainsaw.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));

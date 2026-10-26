@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor.client.dev;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.FlameJet;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.ToolLight;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import java.io.BufferedWriter;
@@ -12,6 +13,7 @@ import java.util.Locale;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
@@ -21,10 +23,13 @@ import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Autopilot scene for the flamethrower (Phase 11): a suit with the flamethrower on flat ground at dusk, facing +Z. In
@@ -111,7 +116,7 @@ final class FlameScene {
             DevUtil.setTime(level, 12600);
             player.stopRiding();
             int x = player.getBlockX() + 120, z = player.getBlockZ();
-            int g = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+            int g = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
             BlockPos b = new BlockPos(x, g, z);
             base = b;
             for (int dx = -8; dx <= 8; dx++) {
@@ -151,7 +156,7 @@ final class FlameScene {
             level.addFreshEntity(s);
             suit = s;
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY); // the hand would take the right click
-            player.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+            player.setGameMode(GameType.CREATIVE);
             player.setShiftKeyDown(false);
             player.teleportTo(x + 0.5, g, z - 1.5);
             player.startRiding(s, true, true);
@@ -172,7 +177,7 @@ final class FlameScene {
 
     private static void open() {
         try {
-            csv = Files.newBufferedWriter(net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().resolve("autopilot_flame.csv"));
+            csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_flame.csv"));
             csv.write("tick,phase,tool_uses,energy,jets,pigs_burning,pig_health,fire_blocks,beef,ice,campfire_lit,"
                     + "client_running,client_pilot_glow\n");
         } catch (IOException e) {
@@ -190,7 +195,7 @@ final class FlameScene {
         String p = phase;
         var client = mc.level == null ? null : mc.level.getEntity(x.getId()) instanceof PowerArmorEntity c ? c : null;
         boolean running = client != null && client.socket().isRunning();
-        float glow = client == null ? 0F : client.socketVisuals().light(dev.ajaczero.powerarmor.item.ToolLight.PILOT, 0F);
+        float glow = client == null ? 0F : client.socketVisuals().light(ToolLight.PILOT, 0F);
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
             AABB area = new AABB(b).inflate(10);
@@ -206,7 +211,7 @@ final class FlameScene {
             }
             ItemEntity meat = beef;
             String beefState = meat == null ? "-" : !meat.isAlive() ? "gone"
-                    : net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(meat.getItem().getItem()).getPath() + "x" + meat.getItem().getCount();
+                    : BuiltInRegistries.ITEM.getKey(meat.getItem().getItem()).getPath() + "x" + meat.getItem().getCount();
             boolean ice = level.getBlockState(b.offset(2, 0, 4)).is(Blocks.ICE);
             var camp = level.getBlockState(b.offset(3, 0, 3));
             boolean lit = camp.hasProperty(CampfireBlock.LIT) && camp.getValue(CampfireBlock.LIT);

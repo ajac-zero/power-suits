@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor.entity;
 import com.geckolib.animatable.manager.AnimatableManager;
 import com.geckolib.animation.AnimationController;
 import com.geckolib.animation.RawAnimation;
+import com.geckolib.animation.object.LoopType;
 import com.geckolib.animation.object.PlayState;
 import com.geckolib.animation.state.AnimationTest;
 import dev.ajaczero.powerarmor.item.PowerTool;
@@ -62,7 +63,7 @@ public final class SuitAnimator {
     // Struck by lightning: convulse (the electrified loop, played once) and then slump like an empty tank. thenPlay would
     // use the JSON's loop setting ("loop": true for electrified) and convulse forever; PLAY_ONCE moves on to the slump.
     private static final RawAnimation ZAPPED = RawAnimation.begin()
-            .then("animation.power_armor.electrified", com.geckolib.animation.object.LoopType.PLAY_ONCE)
+            .then("animation.power_armor.electrified", LoopType.PLAY_ONCE)
             .thenPlayAndHold("animation.power_armor.shutdown");
     private static final RawAnimation TOOL_RECOIL = RawAnimation.begin().thenPlay("animation.power_armor.tool_recoil");
     // Right hand (a_hand.js): carry pose while the pilot holds something, quick reach on every use.

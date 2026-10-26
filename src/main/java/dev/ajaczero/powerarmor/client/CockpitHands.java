@@ -1,20 +1,28 @@
 package dev.ajaczero.powerarmor.client;
 
+import com.geckolib.animation.AnimationController;
+import com.geckolib.util.ClientUtil;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.PowerTool;
 import dev.ajaczero.powerarmor.item.SocketAim;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
-import com.geckolib.animation.AnimationController;
-import com.geckolib.util.ClientUtil;
+import org.joml.Vector3fc;
 
 /**
  * What the pilot sees of the suit's arms, drawn in the hand pass like vanilla's first-person hands. The suit's own
@@ -170,7 +178,7 @@ public final class CockpitHands {
      * there on their screen. The hand pass uses a fixed 70 degree FOV, so the view-space point is rescaled to the
      * world FOV to land on the same spot of the screen.
      */
-    static Vec3 visualMuzzle(PowerArmorEntity suit, net.minecraft.world.entity.LivingEntity operator) {
+    static Vec3 visualMuzzle(PowerArmorEntity suit, LivingEntity operator) {
         Minecraft mc = Minecraft.getInstance();
         if (operator != mc.player || !PowerArmorRenderer.isCockpitView(suit)) {
             return SocketAim.muzzlePosition(suit, operator); // also when a scripted camera watches the suit from outside
@@ -181,7 +189,7 @@ public final class CockpitHands {
         Vector3f p = toolMatrix(suit, suit.socketVisuals().raise(1F)).transformPosition(new Vector3f(0, (MUZZLE_PX + inset) / 16F, -forward / 16F));
         double k = Math.tan(Math.toRadians(mc.options.fov().get()) / 2) / Math.tan(Math.toRadians(70) / 2);
         Camera camera = mc.gameRenderer.mainCamera();
-        org.joml.Vector3fc look = camera.forwardVector(), up = camera.upVector(), left = camera.leftVector();
+        Vector3fc look = camera.forwardVector(), up = camera.upVector(), left = camera.leftVector();
         double x = p.x * k, y = p.y * k, z = p.z;
         return camera.position()
                 .add(-left.x() * x, -left.y() * x, -left.z() * x)
@@ -190,11 +198,11 @@ public final class CockpitHands {
     }
 
     /** Dev: reload the placement from a JSON file (keys as the fields above; positions as [x, y, z]). */
-    public static void loadTuning(java.nio.file.Path file) {
-        try (var reader = java.nio.file.Files.newBufferedReader(file)) {
-            com.google.gson.JsonObject j = com.google.gson.JsonParser.parseReader(reader).getAsJsonObject();
-            java.util.function.BiFunction<String, Float, Float> f = (k, d) -> j.has(k) ? j.get(k).getAsFloat() : d;
-            java.util.function.Function<String, Vector3f> v = k -> {
+    public static void loadTuning(Path file) {
+        try (var reader = Files.newBufferedReader(file)) {
+            JsonObject j = JsonParser.parseReader(reader).getAsJsonObject();
+            BiFunction<String, Float, Float> f = (k, d) -> j.has(k) ? j.get(k).getAsFloat() : d;
+            Function<String, Vector3f> v = k -> {
                 var a = j.getAsJsonArray(k);
                 return new Vector3f(a.get(0).getAsFloat(), a.get(1).getAsFloat(), a.get(2).getAsFloat());
             };
@@ -205,7 +213,7 @@ public final class CockpitHands {
             toolRoll = f.apply("toolRoll", toolRoll); toolScale = f.apply("toolScale", toolScale);
             gauntletScale = f.apply("gauntletScale", gauntletScale);
         } catch (Exception e) {
-            dev.ajaczero.powerarmor.PowerArmor.LOGGER.warn("[view] can't read {}: {}", file, e.toString());
+            PowerArmor.LOGGER.warn("[view] can't read {}: {}", file, e.toString());
         }
     }
 

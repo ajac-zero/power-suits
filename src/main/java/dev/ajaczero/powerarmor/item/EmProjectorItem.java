@@ -1,23 +1,28 @@
 package dev.ajaczero.powerarmor.item;
 
-import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.ai.SuitTargets;
+import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -25,10 +30,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.tags.TagKey;
-import net.minecraft.world.entity.EntityType;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -128,7 +132,7 @@ public class EmProjectorItem extends Item implements PowerTool {
             return false;
         }
         boolean player = e instanceof Player || e.hasPassenger(p -> p instanceof Player);
-        return !player || suit.isRogue() || dev.ajaczero.powerarmor.entity.ai.SuitTargets.pvpAllowed(suit);
+        return !player || suit.isRogue() || SuitTargets.pvpAllowed(suit);
     }
 
     // ---- PowerTool -------------------------------------------------------------------------------
@@ -183,7 +187,7 @@ public class EmProjectorItem extends Item implements PowerTool {
             }
             // A pilot grabs whatever they point at; the machine mind only the monster it picked (never an item, a cow or
             // a villager that happens to be in the line).
-            java.util.function.Predicate<Entity> grabbable = operator instanceof Player ? e -> canHold(suit, e)
+            Predicate<Entity> grabbable = operator instanceof Player ? e -> canHold(suit, e)
                     : e -> e == suit.getTarget() && canHold(suit, e);
             Entity found = SocketAim.entityInView(suit, operator, PowerArmorConfig.EM_RANGE.get(), grabbable, 0.6F);
             if (found != null && suit.power().tryUseEnergy(PowerArmorConfig.EM_HOLD_ENERGY.get())) {
@@ -330,8 +334,8 @@ public class EmProjectorItem extends Item implements PowerTool {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
-            java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
+            Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.em_projector.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.em_projector.stats", PowerArmorConfig.EM_HOLD_ENERGY.get() * 20, PowerArmorConfig.EM_THROW_ENERGY.get())
                 .withStyle(ChatFormatting.DARK_AQUA));

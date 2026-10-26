@@ -1,9 +1,12 @@
 package dev.ajaczero.powerarmor.test;
 
 import dev.ajaczero.powerarmor.PowerArmor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 import net.minecraft.core.Holder;
@@ -14,6 +17,8 @@ import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Rotation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.gametest.GameTestHooks;
@@ -36,7 +41,7 @@ public final class SuitTests {
         }
         for (Method method : PowerArmorTests.class.getDeclaredMethods()) {
             if (method.isAnnotationPresent(SuitTest.class) && Modifier.isStatic(method.getModifiers())) {
-                String name = method.getName().toLowerCase(java.util.Locale.ROOT); // registry ids are lower case
+                String name = method.getName().toLowerCase(Locale.ROOT); // registry ids are lower case
                 FUNCTIONS.register(name, () -> helper -> invoke(method, helper));
                 TESTS.put(method, ResourceKey.create(Registries.TEST_FUNCTION, Identifier.fromNamespaceAndPath(PowerArmor.MODID, name)));
             }
@@ -57,9 +62,9 @@ public final class SuitTests {
             Holder<TestEnvironmentDefinition<?>> environment = environments.computeIfAbsent(batch, b -> event.registerEnvironment(
                     Identifier.fromNamespaceAndPath(PowerArmor.MODID, b), rain
                             ? new TestEnvironmentDefinition.Weather(TestEnvironmentDefinition.Weather.Type.RAIN)
-                            : new TestEnvironmentDefinition.AllOf(java.util.List.of())));
+                            : new TestEnvironmentDefinition.AllOf(List.of())));
             event.registerTest(function.identifier(), new FunctionGameTestInstance(function, new TestData<>(environment,
-                    net.minecraft.world.level.Level.OVERWORLD, PAD, spec.timeoutTicks(), 0, true, net.minecraft.world.level.block.Rotation.NONE,
+                    Level.OVERWORLD, PAD, spec.timeoutTicks(), 0, true, Rotation.NONE,
                     false, 1, 1, rain, 0)));
         });
     }
@@ -67,7 +72,7 @@ public final class SuitTests {
     private static void invoke(Method method, GameTestHelper helper) {
         try {
             method.invoke(null, helper);
-        } catch (java.lang.reflect.InvocationTargetException e) {
+        } catch (InvocationTargetException e) {
             // Assertion failures are thrown as exceptions: rethrow the real one so the test reports its message.
             if (e.getCause() instanceof RuntimeException runtime) {
                 throw runtime;

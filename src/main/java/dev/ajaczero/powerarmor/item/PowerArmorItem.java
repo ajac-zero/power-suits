@@ -1,11 +1,13 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.SuitEngine;
 import dev.ajaczero.powerarmor.entity.SuitFuel;
 import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
-import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -14,11 +16,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 
 /**
@@ -35,7 +39,7 @@ public class PowerArmorItem extends Item {
         if (!(context.getLevel() instanceof ServerLevel level)) {
             return InteractionResult.SUCCESS; // client: just play the arm swing
         }
-        PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.SPAWN_ITEM_USE);
+        PowerArmorEntity suit = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.SPAWN_ITEM_USE);
         if (suit == null) {
             return InteractionResult.FAIL;
         }
@@ -89,10 +93,10 @@ public class PowerArmorItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
-            java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
+            Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.power_armor.tooltip").withStyle(ChatFormatting.GRAY));
-        net.minecraft.world.item.DyeColor paint = stack.get(ModDataComponents.PAINT.get());
+        DyeColor paint = stack.get(ModDataComponents.PAINT.get());
         if (paint != null) { // vanilla names every dye colour ("color.minecraft.red" = "Red")
             tooltip.accept(Component.translatable("item.powerarmor.power_armor.paint",
                     Component.translatable("color.minecraft." + paint.getName())).withStyle(ChatFormatting.GRAY));
@@ -101,8 +105,8 @@ public class PowerArmorItem extends Item {
         if (loadout != null) {
             // No engine field = a suit from before the engines: its firebox.
             ItemStack engineStack = loadout.engine().orElse(null);
-            dev.ajaczero.powerarmor.entity.SuitEngine engine = engineStack == null ? dev.ajaczero.powerarmor.entity.SuitEngine.FIREBOX
-                    : dev.ajaczero.powerarmor.entity.SuitEngine.of(engineStack);
+            SuitEngine engine = engineStack == null ? SuitEngine.FIREBOX
+                    : SuitEngine.of(engineStack);
             if (engineStack != null) {
                 tooltip.accept(engineStack.isEmpty()
                         ? Component.translatable("item.powerarmor.power_armor.no_engine").withStyle(ChatFormatting.RED)
@@ -127,7 +131,7 @@ public class PowerArmorItem extends Item {
 
     /** Energy -> "m:ss" of walking (by default walking burns 1 energy per tick, 20 per second). */
     public static String formatWalkTime(int energy) {
-        int seconds = (int) (energy / (20 * Math.max(0.01, dev.ajaczero.powerarmor.PowerArmorConfig.DRAIN_WALK.get())));
+        int seconds = (int) (energy / (20 * Math.max(0.01, PowerArmorConfig.DRAIN_WALK.get())));
         return String.format("%d:%02d", seconds / 60, seconds % 60);
     }
 }

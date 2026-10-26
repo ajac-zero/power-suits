@@ -2,21 +2,29 @@ package dev.ajaczero.powerarmor;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.ToolMining;
+import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.TriState;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUseAnimation;
+import net.minecraft.world.level.block.CakeBlock;
+import net.minecraft.world.level.block.CandleCakeBlock;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityMountEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 /**
  * What the pilot's hands can do from inside the suit. The suit's right hand is the pilot's main hand and works as
@@ -67,7 +75,7 @@ public final class PilotHands {
     /** Server-side backstop for the above. Breaks by the suit's own mining tools (drill, chainsaw) post this event
      *  too, so protection mods can veto them; those only run while powered anyway. */
     @SubscribeEvent
-    public static void breakBlock(net.neoforged.neoforge.event.level.block.BreakBlockEvent event) {
+    public static void breakBlock(BreakBlockEvent event) {
         PowerArmorEntity suit = suitOf(event.getPlayer());
         if (suit != null && !suit.canOperate() && !ToolMining.isToolBreak()) {
             event.setCanceled(true);
@@ -90,10 +98,10 @@ public final class PilotHands {
     public static void useOnBlock(PlayerInteractEvent.RightClickBlock event) {
         PowerArmorEntity suit = suitOf(event.getEntity());
         var block = event.getLevel().getBlockState(event.getPos()).getBlock();
-        if (suit != null && suit.hasHelmet() && (block instanceof net.minecraft.world.level.block.CakeBlock || block instanceof net.minecraft.world.level.block.CandleCakeBlock)) {
+        if (suit != null && suit.hasHelmet() && (block instanceof CakeBlock || block instanceof CandleCakeBlock)) {
             // Cake is eaten by right-clicking the block itself. Deny only the block's reaction: the item in hand
             // (a block to place, say) still gets its turn.
-            event.setUseBlock(net.minecraft.util.TriState.FALSE);
+            event.setUseBlock(TriState.FALSE);
         }
         checkUse(event, event);
     }
@@ -105,7 +113,7 @@ public final class PilotHands {
             // FAIL (not CONSUME): the click isn't used up, so vanilla moves on to the off hand = the socket tool
             // (ToolInput). Holding bread then works like holding a stick, instead of blocking the tool.
             event.setCanceled(true);
-            event.setCancellationResult(net.minecraft.world.InteractionResult.FAIL);
+            event.setCancellationResult(InteractionResult.FAIL);
             if (event.getLevel().isClientSide() && suit.getSocketStack().isEmpty()) {
                 event.getEntity().sendOverlayMessage(Component.translatable("message.powerarmor.sealed_in"));
             }
@@ -115,14 +123,14 @@ public final class PilotHands {
     }
 
     /** Food (eating) and drinks (potions, milk, honey bottles...): what vanilla plays the eat / drink animation for. */
-    public static boolean isEatOrDrink(net.minecraft.world.item.ItemStack stack) {
+    public static boolean isEatOrDrink(ItemStack stack) {
         var anim = stack.getUseAnimation();
-        return anim == net.minecraft.world.item.ItemUseAnimation.EAT || anim == net.minecraft.world.item.ItemUseAnimation.DRINK;
+        return anim == ItemUseAnimation.EAT || anim == ItemUseAnimation.DRINK;
     }
 
     /** Backstop for anything that starts eating or drinking without a right click (other mods): refuse it. */
     @SubscribeEvent
-    public static void startEating(net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Start event) {
+    public static void startEating(LivingEntityUseItemEvent.Start event) {
         if (event.getEntity() instanceof Player player && suitOf(player) instanceof PowerArmorEntity suit && suit.hasHelmet()
                 && isEatOrDrink(event.getItem())) {
             event.setCanceled(true);
@@ -167,7 +175,7 @@ public final class PilotHands {
                 || player.level().isClientSide()) {
             return;
         }
-        for (var attribute : java.util.List.of(Attributes.BLOCK_INTERACTION_RANGE, Attributes.ENTITY_INTERACTION_RANGE)) {
+        for (var attribute : List.of(Attributes.BLOCK_INTERACTION_RANGE, Attributes.ENTITY_INTERACTION_RANGE)) {
             AttributeInstance instance = player.getAttribute(attribute);
             if (instance == null) {
                 continue;
@@ -197,7 +205,7 @@ public final class PilotHands {
         if (damage == null) {
             return;
         }
-        double bonus = dev.ajaczero.powerarmor.PowerArmorConfig.MELEE_BONUS.get();
+        double bonus = PowerArmorConfig.MELEE_BONUS.get();
         AttributeModifier current = damage.getModifier(DAMAGE_ID);
         if (current == null || current.amount() != bonus) {
             damage.removeModifier(DAMAGE_ID);

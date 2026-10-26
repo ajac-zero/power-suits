@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.PilotHands;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +27,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -57,7 +58,7 @@ public final class ToolMining {
     @Nullable
     public static BlockHitResult target(PowerArmorEntity suit, LivingEntity operator) {
         double reach = operator instanceof Player player ? player.blockInteractionRange()
-                : Attributes.BLOCK_INTERACTION_RANGE.value().getDefaultValue() + dev.ajaczero.powerarmor.PilotHands.EXTRA_REACH;
+                : Attributes.BLOCK_INTERACTION_RANGE.value().getDefaultValue() + PilotHands.EXTRA_REACH;
         Vec3 eye = operator.getEyePosition();
         Vec3 end = eye.add(operator.getViewVector(1F).scale(reach));
         BlockHitResult hit = suit.level().clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, operator));
@@ -84,7 +85,7 @@ public final class ToolMining {
                 || state.getBlock() instanceof GameMasterBlock && !pilot.canUseGameMasterBlocks()) {
             return false;
         }
-        var event = new net.neoforged.neoforge.event.level.block.BreakBlockEvent(level, pos, state, pilot);
+        var event = new BreakBlockEvent(level, pos, state, pilot);
         TOOL_BREAK.set(true);
         try {
             NeoForge.EVENT_BUS.post(event);

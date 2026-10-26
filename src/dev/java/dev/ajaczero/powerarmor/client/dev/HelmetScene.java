@@ -13,10 +13,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Autopilot scene for the helmet (2026-10-19), the last one of the mech run: a fuelled suit without its helmet stands
@@ -85,11 +89,11 @@ final class HelmetScene {
             ServerLevel level = player.level();
             DevUtil.setTime(level, 6000);
             int x = player.getBlockX(), z = player.getBlockZ() + 100;
-            int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
             base = new BlockPos(x, y, z);
             player.setGameMode(GameType.SURVIVAL);
             player.teleportTo(x + 0.5, y, z - 3.5);
-            PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+            PowerArmorEntity s = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.COMMAND);
             DevUtil.firebox(s); s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4)); // fuel, but no helmet
             s.snapTo(x + 0.5, y, z + 0.5, 180, 0); // facing north, toward the player and the camera
             s.setYBodyRot(180);
@@ -110,13 +114,13 @@ final class HelmetScene {
         DevUtil.hideGui(mc, true);
         Vec3 at = Vec3.atBottomCenterOf(b);
         // the camera is an armor stand's eye: place the stand that much lower (as RogueScene does)
-        Vec3 drop = new Vec3(0, net.minecraft.world.entity.EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        Vec3 drop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         AutoPilot.lookCamera(mc, at.add(2.4, 2.5, -4.2).subtract(drop), at.add(0, 2.0, 0).subtract(drop));
     }
 
     private static void open() {
         try {
-            var file = net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().resolve("autopilot_helmet.csv");
+            var file = FMLPaths.GAMEDIR.get().resolve("autopilot_helmet.csv");
             csv = Files.newBufferedWriter(file);
             csv.write("tick,phase,has_helmet,powered,sealed,ai_driven,piloted,burn_left,fuel_items\n");
         } catch (IOException e) {

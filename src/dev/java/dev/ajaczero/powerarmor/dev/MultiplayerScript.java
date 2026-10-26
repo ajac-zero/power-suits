@@ -9,12 +9,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -60,7 +62,7 @@ public final class MultiplayerScript {
         int t = tick++;
         String phase = switch (t / 100) { case 0 -> "board"; case 1 -> "drive_red"; case 2 -> "blue"; case 3 -> "nofuel"; case 4 -> "refuel"; default -> "out"; };
         if (t == 0) {
-            level.getGameRules().set(net.minecraft.world.level.gamerules.GameRules.SPAWN_MOBS, false, server);
+            level.getGameRules().set(GameRules.SPAWN_MOBS, false, server);
             suit = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.COMMAND);
             suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.FIREBOX.get()));
             suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 64));
@@ -91,7 +93,7 @@ public final class MultiplayerScript {
         }
     }
 
-    private static ServerPlayer find(net.minecraft.server.MinecraftServer server, String name) {
+    private static ServerPlayer find(MinecraftServer server, String name) {
         return server.getPlayerList().getPlayerByName(name);
     }
 

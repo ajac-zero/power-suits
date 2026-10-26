@@ -1,7 +1,10 @@
 package dev.ajaczero.powerarmor.client.dev;
 
+import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.registry.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
 
 /** Small helpers the dev scripts share (things 1.21.1 had as plain fields). */
 final class DevUtil {
@@ -18,10 +21,10 @@ final class DevUtil {
     }
 
     /** Suits come without an engine: give a scene's suit a firebox (if it has no engine yet) before fuelling it. */
-    static void firebox(dev.ajaczero.powerarmor.entity.PowerArmorEntity suit) {
-        if (suit.getInventory().getItem(dev.ajaczero.powerarmor.entity.PowerArmorEntity.ENGINE_SLOT).isEmpty()) {
-            suit.getInventory().setItem(dev.ajaczero.powerarmor.entity.PowerArmorEntity.ENGINE_SLOT,
-                    new net.minecraft.world.item.ItemStack(dev.ajaczero.powerarmor.registry.ModItems.FIREBOX.get()));
+    static void firebox(PowerArmorEntity suit) {
+        if (suit.getInventory().getItem(PowerArmorEntity.ENGINE_SLOT).isEmpty()) {
+            suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT,
+                    new ItemStack(ModItems.FIREBOX.get()));
         }
     }
 

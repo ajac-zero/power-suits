@@ -1,5 +1,7 @@
 package dev.ajaczero.powerarmor.entity;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.registry.ModEntities;
@@ -7,16 +9,16 @@ import dev.ajaczero.powerarmor.registry.ModItems;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -47,14 +49,14 @@ public final class RogueSpawner {
         }
 
         /** How it's saved: since 1.21.5 saved data is described by a codec instead of hand-written load/save. */
-        static final com.mojang.serialization.Codec<Countdown> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(
-                com.mojang.serialization.Codec.INT.optionalFieldOf("TicksLeft", DAY).forGetter(c -> c.ticksLeft)
+        static final Codec<Countdown> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.INT.optionalFieldOf("TicksLeft", DAY).forGetter(c -> c.ticksLeft)
         ).apply(i, Countdown::new));
     }
 
     /** Saved in the world as data/powerarmor/rogues.dat. */
     private static final SavedDataType<Countdown> TYPE = new SavedDataType<>(
-            net.minecraft.resources.Identifier.fromNamespaceAndPath(PowerArmor.MODID, "rogues"), Countdown::new, Countdown.CODEC);
+            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "rogues"), Countdown::new, Countdown.CODEC);
 
     @SubscribeEvent
     public static void onLevelTick(LevelTickEvent.Post event) {
@@ -115,7 +117,7 @@ public final class RogueSpawner {
                     || !level.getFluidState(ground).isEmpty()) {
                 continue;
             }
-            PowerArmorEntity rogue = ModEntities.POWER_ARMOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.NATURAL);
+            PowerArmorEntity rogue = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.NATURAL);
             if (rogue == null) {
                 return null;
             }

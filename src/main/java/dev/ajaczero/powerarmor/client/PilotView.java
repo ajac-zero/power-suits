@@ -3,13 +3,19 @@ package dev.ajaczero.powerarmor.client;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.util.context.ContextKey;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.CalculateDetachedCameraDistanceEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ComputeFovModifierEvent;
-import net.minecraft.util.Mth;
+import net.neoforged.neoforge.client.event.ExtractBlockScreenEffectEvent;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import net.neoforged.neoforge.client.event.RenderLivingEvent;
 
@@ -17,12 +23,12 @@ import net.neoforged.neoforge.client.event.RenderLivingEvent;
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class PilotView {
     /** Set on the render state of anyone sitting in a suit (ClientSetup registers PilotView::markPilot). */
-    static final net.minecraft.util.context.ContextKey<Boolean> IN_SUIT =
-            new net.minecraft.util.context.ContextKey<>(net.minecraft.resources.Identifier.fromNamespaceAndPath(PowerArmor.MODID, "in_suit"));
+    static final ContextKey<Boolean> IN_SUIT =
+            new ContextKey<>(Identifier.fromNamespaceAndPath(PowerArmor.MODID, "in_suit"));
 
     /** Extract: note whether this mob/player sits in a suit. The render event below only sees the render state, not the
      *  entity (Minecraft 1.21.2+ draws from snapshots), so the fact travels in the state. */
-    static void markPilot(net.minecraft.world.entity.LivingEntity entity, net.minecraft.client.renderer.entity.state.LivingEntityRenderState state) {
+    static void markPilot(LivingEntity entity, LivingEntityRenderState state) {
         state.setRenderData(IN_SUIT, entity.getVehicle() instanceof PowerArmorEntity);
     }
 
@@ -41,7 +47,7 @@ public final class PilotView {
      * knocked-out or empty suit shows the flames again: no power, no seal.
      */
     @SubscribeEvent
-    public static void cockpitOverlays(net.neoforged.neoforge.client.event.ExtractBlockScreenEffectEvent event) {
+    public static void cockpitOverlays(ExtractBlockScreenEffectEvent event) {
         if (!(event.getPlayer().getVehicle() instanceof PowerArmorEntity suit)) {
             return;
         }
@@ -66,7 +72,7 @@ public final class PilotView {
         if (player == null || !(player.getVehicle() instanceof PowerArmorEntity suit)) {
             return;
         }
-        boolean main = event.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND;
+        boolean main = event.getHand() == InteractionHand.MAIN_HAND;
         if (main || !toolDrawn) {
             CockpitHands.renderTool(event, suit);
         }

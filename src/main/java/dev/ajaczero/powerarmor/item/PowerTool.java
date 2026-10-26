@@ -1,11 +1,12 @@
 package dev.ajaczero.powerarmor.item;
 
-import dev.ajaczero.powerarmor.entity.ai.ToolUse;
+import com.geckolib.animation.RawAnimation;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.ai.ToolUse;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
-import com.geckolib.animation.RawAnimation;
 
 /**
  * A power tool for the suit's left-arm socket (chaingun, EM projector, drill, chainsaw, flamethrower, TNT launcher, rail
@@ -76,7 +77,7 @@ public interface PowerTool {
 
     /** Continuous tools: a looping sound played (client side, see SuitSounds) while the tool runs, or null. */
     @Nullable
-    default net.minecraft.sounds.SoundEvent runSound() {
+    default SoundEvent runSound() {
         return null;
     }
 

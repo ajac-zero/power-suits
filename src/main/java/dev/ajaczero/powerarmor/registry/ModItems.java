@@ -12,10 +12,12 @@ import dev.ajaczero.powerarmor.item.FlamethrowerItem;
 import dev.ajaczero.powerarmor.item.HelmetStyle;
 import dev.ajaczero.powerarmor.item.HelmetTemplateItem;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
+import dev.ajaczero.powerarmor.item.RailCannonItem;
 import dev.ajaczero.powerarmor.item.SuitHelmetItem;
 import dev.ajaczero.powerarmor.item.SuitPartItem;
+import dev.ajaczero.powerarmor.item.TntLauncherItem;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -28,7 +30,7 @@ public final class ModItems {
     /** The packed-up suit. Its durability bar is the suit's health, so you can repair it in an anvil. */
     public static final DeferredItem<PowerArmorItem> POWER_ARMOR = ITEMS.registerItem("power_armor", PowerArmorItem::new, props -> props
                     .durability(PowerArmorEntity.MAX_HEALTH)
-                    .repairable(net.minecraft.world.item.Items.IRON_INGOT) // anvil repair with iron ingots
+                    .repairable(Items.IRON_INGOT) // anvil repair with iron ingots
                     .rarity(Rarity.UNCOMMON));
 
     /** First power tool for the suit's socket: the chaingun (was the plasma cannon, then briefly the rivet gun). */
@@ -54,11 +56,11 @@ public final class ModItems {
 
     /** Fifth (Phase 11, 2026-10-25): a stream of fire. */
     public static final DeferredItem<FlamethrowerItem> FLAMETHROWER = ITEMS.registerItem("flamethrower", FlamethrowerItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
-    public static final DeferredItem<dev.ajaczero.powerarmor.item.TntLauncherItem> TNT_LAUNCHER = ITEMS.registerItem("tnt_launcher",
-            dev.ajaczero.powerarmor.item.TntLauncherItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
+    public static final DeferredItem<TntLauncherItem> TNT_LAUNCHER = ITEMS.registerItem("tnt_launcher",
+            TntLauncherItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
     /** Phase 11 (2026-10-26): the chaingun's opposite, one charged piercing shot. */
-    public static final DeferredItem<dev.ajaczero.powerarmor.item.RailCannonItem> RAIL_CANNON = ITEMS.registerItem("rail_cannon",
-            dev.ajaczero.powerarmor.item.RailCannonItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
+    public static final DeferredItem<RailCannonItem> RAIL_CANNON = ITEMS.registerItem("rail_cannon",
+            RailCannonItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
 
     // The suit's parts (2026-10-19): crafted one by one; torso, two arms and two legs are assembled into the suit (an
     // arm and a leg are crafted twice: both sides are the same piece), the helmet goes in the suit's helmet slot.

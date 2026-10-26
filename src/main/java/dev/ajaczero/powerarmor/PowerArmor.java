@@ -1,17 +1,23 @@
 package dev.ajaczero.powerarmor;
 
+import com.mojang.logging.LogUtils;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.HelmetStyle;
+import dev.ajaczero.powerarmor.network.ToolTriggerPayload;
 import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import dev.ajaczero.powerarmor.registry.ModMenus;
+import dev.ajaczero.powerarmor.registry.ModSounds;
 import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import org.slf4j.Logger;
 
 /**
  * Entry point. NeoForge finds this class through the @Mod annotation and calls the constructor
@@ -20,7 +26,7 @@ import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 @Mod(PowerArmor.MODID)
 public class PowerArmor {
     public static final String MODID = "powerarmor";
-    public static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
+    public static final Logger LOGGER = LogUtils.getLogger();
 
     public PowerArmor(IEventBus modBus, ModContainer container) {
         // Balance knobs: config/powerarmor-common.toml (see PowerArmorConfig). LOCAL = read on both sides from the
@@ -31,14 +37,14 @@ public class PowerArmor {
         ModItems.ITEMS.register(modBus);
         ModDataComponents.COMPONENTS.register(modBus); // the fuel/tool data a packed suit item carries
         ModMenus.MENUS.register(modBus);               // the suit's inventory screen
-        dev.ajaczero.powerarmor.registry.ModSounds.SOUNDS.register(modBus); // engine + tool loops (sounds.json)
+        ModSounds.SOUNDS.register(modBus); // engine + tool loops (sounds.json)
 
         // Every living entity needs a set of attributes (health, armor, speed...).
         modBus.addListener(PowerArmor::registerAttributes);
         // Show the item in a creative inventory tab.
         modBus.addListener(PowerArmor::addToCreativeTab);
         // Network messages (client -> server: socket tool button (right click) pressed/released).
-        modBus.addListener(dev.ajaczero.powerarmor.network.ToolTriggerPayload::register);
+        modBus.addListener(ToolTriggerPayload::register);
         // GameTests and the autopilot live in src/dev/ (not shipped): they register from dev/PowerArmorDev.
     }
 
@@ -58,9 +64,9 @@ public class PowerArmor {
             event.accept(ModItems.RAIL_CANNON);
             event.accept(ModItems.SUIT_HELMET);
             // the styled helmets and their templates (design sec. 4c): in survival these come from structure chests
-            for (var style : dev.ajaczero.powerarmor.item.HelmetStyle.values()) {
-                net.minecraft.world.item.ItemStack helmet = new net.minecraft.world.item.ItemStack(ModItems.SUIT_HELMET.get());
-                helmet.set(dev.ajaczero.powerarmor.registry.ModDataComponents.HELMET_STYLE.get(), style);
+            for (var style : HelmetStyle.values()) {
+                ItemStack helmet = new ItemStack(ModItems.SUIT_HELMET.get());
+                helmet.set(ModDataComponents.HELMET_STYLE.get(), style);
                 event.accept(helmet);
             }
             event.accept(ModItems.PROTECTOR_TEMPLATE);

@@ -1,5 +1,7 @@
 package dev.ajaczero.powerarmor.entity;
 
+
+
 /**
  * Who the suit's machine mind works for when nobody is inside (design sec. 8). It only acts while the suit is powered
  * and has no pilot: an unpowered suit is just a parked machine, a piloted one does what the pilot says.

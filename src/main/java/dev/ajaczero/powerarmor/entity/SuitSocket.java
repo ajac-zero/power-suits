@@ -8,6 +8,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 /**
  * The left-arm socket and the power tool in it, as the suit works it: the trigger (the pilot's right click, or the
@@ -220,12 +222,12 @@ public final class SuitSocket {
 
     /** Server: where the rail cannon's beam ended (set before countShot, so clients get both in one update). */
     public void setRailBeamEnd(Vec3 end) {
-        this.suit.getEntityData().set(PowerArmorEntity.RAIL_END, new org.joml.Vector3f((float) end.x, (float) end.y, (float) end.z));
+        this.suit.getEntityData().set(PowerArmorEntity.RAIL_END, new Vector3f((float) end.x, (float) end.y, (float) end.z));
     }
 
     /** Both sides: where the rail cannon's last beam ended. */
     public Vec3 getRailBeamEnd() {
-        org.joml.Vector3fc end = this.suit.getEntityData().get(PowerArmorEntity.RAIL_END);
+        Vector3fc end = this.suit.getEntityData().get(PowerArmorEntity.RAIL_END);
         return new Vec3(end.x(), end.y(), end.z());
     }
 

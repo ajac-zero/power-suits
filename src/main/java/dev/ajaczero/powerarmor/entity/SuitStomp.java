@@ -6,8 +6,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -16,6 +16,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -59,7 +60,7 @@ public final class SuitStomp {
             }
             // Hurt already shoves the target away from the suit a little; the shock wave also throws it up.
             Vec3 push = away.lengthSqr() < 1e-4 ? Vec3.ZERO : away.normalize().scale(0.4 * falloff);
-            double resist = 1.0 - target.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE);
+            double resist = 1.0 - target.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE);
             target.push(push.x * resist, (0.25 + 0.02 * fallDistance) * falloff * resist, push.z * resist);
             target.syncVelocity = true; // send the new velocity to players' clients
         }

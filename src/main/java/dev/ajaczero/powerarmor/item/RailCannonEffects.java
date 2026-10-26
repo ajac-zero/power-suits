@@ -1,6 +1,8 @@
 package dev.ajaczero.powerarmor.item;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.Mth;
@@ -36,7 +38,7 @@ public final class RailCannonEffects implements ToolEffects {
     public record Beam(Vec3 from, Vec3 to, long firedAt) {}
 
     /** Beams still on screen (client thread only). */
-    public static final java.util.List<Beam> BEAMS = new java.util.ArrayList<>();
+    public static final List<Beam> BEAMS = new ArrayList<>();
     /** How long a beam is drawn, ticks. */
     public static final int BEAM_TICKS = 8;
 

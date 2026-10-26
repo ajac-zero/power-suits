@@ -11,8 +11,17 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
@@ -22,13 +31,15 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -38,8 +49,11 @@ import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.phys.Vec3;
@@ -47,6 +61,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * DEV TOOL, inert unless started with -Dpowerarmor.autopilot=showcase (./gradlew runShowcase): gameplay screenshots for
@@ -129,13 +144,13 @@ public final class ShowcaseScene {
     }
 
     /** A file run/showcase-only with set numbers ("3 4"): shoot only those (quicker iterations on new sets). */
-    private static final java.util.Set<Integer> ONLY = readOnly();
+    private static final Set<Integer> ONLY = readOnly();
 
-    private static java.util.Set<Integer> readOnly() {
+    private static Set<Integer> readOnly() {
         Path file = Path.of("showcase-only");
         try {
-            return Files.exists(file) ? java.util.Arrays.stream(Files.readString(file).trim().split("[\\s,]+"))
-                    .map(Integer::parseInt).collect(java.util.stream.Collectors.toSet()) : null;
+            return Files.exists(file) ? Arrays.stream(Files.readString(file).trim().split("[\\s,]+"))
+                    .map(Integer::parseInt).collect(Collectors.toSet()) : null;
         } catch (IOException | NumberFormatException e) {
             return null;
         }
@@ -249,18 +264,18 @@ public final class ShowcaseScene {
                 for (int s = -3; s <= 3; s++) {
                     Vec3 p = setPos.add(f.scale(a)).add(r.scale(s));
                     int x = Mth.floor(p.x), z = Mth.floor(p.z);
-                    level.setBlock(new BlockPos(x, base.getY() - 1, z), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 2);
-                    level.setBlock(new BlockPos(x, base.getY() - 2, z), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 2);
+                    level.setBlock(new BlockPos(x, base.getY() - 1, z), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+                    level.setBlock(new BlockPos(x, base.getY() - 2, z), Blocks.DIRT.defaultBlockState(), 2);
                     for (int y = 0; y <= 6; y++) {
-                        level.setBlock(new BlockPos(x, base.getY() + y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                        level.setBlock(new BlockPos(x, base.getY() + y, z), Blocks.AIR.defaultBlockState(), 2);
                     }
                     // a natural meadow on the strip: short grass here and there, a few sunflower-plains flowers
                     long h = (x * 73856093L) ^ (z * 19349663L);
                     h = Math.floorMod(h * 2654435761L >>> 7, 100);
                     if (Math.abs(s) >= 1 && h < 45) {
-                        level.setBlock(new BlockPos(x, base.getY(), z), net.minecraft.world.level.block.Blocks.SHORT_GRASS.defaultBlockState(), 2);
+                        level.setBlock(new BlockPos(x, base.getY(), z), Blocks.SHORT_GRASS.defaultBlockState(), 2);
                     } else if (Math.abs(s) >= 1 && h < 50) {
-                        level.setBlock(new BlockPos(x, base.getY(), z), net.minecraft.world.level.block.Blocks.DANDELION.defaultBlockState(), 2);
+                        level.setBlock(new BlockPos(x, base.getY(), z), Blocks.DANDELION.defaultBlockState(), 2);
                     }
                 }
             }
@@ -402,7 +417,7 @@ public final class ShowcaseScene {
      */
     private static Spot findWall(ServerLevel level, BlockPos origin) {
         Heights h = new Heights(level);
-        java.util.List<Spot> rough = new java.util.ArrayList<>();
+        List<Spot> rough = new ArrayList<>();
         for (int gx = -256; gx <= 256; gx += 4) {
             for (int gz = -256; gz <= 256; gz += 4) {
                 int x = origin.getX() + gx, z = origin.getZ() + gz;
@@ -481,8 +496,8 @@ public final class ShowcaseScene {
                     BlockPos p = new BlockPos(x0 + (int) Math.round(dx * d - dz * w), g + y, z0 + (int) Math.round(dz * d + dx * w));
                     var state = level.getBlockState(p);
                     solid = !state.isAir() && state.getFluidState().isEmpty();
-                    stone += state.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD) ? 1 : 0;
-                    ore += state.is(net.minecraft.tags.BlockTags.ORES) ? 1 : 0;
+                    stone += state.is(BlockTags.BASE_STONE_OVERWORLD) ? 1 : 0;
+                    ore += state.is(BlockTags.ORES) ? 1 : 0;
                 }
             }
             if (!solid) {
@@ -515,13 +530,13 @@ public final class ShowcaseScene {
                 level.getChunk(x >> 4, z >> 4);
                 int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
                 BlockPos p = new BlockPos(x, top, z);
-                if (!level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS)) {
+                if (!level.getBlockState(p).is(BlockTags.LOGS)) {
                     continue;
                 }
-                while (level.getBlockState(p.below()).is(net.minecraft.tags.BlockTags.LOGS)) {
+                while (level.getBlockState(p.below()).is(BlockTags.LOGS)) {
                     p = p.below();
                 }
-                if (!level.getBlockState(p.below()).is(net.minecraft.tags.BlockTags.DIRT)) {
+                if (!level.getBlockState(p.below()).is(BlockTags.DIRT)) {
                     continue; // a branch, not the trunk's foot
                 }
                 trunks++;
@@ -564,15 +579,15 @@ public final class ShowcaseScene {
                 }
             }
         }
-        java.util.List<BlockPos> logs = ChainsawItem.treeAbove(level, trunk);
+        List<BlockPos> logs = ChainsawItem.treeAbove(level, trunk);
         if (logs.size() < 4) {
             return null; // not a natural tree (or a stump)
         }
         // a lone tree: no other trunk within 10 blocks (the tree reads on its own, nothing between it and the camera)
-        java.util.Set<BlockPos> own = new java.util.HashSet<>(logs);
+        Set<BlockPos> own = new HashSet<>(logs);
         own.add(trunk);
         for (BlockPos p : BlockPos.betweenClosed(trunk.offset(-10, 0, -10), trunk.offset(10, 2, 10))) {
-            if (!own.contains(p) && level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS)) {
+            if (!own.contains(p) && level.getBlockState(p).is(BlockTags.LOGS)) {
                 return null;
             }
         }
@@ -601,7 +616,7 @@ public final class ShowcaseScene {
     private static final double[] TREE_CAM = {3.0, 5.0, 2.4};
 
     /** A place for a set: where the suit stands and which way it looks (yaw 0 looks +Z). */
-    private record Spot(BlockPos at, float yaw, double score, @org.jetbrains.annotations.Nullable BlockPos target) {
+    private record Spot(BlockPos at, float yaw, double score, @Nullable BlockPos target) {
         Spot(BlockPos at, float yaw, double score) {
             this(at, yaw, score, null);
         }
@@ -611,17 +626,17 @@ public final class ShowcaseScene {
     private static volatile Vec3 target;
 
     /** What a set's suit wears: its paint, engine and tool. */
-    private record Loadout(DyeColor paint, Item engine, Item tool, @org.jetbrains.annotations.Nullable HelmetStyle helmet) {
+    private record Loadout(DyeColor paint, Item engine, Item tool, @Nullable HelmetStyle helmet) {
         Loadout(DyeColor paint, Item engine, Item tool) {
             this(paint, engine, tool, null);
         }
     }
 
-    private static java.util.function.Function<ServerLevel, Spot> pin(int x, int y, int z, float yaw) {
+    private static Function<ServerLevel, Spot> pin(int x, int y, int z, float yaw) {
         return level -> new Spot(new BlockPos(x, y, z), yaw, 0);
     }
 
-    private static java.util.function.Function<ServerLevel, Spot> pin(int x, int y, int z, float yaw, BlockPos target) {
+    private static Function<ServerLevel, Spot> pin(int x, int y, int z, float yaw, BlockPos target) {
         return level -> new Spot(new BlockPos(x, y, z), yaw, 0, target);
     }
 
@@ -630,7 +645,7 @@ public final class ShowcaseScene {
      * third-person camera and 32 blocks ahead, landscape rising on the horizon) and put the player in a fresh suit there
      * (firebox + coal, helmet, chaingun, nuggets, a lived-in hotbar). Sets {@code ready} when done.
      */
-    private static void moveTo(Minecraft mc, String name, ResourceKey<Biome> biome, long time, java.util.function.Function<ServerLevel, Spot> where, Loadout loadout) {
+    private static void moveTo(Minecraft mc, String name, ResourceKey<Biome> biome, long time, Function<ServerLevel, Spot> where, Loadout loadout) {
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
             DevUtil.setTime(level, time);
@@ -745,7 +760,7 @@ public final class ShowcaseScene {
         int n = 0;
         for (BlockPos p : BlockPos.betweenClosed(at.offset(-r, -1, -r), at.offset(r, 4, r))) {
             var state = level.getBlockState(p);
-            if (state.is(net.minecraft.tags.BlockTags.CORAL_BLOCKS) || state.is(net.minecraft.tags.BlockTags.CORALS)) {
+            if (state.is(BlockTags.CORAL_BLOCKS) || state.is(BlockTags.CORALS)) {
                 n++;
             }
         }
@@ -761,7 +776,7 @@ public final class ShowcaseScene {
         var found = level.findClosestBiome3d(h -> h.is(biome), origin, 6000, 16, 32);
         BlockPos centre = found == null ? origin : found.getFirst();
         Heights heights = new Heights(level);
-        java.util.List<Spot> spots = new java.util.ArrayList<>();
+        List<Spot> spots = new ArrayList<>();
         for (int gx = -192; gx <= 192; gx += 16) {
             for (int gz = -192; gz <= 192; gz += 16) {
                 int x = centre.getX() + gx, z = centre.getZ() + gz;
@@ -802,9 +817,9 @@ public final class ShowcaseScene {
     /** The generator's surface / sea-floor estimate per column (no chunks generated), cached at 2-block resolution. */
     private static final class Heights {
         private final ServerLevel level;
-        private final net.minecraft.world.level.chunk.ChunkGenerator gen;
-        private final net.minecraft.world.level.levelgen.RandomState random;
-        private final java.util.Map<Long, int[]> cache = new java.util.HashMap<>();
+        private final ChunkGenerator gen;
+        private final RandomState random;
+        private final Map<Long, int[]> cache = new HashMap<>();
 
         Heights(ServerLevel level) {
             this.level = level;
@@ -856,7 +871,7 @@ public final class ShowcaseScene {
                     return -1; // water, a hole (a cave or ravine reaching the surface) or a hill
                 }
                 var top = level.getBlockState(new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1, z));
-                if (top.is(net.minecraft.tags.BlockTags.LEAVES) || top.is(net.minecraft.tags.BlockTags.LOGS)) {
+                if (top.is(BlockTags.LEAVES) || top.is(BlockTags.LOGS)) {
                     count++;
                 }
             }
@@ -921,10 +936,10 @@ public final class ShowcaseScene {
                 if (types[i].create(level, EntitySpawnReason.COMMAND) instanceof Mob mob) {
                     mob.snapTo(p.x, y, p.z, yaw + 180, 0);
                     mob.finalizeSpawn(level, level.getCurrentDifficultyAt(mob.blockPosition()), EntitySpawnReason.COMMAND, null);
-                    if (mob instanceof net.minecraft.world.entity.monster.zombie.Zombie zombie) {
+                    if (mob instanceof Zombie zombie) {
                         zombie.setBaby(false); // finalizeSpawn may roll a baby: too small to read at this distance
                     }
-                    mob.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(helmets[i])); // no burning before dark
+                    mob.setItemSlot(EquipmentSlot.HEAD, new ItemStack(helmets[i])); // no burning before dark
                     mob.setPersistenceRequired();
                     level.addFreshEntity(mob);
                 }

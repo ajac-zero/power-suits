@@ -1,13 +1,15 @@
 package dev.ajaczero.powerarmor.item;
 
-import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.SuitSmash;
+import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.registry.ModSounds;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -29,6 +31,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -274,7 +277,7 @@ public class RailCannonItem extends Item implements PowerTool {
                 hit.add((LivingEntity) e);
             }
         }
-        hit.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(eye)));
+        hit.sort(Comparator.comparingDouble(e -> e.distanceToSqr(eye)));
         for (LivingEntity target : hit) {
             if (target.hurtServer(level, source, damage) && operator instanceof Player pilot) {
                 pilot.setLastHurtMob(target);
@@ -325,8 +328,8 @@ public class RailCannonItem extends Item implements PowerTool {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
-            java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
+            Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.rail_cannon.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.rail_cannon.stats",
                 String.format("%.0f", PowerArmorConfig.RAIL_DAMAGE.get() / 2), String.format("%.1f", PowerArmorConfig.RAIL_CHARGE.get() / 20F),
