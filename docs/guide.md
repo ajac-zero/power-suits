@@ -3,7 +3,7 @@
 A Minecraft mod (Minecraft 26.3, NeoForge 26.3.0.76 + GeckoLib 5.5.7) that adds a power armor suit you climb into,
 Fallout / Titanfall style. Model and animations come from `model/power_armor.bbmodel`.
 
-Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Working notes for agents: `AGENTS.md`.
+Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outside the repo).
 
 ## Playing it
 

@@ -28,4 +28,4 @@ Customize your suit by dyeing it, and find the easter egg helmet templates that 
 
 ## More
 
-Controls, crafting and the file map: [docs/guide.md](docs/guide.md). Design spec: [docs/design.md](docs/design.md).
+Controls, crafting and the file map: [docs/guide.md](docs/guide.md).

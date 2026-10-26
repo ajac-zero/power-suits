@@ -1,7 +1,7 @@
 # Working on Power Armor
 
-A NeoForge 26.3 + GeckoLib 5.5.7 Minecraft mod (Java 25): an enterable power-armor suit. Start with
-`docs/design.md` (spec), `docs/implementation-plan.md` (next phases) and `README.md` (controls, files).
+A NeoForge 26.3 + GeckoLib 5.5.7 Minecraft mod (Java 25): an enterable power-armor suit. Start with the
+**Design spec** and the **Roadmap** in Notion (see *Notion* below), `README.md` and `docs/guide.md` (controls, files).
 Ported from 1.21.1 / GeckoLib 4 on 2026-10-14 (branch `port-26.3`); the porting notes below marked *(26.3)*
 replace older advice. The how-to for this kind of work (setup, GeckoLib, riding, testing, pitfalls) is the project skill
 `.agents/skills/minecraft-modding/SKILL.md`; model/animation work uses
@@ -25,8 +25,27 @@ replace older advice. The how-to for this kind of work (setup, GeckoLib, riding,
   mostly sees the suit's back). Keep the model in its in-game rest pose (the T-pose used for a while is retired:
   the animations are built on the rest pose).
 
+## Notion (design, roadmap, taste)
+Since 2026-10-26 the design docs live in the user's Notion, not in the repo (it's public): Minecraft Add-on Studio >
+Projects > *Power Armor*. Read them with the Notion MCP (`notion_fetch` with the page id), from codemode.
+| Page | Id | What |
+|---|---|---|
+| Power Armor (project page) | `3feeb0d9a8ce8122ad20f48b5dc4d0a2` | status, links to the rest |
+| Design spec | `405eb0d9a8ce810bae56eb48d4837873` | what is decided and why; numbered sections (`design sec. 4b` in code comments points here); **OPEN** items need the user's decision before building |
+| Roadmap (database) | `be28d19e58124d1d8421d605254d7c8f`, data source `collection://336c5748-bfbc-4f04-84cb-06891b2bba4d` | one row per phase / tool / open item: Status (Backlog, Parked, Drafting, Building, Done), Kind, Phase, Release, Done date, Branch, Summary; the page body holds the details (files, tests, scenes) |
+| Art direction | `405eb0d9a8ce81c39a35d0979cf8b096` | the user's taste rulings on look and motion: read before Blockbench / animation work |
+| Design history | `405eb0d9a8ce81d18f0fc3528967e031` | the pre-Phase-1 discussion (frozen) |
+
+Keep them current as part of the work, like the README: a decision goes into the Design spec when it's made, a
+feature gets a Roadmap row (Drafting/Building while in progress, Done + date + release when merged, its body: what was
+built, where, tests, autopilot scene), a taste ruling gets a dated line in Art direction. Notion turns bare file names
+like `guide.md` into web links: put paths in backticks. A phase or tool is done when: build passes, all GameTests
+pass, an autopilot run looks right (screenshots / CSV), README + `docs/guide.md` + the Design spec are updated, it's
+committed, and the user got a short explanation (teach the concepts as you go). New tools: hidden `proto_*` drafts in
+Blockbench -> the user picks -> game part (bone, code, icon, recipe, autopilot scene, tests).
+
 ## Layout
-- `src/` the mod; `tools/` export / art / test helpers; `docs/` design + plan; `run/` dev game (not in git).
+- `src/` the mod; `tools/` export / art / test helpers; `docs/guide.md` player guide + file map; `run/` dev game (not in git).
 - `model/` the Blockbench source: `power_armor.bbmodel`, `anim/` procedural animation specs (bake with
   `.agents/skills/blockbench-mcp/scripts/run.mjs`, see `model/anim/README.md`), `art/` one-off texture/part scripts.
 - `site/` the mod's web page (GitHub Pages, https://ajac-zero.github.io/power-suits/). A template: `tools/build-site.py`
@@ -304,14 +323,12 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   the walk forwards (a 3.15 blocks/s moonwalk). Backing up plays `walk_back` (the walk's keys reversed in time; rebuild it
   from the walk if the walk is re-baked). GeckoLib 5 can't loop an animation at a negative speed (it clamps at 0).
   Measure with `runAutopilotGait`; what's left is the legs swinging round (18 deg/tick) and turning on the spot.
-- **Model first, animations after** (user, 2026-10-15): while the shape is in flux the user judges the neutral pose
-  only ("no part of the model is safe"); animations are redone once the model is final. Every leg animation is baked on the
-  current legs (walk/run 2026-10-15, the rest re-baked unchanged from their specs 2026-10-18). Known open (user: wait for the
-  upper-body rework): arms clip the thighs in jump_charge/jump/land/death/shutdown (0.3-1.6 px), death's leg roll
-  pushes the drums 0.85 px into the hip post, the crouches fold the knees to ~90 (reads as a squat). Exported 2026-10-19. The game walked at the walk's
-  authored 2.218 blocks/s from 2026-10-19; since 2026-10-20 it walks at 3.0 (user: too slow to get anywhere at half a
-  player's walk; the steps follow the speed) and sprints at the run's 6.25. A tap of the sprint key keeps the sprint going
-  while W is held (vanilla; runAutopilotGait's sprint_tap checks it).
+- **The user's taste lives in Notion's Art direction page** (model first, animations after; simple boxes with detail in
+  the texture; no bevels; what "noise" means; how motion words translate into gait numbers; the final feet...): read it
+  before Blockbench or animation work and add a dated line when the user rules on something. Every leg animation is baked
+  on the current legs (walk/run 2026-10-15, the rest re-baked unchanged from their specs 2026-10-18); the known clips
+  waiting for the upper-body rework are a Roadmap row. A tap of the sprint key keeps the sprint going while W is held
+  (vanilla; runAutopilotGait's sprint_tap checks it).
 - **Read the user's sketches literally and confirm a reading in words before building**: "an opposite slope" for the
   thigh meant a thigh bottom PARALLEL to the shin top (both falling toward the back, a dark knee band between), and
   "the slot where the foot is" meant the shin coming down to the ground around the foot, not an empty pocket above it.
@@ -319,18 +336,9 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **The legs are rebuilt by a script** (`model/art/legs_stomper_art.py` + `legs_stomper_apply.js`, from a fresh snapshot
   of the live project): when the user tweaks a leg cube by hand, carry the change into the script before the next
   rebuild, or it is undone (the knee joint's 6.2 depth, 2026-10-15).
-- **The feet are final (user, 2026-10-15, legs v10)**: the shin is a solid block down to the boot's sole strip, the ankle
-  hinges at the shin's FRONT bottom edge, and the boot's hidden heel follows the circle the shin's back edge travels
-  about that hinge. Every slot/slope/band variant failed: with big steps the shin leans ~30-40 deg over the flat boot at
-  push-off, so whatever sits under the shin must be shaped around the hinge. A front hinge makes the leg straightest with
-  the knee bent ~23 (gaits use KMIN 23; the kit's knee guard keeps the solver off the backward-bending solution).
-- **The user judges motion by feel, in words; translate each word into a measurable gait change** (2026-10-15):
-  "slower, bigger steps" = longer cycle + longer stance (walk 0.6 -> 1.0 s, 15 -> 22 px); "baby steps" = short stance
-  and cadence; "hopping, frolicking" = long flights, high hips, little ground time (v7 run rejected); "pushing hard into
-  the ground at every step" = more ground time (foot planted 32%), hips sinking into the loaded leg right after each
-  footfall and a push-off that throws the trailing leg out behind (v8 run, approved). Arms: both calm in the run (fist
-  ~5 px of travel against the chest; a 17 px swing next to the steady tool arm read as "jarring"), the tool arm pumps
-  like the hand in the run (its third-person pose never aims: shots leave from the eye, the cockpit has a viewmodel).
+- **The ankle hinges at the shin's FRONT bottom edge** (the final feet, see Art direction): a front hinge makes the leg
+  straightest with the knee bent ~23 (gaits use KMIN 23; the kit's knee guard keeps the solver off the backward-bending
+  solution). The tool arm's third-person pose never aims (shots leave from the eye, the cockpit has a viewmodel).
 - **Moving a bone pivot invalidates every baked animation on it**: the keys are joint angles, so after the ankle hinge
   moved, the old walk tilted the planted boot up to 30 deg toes-up ("looks like it's going up a slope") and sank it 3 px.
   Re-solve the IK specs (and check the live result with the skill's `scripts/livefeet.mjs`).
@@ -354,20 +362,12 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   in the run), so the hip hoods hang from new root bones (`hips` > `right_hood` / `left_hood`) yawed like the legs (-7/+7).
 - **The arms hang beside the hips**: in the walk/run they come to x 7.2-8.8 between y 22 and 29 (both sides). The old V
   and thigh tops were fitted to that; anything wider at the waist clips an arm. Measure the arm envelope before widening.
-- **What the user likes in the legs (2026-10-17/18)**: armour faces forward, so more exposed joint at the back is fine;
-  no bevels / chamfers on thigh tops ("terrible", even when the numbers worked); shapes run into each other (a thigh top
-  that stops against the drum "stops arbitrarily": the shoulder ramp fixed it); thigh and hip designed as one piece, like
-  the shin and boot. Dark iron undersides read as a hollow bracket from the side: shade undersides in the armour blue.
 - **The way of working the user liked (same session)**: measure the cause, offer options with numbers and a sketch, build
   cheap prototypes (A/B) and film them with the same cameras next to the committed model, then checkpoint each approved
   step as its own commit. Before every checkpoint diff the live project against the saved file plus the planned edits
   (the user inspects and hides cubes in Blockbench between turns): "make sure I didn't move anything".
-- **Texture "noise" means loud decoration, not grain** (2026-10-19): on the pads it was the red stripes, white chevron and
-  grey rim; removing the wear grain made them "too flat". The armour's texture recipe is the breastplate's
-  (`sm_chest_art.py`): flat armour blue, structure in horizontal plate bands (highlight rim on a plate's top, a shadow row
-  where it tucks under the one above, a shaded bottom row), soft edge columns, sparse light 1 px marks. Shading by
-  columns across a whole limb reads as a tube. Blocks that form one piece get no rims or seams between them, and a
-  detail must use the whole piece (paint it in limb coordinates across its blocks: `model/art/thigh_upper_world.py`).
+- **A detail painted across blocks that form one piece** is painted in limb coordinates (`model/art/thigh_upper_world.py`);
+  the texture recipe itself (the breastplate's, `sm_chest_art.py`) is in Art direction.
 - **Re-exporting after a model rework touches code numbers** (2026-10-19 export): the tool raise (`RAISE_ARM_X`: the old
   torso leaned 7 deg and carried the tool up; upright, the tool pointed 13.5 deg down) and `SocketAim`'s muzzle were
   re-measured by forward kinematics on the .bbmodel (`.scratch/aimfk.py` recipe: chain T(o) R(rot) T(-o) per bone);
@@ -431,5 +431,5 @@ Comment the "why" for anything non-obvious; the user reads the code to learn.
   ramp (`model/art/steel_art.py`, `STEEL` in `tools/make-paint-textures.py`); the dye textures swap those shades on the
   plate cubes (`PLATES`) for each dye's ramp. So: repaint armour only in those 8 steel shades (another grey on a plate
   won't take paint), keep them off the steel parts' trim, and re-run `make-paint-textures.py` after every texture export
-  (it refuses a texture with no steel ramp). The user's "metal" verdicts: flat vanilla greys read as plastic, random grain
-  as stone; what reads as metal is a wide value range with hue shift (cool shadows, warm glints).
+  (it refuses a texture with no steel ramp). What reads as metal to the user (and what reads as plastic or stone): Art
+  direction.

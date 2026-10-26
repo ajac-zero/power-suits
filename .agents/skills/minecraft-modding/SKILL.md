@@ -41,8 +41,10 @@ For model and animation work use the Blockbench skill:
    saved together with every commit that changes art; ask what a new user prefers).
 6. **Teach as you go** (first-time modders): after each change explain one concept in plain words:
    client vs server, registries, events, synced data, why a bug happened. Comment the "why" in code.
-7. **Before handing off**, write `docs/design.md` (spec with OPEN questions), `docs/implementation-plan.md`
-   (phases, files, APIs, tests) and `AGENTS.md` (setup, verification loop, lessons). Check that every API
+7. **Before handing off**, write the spec (with OPEN questions), the plan (phases, files, APIs, tests) and
+   `AGENTS.md` (setup, verification loop, lessons). Ask where the user keeps design docs: on Power Armor they live in
+   Notion (spec + Roadmap database, see its `AGENTS.md`); a new project may want `docs/design.md` +
+   `docs/implementation-plan.md` in the repo. Check that every API
    the plan names exists in the pinned versions.
 
 ## Pitfalls (each cost a round of debugging)
