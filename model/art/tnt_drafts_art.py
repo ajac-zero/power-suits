@@ -130,12 +130,17 @@ def first(*fns):
     return p
 
 
-A = {   # TF2: drum 14.625-19.625, barrel 4x4 on the top chamber down to 9.625, sight on the muzzle
-    "pkTA_base": BASE_CUBE(),
-    **octagon("pkTA", 14.625, BASE, on('slate', **wf(first(chambers(CH), slot, flutes)))),
-    **barrel("pkTA", TOP[0], TOP[1], 4, 9.625, 15.125),
-    "pkTA_sight": ([-12, 10.625, -6.25], [-11, 12.625, -5.5], on('slate')),
-}
+def demo(pre, with_slot=True):
+    """TF2: drum 14.625-19.625, barrel 4x4 on the top chamber down to 9.625, sight on the muzzle."""
+    return {
+        f"{pre}_base": BASE_CUBE(),
+        **octagon(pre, 14.625, BASE, on('slate', **wf(first(chambers(CH), *([slot] if with_slot else []), flutes)))),
+        **barrel(pre, TOP[0], TOP[1], 4, 9.625, 15.125),
+        f"{pre}_sight": ([-12, 10.625, -6.25], [-11, 12.625, -5.5], on('slate')),
+    }
+
+
+A = demo("pkTA")
 
 B = {   # cage: rear plate 18.625-19.625, front plate 13.625-14.625, axle, four rounds, barrel 3x3 + ring
     "pkTB_base": BASE_CUBE(),
@@ -187,11 +192,15 @@ A1 = {k.replace("pkTA", "pkTA1"): v for k, v in A.items() if "barrel" not in k a
 A1.update({k.replace("pkTA", "pkTA1"): v for k, v in barrel("pkTA", TOP[0], TOP[1], 4, 9.625, 15.125, bore=False).items()})
 A2 = {k.replace("pkTA", "pkTA2"): v for k, v in A.items() if "barrel" not in k and "muzzle" not in k}
 A2.update({k.replace("pkTA", "pkTA2"): v for k, v in barrel("pkTA", TOP[0], TOP[1], 4, 9.625, BASE).items()})
-DRAFTS = {"proto_tnt_A_demo": A, "proto_tnt_A1_closed": A1, "proto_tnt_A2_long": A2}
-REMOVED = ["proto_tnt_B_cage", "proto_tnt_C_loaded", "proto_tnt_D_wheel"]
+ROUND2 = {"proto_tnt_A_demo": A, "proto_tnt_A1_closed": A1, "proto_tnt_A2_long": A2}
+
+# round 3 (user: neither; "close the round magazine": the loading slot on the drum's back, which showed a round through
+# it): A with the drum solid all round (the red chamber ends on its front stay)
+DRAFTS = {"proto_tnt_A_demo": demo("pkTA", with_slot=False)}
+REMOVED = ["proto_tnt_A1_closed", "proto_tnt_A2_long"]
 
 if __name__ == "__main__":
-    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before TNT launcher round 2")
+    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before TNT launcher round 3")
     # free the texels of the drafts dropped (painted, but no cube uses them any more)
     import base64, io
     from PIL import Image
