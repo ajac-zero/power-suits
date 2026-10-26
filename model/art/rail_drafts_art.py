@@ -499,3 +499,35 @@ def emitter_plan():
             k = 'Z' if abs(z - CZ) < .6 and abs(x - CX) < 1.1 else 'K' if abs(x - CX) < 1.8 and abs(z - CZ) < .6 else 'D'
             pixels.append([int(min(u0, u1)) + c, int(min(v0, v1)) + r, PAL[k]])
     return {"groups": {}, "pixels": pixels, "origin": ORIGIN, "parent": "left_forearm", "checkpoint": "rail emitter"}
+
+
+# ---- three segments per prong (user, 2026-10-26: the 1 px tip cubes flickered against the segment behind them, "remove
+# rail_prong_in_3 and just paint it on 2"): the front segment runs on to the muzzle (y TIP..11.625) and its last row is
+# painted as the tip: the outer half in shadow (the step in), a dark end on the slot side. Rebuilt as the bones'
+# cubes (apply with .scratch/flame/apply.js: it replaces the cubes in groups of these names).
+def fork_segments(side):
+    edge = GAP_EDGE[side]
+    sign = -1 if side == "out" else 1           # outward from the slot
+    outer_face = "west" if side == "out" else "east"
+    z0, z1 = CZ - 1.5, CZ + 1.5
+    cubes = {}
+    for i, (top, bottom, w) in enumerate([(BASE, 15.625, 2.5), (15.625, 11.625, 2.0), (11.625, TIP, 1.5)]):
+        def fn(face, x, y, z, w=w, last=(i == 2)):
+            u = abs(x - edge)
+            lip, outer = u < 1.0, u > w - 1.0
+            tip_row = last and y < TIP + 1
+            if face in ("north", "south"):
+                if tip_row:
+                    return 'G' if lip else '5'
+                return 'G' if lip else 'S' if outer else 't'
+            if face == "down":
+                return ('K' if lip else '5') if last else '.'
+            if face == outer_face and tip_row:
+                return '5'
+            return '.'
+        x0, x1 = sorted([edge, edge + sign * w])
+        cubes[f"rail_prong_{side}_{i}"] = ([x0, bottom, z0], [x1, top, z1], on('steel', **wf(fn)))
+    return cubes
+
+
+FORKS = {"rail_fork_out": fork_segments("out"), "rail_fork_in": fork_segments("in")}
