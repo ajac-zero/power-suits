@@ -36,8 +36,14 @@ PAL.update(i='6e1e14', j='a3301e', l='d2442a', m='e6e2d6', n='3a2f2a', s='a69c8c
 
 def wf(fn):
     """Face overrides painted in model coordinates: fn(face, x, y, z) -> key or '.' (keeps the material)."""
+    def at(face, f, t, c, r):
+        x, y, z = face_point(face, f, t, c, r)
+        # a down face's rows run from the back (+z) as applied here (face_point has them from the front): the chamber
+        # behind the barrel was painted under it until round 4
+        return (x, y, f[2] + t[2] - z) if face == "down" else (x, y, z)
+
     def for_face(face):
-        return lambda w, h, f, t: [''.join(fn(face, *face_point(face, f, t, c, r)) for c in range(w)) for r in range(h)]
+        return lambda w, h, f, t: [''.join(fn(face, *at(face, f, t, c, r)) for c in range(w)) for r in range(h)]
     return {k: for_face(k) for k in ("north", "south", "east", "west", "up", "down")}
 
 
@@ -194,13 +200,41 @@ A2 = {k.replace("pkTA", "pkTA2"): v for k, v in A.items() if "barrel" not in k a
 A2.update({k.replace("pkTA", "pkTA2"): v for k, v in barrel("pkTA", TOP[0], TOP[1], 4, 9.625, BASE).items()})
 ROUND2 = {"proto_tnt_A_demo": A, "proto_tnt_A1_closed": A1, "proto_tnt_A2_long": A2}
 
+def rects(rs):
+    """Red TNT ends painted on a drum's muzzle end (down face) in texel-aligned rectangles rs = [(x0, x1, z0, z1)]."""
+    def p(face, x, y, z):
+        if face != "down": return '.'
+        for x0, x1, z0, z1 in rs:
+            if x0 < x < x1 and z0 < z < z1:
+                return 'l' if x < x0 + 1 and z < z0 + 1 else 'i' if x > x1 - 1 and z > z1 - 1 else 'j'
+        return '.'
+    return p
+
+
+def demo_low(pre):
+    """Round 4 (user: "lower the barrel so it doesn't stick out" of the drum, and "instead of one notch on top of the
+    barrel do two so it's like a fork"): the barrel 1.25 px nearer the drum's axis, its muzzle ring flush with the drum's
+    top (z -5), two sight posts with a 1 px gap; the chamber ends re-placed round the barrel (both sides, behind)."""
+    cz = -2.75
+    return {
+        f"{pre}_base": BASE_CUBE(),
+        **octagon(pre, 14.625, BASE, on('slate', **wf(first(rects([(-15, -13, -3, -1), (-10, -8, -3, -1), (-13, -10, 0, 2)]),
+                                                         flutes)))),
+        **barrel(pre, CX, cz, 4, 9.625, 15.125),
+        f"{pre}_sight_l": ([-13, 10.625, -5.5], [-12, 12.625, -4.75], on('slate')),
+        f"{pre}_sight_r": ([-11, 10.625, -5.5], [-10, 12.625, -4.75], on('slate')),
+    }
+
+
 # round 3 (user: neither; "close the round magazine": the loading slot on the drum's back, which showed a round through
 # it): A with the drum solid all round (the red chamber ends on its front stay)
-DRAFTS = {"proto_tnt_A_demo": demo("pkTA", with_slot=False)}
+ROUND3 = {"proto_tnt_A_demo": demo("pkTA", with_slot=False)}
+# round 4: demo_low
+DRAFTS = {"proto_tnt_A_demo": demo_low("pkTA")}
 REMOVED = ["proto_tnt_A1_closed", "proto_tnt_A2_long"]
 
 if __name__ == "__main__":
-    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before TNT launcher round 3")
+    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before TNT launcher round 4")
     # free the texels of the drafts dropped (painted, but no cube uses them any more)
     import base64, io
     from PIL import Image
