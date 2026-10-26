@@ -232,7 +232,7 @@ Each tool: hidden `proto_*` drafts in Blockbench -> user picks -> game part (bon
   thigh 0.4-0.5 px in jump_charge/jump/land (B5: 0.65; known arm/thigh clips there). Then two copper bands and plate
   seams + rivets on the rails' tops (option B of three), then polished like the sides instead (B was busy in game), no
   light rows at the steps; the emitter hole under the band (glowmask `rail_emit`), the core's ends open; three segments per prong (the tip
-  cubes flickered: the tip is painted on the front segment's last row).
+  cubes flickered: removed, the front segment as it was).
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint
