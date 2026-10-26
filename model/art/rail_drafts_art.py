@@ -108,7 +108,11 @@ def muzzle_end(cx, cz, r=1.0):
     return p
 
 
-BASE_CUBE = lambda: ([-15, BASE, -5], [-8, BASE + 1, 2], fl.socket_base())
+_SOCKET = []
+def BASE_CUBE():
+    """The standard socket base (one shared painter: each socket_base() call claims new palette keys)."""
+    if not _SOCKET: _SOCKET.append(fl.socket_base())
+    return ([-15, BASE, -5], [-8, BASE + 1, 2], _SOCKET[0])
 CX, CZ = -11.5, -1.5
 
 
@@ -186,11 +190,116 @@ def full(pre):
     return d
 
 
-DRAFTS = {"proto_rail_A_doom": doom("pkRA"), "proto_rail_B_split": split("pkRB"),
+ROUND1 = {"proto_rail_A_doom": doom("pkRA"), "proto_rail_B_split": split("pkRB"),
           "proto_rail_C_shroud": shroud("pkRC"), "proto_rail_D_full": full("pkRD")}
 
+# round 2 (user: "I prefer B, but not 100%. Let's try more variations of that horizontal two-prong style"). All keep the
+# prongs left and right with the core between them, seen from above (the cockpit) and below (the back view at rest).
+
+
+def prong(x0, x1, z0, z1, y0, y1=BASE, inner=None):
+    """A steel prong: vents on its outer side, a dark muzzle end; `inner` = 'x' of its face toward the core, painted
+    with a lit copper contact strip along it (the rail the slug rides)."""
+    out = x0 if inner == x1 else x1
+    def strip(face, x, y, z):
+        if inner is None or face not in ("east", "west") or abs(x - inner) > .01: return '.'
+        return 'k' if abs(z - (z0 + z1) / 2) < .6 and y < BASE - 2.5 else '.'
+    return on('steel', **wf(first(strip, vents('z', (x0 + x1) / 2, y0 + 1, BASE - 5), muzzle_end((x0 + x1) / 2, (z0 + z1) / 2, 0))))
+
+
+def long_core(pre):
+    """B1: B with a 2 px receiver, so the core runs 9 px (most of the gun, like DOOM's); one copper band."""
+    return {
+        f"{pre}_base": BASE_CUBE(),
+        f"{pre}_rail_out": ([-15, TIP, -4], [-13, BASE, 1], prong(-15, -13, -4, 1, TIP, inner=-13)),
+        f"{pre}_rail_in": ([-10, TIP, -4], [-8, BASE, 1], prong(-10, -8, -4, 1, TIP, inner=-10)),
+        f"{pre}_receiver": ([-13.05, BASE - 2, -3.9], [-9.95, BASE, .9], on('slate')),
+        f"{pre}_core": ([-12.5, TIP + 1, -3.5], [-10.5, BASE - 2, .5], on('core')),
+        **bands(pre, [BASE - 1.5], -15.25, -7.75, -4.25, 1.25),
+    }
+
+
+def fork(pre):
+    """B2: tapered prongs like a tuning fork: a thick 2.5 x 6 root (y BASE-5..BASE) stepping down to a 1.5 x 4 prong
+    out to the tip (the step on the outer side and top/bottom; the inner faces stay one plane along the slot)."""
+    return {
+        f"{pre}_base": BASE_CUBE(),
+        f"{pre}_root_out": ([-15.5, BASE - 5, -4.5], [-13, BASE, 1.5], on('steel')),
+        f"{pre}_root_in": ([-10, BASE - 5, -4.5], [-7.5, BASE, 1.5], on('steel')),
+        f"{pre}_prong_out": ([-14.5, TIP, -3.5], [-13.05, BASE - 4.95, .5], prong(-14.5, -13, -3.5, .5, TIP, inner=-13.05)),
+        f"{pre}_prong_in": ([-9.95, TIP, -3.5], [-8.5, BASE - 4.95, .5], prong(-10, -8.5, -3.5, .5, TIP, inner=-9.95)),
+        f"{pre}_receiver": ([-13.1, BASE - 5, -3.9], [-9.9, BASE, .9], on('slate')),
+        f"{pre}_core": ([-12.5, TIP + 1, -2.5], [-10.5, BASE - 5, -.5], on('core')),
+        **bands(pre, [BASE - 2.5], -15.75, -7.25, -4.75, 1.75),
+    }
+
+
+def coils(pre):
+    """B3: coil-gun prongs: each prong wrapped in its own three copper coils (no band round the whole), a long core."""
+    d = {
+        f"{pre}_base": BASE_CUBE(),
+        f"{pre}_rail_out": ([-15, TIP, -4], [-13, BASE, 1], prong(-15, -13, -4, 1, TIP)),
+        f"{pre}_rail_in": ([-10, TIP, -4], [-8, BASE, 1], prong(-10, -8, -4, 1, TIP)),
+        f"{pre}_receiver": ([-13.05, BASE - 2, -3.9], [-9.95, BASE, .9], on('slate')),
+        f"{pre}_core": ([-12.5, TIP + 1, -3.5], [-10.5, BASE - 2, .5], on('core')),
+    }
+    for i, y in enumerate([BASE - 3, BASE - 6, BASE - 9]):
+        d[f"{pre}_coil_out_{i}"] = ([-15.25, y - 1, -4.25], [-12.95, y, 1.25], on('copper'))
+        d[f"{pre}_coil_in_{i}"] = ([-10.05, y - 1, -4.25], [-7.75, y, 1.25], on('copper'))
+    return d
+
+
+def bridged(pre):
+    """B4: B's prongs tied by two slate bridges across the top (cockpit side) and bottom, at the middle and near the
+    muzzle: the core glows through three windows between them; the bridges' ends sit inside the prongs."""
+    d = long_core(pre)
+    for i, y in enumerate([BASE - 6, TIP + 1.5]):
+        d[f"{pre}_bridge_top_{i}"] = ([-13.5, y - 1, -4.25], [-9.5, y, -3.25], on('slate'))
+        d[f"{pre}_bridge_bot_{i}"] = ([-13.5, y - 1, .25], [-9.5, y, 1.25], on('slate'))
+    return d
+
+
+def wide(pre):
+    """B5: a wider, heavier fork: prongs 2.5 x 6 set 4 px apart (9 px across, wider than the socket), a 3 px core, the
+    prongs' inner faces lit by copper contact strips; a short receiver and one band."""
+    return {
+        f"{pre}_base": BASE_CUBE(),
+        f"{pre}_rail_out": ([-16, TIP, -4.5], [-13.5, BASE, 1.5], prong(-16, -13.5, -4.5, 1.5, TIP, inner=-13.5)),
+        f"{pre}_rail_in": ([-9.5, TIP, -4.5], [-7, BASE, 1.5], prong(-9.5, -7, -4.5, 1.5, TIP, inner=-9.5)),
+        f"{pre}_receiver": ([-13.55, BASE - 3, -4.4], [-9.45, BASE, 1.4], on('slate')),
+        f"{pre}_core": ([-13, TIP + 1, -3], [-10, BASE - 3, 0], on('core')),
+        **bands(pre, [BASE - 2], -16.25, -6.75, -4.75, 1.75),
+    }
+
+
+DRAFTS = {"proto_rail_B_split": split("pkRB"), "proto_rail_B1_long": long_core("pkRB1"),
+          "proto_rail_B2_fork": fork("pkRB2"), "proto_rail_B3_coils": coils("pkRB3"),
+          "proto_rail_B4_bridged": bridged("pkRB4"), "proto_rail_B5_wide": wide("pkRB5")}
+REMOVED = ["proto_rail_A_doom", "proto_rail_C_shroud", "proto_rail_D_full"]
+
 if __name__ == "__main__":
-    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before rail cannon drafts")
+    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before rail cannon round 2")
+    # free the texels of the drafts dropped (painted, but no cube uses them any more)
+    import base64, io
+    from PIL import Image
+    from backpack_kit import used_mask
+    src = json.load(open(SRC)); model = src["model"]
+    gs = {g["uuid"]: g for g in model["groups"]}
+    def uuids(node, inside):
+        out = set()
+        for c in node:
+            if isinstance(c, str):
+                if inside: out.add(c)
+            else: out |= uuids(c.get("children", []), inside or gs[c["uuid"]]["name"] in REMOVED)
+        return out
+    gone = uuids(model["outliner"], False)
+    size = Image.open(io.BytesIO(base64.b64decode(src["texture"].split(",", 1)[1]))).size
+    mask = lambda els: used_mask(dict(model, elements=els), Image.new("RGBA", size, (0, 0, 0, 0)))
+    o = mask([e for e in model["elements"] if e["uuid"] in gone])
+    k = mask([e for e in model["elements"] if e["uuid"] not in gone and not e["name"].startswith("pkR")])
+    new = {(x, y) for x, y, _ in plan["pixels"]}
+    plan["clear"] = [[x, y] for y, row in enumerate(o) for x, v in enumerate(row) if v and not k[y][x] and (x, y) not in new]
+    plan["remove"] = REMOVED
     json.dump(plan, open(OUT, "w"))
     lit = dict(plan, pixels=[p for p in plan["pixels"]])
     litmap = {(x, y): c for x, y, c in plan["lit"]}
