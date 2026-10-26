@@ -107,15 +107,19 @@ public class TntLauncherItem extends Item implements PowerTool {
         suit.countShot(); // every client: the recoil kick and the drum's quarter turn; the pilot's own client puffs smoke
         for (ServerPlayer viewer : level.players()) {
             if (viewer != operator && viewer.distanceToSqr(muzzle) < 64 * 64) {
-                muzzlePuff((type, x, y, z, n, sp, v) -> level.sendParticles(viewer, type, false, false, x, y, z, n, sp, sp, sp, v), muzzle);
+                muzzlePuff((type, x, y, z, n, sp, v) -> level.sendParticles(viewer, type, false, false, x, y, z, n, sp, sp, sp, v), muzzle, true);
             }
         }
         return true;
     }
 
-    /** The puff at the muzzle after a shot: smoke and a few sparks (no big flash: the charge only lobs the round). */
-    public static void muzzlePuff(ChaingunItem.Particles out, Vec3 at) {
-        out.add(ParticleTypes.POOF, at.x, at.y, at.z, 4, 0.08, 0.03);
+    /** The puff at the muzzle after a shot: smoke and a few sparks (no big flash: the charge only lobs the round). The
+     *  big white puffs only where they're seen from a distance ({@code puffs}): in the pilot's own cockpit view they drift
+     *  right in front of the camera as big blobs. */
+    public static void muzzlePuff(ChaingunItem.Particles out, Vec3 at, boolean puffs) {
+        if (puffs) {
+            out.add(ParticleTypes.POOF, at.x, at.y, at.z, 4, 0.08, 0.03);
+        }
         out.add(ParticleTypes.SMOKE, at.x, at.y, at.z, 3, 0.06, 0.02);
         out.add(ParticleTypes.SMALL_FLAME, at.x, at.y, at.z, 2, 0.04, 0.04);
     }

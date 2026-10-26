@@ -61,6 +61,8 @@ public final class AutoPilot {
     private static final boolean ENGINE_ONLY = "engine".equals(System.getProperty("powerarmor.autopilot"));
     /** "flame" mode: only the flamethrower scene (FlameScene: pigs, a plank wall, beef, ice, a campfire), ~30 s. */
     private static final boolean FLAME_ONLY = "flame".equals(System.getProperty("powerarmor.autopilot"));
+    /** "tnt" mode: only the TNT launcher scene (TntScene: a wall, husks, the drum, the ammo slot), ~35 s. */
+    private static final boolean TNT_ONLY = "tnt".equals(System.getProperty("powerarmor.autopilot"));
     private static final int MECH_START = 1712;
     /** A file run/cleanzap: no fire from the lightning scene's bolt, so the knock-out animation can be seen. */
     private static final boolean CLEAN_ZAP = Files.exists(Path.of("cleanzap"));
@@ -128,6 +130,10 @@ public final class AutoPilot {
             }
         } else if (FLAME_ONLY) {
             if (!FlameScene.step(mc, tick++)) {
+                mc.stop();
+            }
+        } else if (TNT_ONLY) {
+            if (!TntScene.step(mc, tick++)) {
                 mc.stop();
             }
         } else {

@@ -2366,7 +2366,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
                 }
             };
             if (launcher) {
-                dev.ajaczero.powerarmor.item.TntLauncherItem.muzzlePuff(out, muzzle);
+                dev.ajaczero.powerarmor.item.TntLauncherItem.muzzlePuff(out, muzzle, !firstPerson);
             } else {
                 dev.ajaczero.powerarmor.item.ChaingunItem.muzzleBurst(out, muzzle, spin, !firstPerson);
             }

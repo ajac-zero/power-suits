@@ -172,7 +172,7 @@
   "powerarmor.configuration.nugget_store_max.tooltip": "Most iron nuggets a suit's hidden ammo store holds (right-click the suit with nuggets to load it). The chaingun uses it: the machine mind always, a pilot after the nuggets in their own inventory.",
   "powerarmor.configuration.guard_range": "Guard range",
   "powerarmor.configuration.guard_range.tooltip": "A friendly suit with a chaingun shoots monsters within this many blocks of its owner (or of itself).",
-  "gui.powerarmor.ammo": "Ammo %s",
+  "gui.powerarmor.ammo": "Bullets %s",
   "message.powerarmor.nuggets_loaded": "Loaded %s nuggets (%s in the suit)",
   "message.powerarmor.nuggets_full": "The suit's nugget store is full (%s)",
   "item.powerarmor.power_armor.nuggets": "Ammo store: %s iron nuggets",

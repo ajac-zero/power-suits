@@ -109,6 +109,13 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'flame'
         }
 
+        // Dev tool: only the TNT launcher scene (a wall, husks, the drum's turn, the ammo slot; ap_tnt_*.png,
+        // ap_menu_ammo.png, run/autopilot_tnt.csv), ~35 s.
+        autopilotTnt {
+            client()
+            systemProperty 'powerarmor.autopilot', 'tnt'
+        }
+
         // Dev tool: live-tunes the cockpit viewmodel (see AutoPilot.viewTuner); stays open until closed.
         autopilotView {
             client()
