@@ -218,6 +218,8 @@ Each tool: hidden `proto_*` drafts in Blockbench -> user picks -> game part (bon
   draft A (TF2's grenade launcher) with the drum closed all round, 3 px long, the barrel sunk into its outline, a fork sight;
   bone `tnt_launcher` + `tnt_launcher_drum` (a quarter turn per shot, `ToolRotors`). 8 GameTests (126); `runAutopilotTnt` (TntScene).
 - [ ] Water cannon (extinguishes, pushes mobs, waters crops)
+- [ ] Rail cannon (added 2026-10-26, user): the chaingun's opposite: slow, one shot at a time, critical damage (the chaingun
+  is rapid-fire damage per second, the rail cannon is the single big hit). Details to decide before the drafts.
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint
