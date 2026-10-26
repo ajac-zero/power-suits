@@ -254,6 +254,12 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **Projectile orientation**: `ProjectileUtil.rotateTowardsMovement` stores yaw as `atan2(z, x) + 90` and pitch with up
   negative, unlike vanilla arrows: after `YP(yRot - 90)`, `ZP(xRot)` the model's forward is -X (`BulletRenderer`; the
   rivet gun's first rivet rendered backwards, shank out of the wall).
+- **Shared code never touches client classes** (`Minecraft`, cameras, screens): they don't exist on a dedicated server, which
+  crashes the moment such a line runs (the compiler doesn't notice). Ask through a hook the client fills in at startup
+  (`entity/ClientView`, `SocketAim.visualMuzzle`, set in `client/ClientSetup`).
+- **Client-side caches must die with the world** (review 2026-10-26): leaving a world silences every sound without marking
+  it stopped (`SoundEngine.stopAll`), so `SuitSounds` kept loops (each holding its suit and the old level) forever. Check
+  `SoundManager.isActive`, clear static lists on `ClientPlayerNetworkEvent.LoggingOut`, and don't trust game time across worlds.
 - **Variable-speed spinning parts are code-driven**: GeckoLib scales an animation's whole elapsed time by its speed,
   so the chaingun's barrels turn by an angle each client accumulates from the synced spin (`ToolRotors`, absolute
   set on an unkeyed bone). Rapid fire needs: hit immunity bypass (`target.invulnerableTime = 0`), the damage type in
