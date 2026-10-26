@@ -94,16 +94,17 @@ def flutes(face, x, y, z):
     return '.'
 
 
-def barrel(pre, cx, cz, size, y0, y1, ring=True):
-    """A fat barrel down to a muzzle ring (0.5 px wider) with the bore painted dark on its end."""
+def barrel(pre, cx, cz, size, y0, y1, ring=True, bore=True):
+    """A fat barrel down to a muzzle ring (0.5 px wider) with the bore painted dark on its end (bore=False: closed)."""
     h = size / 2
     d = {f"{pre}_barrel": ([cx - h, y0 + .5, cz - h], [cx + h, y1, cz + h], on('steel'))}
     if ring:
-        def bore(face, x, y, z):
+        def end(face, x, y, z):
             if face != "down": return '.'
             r = max(abs(x - cx), abs(z - cz))
+            if not bore: return 'U' if r < h - .3 else 'I'      # a closed cap: a lighter slate disc, lit rim
             return 'K' if r < h - .8 else 'd' if r < h - .3 else '.'
-        d[f"{pre}_muzzle"] = ([cx - h - .25, y0, cz - h - .25], [cx + h + .25, y0 + 1, cz + h + .25], on('slate', **wf(bore)))
+        d[f"{pre}_muzzle"] = ([cx - h - .25, y0, cz - h - .25], [cx + h + .25, y0 + 1, cz + h + .25], on('slate', **wf(end)))
     return d
 
 
@@ -177,9 +178,39 @@ D = {   # wheel: a 2.5 px drum wheel on the outer side (axis across the arm), ba
     "pkTD_sight": ([-10.5, 10.625, -5.75], [-9.5, 12.125, -5], on('slate')),
 }
 
-DRAFTS = {"proto_tnt_A_demo": A, "proto_tnt_B_cage": B, "proto_tnt_C_loaded": C, "proto_tnt_D_wheel": D}
+ROUND1 = {"proto_tnt_A_demo": A, "proto_tnt_B_cage": B, "proto_tnt_C_loaded": C, "proto_tnt_D_wheel": D}
+
+# round 2 (user: "go with A but close the barrel all the way"); two readings, side by side with A:
+#   A1 closed  the muzzle's end solid (no bore hole)
+#   A2 long    the barrel runs all the way back over the drum to the socket base
+A1 = {k.replace("pkTA", "pkTA1"): v for k, v in A.items() if "barrel" not in k and "muzzle" not in k}
+A1.update({k.replace("pkTA", "pkTA1"): v for k, v in barrel("pkTA", TOP[0], TOP[1], 4, 9.625, 15.125, bore=False).items()})
+A2 = {k.replace("pkTA", "pkTA2"): v for k, v in A.items() if "barrel" not in k and "muzzle" not in k}
+A2.update({k.replace("pkTA", "pkTA2"): v for k, v in barrel("pkTA", TOP[0], TOP[1], 4, 9.625, BASE).items()})
+DRAFTS = {"proto_tnt_A_demo": A, "proto_tnt_A1_closed": A1, "proto_tnt_A2_long": A2}
+REMOVED = ["proto_tnt_B_cage", "proto_tnt_C_loaded", "proto_tnt_D_wheel"]
 
 if __name__ == "__main__":
-    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before TNT launcher drafts")
+    plan = build(SRC, DRAFTS, "left_forearm", ORIGIN, "before TNT launcher round 2")
+    # free the texels of the drafts dropped (painted, but no cube uses them any more)
+    import base64, io
+    from PIL import Image
+    from backpack_kit import used_mask
+    src = json.load(open(SRC)); model = src["model"]
+    gs = {g["uuid"]: g for g in model["groups"]}
+    def uuids(node, inside):
+        out = set()
+        for c in node:
+            if isinstance(c, str):
+                if inside: out.add(c)
+            else: out |= uuids(c.get("children", []), inside or gs[c["uuid"]]["name"] in REMOVED)
+        return out
+    gone = uuids(model["outliner"], False)
+    size = Image.open(io.BytesIO(base64.b64decode(src["texture"].split(",", 1)[1]))).size
+    mask = lambda els: used_mask(dict(model, elements=els), Image.new("RGBA", size, (0, 0, 0, 0)))
+    o, k = mask([e for e in model["elements"] if e["uuid"] in gone]), mask([e for e in model["elements"] if e["uuid"] not in gone])
+    new = {(x, y) for x, y, _ in plan["pixels"]}
+    plan["clear"] = [[x, y] for y, row in enumerate(o) for x, v in enumerate(row) if v and not k[y][x] and (x, y) not in new]
+    plan["remove"] = REMOVED
     json.dump(plan, open(OUT, "w"))
     print("cubes", sum(len(c) for c in DRAFTS.values()), "pixels", len(plan["pixels"]))
