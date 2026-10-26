@@ -153,7 +153,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   `FUEL_SLOT`, or the suit sits slumped (`powered_off`). The user's world contains old unfuelled suits and
   the saved player may already sit in one: `TerrainPilot.fuelVehicle` fuels whatever suit you're in.
 - **Synced entity data must be refreshed wherever the server field changes**, not only in `tick()`: loading,
-  `applyLoadout`, test setters (a GameTest caught a stale `BURN_TOTAL` after load). See `syncBurn()`/`syncSlots()`.
+  `applyLoadout`, test setters (a GameTest caught a stale `BURN_TOTAL` after load). See `SuitPower.sync()` / `syncSlots()`.
 - **`damageSources().source(key, a, b)` takes (projectile, shooter)** despite its parameter names
   (vanilla: `source(FIREBALL, fireball, thrower)`). Swapped, kills credit the projectile instead of the pilot.
 - **GeckoLib won't restart a triggered animation that is still playing**: per-use animations must be shorter
@@ -308,7 +308,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   next tick's drag: it read 2.9 for a 5.2 blocks/s walk).
 - **`Mob.serverAiStep` is final**: gate the mind with each goal's `canUse`/`canContinueToUse` + `updateControlFlags`.
   `LookControl` zeroes the pitch and eases the head to the body every tick unless asked to look; `customServerAiStep`
-  runs after the goals and before the look control, so the mind's aim (`setAiAim`) is applied there.
+  runs after the goals and before the look control, so the mind's aim (`SuitBrain.setAim`) is applied there.
 - **Paths of wide mobs end short**: vanilla's path for the 1.4-wide suit stopped 1.7 blocks from home (node offsets);
   `ReturnHome` walks the last stretch with `MoveControl.setWantedPosition`. The pathfinder returns null for a mob in
   the air (just spawned): wait for `onGround()`.
@@ -395,7 +395,7 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **Engines (2026-10-21): a suit comes without an engine (since 2026-10-23; scenes call `DevUtil.firebox`, GameTests'
   `suitAt` installs one), and a firebox floods in deep water** (water over the backpack,
   2.2 blocks up: 3+ deep): scenes or tests that put a fuelled suit in deep water need a tidal engine (+ a water bucket to
-  climb out) or a reactor. Swapping the engine drops the half-burnt item one tick later (`tickFuel` notices the swap),
+  climb out) or a reactor. Swapping the engine drops the half-burnt item one tick later (`SuitPower.tick` notices the swap),
   so set burn values after a swap has been seen, not in the same tick.
 - **GameTests run at random spots of a world with real biomes**: a weather test landed in a desert (no rain). The "rain"
   batch sets the weather, opens the sky (`TestData.skyAccess`: the default barrier ceiling keeps rain off) and paints
@@ -407,7 +407,12 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.
 
 ## Code map (see README for the full list)
-`entity/PowerArmorEntity.java` holds riding, movement, terrain/water, jump, turning, fuel/power, inventory, animation state;
+`entity/PowerArmorEntity.java` is the suit as Minecraft sees it (riding, movement, terrain/water, jump, turning, damage,
+saving, the synced data table, the slots) and runs its parts, one class each (since 2026-10-26): `SuitPower` (engine,
+fuel), `SuitSocket` (the tool's trigger/cooldown/synced state), `SuitBrain` (the mind's owner/home/aim/jobs), and on the
+client `SocketVisuals`, `SuitAnimator`, `SuitLights`. A tool lives in its own files: its item (`PowerTool`: what it does,
+`mindUse()` its mind job, `createEffects()` its looks) and its `ToolEffects` (moving parts, `ToolLight`s, shot effects): a
+new tool shouldn't need changes to the entity or the renderers beyond its bone name and glowmask;
 `entity/ai/` the machine mind's goals (`SuitMind` friendly/rogue); `menu/` the suit menu logic, `client/PowerArmorScreen` + `FuelGauge` its picture and the HUD;
 `client/` holds rendering + camera; `PilotProtection.java` redirects damage; `registry/` registers things.
 Comment the "why" for anything non-obvious; the user reads the code to learn.

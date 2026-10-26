@@ -22,8 +22,6 @@ import org.jspecify.annotations.Nullable;
  * posed and drawn from that snapshot alone (adjustModelBonesForRender, the layers).
  */
 public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, LivingEntityRenderState> {
-    /** Every tool's bone in the suit model (PowerTool.suitBone). Add new tools here. */
-    private static final String[] TOOL_BONES = {"chaingun", "em_projector", "drill", "chainsaw", "flamethrower", "tnt_launcher", "rail_cannon"};
     /** Each engine's backpack (design sec. 4b), in SuitEngine order: the firebox (with its exhausts), the tidal engine's
      *  tanks, the star reactor's canisters. Only the installed engine's is drawn; none without an engine. */
     private static final String[] ENGINE_BONES = {"backpack_parts", "pack_tidal", "pack_reactor"};
@@ -85,7 +83,7 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         bones.ifPresent("body", body -> body.skipRender(cockpit).skipChildrenRender(cockpit));
         // Socket: show the installed tool's bone and hide the others; the bare coupling only when empty.
         String installed = info.getOrDefaultGeckolibData(SuitRenderData.TOOL_BONE, "");
-        for (String toolBone : TOOL_BONES) {
+        for (String toolBone : ToolBones.all()) {
             boolean hide = !toolBone.equals(installed);
             bones.ifPresent(toolBone, bone -> bone.skipRender(hide).skipChildrenRender(hide));
         }

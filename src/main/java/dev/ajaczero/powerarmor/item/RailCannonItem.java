@@ -111,6 +111,14 @@ public class RailCannonItem extends Item implements PowerTool {
         return -3F;
     }
 
+    /** HUD: shots left (iron ingots in the ammo slot), and the charge as a thin blue bar that turns white when it's full
+     *  (let go!). */
+    @Override
+    public HudAmmo hudAmmo(PowerArmorEntity suit, Player pilot) {
+        float charge = suit.socket().getSpin();
+        return new HudAmmo(Items.IRON_INGOT, countRounds(suit, pilot), charge, charge >= 0.999F ? 0xFFE6FBFF : 0xFF2F9CFF);
+    }
+
     @Override
     public ToolEffects createEffects() {
         return new RailCannonEffects();

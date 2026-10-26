@@ -236,7 +236,14 @@ src/main/java/dev/ajaczero/powerarmor/
   registry/ModEntities.java  the entity type (hitbox size, pilot seat height)
   registry/ModItems.java     the item
   registry/ModMenus.java     the suit menu type; ModDataComponents.java: the loadout stored on a packed item
-  entity/PowerArmorEntity.java  the suit: riding, movement, fuel/power, damage, death, animation choice
+  entity/PowerArmorEntity.java  the suit as Minecraft sees it: vanilla hooks (riding, movement, water, jumping, damage,
+                             death, saving), the synced data table, the slots, the tick that runs its parts:
+    entity/SuitPower.java    the engine and its energy: burning fuel, flooding, free power, the lightning knock-out
+    entity/SuitSocket.java   the arm socket's tool as the suit works it: trigger (pilot / mind), cooldown, synced spin/shots
+    entity/SuitBrain.java    the machine mind's state: owner, home, aim, the job its tool gives it, rogues' gear and lifetime
+    entity/SocketVisuals.java   client: the tool arm's raise and recoil, the installed tool's ToolEffects
+    entity/SuitAnimator.java    client: measured speed, jumps/landings, step easing, which animation plays and how fast
+    entity/SuitLights.java      client: fire, visor, engine glass, lightning sparks
   entity/SuitFuel.java       which items burn and for how long, per engine
   entity/FireboxFuel.java    asks a never-placed furnace how long it burns an item (the firebox's table)
   entity/SuitEngine.java     the engines (firebox / tidal / reactor); item/EngineItem.java: their items
@@ -245,7 +252,11 @@ src/main/java/dev/ajaczero/powerarmor/
   item/SuitLoadout.java      fuel/tool/helmet/engine/half-burnt item carried by a packed suit item
   item/HelmetStyle.java      the helmet styles (design sec. 4c); SuitHelmetItem: name + flavour line, HelmetTemplateItem: the templates
   item/PowerTool.java        what a socket tool is: fuel per use, cooldown, model bone, use(); worked by an operator
-                             (the pilot, or the suit itself while its mind drives: aim, ammo, credit)
+                             (the pilot, or the suit itself while its mind drives: aim, ammo, credit); its mind job
+                             (mindUse: entity/ai/ToolUse) and its looks (createEffects)
+  item/ToolEffects.java      client: one suit's looks for its tool (moving parts, lights = ToolLight, shot effects);
+                             one per tool: ChaingunEffects, TntLauncherEffects, EmProjectorEffects (+ the EM beam),
+                             FlamethrowerEffects, RailCannonEffects (+ the rail beam, drawn by client/RailBeamRenderer)
   entity/SuitMind.java       friendly / rogue (synced: the visor colour)
   entity/ai/SuitGoals.java   the machine mind's goals (vanilla goal system): walk home, look around, follow the owner,
                              pick a target, shoot / punch
@@ -258,9 +269,8 @@ src/main/java/dev/ajaczero/powerarmor/
   item/DrillItem.java        the third tool: 3x3 digging at diamond pickaxe/shovel speed
   item/ChainsawItem.java     the fourth tool: cuts wood, fells natural trees top-down
   item/RailCannonItem.java   charge, fire on release, the piercing beam (blocks it breaks, mobs it hits); the mind's job is
-                             SuitGoals.RailGuard; entity/RailBeamEffects + client/RailBeamRenderer draw the beam
+                             SuitGoals.RailGuard; item/RailCannonEffects + client/RailBeamRenderer draw the beam
   item/ToolMining.java       shared block breaking for both (BreakEvent, drops, crack overlay, progress)
-  entity/EmBeamEffects.java  client-side redstone beam particles + sparks
   entity/Bullet.java         the tracer bullet (flight, hit without immunity, sparks off blocks)
   network/ToolTriggerPayload.java  client -> server "attack pressed/released"
   item/PowerArmorItem.java   deploying / packing / repairing
@@ -283,9 +293,9 @@ src/main/java/dev/ajaczero/powerarmor/
     FuelGauge.java           HUD fuel gauge + low-fuel beep
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
-    SuitGlowLayer.java       firebox, visor, chaingun heat and EM redstone lights (glowmasks, tinted per frame)
+    SuitGlowLayer.java       the suit's lights + the tool's ToolLights (glowmasks, tinted per frame)
     BulletRenderer.java      the glowing tracer streak
-    ToolRotors.java       turns the chaingun's barrels with the synced spin (suit + cockpit viewmodel)
+    ToolRotors.java          turns the chaingun's barrels / the TNT drum, shakes the rail cannon (suit + cockpit viewmodel)
     ClientSetup.java         registers the renderer
     PowerArmorClient.java    client-only @Mod entry: the in-game config screen
     SuitSounds.java          engine sounds now and then + tool loops (tickable sounds that follow the suit)

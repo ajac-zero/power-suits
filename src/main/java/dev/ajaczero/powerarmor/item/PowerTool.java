@@ -5,6 +5,8 @@ import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -99,6 +101,16 @@ public interface PowerTool {
     /** How the machine mind uses this tool, which picks its job (design sec. 8). */
     default ToolUse mindUse() {
         return ToolUse.NONE;
+    }
+
+    /** What the pilot's HUD shows above the fuel (client/FuelGauge): the ammo's icon and count (-1: endless, creative;
+     *  0 is shown red), and a thin bar under the count (0 = no bar) in a colour. */
+    record HudAmmo(Item icon, int count, float bar, int barColour) {}
+
+    /** Client: this tool's ammo line on the pilot's HUD, or null for a tool that needs no ammo. */
+    @Nullable
+    default HudAmmo hudAmmo(PowerArmorEntity suit, Player pilot) {
+        return null;
     }
 
     /** Server: keep the run animation going after the trigger is released (a tree still coming down). */

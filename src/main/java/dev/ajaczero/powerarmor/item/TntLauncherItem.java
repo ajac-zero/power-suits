@@ -51,6 +51,12 @@ public class TntLauncherItem extends Item implements PowerTool {
         return PowerArmorConfig.TNT_LAUNCHER_ENERGY.get();
     }
 
+    /** HUD: rounds left (TNT in the suit's ammo slot). */
+    @Override
+    public HudAmmo hudAmmo(PowerArmorEntity suit, Player pilot) {
+        return new HudAmmo(Items.TNT, countRounds(suit, pilot), 0F, 0);
+    }
+
     @Override
     public ToolEffects createEffects() {
         return new TntLauncherEffects();

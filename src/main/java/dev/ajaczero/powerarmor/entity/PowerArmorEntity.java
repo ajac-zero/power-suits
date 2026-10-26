@@ -80,6 +80,18 @@ import org.joml.Vector3fc;
  *
  * Minecraft runs every entity twice: on the server (the real game state) and on each client
  * (a copy used for rendering). {@code level().isClientSide()} tells you which one you are in.
+ *
+ * This class is the suit as Minecraft sees it: the vanilla hooks (riding, movement, damage, saving), the table of
+ * synced data (everything the server sends to clients about a suit), the slots, and the tick that runs its parts in
+ * order. The rules of each part live in its own class, one plain object per suit:
+ * <ul>
+ *   <li>{@link SuitPower} ({@code power()}): the engine, fuel, flooding, free power, the lightning knock-out;</li>
+ *   <li>{@link SuitSocket} ({@code socket()}): the tool in the arm socket as the suit works it (trigger, cooldown);</li>
+ *   <li>{@link SuitBrain} ({@code brain()}): the machine mind's state: owner, home, aim, jobs, rogues;</li>
+ *   <li>client only: {@link SocketVisuals} (how the tool is drawn: raise, recoil, the tool's own ToolEffects),
+ *       {@link SuitAnimator} (speed, jumps, steps, which animation plays) and {@link SuitLights} (fire, visor, sparks).</li>
+ * </ul>
+ * What a tool does lives in its item (item/PowerTool); what the mind decides, in entity/ai.
  */
 public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJumping {
     public static final int MAX_HEALTH = 100;
@@ -976,8 +988,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
     }
 
-    // ---- Lights (client): the firebox and the visor, drawn by SuitGlowLayer -----------------------------
-
     /** Client: true while the legs are shuffling round to face the view (plays a step cycle). */
     public boolean isRealigning() {
         return this.realigning;
@@ -1184,8 +1194,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
     }
 
-    // ---- Rogues: they leave after a while (design sec. 8), like the wandering trader ---------------------------
-
     /** Death messages and the like say "Rogue Power Armor" for a rogue (synced mind: right on both sides). */
     @Override
     protected Component getTypeName() {
@@ -1268,7 +1276,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     // =========================================================================================
-    // Animation (GeckoLib). This only runs on the client.
+    // The tick: the parts in order (server: rogue gear, engine, tool, mind; client: lights, smoke, tool looks, motion)
     // =========================================================================================
 
     @Override

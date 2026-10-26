@@ -2,7 +2,7 @@
 
 Built for the Power Armor plasma cannon, then rivet gun, now its chaingun. Files: `item/PowerTool.java`,
 `item/ChaingunItem.java`, `entity/Bullet.java`, `network/ToolTriggerPayload.java`, `client/ToolInput.java`,
-`client/BulletRenderer.java`, `PowerArmorEntity.tickTool`. (The rivet gun's sticking
+`client/BulletRenderer.java`, `entity/SuitSocket.tick`. (The rivet gun's sticking
 projectile is in git history, commit 299d91b.)
 
 ## Hold-to-use input from a vehicle

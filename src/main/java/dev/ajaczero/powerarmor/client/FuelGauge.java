@@ -2,10 +2,10 @@ package dev.ajaczero.powerarmor.client;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
-import dev.ajaczero.powerarmor.item.ChaingunItem;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
-import dev.ajaczero.powerarmor.item.RailCannonItem;
-import dev.ajaczero.powerarmor.item.TntLauncherItem;
+import dev.ajaczero.powerarmor.item.PowerTool;
+import java.util.HashMap;
+import java.util.Map;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -15,8 +15,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -68,52 +68,23 @@ public final class FuelGauge {
                 : Component.translatable("gui.powerarmor.no_fuel");
         int colour = free ? 0xFFFFFFFF : energy == 0 || suit.power().isFlooded() ? 0xFFFF5555 : low ? (blink ? 0xFFFF5555 : 0xFFFFB13B) : 0xFFFFFFFF;
         graphics.text(mc.font, text, x + 36, y + 3, colour, true);
-        if (suit.getSocketStack().getItem() instanceof ChaingunItem) {
-            // Bullets left (iron nuggets carried), just above the fuel: red when there are none.
-            int bullets = mc.player.hasInfiniteMaterials() ? -1 : ChaingunItem.countBullets(mc.player);
-            if (bulletIcon == null) {
-                bulletIcon = new ItemStack(Items.IRON_NUGGET);
-            }
-            graphics.item(bulletIcon, x + 16, y - 18);
-            Component count = Component.literal(bullets < 0 ? "\u221e" : Integer.toString(bullets));
-            graphics.text(mc.font, count, x + 36, y - 14, bullets == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
-            // Barrel heat (with overheat on): a thin bar under the count, orange to red, blinking when overheated.
-            float heat = suit.socket().getHeat();
-            if (heat > 0.01F && !(heat >= 0.99F && (suit.tickCount / 4) % 2 == 0)) {
-                int w = Math.round(24 * heat);
+        // The socket tool's ammo just above the fuel (each tool says what: PowerTool.hudAmmo), red when there's none.
+        PowerTool.HudAmmo ammo = suit.socket().tool() == null ? null : suit.socket().tool().hudAmmo(suit, mc.player);
+        if (ammo != null) {
+            graphics.item(ICONS.computeIfAbsent(ammo.icon(), ItemStack::new), x + 16, y - 18);
+            Component count = Component.literal(ammo.count() < 0 ? "\u221e" : Integer.toString(ammo.count()));
+            graphics.text(mc.font, count, x + 36, y - 14, ammo.count() == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
+            if (ammo.bar() > 0.01F) { // a thin bar under the count (the chaingun's heat, the rail cannon's charge)
+                int w = Math.round(24 * Math.min(1F, ammo.bar()));
                 graphics.fill(x + 36, y - 4, x + 60, y - 2, 0x80000000);
-                graphics.fill(x + 36, y - 4, x + 36 + w, y - 2, heat > 0.75F ? 0xFFFF3B1E : 0xFFFF9A2E);
-            }
-        } else if (suit.getSocketStack().getItem() instanceof TntLauncherItem) {
-            // Rounds left (TNT in the suit's ammo slot), in the same place: red when the drum is empty.
-            int rounds = TntLauncherItem.countRounds(suit, mc.player);
-            if (tntIcon == null) {
-                tntIcon = new ItemStack(Items.TNT);
-            }
-            graphics.item(tntIcon, x + 16, y - 18);
-            Component count = Component.literal(rounds < 0 ? "\u221e" : Integer.toString(rounds));
-            graphics.text(mc.font, count, x + 36, y - 14, rounds == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
-        } else if (suit.getSocketStack().getItem() instanceof RailCannonItem) {
-            // Shots left (iron ingots in the ammo slot), red when there are none; under the count, the charge as a thin
-            // blue bar that turns white when it's full (let go!).
-            int rounds = RailCannonItem.countRounds(suit, mc.player);
-            if (ingotIcon == null) {
-                ingotIcon = new ItemStack(Items.IRON_INGOT);
-            }
-            graphics.item(ingotIcon, x + 16, y - 18);
-            Component count = Component.literal(rounds < 0 ? "\u221e" : Integer.toString(rounds));
-            graphics.text(mc.font, count, x + 36, y - 14, rounds == 0 ? 0xFFFF5555 : 0xFFFFFFFF, true);
-            float charge = suit.socket().getSpin();
-            if (charge > 0.01F) {
-                int w = Math.round(24 * charge);
-                graphics.fill(x + 36, y - 4, x + 60, y - 2, 0x80000000);
-                graphics.fill(x + 36, y - 4, x + 36 + w, y - 2, charge >= 0.999F ? 0xFFE6FBFF : 0xFF2F9CFF);
+                graphics.fill(x + 36, y - 4, x + 36 + w, y - 2, ammo.barColour());
             }
         }
     }
 
-    /** Made on first use: since 1.21.x an ItemStack can't be created before the game has loaded its item data. */
-    private static ItemStack bulletIcon, tntIcon, ingotIcon;
+    /** Ammo icons, made on first use: since 1.21.x an ItemStack can't be created before the game has loaded its item
+     *  data. One per ammo item (a handful). */
+    private static final Map<Item, ItemStack> ICONS = new HashMap<>();
 
     /** Warning beep every 2 seconds while running on the last few seconds of fuel. */
     @SubscribeEvent
