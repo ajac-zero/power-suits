@@ -89,6 +89,7 @@ final class RailScene {
                               x.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.IRON_INGOT, 4)); } });
                           aim(b, 0.5, 1.6, WALL_Z); closeCamera(mc); }
             case 292 -> AutoPilot.hold(o.keyUse, true);
+            case 318 -> frontCamera(mc);   // the rest from in front: down the slot, the energy and the emitter in the band
             case 340 -> AutoPilot.hold(o.keyUse, false);
             // the machine mind: the pilot climbs out (the suit's home is where it stands), ingots go back in, a husk
             // comes in off to the left: the mind charges, aims and fires
@@ -221,6 +222,18 @@ final class RailScene {
         Vec3 drop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
         Vec3 gun = c.position().add(0.7, 2.15, 1.3);
         AutoPilot.lookCamera(mc, gun.add(0.5, 1.7, -0.7).subtract(drop), gun.add(-0.1, 0, 0.5).subtract(drop));
+    }
+
+    /** In front of the raised cannon, a little above and to its outer side, looking back down its slot. */
+    private static void frontCamera(Minecraft mc) {
+        PowerArmorEntity c = clientSuit(mc);
+        if (c == null) {
+            return;
+        }
+        mc.options.setCameraType(CameraType.FIRST_PERSON);
+        DevUtil.hideGui(mc, true);
+        Vec3 drop = new Vec3(0, EntityTypes.ARMOR_STAND.getDimensions().eyeHeight(), 0);
+        AutoPilot.lookCamera(mc, c.position().add(0.95, 2.25, 3.1).subtract(drop), c.position().add(0.75, 1.75, 1.2).subtract(drop));
     }
 
     /** Behind the suit and to its right, looking past it toward the husk off to the left. */

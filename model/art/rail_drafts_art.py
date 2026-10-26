@@ -428,10 +428,8 @@ def rail_skin(style, side):
         lip = u < 1.0                        # the texel along the slot (half a texel on the inner prong: 2.5 px faces)
         if style == "polished":
             # (user, 2026-10-26: B "a little busy", "a more polished look: the sides look great, make the front match"):
-            # the steel sides' recipe across the top: a highlight row where each step begins, a lit column along the
-            # slot, the mid tone, a shaded outer column
-            top = [BASE, 15.625, 11.625, 8.625][seg]
-            if top - y < 1: return 'W'
+            # the steel sides' recipe across the top: a lit column along the slot, the mid tone, a shaded outer column
+            # (then, same day: without the light rows at each step: "remove those lighter coloured dividers")
             if lip: return 'G'
             return 'S' if outer else 't'
         if style == "vents":
@@ -475,3 +473,29 @@ def skin_plan(style):
                     if k != '.':
                         pixels.append([int(min(u0, u1)) + c, int(min(v0, v1)) + r, PAL[k]])
     return {"groups": {}, "pixels": pixels, "origin": ORIGIN, "parent": "left_forearm", "checkpoint": f"rail top skin {style}"}
+
+
+# ---- the emitter (user, 2026-10-26: the band across the slot "is just a flat orange, but we could paint the inside of it
+# so it looks like the hole where the energy comes from"): on the underside of the band nearest the muzzle (rail_band_0's
+# down face; rail_band_1 shares its texels, but there the slot is filled by the receiver), the slot becomes a dark hole
+# with a blue emitter in its middle. The emitter is a reserved colour of its own ('Z', glowmask rail_emit): opaque (not
+# see-through like the core), it lights up with the charge.
+PAL.update(Z='183850')
+
+
+def emitter_plan():
+    src = json.load(open(SRC))
+    e = next(x for x in src["model"]["elements"] if x["name"] == "rail_band_0")
+    f, t = e["from"], e["to"]
+    u0, v0, u1, v1 = e["faces"]["down"]["uv"]
+    w, h = math.ceil(abs(u1 - u0) - 1e-6), math.ceil(abs(v1 - v0) - 1e-6)
+    pixels = []
+    for r in range(h):
+        for c in range(w):
+            x, y, z = face_point("down", f, t, c, r)
+            z = f[2] + t[2] - z                       # (a down face runs front to back mirrored: AGENTS.md)
+            if not (-13.5 < x < -9.5 and -3 < z < 0):
+                continue                              # outside the slot: the copper stays
+            k = 'Z' if abs(z - CZ) < .6 and abs(x - CX) < 1.1 else 'K' if abs(x - CX) < 1.8 and abs(z - CZ) < .6 else 'D'
+            pixels.append([int(min(u0, u1)) + c, int(min(v0, v1)) + r, PAL[k]])
+    return {"groups": {}, "pixels": pixels, "origin": ORIGIN, "parent": "left_forearm", "checkpoint": "rail emitter"}

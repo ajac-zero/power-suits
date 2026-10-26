@@ -38,13 +38,13 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
     static final Identifier REACTOR = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_reactor.png");
     /** The flamethrower's pilot light (the tip of its slate rod by the nozzle). */
     static final Identifier PILOT = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_pilot.png");
-    /** The rail cannon's core between its prongs (brightens as it charges). */
-    static final Identifier RAIL = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_rail.png");
     /** The core's rings, a third each (ring r is in mask r mod 3): lit in turn, the energy runs along the core. */
     static final Identifier[] RAIL_FLOW = {flow(0), flow(1), flow(2)};
     /** The masks, in the order of the tints in SuitRenderData.GLOW. */
-    private static final Identifier[] MASKS = {FIRE, VISOR, HEAT, HEAT_BARREL, EM_CORE, EM_ARC, TIDAL, REACTOR, PILOT, RAIL,
-            RAIL_FLOW[0], RAIL_FLOW[1], RAIL_FLOW[2]};
+    /** The emitter in the rail cannon's band, where the energy comes out (opaque: dark when off, lit with the charge). */
+    static final Identifier RAIL_EMIT = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_rail_emit.png");
+    private static final Identifier[] MASKS = {FIRE, VISOR, HEAT, HEAT_BARREL, EM_CORE, EM_ARC, TIDAL, REACTOR, PILOT,
+            RAIL_FLOW[0], RAIL_FLOW[1], RAIL_FLOW[2], RAIL_EMIT};
 
     private static Identifier flow(int phase) {
         return Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_rail_flow_" + phase + ".png");
@@ -73,10 +73,10 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
                 tint(suit.getTidalGlow(time), 1F, 1F, 1F),
                 tint(suit.getReactorGlow(time), 1F, 1F, 1F),
                 tint(suit.getPilotGlow(time), 1F, 1F, 1F),
-                energy(suit.getRailGlow(time)),
                 energy(suit.getRailFlowGlow(0, partialTick)),
                 energy(suit.getRailFlowGlow(1, partialTick)),
-                energy(suit.getRailFlowGlow(2, partialTick))});
+                energy(suit.getRailFlowGlow(2, partialTick)),
+                tint(suit.getRailGlow(time), 1F, 1F, 1F)});
         state.addGeckolibData(SuitRenderData.RAIL_SHAKE, new float[] {suit.getRailCharge(), time});
     }
 

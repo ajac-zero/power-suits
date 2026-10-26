@@ -30,8 +30,8 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
     private static final DataTicket<float[]> RAIL_SHAKE = DataTicket.create("powerarmor_view_rail_shake", float[].class);
     private static final DataTicket<int[]> GLOW = DataTicket.create("powerarmor_view_glow", int[].class);
     /** The tool's lights, like on the suit (SuitGlowLayer): the chaingun's hot barrels, the EM projector's redstone. */
-    private static final Identifier[] MASKS = {SuitGlowLayer.HEAT, SuitGlowLayer.HEAT_BARREL, SuitGlowLayer.EM_CORE, SuitGlowLayer.EM_ARC, SuitGlowLayer.PILOT, SuitGlowLayer.RAIL,
-            SuitGlowLayer.RAIL_FLOW[0], SuitGlowLayer.RAIL_FLOW[1], SuitGlowLayer.RAIL_FLOW[2]};
+    private static final Identifier[] MASKS = {SuitGlowLayer.HEAT, SuitGlowLayer.HEAT_BARREL, SuitGlowLayer.EM_CORE, SuitGlowLayer.EM_ARC, SuitGlowLayer.PILOT,
+            SuitGlowLayer.RAIL_FLOW[0], SuitGlowLayer.RAIL_FLOW[1], SuitGlowLayer.RAIL_FLOW[2], SuitGlowLayer.RAIL_EMIT};
 
     CockpitViewRenderer() {
         super(new Model());
@@ -53,10 +53,10 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
                     SuitGlowLayer.tint(suit.getEmCoreGlow(time), 1F, 1F, 1F),
                     SuitGlowLayer.tint(suit.getEmArcGlow(time), 1F, 1F, 1F),
                     SuitGlowLayer.tint(suit.getPilotGlow(time), 1F, 1F, 1F),
-                    SuitGlowLayer.energy(suit.getRailGlow(time)),
                     SuitGlowLayer.energy(suit.getRailFlowGlow(0, partialTick)),
                     SuitGlowLayer.energy(suit.getRailFlowGlow(1, partialTick)),
-                    SuitGlowLayer.energy(suit.getRailFlowGlow(2, partialTick))});
+                    SuitGlowLayer.energy(suit.getRailFlowGlow(2, partialTick)),
+                    SuitGlowLayer.tint(suit.getRailGlow(time), 1F, 1F, 1F)});
             state.addGeckolibData(RAIL_SHAKE, new float[] {suit.getRailCharge(), time});
         }
     }

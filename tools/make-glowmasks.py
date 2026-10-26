@@ -17,8 +17,8 @@ which adds nothing (SuitGlowLayer draws the masks full-bright and additively, ti
   power_armor_glow_tidal.png    the tidal engine's Heart of the Sea in the pump's porthole (teal)
   power_armor_glow_reactor.png  the star reactor's core and the energy in its canisters' glass strips (violet -> white)
   power_armor_glow_pilot.png    the flamethrower's pilot light, the tip of the slate rod by its nozzle (blue)
-  power_armor_glow_rail.png     the rail cannon's core between its prongs (its edges and ends; brightens as it charges)
   power_armor_glow_rail_flow_{0,1,2}.png  the core's rings, a third each: lit in turn, energy runs along the core
+  power_armor_glow_rail_emit.png  the emitter in the band's hole the energy comes out of (opaque, lit by the charge)
 The script refuses to run if a reserved colour turns up outside the expected amount (someone painted with it).
 The rail cannon's core colours are see-through (SEE_THROUGH): cleared from power_armor.png once their masks are made, so
 run make-paint-textures.py after this script.
@@ -59,10 +59,11 @@ GLOW = {
     H('1b2638'): ('pilot', H('2a6cff')), H('22304a'): ('pilot', H('8ec2ff')),
     # the rail cannon's core glass between its prongs: its edges and ends (lit by the charge), and its rings in three
     # phases by position along it (ring r is phase r mod 3): lit in turn, the light runs toward the muzzle (flow)
-    H('16304a'): ('rail', H('1a5cc8')), H('1d3f5e'): ('rail', H('2f9cff')),
+    # the emitter: the hole in the band where the energy comes out (opaque dark blue, lit by the charge)
+    H('183850'): ('rail_emit', H('5fc8ff')),
     H('254e73'): ('rail_flow_0', H('9ae8ff')), H('245079'): ('rail_flow_1', H('9ae8ff')), H('26507b'): ('rail_flow_2', H('9ae8ff')),
 }
-EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20, 'tidal': 4, 'reactor': 69, 'pilot': 6, 'rail': 18, 'rail_flow_0': 36, 'rail_flow_1': 36, 'rail_flow_2': 24}  # pixels per mask (fire: the backpack's painted firebox, 4 coals x 3 rows (backpack v3, 2026-10-20: the old firebox cube and its 8 vent slits are gone); the visor cube: 7x5 glass front + 59 on its
+EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core': 30, 'em_arc': 20, 'tidal': 4, 'reactor': 69, 'pilot': 6, 'rail_flow_0': 36, 'rail_flow_1': 36, 'rail_flow_2': 24, 'rail_emit': 2}  # pixels per mask (fire: the backpack's painted firebox, 4 coals x 3 rows (backpack v3, 2026-10-20: the old firebox cube and its 8 vent slits are gone); the visor cube: 7x5 glass front + 59 on its
 # other faces, plus 150 left in the texture from the old visor that no cube uses (2026-10-19 export: harmless, never drawn);
 # 2026-10-21 export: 540 = 236 of those + 304 on the hidden helmet drafts' faces (proto_helm_*: their visors are glass
 # too; since 2026-10-22 they're the helmet styles, helm_*, drawn when worn: their visors glow like the standard one; 8 old leftovers were painted over by the drafts); 2026-10-21 engine
@@ -72,8 +73,10 @@ EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core':
 # texels (4 left: the porthole's drawn faces; checked against the texture and model before, no drawn texel changed);
 # 2026-10-26 the rail cannon's drafts were packed over 6 never-drawn visor leftovers (441; checked: no texel a cube
 # draws changed);
-# rail (2026-10-26, flowing core): the 3x8x3 core's ends (18); rail_flow_*: its rings, the full width of its 4 sides
-# (4 x 3 x 8 by phase: 36 / 36 / 24; until the same day the two edge columns were steady glass in rail);
+# rail_flow_* (2026-10-26, flowing core; its ends are left transparent, so you can look down the slot at the emitter;
+# the steady 'rail' mask of its edges and ends is gone): its rings, the full width of its 4 sides
+# (4 x 3 x 8 by phase: 36 / 36 / 24; until the same day the two edge columns were steady glass in rail); rail_emit: the
+# 2 texels in the middle of the hole under the band nearest the muzzle (shared by the band at the base, where it's hidden);
 # pilot: the 1x1x1 tip of the flamethrower's pilot light, 6 faces;
 # tidal: the 2x2 porthole x 2 faces' worth (8); reactor: the core's ring + the canisters' glass strips (69);
 # 4 barrel sides x 2x2 tips; 4 barrel sides x 2x3 behind them + the front collar's 6x1x6 net, 96;
@@ -85,7 +88,7 @@ EXPECTED = {'fire': 12, 'visor': 441, 'heat': 16, 'heat_barrel': 120, 'em_core':
 # actual energy charging up instead of some blue LEDs"): after the masks are made, these pixels are cleared from the
 # base texture, so the cube is invisible (cut out) and only its glow shows. Blockbench keeps them painted (to design with,
 # and so the next export brings them back for this script).
-SEE_THROUGH = {'rail', 'rail_flow_0', 'rail_flow_1', 'rail_flow_2'}
+SEE_THROUGH = {'rail_flow_0', 'rail_flow_1', 'rail_flow_2'}
 
 
 def main():
