@@ -214,6 +214,11 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   at 60% was invisible in every daytime shot (a pixel diff found nothing); a see-through blue sheath
   (`entityTranslucentEmissive`, alpha fades) round an additive white core reads by day and glows by night. Check new effects
   with a diff of a frame with and without them, not by eye.
+- **Glow fades by opacity, never by darkening** (2026-10-26): the 26.3 "eyes" pass blends (`BlendFunction.TRANSLUCENT`), so a
+  mask tinted darker (or painted in dark reds meant for an additive glow) paints the part darker than the cold metal: the
+  chaingun's warming barrels showed a dark smudge. Fade lights with `SuitGlowLayer.energy` (alpha) and give mask colours
+  their own opacity in `make-glowmasks.py` (third item in GLOW). Texels in reserved colours glow wherever they're used:
+  a cube that copies another's net (the chaingun's back plate) needs its own net in the cold colours.
 - **Geometry that isn't an entity** (the rail beam): copy what to draw into the level render state in NeoForge's
   `ExtractLevelRenderStateEvent` (`setRenderData` with a `ContextKey`) and draw it in `SubmitCustomGeometryEvent`; its pose
   stack is camera-relative (translate by position minus the camera's, like `submitBlockOutline`). A hitscan beam from the

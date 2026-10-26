@@ -66,8 +66,10 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
         state.addGeckolibData(SuitRenderData.GLOW, new int[] {
                 tint(fire, 1F, 1F, 1F),
                 tint(on, visor[0], visor[1], visor[2]),
-                tint(heatGlow(heat), 1F, 1F, 1F),
-                tint(barrelGlow(heat), 1F, 1F, 1F),
+                // Heat fades in by opacity: dimming the colour painted the warming barrels darker than cold metal
+                // (the "eyes" pass blends, it doesn't add light), a dark smudge over the glow until 2026-10-26.
+                energy(heatGlow(heat)),
+                energy(barrelGlow(heat)),
                 tint(suit.getEmCoreGlow(time), 1F, 1F, 1F),
                 tint(suit.getEmArcGlow(time), 1F, 1F, 1F),
                 tint(suit.getTidalGlow(time), 1F, 1F, 1F),
@@ -125,8 +127,8 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
         return h * h * (3 - 2 * h);
     }
 
-    /** Light with nothing behind it (the rail cannon's core, see-through when off: its pixels are cleared from the
-     *  texture): the mask's own colour, faded by its opacity instead of darkened. The "eyes" pipeline blends by alpha
+    /** Light that fades in over the model or over nothing (the chaingun's heat, the rail cannon's core, see-through
+     *  when off: its pixels are cleared from the texture): the mask's own colour, faded by its opacity instead of darkened. The "eyes" pipeline blends by alpha
      *  (it isn't additive), so a dimmed opaque colour would draw a dark core where there should be air. */
     static int energy(float brightness) {
         if (brightness <= 0.01F) {

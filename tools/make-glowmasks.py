@@ -4,7 +4,9 @@
 
 Glowing parts are painted in Blockbench with RESERVED colours: dark, so a powered-off suit shows dead coals and
 dark glass. Each reserved colour maps to a bright colour in one glowmask; everything else is transparent black,
-which adds nothing (SuitGlowLayer draws the masks full-bright and additively, tinted per frame):
+which draws nothing (SuitGlowLayer draws the masks full-bright on top, tinted per frame; in 26.3 the "eyes" pass blends
+by alpha, it doesn't add light, so a dark mask colour paints the part darker: lights that fade fade by opacity, and a
+colour may carry its own opacity, the third item in GLOW):
   power_armor_glow_fire.png   the firebox coals (yellow at the bottom -> red at the top), painted flat on the backpack
   power_armor_glow_visor.png  the visor glass, white (tinted green / amber / red by the suit's state)
   power_armor_glow_heat.png   the chaingun's barrel tips (tinted by the barrels' heat)
@@ -41,12 +43,15 @@ GLOW = {
     H('46505c'): ('visor', H('ffffff')),  # visor glass, highlight
     H('3c4147'): ('heat', H('ff6a1a')),   # chaingun barrel tip, second row: orange
     H('353a40'): ('heat', H('ffc860')),   # chaingun barrel tip, last row: yellow-hot
-    # barrel sides behind the tips: the stripes' own colours, one step off (cold barrels look the same)
-    H('4c555a'): ('heat_barrel', H('6e1a0a')), H('3b4247'): ('heat_barrel', H('5a1408')),  # 4th row from the tip: dark red
-    H('4c555b'): ('heat_barrel', H('b4300e')), H('3b4248'): ('heat_barrel', H('96280c')),  # 3rd: red
-    H('4c555c'): ('heat_barrel', H('f0501a')), H('3b4249'): ('heat_barrel', H('d24416')),  # under the front collar: orange-red
-    # the front collar around the barrels (its own net; the rear collar stays cold): the ring's greys, one step off
-    H('89939b'): ('heat_barrel', H('f0501a')), H('7d888f'): ('heat_barrel', H('d24416')), H('6f797f'): ('heat_barrel', H('b4300e')),
+    # barrel sides behind the tips: the stripes' own colours, one step off (cold barrels look the same). The heat fades
+    # back from the tips by opacity, not by darker reds (until 2026-10-26 these were dark reds, 6e1a0a..., made for an
+    # additive glow: blended over the metal they read as a dark smudge on the hot barrels)
+    H('4c555a'): ('heat_barrel', H('ff4a14'), 90), H('3b4247'): ('heat_barrel', H('e8400f'), 90),    # 4th row from the tip
+    H('4c555b'): ('heat_barrel', H('ff5a18'), 150), H('3b4248'): ('heat_barrel', H('ec4c14'), 150),  # 3rd
+    H('4c555c'): ('heat_barrel', H('ff6a1e'), 210), H('3b4249'): ('heat_barrel', H('f05818'), 210),  # under the front collar
+    # the front collar around the barrels (its own net; the back plate by the socket has its own cold copy since
+    # 2026-10-26): the ring's greys, one step off
+    H('89939b'): ('heat_barrel', H('ff7a2a')), H('7d888f'): ('heat_barrel', H('f0601e')), H('6f797f'): ('heat_barrel', H('dd4c14')),
     # EM projector (model/art/em_redstone_art.py): dead redstone, lit red
     H('3a0e0c'): ('em_core', H('7a0600')), H('4b1310'): ('em_core', H('b81206')),
     H('5c1813'): ('em_core', H('f0200c')), H('701f17'): ('em_core', H('ff6a4a')),
@@ -102,7 +107,7 @@ def main():
             r, g, b, a = src.getpixel((x, y))
             hit = GLOW.get((r, g, b)) if a else None
             if hit:
-                masks[hit[0]].putpixel((x, y), hit[1] + (255,))
+                masks[hit[0]].putpixel((x, y), hit[1] + (hit[2] if len(hit) > 2 else 255,))
                 count[hit[0]] += 1
                 if hit[0] in SEE_THROUGH:
                     clear.append((x, y))

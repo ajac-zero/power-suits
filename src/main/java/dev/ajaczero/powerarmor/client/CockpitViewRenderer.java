@@ -48,8 +48,8 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
             float heat = suit.getToolHeat();
             float time = (float) ClientUtil.getCurrentTick(partialTick);
             state.addGeckolibData(GLOW, new int[] {
-                    SuitGlowLayer.tint(SuitGlowLayer.heatGlow(heat), 1F, 1F, 1F),
-                    SuitGlowLayer.tint(SuitGlowLayer.barrelGlow(heat), 1F, 1F, 1F),
+                    SuitGlowLayer.energy(SuitGlowLayer.heatGlow(heat)), // heat fades in by opacity (see SuitGlowLayer)
+                    SuitGlowLayer.energy(SuitGlowLayer.barrelGlow(heat)),
                     SuitGlowLayer.tint(suit.getEmCoreGlow(time), 1F, 1F, 1F),
                     SuitGlowLayer.tint(suit.getEmArcGlow(time), 1F, 1F, 1F),
                     SuitGlowLayer.tint(suit.getPilotGlow(time), 1F, 1F, 1F),
