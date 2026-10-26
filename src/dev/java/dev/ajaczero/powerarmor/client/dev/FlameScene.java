@@ -190,7 +190,7 @@ final class FlameScene {
         String p = phase;
         var client = mc.level == null ? null : mc.level.getEntity(x.getId()) instanceof PowerArmorEntity c ? c : null;
         boolean running = client != null && client.socket().isRunning();
-        float glow = client == null ? 0F : client.getPilotGlow(0F);
+        float glow = client == null ? 0F : client.socketVisuals().light(dev.ajaczero.powerarmor.item.ToolLight.PILOT, 0F);
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
             AABB area = new AABB(b).inflate(10);

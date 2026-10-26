@@ -1441,7 +1441,7 @@ public final class AutoPilot {
             mindCsv.write(String.format(java.util.Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%s,%.1f,%.1f,%.1f,%b,%.2f,%d,%d,%d,%.2f,%.2f,%.2f,%b,%s,%.2f,%s,%d,%d,%d,%.1f,%s,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%s%n",
                     m, mindPhase, server.getX() - (b.getX() + 0.5), server.getZ() - (b.getZ() + 0.5),
                     Math.hypot(server.getX() - server.xo, server.getZ() - server.zo) * 20, server.isAiDriven(), client.getMovementAnimationName(),
-                    server.getYHeadRot(), server.yBodyRot, server.getXRot(), server.socket().isActive(), client.getToolRaise(1F), faceLeft, drops,
+                    server.getYHeadRot(), server.yBodyRot, server.getXRot(), server.socket().isActive(), client.socketVisuals().raise(1F), faceLeft, drops,
                     server.power().getTotalEnergy(), visor[0], visor[1], visor[2], server.getNavigation().isDone(),
                     server.runningGoalNames(), server.getOwner() == null ? -1F : server.distanceTo(server.getOwner()),
                     server.getTarget() == null ? "-" : server.getTarget().getType().toShortString(), server.getStoredNuggets(), server.socket().getUses(),

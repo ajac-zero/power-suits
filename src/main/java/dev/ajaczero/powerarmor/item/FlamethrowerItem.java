@@ -82,6 +82,11 @@ public class FlamethrowerItem extends Item implements PowerTool {
     }
 
     @Override
+    public ToolEffects createEffects() {
+        return new FlamethrowerEffects();
+    }
+
+    @Override
     public boolean isContinuous() {
         return true;
     }

@@ -270,9 +270,9 @@ final class RailScene {
         PowerArmorEntity client = clientSuit(mc);
         int clientAmmo = client == null ? -1 : client.getAmmoStack().getCount();
         float clientCharge = client == null ? -1F : client.socket().getSpin();
-        float recoil = client == null ? 0F : client.getRecoil(0F);
-        float raise = client == null ? 0F : client.getToolRaise(0F);
-        float glow = client == null ? 0F : client.getRailGlow(client.tickCount);
+        float recoil = client == null ? 0F : client.socketVisuals().recoil(0F);
+        float raise = client == null ? 0F : client.socketVisuals().raise(0F);
+        float glow = client == null ? 0F : client.socketVisuals().light(dev.ajaczero.powerarmor.item.ToolLight.RAIL_EMIT, client.tickCount);
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
             AABB area = new AABB(b).inflate(24);

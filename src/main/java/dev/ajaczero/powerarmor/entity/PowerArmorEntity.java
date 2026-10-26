@@ -247,6 +247,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private final SuitPower power = new SuitPower(this);
     /** The socket tool as the suit works it (trigger, cooldown, synced spin/shots...): see SuitSocket. */
     private final SuitSocket socket = new SuitSocket(this);
+    /** Client: how this client draws the socket tool (raise, recoil, the tool's ToolEffects): see SocketVisuals. */
+    private final SocketVisuals socketVisuals = new SocketVisuals(this);
     private final SimpleContainer inventory = new SimpleContainer(5) {
         @Override
         public void setChanged() {
@@ -263,27 +265,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private int startupTicks;
     /** Client: the pilot's arm was mid-swing last tick (to catch the start of each swing). */
     private boolean pilotWasSwinging;
-    /** Client: the action controller was already playing a shot last tick (for the pilot's own muzzle burst). */
-    private int seenShots;
-    /** Client: chaingun barrel angle (degrees, this and last tick) and the recoil kick (1 right after a shot, decays). The
-     *  TNT launcher's drum uses the same angle (one tool at a time): drumTurn is how much of its quarter turns is left. */
-    private float barrelAngle, barrelAngleO, recoil, recoilO, drumTurn;
-    /** Degrees per tick the TNT launcher's drum turns after a shot (a quarter turn in 5 ticks). */
-    private static final float DRUM_SPEED = 18F;
     /** Client: 0..1, how much the torso follows the pilot's view (eases out on shutdown, in after startup). */
     private float aimBlend;
-    /** Client: 0 = tool arm in its hip carry, 1 = raised to aim (follows TOOL_ACTIVE, like raising a shield). */
-    private float toolRaise, toolRaiseO;
     /** Client: the lights (SuitGlowLayer). Fire 0..1; visor brightness 0..1 and colour; ticks the visor stays red after a hit. */
     private float fireGlow, visorLevel;
-    /** Client: the EM projector's redstone, 0..1: the lens + vents (core) and the prong tips (arc). */
-    private float emCoreGlow, emArcGlow;
-    /** Client: the flamethrower's pilot light, 0 (out) .. 1 (spraying). */
-    private float pilotGlow;
-    /** Client: the rail cannon's core glow, 0..1 (the charge, a flash after each shot). */
-    private float railGlow;
-    /** Client: how far the light running along the rail cannon's core has gone (in rings; faster as it charges). */
-    private float railFlow, railFlowO;
     /** Client: the tidal engine's / star reactor's glass, 0 (dark) .. 1 (running), eased like the fire. */
     private float engineGlow;
     private final float[] visorColor = {1F, 0.68F, 0.22F};
@@ -715,6 +700,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** The left-arm socket and the tool in it. */
     public SuitSocket socket() {
         return this.socket;
+    }
+
+    /** Client: how the socket tool is drawn on this client. */
+    public SocketVisuals socketVisuals() {
+        return this.socketVisuals;
     }
 
     /** Server, every tick: a rogue always wears a helmet and a backpack, whatever made it. */
@@ -1215,12 +1205,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return current == null ? "-" : current.animation().name().replace("animation.power_armor.", "");
     }
 
-    /** Client: how far the tool arm is raised, 0 (hip carry) .. 1 (aiming), eased, for this frame. */
-    public float getToolRaise(float partial) {
-        float t = Mth.lerp(partial, this.toolRaiseO, this.toolRaise);
-        return t * t * (3 - 2 * t);
-    }
-
     // ---- Lights (client): the firebox and the visor, drawn by SuitGlowLayer -----------------------------
 
     private static final float[] VISOR_GREEN = {0.35F, 1F, 0.45F}, VISOR_AMBER = {1F, 0.68F, 0.22F}, VISOR_RED = {1F, 0.12F, 0.08F};
@@ -1238,33 +1222,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         float levelTarget = powered ? 1F : 0F;
         this.visorLevel += (levelTarget - this.visorLevel) * (powered ? 0.3F : 0.08F);
-        // EM projector: the core idles at a faint glow while mounted in a powered suit, brightens while the button
-        // is held (searching for something to grab) and runs full while the beam holds something; the prong tips
-        // only light up while the beam holds something (that's when they spark). Quick to light, slower to fade.
-        boolean em = powered && this.getSocketStack().getItem() instanceof EmProjectorItem;
-        boolean holding = em && this.socket.getBeamTarget() != null;
-        float coreTarget = !em ? 0F : holding ? 1F : this.socket.isActive() ? 0.6F : 0.25F;
-        float arcTarget = holding ? 1F : 0F;
-        this.emCoreGlow += (coreTarget - this.emCoreGlow) * (coreTarget > this.emCoreGlow ? 0.35F : 0.1F);
-        this.emArcGlow += (arcTarget - this.emArcGlow) * (arcTarget > this.emArcGlow ? 0.5F : 0.15F);
-        // Flamethrower: the pilot light burns whenever the suit is powered with it fitted, brighter while it sprays; under
-        // water it goes out.
-        boolean flamer = powered && this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.FlamethrowerItem
-                && !this.isEyeInFluid(net.minecraft.tags.FluidTags.WATER);
-        float pilotTarget = !flamer ? 0F : this.socket.isActive() ? 1F : 0.7F;
-        this.pilotGlow += (pilotTarget - this.pilotGlow) * (pilotTarget > this.pilotGlow ? 0.4F : 0.1F);
-        // Rail cannon: the core idles at a faint blue while it's fitted to a powered suit and brightens with the charge
-        // (synced as the tool spin); a shot flashes it (tickShotEffects), then it fades back.
-        boolean rail = powered && this.hasRailCannon();
-        float railTarget = !rail ? 0F : 0.15F + 0.85F * this.socket.getSpin();
-        this.railGlow += (railTarget - this.railGlow) * (railTarget > this.railGlow ? 0.5F : 0.12F);
-        // The energy in the core runs toward the muzzle: slowly while idle, racing as the charge builds.
-        this.railFlowO = this.railFlow;
-        this.railFlow += 0.06F + 0.55F * this.socket.getSpin();
-        if (this.railFlow > 300F) { // keep it small (a multiple of 3 rings: the pattern repeats every 3)
-            this.railFlow -= 300F;
-            this.railFlowO -= 300F;
-        }
         // The tidal engine's and the reactor's glass light up while they run (the firebox has its fire above).
         float engineTarget = powered && this.getEngine() != SuitEngine.FIREBOX ? 1F : 0F;
         this.engineGlow += (engineTarget - this.engineGlow) * (engineTarget > this.engineGlow ? 0.15F : 0.05F);
@@ -1285,49 +1242,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         float pulse = Mth.sin(time * 0.12F + this.getId());
         return this.engineGlow * (0.78F + 0.22F * pulse * pulse);
-    }
-
-    /** Client: the EM projector's lens and vents at this moment, 0..1: a slow breathing pulse, and a fast uneven
-     *  throb while the beam holds something (time in ticks, with the partial tick). */
-    public float getEmCoreGlow(float time) {
-        float g = this.emCoreGlow;
-        float pulse = this.emArcGlow > 0.5F ? 0.8F + 0.12F * Mth.sin(time * 1.7F) + 0.08F * Mth.sin(time * 4.3F)
-                : 0.85F + 0.15F * Mth.sin(time * 0.25F);
-        return g * pulse;
-    }
-
-    /** Client: the EM projector's prong tips at this moment, 0..1: they crackle (flicker at random-looking times). */
-    public float getEmArcGlow(float time) {
-        float crackle = Mth.sin(time * 5.1F) * Mth.sin(time * 2.9F + this.getId()) > 0.5F ? 0.55F : 1F;
-        return this.emArcGlow * crackle;
-    }
-
-    /** Client: the flamethrower's pilot light at this moment, 0..1: a small flame, it wavers a little. */
-    public float getPilotGlow(float time) {
-        return this.pilotGlow * (0.88F + 0.08F * Mth.sin(time * 0.9F + this.getId()) + 0.04F * Mth.sin(time * 2.3F));
-    }
-
-    /** Client: the rail cannon's core at this moment, 0..1: steady while it charges, a fast shimmer once it's full. */
-    public float getRailGlow(float time) {
-        boolean full = this.socket.getSpin() >= 0.999F;
-        return this.railGlow * (full ? 0.85F + 0.15F * Mth.sin(time * 2.7F + this.getId()) : 1F);
-    }
-
-    /** Client: one third of the core's rings (phase 0, 1, 2: ring r is phase r mod 3) at this moment, 0..1. A wave
-     *  runs along the core, so each phase brightens in turn after the one behind it: the light flows toward the muzzle.
-     *  Dim and lazy while idle, a bright fast pulse train while charging, all lit when it fires (the flash). */
-    public float getRailFlowGlow(int phase, float partial) {
-        float flow = Mth.lerp(partial, this.railFlowO, this.railFlow);
-        float wave = Mth.cos((flow - phase) * Mth.TWO_PI / 3F) * 0.5F + 0.5F;  // 1 when the crest is on this phase
-        float charge = this.socket.getSpin();
-        float crest = wave * wave * wave;                                  // a narrow crest, so it reads as moving rings
-        float flash = Math.max(0F, this.railGlow - (0.15F + 0.85F * charge)); // what's left of a shot's flash: all rings lit
-        return Math.min(1F, this.railGlow * (0.3F + 0.7F * crest) + flash);
-    }
-
-    /** Client: the rail cannon's charge, 0..1 (synced tool spin), for the shake and the sparks. */
-    public float getRailCharge() {
-        return this.hasRailCannon() ? this.socket.getSpin() : 0F;
     }
 
     /** Client: firebox glow, 0 (cold) .. 1 (roaring). */
@@ -1757,17 +1671,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             // The torso follows the view of whoever drives: the pilot's, or the head of the mind (what it looks at).
             float aimTarget = this.isDriven() && this.canOperate() ? 1F : 0F;
             this.aimBlend += (aimTarget - this.aimBlend) * 0.2F;
-            // Raise the tool arm in 3 ticks while the tool is used, lower it in 5 (heavier on the way down).
-            this.toolRaiseO = this.toolRaise;
-            this.toolRaise = this.socket.isActive() && this.isDriven() ? Math.min(1F, this.toolRaise + 1F / 3F)
-                    : Math.max(0F, this.toolRaise - 1F / 5F);
             this.tickLights();
             this.tickSparks();
             ExhaustSmoke.tick(this);
-            EmBeamEffects.tick(this);
             this.tickHandSwing();
-            this.tickShotEffects();
-            RailBeamEffects.chargeTick(this);
+            this.socketVisuals.tick(); // the tool arm's raise, recoil, and the tool's own looks (ToolEffects)
             // Measure how fast we actually move (blocks/s) and smooth it to avoid flicker
             // between idle and walk.
             double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
@@ -1955,81 +1863,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.level().playLocalSound(this.getX(), this.getY() + 1, this.getZ(), SoundEvents.COPPER_BULB_TURN_OFF,
                     net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 0.6F + this.random.nextFloat() * 0.6F, false);
         }
-    }
-
-    /** Client, every tick: follow the socket tool's synced spin and shots. The chaingun's barrels turn by the spin (up to
-     *  60 degrees a tick, ten turns a second), the TNT launcher's drum a quarter turn after each shot; each new shot kicks
-     *  the recoil (harder for the heavy slow shots) and, for our own pilot only, puffs the muzzle burst at the muzzle on
-     *  their screen (the cockpit viewmodel's in first person, SocketAim.visualMuzzle). The server sends the burst to
-     *  everyone else. */
-    private void tickShotEffects() {
-        float spin = this.socket.getSpin();
-        boolean launcher = this.getSocketStack().getItem() instanceof dev.ajaczero.powerarmor.item.TntLauncherItem;
-        this.barrelAngleO = this.barrelAngle;
-        this.barrelAngle += 60F * spin;
-        if (this.drumTurn > 0F) {
-            float step = Math.min(DRUM_SPEED, this.drumTurn);
-            this.barrelAngle += step;
-            this.drumTurn -= step;
-            if (this.drumTurn <= 0F) {
-                // the next round drops into line with the barrel: a hard little click
-                this.level().playLocalSound(this.getX(), this.getY() + 1.5, this.getZ(), SoundEvents.IRON_TRAPDOOR_CLOSE,
-                        net.minecraft.sounds.SoundSource.PLAYERS, 0.35F, 1.7F, false);
-            }
-        }
-        if (this.barrelAngle > 3600F) { // keep it small; a multiple of 90 so the square cluster doesn't jump
-            this.barrelAngle -= 3600F;
-            this.barrelAngleO -= 3600F;
-        }
-        this.recoilO = this.recoil;
-        this.recoil *= 0.55F;
-        int shots = this.socket.getShots();
-        if (shots == this.seenShots) {
-            return;
-        }
-        this.seenShots = shots;
-        this.recoil = Math.max(this.recoil, 1F - 0.65F * spin);
-        if (launcher) {
-            this.drumTurn += 90F;
-        }
-        if (this.hasRailCannon()) {
-            // The beam, drawn here by every client from the muzzle it sees; the core flashes white-hot.
-            this.railGlow = 1F;
-            LivingEntity operator = this.getControllingPassenger() instanceof Player pilot ? pilot : this;
-            RailBeamEffects.shot(this, operator, this.socket.getRailBeamEnd());
-            return;
-        }
-        if (this.getControllingPassenger() instanceof Player pilot && pilot.isLocalPlayer()) {
-            Vec3 muzzle = dev.ajaczero.powerarmor.item.SocketAim.visualMuzzle.apply(this, pilot);
-            boolean firstPerson = muzzle.distanceTo(pilot.getEyePosition()) < 1.4;
-            if (firstPerson) {
-                // The viewmodel's muzzle is under a block from the camera, where particles turn into big blobs: burst a
-                // little further out along the shot, and without the steam (it covered the target).
-                muzzle = muzzle.add(pilot.getViewVector(1F).scale(1.4));
-            }
-            dev.ajaczero.powerarmor.item.ChaingunItem.Particles out = (type, x, y, z, n, spread, speed) -> {
-                for (int i = 0; i < n; i++) {
-                    this.level().addParticle(type, x + this.random.nextGaussian() * spread, y + this.random.nextGaussian() * spread,
-                            z + this.random.nextGaussian() * spread, this.random.nextGaussian() * speed,
-                            this.random.nextGaussian() * speed, this.random.nextGaussian() * speed);
-                }
-            };
-            if (launcher) {
-                dev.ajaczero.powerarmor.item.TntLauncherItem.muzzlePuff(out, muzzle, !firstPerson);
-            } else {
-                dev.ajaczero.powerarmor.item.ChaingunItem.muzzleBurst(out, muzzle, spin, !firstPerson);
-            }
-        }
-    }
-
-    /** Client: the chaingun barrels' angle this frame, degrees. */
-    public float getBarrelAngle(float partial) {
-        return Mth.lerp(partial, this.barrelAngleO, this.barrelAngle);
-    }
-
-    /** Client: recoil kick this frame, 0..1. */
-    public float getRecoil(float partial) {
-        return Mth.lerp(partial, this.recoilO, this.recoil);
     }
 
     /** Client: the pilot swung their hand (placed a block, used an item on something): reach with the suit's hand.

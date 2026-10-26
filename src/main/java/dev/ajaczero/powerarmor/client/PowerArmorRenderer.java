@@ -49,9 +49,9 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         state.addGeckolibData(SuitRenderData.STEP_OFFSET, (float) suit.getStepOffset(partialTick));
         state.addGeckolibData(SuitRenderData.AIMING, suit.isDriven() && !suit.isDeadOrDying());
         state.addGeckolibData(SuitRenderData.AIM_BLEND, suit.getAimBlend());
-        state.addGeckolibData(SuitRenderData.TOOL_RAISE, suit.getToolRaise(partialTick));
-        state.addGeckolibData(SuitRenderData.RECOIL, suit.getRecoil(partialTick));
-        state.addGeckolibData(SuitRenderData.BARREL_ANGLE, suit.getBarrelAngle(partialTick));
+        state.addGeckolibData(SuitRenderData.TOOL_RAISE, suit.socketVisuals().raise(partialTick));
+        state.addGeckolibData(SuitRenderData.RECOIL, suit.socketVisuals().recoil(partialTick));
+        state.addGeckolibData(SuitRenderData.BARREL_ANGLE, suit.socketVisuals().rotorAngle(partialTick));
         state.addGeckolibData(SuitRenderData.HIP_SINK, suit::setHipHeight);
     }
 

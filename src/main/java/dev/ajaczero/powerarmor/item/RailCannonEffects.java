@@ -1,23 +1,30 @@
-package dev.ajaczero.powerarmor.entity;
+package dev.ajaczero.powerarmor.item;
 
-import dev.ajaczero.powerarmor.item.SocketAim;
+import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Client: the rail cannon's shot, drawn by every client when the suit's synced shot counter moves (the server only sends
- * where the beam ended, PowerArmorEntity.setRailBeamEnd): a straight bar of blue-white light from the muzzle this client
+ * Client: the rail cannon's looks on one suit. Its core idles at a faint blue while it's fitted to a powered suit and
+ * brightens with the charge (synced as the socket's spin); the energy runs along the core's rings toward the muzzle,
+ * slowly while idle, racing as the charge builds; sparks jump between the prong tips as it charges; a shot flashes the
+ * core white-hot, then it fades back.
+ *
+ * The shot itself is drawn by every client when the suit's synced shot counter moves (the server only sends where the
+ * beam ended, SuitSocket.setRailBeamEnd): a straight bar of blue-white light from the muzzle this client
  * sees (the cockpit viewmodel's for its own pilot in first person, SocketAim.visualMuzzle) to the end, drawn as geometry
  * for a few ticks while it fades ({@link #BEAMS}, client/RailBeamRenderer: particles alone read as a dotted streak near
  * the gun, runAutopilotRail), with blue dust hanging along it a moment longer, sparks, and a burst where it stopped.
  * The server fired from the eye along the crosshair; from the muzzle the line is a hair off that, which nobody can see
  * over 64 blocks (the chaingun's bullets join their real path the same way).
  */
-public final class RailBeamEffects {
+public final class RailCannonEffects implements ToolEffects {
     /** The core: small and near white (dust lives in proportion to its size: it fades first). */
     private static final DustParticleOptions CORE = new DustParticleOptions(0xD8FCFF, 0.55F);
     /** The glow round it: the core glass's blue, bigger, so it lingers. */
@@ -33,7 +40,56 @@ public final class RailBeamEffects {
     /** How long a beam is drawn, ticks. */
     public static final int BEAM_TICKS = 8;
 
-    static void shot(PowerArmorEntity suit, LivingEntity operator, Vec3 end) {
+    /** Client: the core's glow, 0..1 (the charge, a flash after each shot), and how far the light running along it has
+     *  gone (in rings; faster as it charges). */
+    private float glow, flow, flowO;
+
+    @Override
+    public void tick(PowerArmorEntity suit) {
+        float charge = suit.socket().getSpin();
+        float target = !suit.isPowered() ? 0F : 0.15F + 0.85F * charge;
+        this.glow = ToolEffects.ease(this.glow, target, 0.5F, 0.12F);
+        this.flowO = this.flow;
+        this.flow += 0.06F + 0.55F * charge;
+        if (this.flow > 300F) { // keep it small (a multiple of 3 rings: the pattern repeats every 3)
+            this.flow -= 300F;
+            this.flowO -= 300F;
+        }
+        sparks(suit, charge);
+    }
+
+    @Override
+    public void shot(PowerArmorEntity suit) {
+        // The beam, drawn here by every client from the muzzle it sees; the core flashes white-hot.
+        this.glow = 1F;
+        LivingEntity operator = suit.getControllingPassenger() instanceof Player pilot ? pilot : suit;
+        beam(suit, operator, suit.socket().getRailBeamEnd());
+    }
+
+    @Override
+    public float shake(PowerArmorEntity suit) {
+        return suit.socket().getSpin();
+    }
+
+    @Override
+    public void lights(PowerArmorEntity suit, float time, float partial, float[] out) {
+        float charge = suit.socket().getSpin();
+        // The rings: a wave runs along the core, so each third brightens in turn after the one behind it. Dim and lazy
+        // while idle, a bright fast pulse train while charging, all lit when it fires (the flash).
+        float flow = Mth.lerp(partial, this.flowO, this.flow);
+        float flash = Math.max(0F, this.glow - (0.15F + 0.85F * charge)); // what's left of a shot's flash: all rings lit
+        for (int phase = 0; phase < 3; phase++) {
+            float wave = Mth.cos((flow - phase) * Mth.TWO_PI / 3F) * 0.5F + 0.5F; // 1 when the crest is on this phase
+            float crest = wave * wave * wave;                                    // a narrow crest, so it reads as moving rings
+            out[ToolLight.RAIL_FLOW_0.ordinal() + phase] = Math.min(1F, this.glow * (0.3F + 0.7F * crest) + flash);
+        }
+        // the emitter: steady while it charges, a fast shimmer once it's full
+        boolean full = charge >= 0.999F;
+        out[ToolLight.RAIL_EMIT.ordinal()] = this.glow * (full ? 0.85F + 0.15F * Mth.sin(time * 2.7F + suit.getId()) : 1F);
+    }
+
+    /** The beam from the muzzle this client sees to where it ended: a bar of light (BEAMS) and particles. */
+    private static void beam(PowerArmorEntity suit, LivingEntity operator, Vec3 end) {
         Level level = suit.level();
         RandomSource random = suit.getRandom();
         Vec3 from = SocketAim.visualMuzzle.apply(suit, operator);
@@ -75,8 +131,7 @@ public final class RailBeamEffects {
 
     /** Client, every tick: while it charges, sparks jump between the prong tips (more and more as it fills; a steady
      *  crackle at full charge), like the gun can barely hold the charge in. Not right at the pilot's eye. */
-    static void chargeTick(PowerArmorEntity suit) {
-        float charge = suit.getRailCharge();
+    private static void sparks(PowerArmorEntity suit, float charge) {
         LivingEntity operator = suit.getControllingPassenger() instanceof LivingEntity p ? p : suit;
         if (charge < 0.1F || suit.getRandom().nextFloat() > 0.15F + 0.75F * charge * charge) {
             return;
@@ -97,6 +152,4 @@ public final class RailBeamEffects {
             }
         }
     }
-
-    private RailBeamEffects() {}
 }

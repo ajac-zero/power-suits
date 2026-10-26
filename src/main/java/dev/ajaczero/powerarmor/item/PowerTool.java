@@ -88,6 +88,12 @@ public interface PowerTool {
         return 1F;
     }
 
+    /** Client: a fresh object for this tool's looks on one suit (moving parts, lights, shot effects), made when the tool
+     *  goes into a socket. Tools with nothing to show keep the default. */
+    default ToolEffects createEffects() {
+        return ToolEffects.NONE;
+    }
+
     /** Server: keep the run animation going after the trigger is released (a tree still coming down). */
     default boolean keepsRunning(PowerArmorEntity suit) {
         return false;

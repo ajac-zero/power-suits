@@ -60,7 +60,7 @@ public final class CockpitHands {
         view.suit = suit;
         pollShot(suit, view);
         pose.pushPose();
-        toolTransform(pose, suit, event.getPartialTick(), suit.getToolRaise(event.getPartialTick()));
+        toolTransform(pose, suit, event.getPartialTick(), suit.socketVisuals().raise(event.getPartialTick()));
         drawPart(pose, event, CockpitViewRenderer.Part.TOOL);
         pose.popPose();
     }
@@ -86,7 +86,7 @@ public final class CockpitHands {
     /** Tool: low on the left, raised toward the middle while used, bobbing with the gait, kicking back and up when
      *  it fires. */
     private static void toolTransform(PoseStack pose, PowerArmorEntity suit, float partial, float raise) {
-        float kick = Math.max(recoil(partial), suit.getRecoil(partial)); // EM push / chaingun shots
+        float kick = Math.max(recoil(partial), suit.socketVisuals().recoil(partial)); // EM push / chaingun shots
         Vector3f p = new Vector3f(toolPos).lerp(toolRaisedPos, raise);
         pose.translate(p.x, p.y + bob(suit), p.z + kick * 0.10F);
         pose.rotateDegrees(Axis.YP, Mth.lerp(raise, toolYaw, toolRaisedYaw));
@@ -143,7 +143,7 @@ public final class CockpitHands {
     }
 
     /** The suit plays tool_recoil when the EM projector pushes; start the kick here too. (Chaingun shots kick through
-     *  the suit's synced shot counter, PowerArmorEntity.getRecoil.) */
+     *  the suit's synced shot counter, SocketVisuals.recoil.) */
     private static void pollShot(PowerArmorEntity suit, CockpitView view) {
         AnimationController<?> action = suit.getAnimatableInstanceCache().getManagerForId(suit.getId()).getAnimationControllers().get("action");
         var triggered = action == null ? null : action.getCurrentRawAnimation();
@@ -178,7 +178,7 @@ public final class CockpitHands {
         PowerTool tool = suit.getSocketStack().getItem() instanceof PowerTool t ? t : null;
         float inset = tool != null ? tool.muzzleInsetPixels() : 0F;
         float forward = tool != null ? tool.barrelForwardPixels() : 0F; // the model's front is -z
-        Vector3f p = toolMatrix(suit, suit.getToolRaise(1F)).transformPosition(new Vector3f(0, (MUZZLE_PX + inset) / 16F, -forward / 16F));
+        Vector3f p = toolMatrix(suit, suit.socketVisuals().raise(1F)).transformPosition(new Vector3f(0, (MUZZLE_PX + inset) / 16F, -forward / 16F));
         double k = Math.tan(Math.toRadians(mc.options.fov().get()) / 2) / Math.tan(Math.toRadians(70) / 2);
         Camera camera = mc.gameRenderer.mainCamera();
         org.joml.Vector3fc look = camera.forwardVector(), up = camera.upVector(), left = camera.leftVector();

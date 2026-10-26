@@ -218,9 +218,9 @@ final class TntScene {
         String p = phase;
         PowerArmorEntity client = clientSuit(mc);
         int clientAmmo = client == null ? -1 : client.getAmmoStack().getCount();
-        float drum = client == null ? 0F : client.getBarrelAngle(0F);
-        float recoil = client == null ? 0F : client.getRecoil(0F);
-        float raise = client == null ? 0F : client.getToolRaise(0F);
+        float drum = client == null ? 0F : client.socketVisuals().rotorAngle(0F);
+        float recoil = client == null ? 0F : client.socketVisuals().recoil(0F);
+        float raise = client == null ? 0F : client.socketVisuals().raise(0F);
         AutoPilot.onServer(mc, player -> {
             ServerLevel level = player.level();
             AABB area = new AABB(b).inflate(24);

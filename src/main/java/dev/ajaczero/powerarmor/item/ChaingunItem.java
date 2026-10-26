@@ -6,7 +6,6 @@ import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.registry.ModSounds;
 import java.util.List;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -84,6 +83,11 @@ public class ChaingunItem extends Item implements PowerTool {
     @Override
     public String suitBone() {
         return "chaingun";
+    }
+
+    @Override
+    public ToolEffects createEffects() {
+        return new ChaingunEffects();
     }
 
     @Override
@@ -203,14 +207,9 @@ public class ChaingunItem extends Item implements PowerTool {
         }
     }
 
-    /** A particle sink: (type, x, y, z, count, spread, speed). Lets the server and the client share muzzleBurst. */
-    public interface Particles {
-        void add(ParticleOptions type, double x, double y, double z, int count, double spread, double speed);
-    }
-
     /** The puff at the muzzle: sparks and smoke, and a burst of steam for the heavy slow shots (not in the pilot's
      *  own first-person view, where it covered the target). Light at full spin: ten of these a second. */
-    public static void muzzleBurst(Particles out, Vec3 at, float spin, boolean steam) {
+    public static void muzzleBurst(ToolEffects.Particles out, Vec3 at, float spin, boolean steam) {
         if (steam && spin < 0.4F) {
             out.add(ParticleTypes.POOF, at.x, at.y, at.z, 3, 0.06, 0.03);
         }

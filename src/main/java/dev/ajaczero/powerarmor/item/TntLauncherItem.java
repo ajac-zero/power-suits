@@ -33,7 +33,7 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>A repeating tool: while the trigger is held, the suit calls {@link #use} whenever the reload ({@link
  * #cooldownTicks}) has run out. After each shot the drum turns a quarter turn to bring the next round under the barrel
- * (client side, from the synced shot counter: PowerArmorEntity.tickShotEffects, drawn by ToolRotors).
+ * (client side, from the synced shot counter: TntLauncherEffects, drawn by ToolRotors).
  */
 public class TntLauncherItem extends Item implements PowerTool {
     /** How far ahead the operator's aim is worked out (blocks): the round flies at what the crosshair is on. */
@@ -47,6 +47,11 @@ public class TntLauncherItem extends Item implements PowerTool {
     @Override
     public int energyPerUse() {
         return PowerArmorConfig.TNT_LAUNCHER_ENERGY.get();
+    }
+
+    @Override
+    public ToolEffects createEffects() {
+        return new TntLauncherEffects();
     }
 
     /** The reload: ticks between shots while the trigger is held. */
@@ -116,7 +121,7 @@ public class TntLauncherItem extends Item implements PowerTool {
     /** The puff at the muzzle after a shot: smoke and a few sparks (no big flash: the charge only lobs the round). The
      *  big white puffs only where they're seen from a distance ({@code puffs}): in the pilot's own cockpit view they drift
      *  right in front of the camera as big blobs. */
-    public static void muzzlePuff(ChaingunItem.Particles out, Vec3 at, boolean puffs) {
+    public static void muzzlePuff(ToolEffects.Particles out, Vec3 at, boolean puffs) {
         if (puffs) {
             out.add(ParticleTypes.POOF, at.x, at.y, at.z, 4, 0.08, 0.03);
         }

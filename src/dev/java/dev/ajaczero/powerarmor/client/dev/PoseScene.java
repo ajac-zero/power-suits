@@ -95,7 +95,7 @@ final class PoseScene {
         if (csv != null && mc.player.getVehicle() instanceof PowerArmorEntity suit) {
             try {
                 csv.write(String.format(Locale.ROOT, "%s,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.2f%n", name, mc.player.getYRot(), mc.player.getXRot(),
-                        suit.getYRot(), suit.getXRot(), suit.yBodyRot, Mth.wrapDegrees(suit.getYRot() - suit.yBodyRot), suit.getToolRaise(1F)));
+                        suit.getYRot(), suit.getXRot(), suit.yBodyRot, Mth.wrapDegrees(suit.getYRot() - suit.yBodyRot), suit.socketVisuals().raise(1F)));
             } catch (IOException ignored) {
                 // closed
             }

@@ -52,7 +52,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>A continuous tool: the suit calls {@link #holdTick} every tick the trigger is held (the charge builds), and
  * {@link #release} when it goes up (a full charge fires). The charge (0..1) is synced to every client through the suit's
  * tool spin: it drives the core's glow, the hum's pitch and the HUD. A shot sets the synced beam end and bumps the shot
- * counter; each client then draws the beam from the muzzle it sees (PowerArmorEntity.tickShotEffects, RailBeamEffects).
+ * counter; each client then draws the beam from the muzzle it sees (RailCannonEffects).
  */
 public class RailCannonItem extends Item implements PowerTool {
     /** "powerarmor:rail" (data/powerarmor/damage_type/rail.json): "skewered by a rail beam". It's in
@@ -105,6 +105,11 @@ public class RailCannonItem extends Item implements PowerTool {
     @Override
     public float muzzleInsetPixels() {
         return -3F;
+    }
+
+    @Override
+    public ToolEffects createEffects() {
+        return new RailCannonEffects();
     }
 
     @Override

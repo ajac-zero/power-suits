@@ -3,7 +3,7 @@ package dev.ajaczero.powerarmor.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.ajaczero.powerarmor.PowerArmor;
-import dev.ajaczero.powerarmor.entity.RailBeamEffects;
+import dev.ajaczero.powerarmor.item.RailCannonEffects;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -23,7 +23,7 @@ import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import org.joml.Quaternionf;
 
 /**
- * Draws the rail cannon's beams (RailBeamEffects.BEAMS) as bars of light: a white core (full-bright and additive, the
+ * Draws the rail cannon's beams (RailCannonEffects.BEAMS) as bars of light: a white core (full-bright and additive, the
  * "eyes" render type like the chaingun's tracers) inside a see-through blue sheath (full-bright translucent: added light
  * alone hardly showed against a day sky, runAutopilotRail), fading out over a few ticks and thinning as they fade. Beams aren't entities, so they go through NeoForge's custom geometry hooks: when the frame is
  * extracted the beams still alive are copied (with their brightness and the camera position) into the level's render
@@ -40,16 +40,16 @@ public final class RailBeamRenderer {
 
     @SubscribeEvent
     public static void extract(ExtractLevelRenderStateEvent event) {
-        if (RailBeamEffects.BEAMS.isEmpty()) {
+        if (RailCannonEffects.BEAMS.isEmpty()) {
             return;
         }
         float now = event.getLevel().getGameTime() + event.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         List<Bar> bars = new ArrayList<>();
         // A beam from the future (fired at a later game time than now) belongs to another world: a world joined after
         // leaving one has its own clock. Without the second test it was drawn at full brightness until the clock caught up.
-        RailBeamEffects.BEAMS.removeIf(b -> now - b.firedAt() > RailBeamEffects.BEAM_TICKS || now < b.firedAt() - 1);
-        for (RailBeamEffects.Beam b : RailBeamEffects.BEAMS) {
-            float t = Mth.clamp((now - b.firedAt()) / RailBeamEffects.BEAM_TICKS, 0F, 1F);
+        RailCannonEffects.BEAMS.removeIf(b -> now - b.firedAt() > RailCannonEffects.BEAM_TICKS || now < b.firedAt() - 1);
+        for (RailCannonEffects.Beam b : RailCannonEffects.BEAMS) {
+            float t = Mth.clamp((now - b.firedAt()) / RailCannonEffects.BEAM_TICKS, 0F, 1F);
             bars.add(new Bar(b.from(), b.to(), 1F - t * t)); // bright for most of its life, then gone
         }
         event.getRenderState().setRenderData(BARS, bars);
@@ -59,7 +59,7 @@ public final class RailBeamRenderer {
     /** Leaving a world: its beams go with it. */
     @SubscribeEvent
     public static void loggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
-        RailBeamEffects.BEAMS.clear();
+        RailCannonEffects.BEAMS.clear();
     }
 
     @SubscribeEvent

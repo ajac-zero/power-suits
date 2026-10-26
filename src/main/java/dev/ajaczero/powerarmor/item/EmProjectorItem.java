@@ -133,6 +133,11 @@ public class EmProjectorItem extends Item implements PowerTool {
     // ---- PowerTool -------------------------------------------------------------------------------
 
     @Override
+    public ToolEffects createEffects() {
+        return new EmProjectorEffects();
+    }
+
+    @Override
     public boolean isContinuous() {
         return true;
     }

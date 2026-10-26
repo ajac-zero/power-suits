@@ -8,6 +8,7 @@ import com.geckolib.renderer.layer.GeoRenderLayer;
 import com.geckolib.util.ClientUtil;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.ToolLight;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -23,31 +24,51 @@ import org.jspecify.annotations.Nullable;
  * everywhere except the glowing pixels, made by tools/make-glowmasks.py) in vanilla's "eyes" render type (the one
  * spider and enderman eyes use): it ignores light and draws its colour on top (blended by alpha in 26.3, not added:
  * a dimmed mask is a darker colour, fine over the dark glass and coals it sits on). Unlike AutoGlowingGeoLayer, each mask
- * is tinted every frame, so the fire flickers and fades and the visor changes colour (PowerArmorEntity.tickLights).
+ * is tinted every frame, so the fire flickers and fades and the visor changes colour (PowerArmorEntity.tickLights). The
+ * socket tool's lights ({@link ToolLight}) are worked out by the installed tool's ToolEffects.
  */
 public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, LivingEntityRenderState> {
-    private static final Identifier FIRE = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_fire.png");
-    private static final Identifier VISOR = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_visor.png");
-    static final Identifier HEAT = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_heat.png");
-    static final Identifier HEAT_BARREL = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_heat_barrel.png");
-    /** The EM projector's redstone: lens + vents, and the prong tips. */
-    static final Identifier EM_CORE = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_em_core.png");
-    static final Identifier EM_ARC = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_em_arc.png");
-    /** The engine backpacks' glass (design sec. 4b): the tidal engine's Heart of the Sea, the star reactor's core + canisters. */
-    static final Identifier TIDAL = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_tidal.png");
-    static final Identifier REACTOR = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_reactor.png");
-    /** The flamethrower's pilot light (the tip of its slate rod by the nozzle). */
-    static final Identifier PILOT = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_pilot.png");
-    /** The core's rings, a third each (ring r is in mask r mod 3): lit in turn, the energy runs along the core. */
-    static final Identifier[] RAIL_FLOW = {flow(0), flow(1), flow(2)};
-    /** The emitter in the rail cannon's band, where the energy comes out (opaque: dark when off, lit with the charge). */
-    static final Identifier RAIL_EMIT = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_rail_emit.png");
-    /** The masks, in the order of the tints in SuitRenderData.GLOW. */
-    private static final Identifier[] MASKS = {FIRE, VISOR, HEAT, HEAT_BARREL, EM_CORE, EM_ARC, TIDAL, REACTOR, PILOT,
-            RAIL_FLOW[0], RAIL_FLOW[1], RAIL_FLOW[2], RAIL_EMIT};
+    // The suit's own lights: the firebox's fire, the visor, and the other engines' glass (design sec. 4b: the tidal
+    // engine's Heart of the Sea, the star reactor's core + canisters).
+    private static final Identifier FIRE = mask("fire");
+    private static final Identifier VISOR = mask("visor");
+    private static final Identifier TIDAL = mask("tidal");
+    private static final Identifier REACTOR = mask("reactor");
+    private static final Identifier[] SUIT_MASKS = {FIRE, VISOR, TIDAL, REACTOR};
+    /** The socket tools' lights, indexed by ToolLight.ordinal() (also drawn on the cockpit viewmodel). */
+    static final Identifier[] TOOL_MASKS = java.util.Arrays.stream(ToolLight.values()).map(SuitGlowLayer::mask).toArray(Identifier[]::new);
+    /** All masks, in the order of the tints in SuitRenderData.GLOW: the suit's, then the tool's. */
+    private static final Identifier[] MASKS = java.util.stream.Stream.concat(java.util.Arrays.stream(SUIT_MASKS),
+            java.util.Arrays.stream(TOOL_MASKS)).toArray(Identifier[]::new);
 
-    private static Identifier flow(int phase) {
-        return Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_rail_flow_" + phase + ".png");
+    private static Identifier mask(String name) {
+        return Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_" + name + ".png");
+    }
+
+    /** A tool light's glowmask file (written by tools/make-glowmasks.py). */
+    private static Identifier mask(ToolLight light) {
+        return mask(switch (light) {
+            case HEAT -> "heat";
+            case HEAT_BARREL -> "heat_barrel";
+            case EM_CORE -> "em_core";                 // the EM projector's lens + vents
+            case EM_ARC -> "em_arc";                   // and its prong tips
+            case PILOT -> "pilot";                     // the flamethrower's pilot light (the tip of its slate rod)
+            case RAIL_FLOW_0 -> "rail_flow_0";         // the rail cannon's core rings, a third each (ring r in mask r mod 3)
+            case RAIL_FLOW_1 -> "rail_flow_1";
+            case RAIL_FLOW_2 -> "rail_flow_2";
+            case RAIL_EMIT -> "rail_emit";             // the emitter in its band (opaque: dark when off)
+        });
+    }
+
+    /** This frame's tints of the socket tool's lights (ToolLight order), from the installed tool's effects. */
+    static int[] toolTints(PowerArmorEntity suit, float time, float partial) {
+        float[] lights = suit.socketVisuals().lights(time, partial);
+        int[] tints = new int[lights.length];
+        ToolLight[] all = ToolLight.values();
+        for (int i = 0; i < lights.length; i++) {
+            tints[i] = all[i].fadesByAlpha ? energy(lights[i]) : tint(lights[i], 1F, 1F, 1F);
+        }
+        return tints;
     }
 
     public SuitGlowLayer(GeoRenderer<PowerArmorEntity, Void, LivingEntityRenderState> renderer) {
@@ -62,24 +83,16 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
         float fire = suit.getFireGlow() * (0.86F + 0.08F * Mth.sin(time * 0.37F + suit.getId()) + 0.06F * Mth.sin(time * 1.31F));
         float[] visor = suit.getVisorColor();
         float on = suit.getVisorFlicker(time);
-        float heat = suit.socket().getHeat();
-        state.addGeckolibData(SuitRenderData.GLOW, new int[] {
+        int[] suitTints = {
                 tint(fire, 1F, 1F, 1F),
                 tint(on, visor[0], visor[1], visor[2]),
-                // Heat fades in by opacity: dimming the colour painted the warming barrels darker than cold metal
-                // (the "eyes" pass blends, it doesn't add light), a dark smudge over the glow until 2026-10-26.
-                energy(heatGlow(heat)),
-                energy(barrelGlow(heat)),
-                tint(suit.getEmCoreGlow(time), 1F, 1F, 1F),
-                tint(suit.getEmArcGlow(time), 1F, 1F, 1F),
                 tint(suit.getTidalGlow(time), 1F, 1F, 1F),
-                tint(suit.getReactorGlow(time), 1F, 1F, 1F),
-                tint(suit.getPilotGlow(time), 1F, 1F, 1F),
-                energy(suit.getRailFlowGlow(0, partialTick)),
-                energy(suit.getRailFlowGlow(1, partialTick)),
-                energy(suit.getRailFlowGlow(2, partialTick)),
-                tint(suit.getRailGlow(time), 1F, 1F, 1F)});
-        state.addGeckolibData(SuitRenderData.RAIL_SHAKE, new float[] {suit.getRailCharge(), time});
+                tint(suit.getReactorGlow(time), 1F, 1F, 1F)};
+        int[] toolTints = toolTints(suit, time, partialTick);
+        int[] tints = java.util.Arrays.copyOf(suitTints, suitTints.length + toolTints.length);
+        System.arraycopy(toolTints, 0, tints, suitTints.length, toolTints.length);
+        state.addGeckolibData(SuitRenderData.GLOW, tints);
+        state.addGeckolibData(SuitRenderData.RAIL_SHAKE, new float[] {suit.socketVisuals().effects().shake(suit), time});
     }
 
     /** Render: draw the model once per lit mask, after (on top of) the suit itself. */
@@ -115,21 +128,10 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
         state.addGeckolibData(DataTickets.PACKED_OVERLAY, overlay);
     }
 
-    /** Chaingun barrel tips: nothing while cool, a dull red glow from a third of the way, white-hot when overheated. */
-    static float heatGlow(float heat) {
-        float h = Math.max(0F, (heat - 0.3F) / 0.7F);
-        return h * h * (3 - 2 * h);
-    }
-
-    /** The barrels behind the tips: only once they're really hot (from 55%), so the glow creeps back from the tips. */
-    static float barrelGlow(float heat) {
-        float h = Math.max(0F, (heat - 0.55F) / 0.45F);
-        return h * h * (3 - 2 * h);
-    }
-
     /** Light that fades in over the model or over nothing (the chaingun's heat, the rail cannon's core, see-through
-     *  when off: its pixels are cleared from the texture): the mask's own colour, faded by its opacity instead of darkened. The "eyes" pipeline blends by alpha
-     *  (it isn't additive), so a dimmed opaque colour would draw a dark core where there should be air. */
+     *  when off: its pixels are cleared from the texture): the mask's own colour, faded by its opacity instead of darkened.
+     *  The "eyes" pipeline blends by alpha (it isn't additive), so a dimmed opaque colour would draw a dark core where
+     *  there should be air (the chaingun's warming barrels showed a dark smudge until 2026-10-26). */
     static int energy(float brightness) {
         if (brightness <= 0.01F) {
             return 0xFF000000;

@@ -1,6 +1,6 @@
-package dev.ajaczero.powerarmor.entity;
+package dev.ajaczero.powerarmor.item;
 
-import dev.ajaczero.powerarmor.item.SocketAim;
+import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.Mth;
@@ -10,12 +10,17 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Client: the EM beam, a twisting ribbon of redstone dust from the projector's prongs to what it holds, red sparks
+ * Client: the EM projector's looks on one suit. Its redstone lights: the lens and vents (core) idle at a faint glow while
+ * mounted in a powered suit, brighten while the button is held (searching for something to grab) and run full while the
+ * beam holds something; the prong tips only light up while it holds something (that's when they spark). Quick to light,
+ * slower to fade.
+ *
+ * And the EM beam, a twisting ribbon of redstone dust from the projector's prongs to what it holds, red sparks
  * crackling between the prong tips and dust swirling round the held thing. The projector is a redstone electromagnet
  * (its lens and tips glow, SuitGlowLayer), so everything is redstone red: one strand vanilla's redstone red, the other a
  * hotter orange-red so the twist reads. (A dark red strand was tried first: thick dark-red dust round a pig read as blood.)
  */
-final class EmBeamEffects {
+final class EmProjectorEffects implements ToolEffects {
     private static final DustParticleOptions STRAND_RED = new DustParticleOptions(0xFF1A0D, 0.6F);
     private static final DustParticleOptions STRAND_HOT = new DustParticleOptions(0xFF6B38, 0.5F);
     /** Small and hot (orange-red): short-lived, because dust lives in proportion to its size. */
@@ -25,7 +30,31 @@ final class EmBeamEffects {
      *  on the cockpit glass, so none are spawned that close. The sparks are tiny and short-lived: they may come closer. */
     private static final double KEEP_CLEAR = 1.3, KEEP_CLEAR_SPARKS = 0.9;
 
-    static void tick(PowerArmorEntity suit) {
+    private float coreGlow, arcGlow;
+
+    @Override
+    public void tick(PowerArmorEntity suit) {
+        boolean powered = suit.isPowered();
+        boolean holding = powered && suit.socket().getBeamTarget() != null;
+        float coreTarget = !powered ? 0F : holding ? 1F : suit.socket().isActive() ? 0.6F : 0.25F;
+        this.coreGlow = ToolEffects.ease(this.coreGlow, coreTarget, 0.35F, 0.1F);
+        this.arcGlow = ToolEffects.ease(this.arcGlow, holding ? 1F : 0F, 0.5F, 0.15F);
+        this.beam(suit);
+    }
+
+    @Override
+    public void lights(PowerArmorEntity suit, float time, float partial, float[] out) {
+        // the core: a slow breathing pulse, and a fast uneven throb while the beam holds something
+        float pulse = this.arcGlow > 0.5F ? 0.8F + 0.12F * Mth.sin(time * 1.7F) + 0.08F * Mth.sin(time * 4.3F)
+                : 0.85F + 0.15F * Mth.sin(time * 0.25F);
+        out[ToolLight.EM_CORE.ordinal()] = this.coreGlow * pulse;
+        // the prong tips crackle (flicker at random-looking times)
+        float crackle = Mth.sin(time * 5.1F) * Mth.sin(time * 2.9F + suit.getId()) > 0.5F ? 0.55F : 1F;
+        out[ToolLight.EM_ARC.ordinal()] = this.arcGlow * crackle;
+    }
+
+    /** The beam's particles, from the muzzle this client sees to what it holds. */
+    private void beam(PowerArmorEntity suit) {
         Entity target = suit.socket().getBeamTarget();
         LivingEntity operator = suit.toolOperator(); // the pilot, or the suit itself while its mind drives
         if (target == null || operator == null) {
@@ -83,6 +112,4 @@ final class EmBeamEffects {
                     to.z + Math.sin(a) * r, 0, 0, 0);
         }
     }
-
-    private EmBeamEffects() {}
 }
