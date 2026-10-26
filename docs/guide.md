@@ -20,7 +20,7 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
 | Pack it up | **Pack up** button in the suit menu (keeps damage, name, fuel, tool, ammo, helmet and engine) |
-| Install a tool | Put a power tool (Chaingun, EM Projector, Mining Drill, Chainsaw, Flamethrower, TNT Launcher) in the menu's socket slot; it appears on the suit's left arm |
+| Install a tool | Put a power tool (Chaingun, EM Projector, Mining Drill, Chainsaw, Flamethrower, TNT Launcher, Rail Cannon) in the menu's socket slot; it appears on the suit's left arm |
 | Your hand | Works as normal while piloting: the suit's right hand holds your selected item; left click punches, fights and mines, right click places, opens doors, throws potions... 1.5 blocks extra reach. No eating or drinking (you're sealed in): food in your hand counts as nothing to do, so right click goes to the tool |
 | Use the tool | Right-click when your hand has nothing to do (empty hand, a sword, aiming at the air with blocks...), like a shield in the off hand; hold it as long as you need. The tool arm raises while in use |
 | EM Projector | Hold right-click on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 1 fuel/tick while holding, 80 per throw |
@@ -28,13 +28,14 @@ Design spec: `docs/design.md`. Next steps: `docs/implementation-plan.md`. Workin
 | Chainsaw | Hold right-click on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 15 fuel per log |
 | Flamethrower | Hold right-click: a stream of fire about 7 blocks toward your crosshair. Sets mobs and blocks alight, melts ice and snow, lights campfires and candles, sets off TNT, cooks food lying on the ground. Dead under water. 6 fuel per tick |
 | TNT Launcher | Right-click: lobs a block of primed TNT toward your crosshair that blows up the moment it hits something (real TNT: it breaks blocks). Hold to keep firing, one round a second. Each shot uses one TNT from the suit's **ammo slot** (beside the socket in the menu; the HUD counts what's left); free in creative. No fuel |
+| Rail Cannon | Hold right-click to charge (1.5 s, the core between its prongs glows brighter, the HUD shows a charge bar), let go at full charge: an instant beam along your crosshair, 20 hearts to every mob on the line (it goes through them all), breaking glass, panes, leaves and ice on the way; it stops at anything solid. Let go early and nothing happens. Each shot is an iron ingot from the suit's ammo slot + 100 fuel |
 | Fire | Right-click while piloting (Chaingun): tap for heavy single shots, hold to spin up to a 10-a-second barrage toward your crosshair; one iron nugget per bullet (yours first, then the suit's store) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
 | Sealed suit | While powered and wearing its helmet: fire, frost, magma, cactus/berry bushes and harmful effects (poison, wither, slowness...) don't reach you or the hull; keeping them out costs fuel. You breathe under water (0.5 fuel/tick extra). A running suit never catches fire (lava excepted: it burns while in it, the flames die as it steps out). Lava still eats the hull (wade through at a third of your speed). No power, no seal: an empty or knocked-out suit burns like anything else. What's already inside you stays yours: poison or wither you had when you climbed in (food poisoning) hurts you, not the suit |
 | Strength | Every melee hit from inside (bare hand, sword, axe...) does +4 damage |
 | Stomp | Landing from 3.5+ blocks hurts everything around you (not you): 2 damage per block fallen, up to 30, half at the edge of the shock wave (2-3.5 blocks); things get thrown. A normal jump doesn't stomp |
 | Smashing through | Walking breaks leaves, glass panes, cobwebs, snow layers, berry bushes, bamboo...; sprinting also breaks glass and ice. Nothing drops. Block tags `powerarmor:suit_smashes_walking` / `_sprinting`; can be switched off in the config |
-| Machine mind | A powered suit with its helmet on and nobody inside is driven by its own mind (green visor): it works for its owner (whoever last piloted it, or deployed it) from its home (the block where the pilot got out, or where it was deployed). Its job depends on the socket tool: none (or a tool whose job isn't built yet) = stand guard at home, look at people nearby, walk back if pushed away; **chaingun** = follow its owner like a tamed wolf (walks over 7 blocks away, sprints past 16, stops at 4, no teleporting) and defend them: it shoots whatever attacks the owner or the suit, whatever the owner attacks, and monsters within 16 blocks of the owner, never with the owner, a villager, a pet or another suit in the line of fire; with no nuggets left it walks up and punches (1 + melee bonus); **EM projector** = guard home: monsters within 12 blocks of home (config) are caught one by one, lifted overhead and flung ~30 blocks up (44 blocks/s, config) so the fall kills them; creepers are thrown up and away from home instead. Never animals, villagers, players or pets; **drill** = clear an open hall at home level, 3 blocks high, ring by ring outward from home within 12 blocks (config `work_radius`): it never digs down or into the ceiling, leaves a wall wherever a block touches lava or water and leaves columns standing over holes in the floor; **chainsaw** = fell the natural trees within 12 blocks of home, nearest first (never log cabins). Drops stay on the floor: give allays the items you want (an allay given coal brings every coal it sees to you); the stone and dirt nobody collects despawn after 5 minutes. Design sec. 8. It burns fuel like a piloted suit (idle 0.25/tick): **to park a suit, take the fuel out** |
+| Machine mind | A powered suit with its helmet on and nobody inside is driven by its own mind (green visor): it works for its owner (whoever last piloted it, or deployed it) from its home (the block where the pilot got out, or where it was deployed). Its job depends on the socket tool: none (or a tool whose job isn't built yet) = stand guard at home, look at people nearby, walk back if pushed away; **chaingun** = follow its owner like a tamed wolf (walks over 7 blocks away, sprints past 16, stops at 4, no teleporting) and defend them: it shoots whatever attacks the owner or the suit, whatever the owner attacks, and monsters within 16 blocks of the owner, never with the owner, a villager, a pet or another suit in the line of fire; with no nuggets left it walks up and punches (1 + melee bonus); **EM projector** = guard home: monsters within 12 blocks of home (config) are caught one by one, lifted overhead and flung ~30 blocks up (44 blocks/s, config) so the fall kills them; creepers are thrown up and away from home instead. Never animals, villagers, players or pets; **drill** = clear an open hall at home level, 3 blocks high, ring by ring outward from home within 12 blocks (config `work_radius`): it never digs down or into the ceiling, leaves a wall wherever a block touches lava or water and leaves columns standing over holes in the floor; **chainsaw** = fell the natural trees within 12 blocks of home, nearest first (never log cabins); **rail cannon** = a long-range guard at home: it charges and shoots monsters it can see within 40 blocks of home (config), and whatever attacks it or its owner, never with a friend anywhere on the beam; it needs iron ingots in the ammo slot. Drops stay on the floor: give allays the items you want (an allay given coal brings every coal it sees to you); the stone and dirt nobody collects despawn after 5 minutes. Design sec. 8. It burns fuel like a piloted suit (idle 0.25/tick): **to park a suit, take the fuel out** |
 | Helmet styles | Easter eggs: five smithing templates hide in structure chests (ocean ruins and shipwrecks, trial chamber vaults, end cities, ancient cities, desert pyramids and jungle temples). At a smithing table, template + Power Armor Helmet + the object the template names gives that helmet its new look (name, icon and model change; it works the same). Helmet + iron block with no template gives the standard helmet back; 7 diamonds round a template and its object copy it. Rogues sometimes wear one. Design sec. 4c |
 | Paint | Right-click the suit with any dye: its armour plates (shoulder pads, upper arms, chest, collar, belly plate, hips, thighs, the helmet's shell) take the colour and the dye is used up; another dye paints over it, a wet sponge washes it back to bare steel (the sponge stays wet). Only the look changes. A packed suit keeps its paint |
 | Load ammo | Right-click the suit with iron nuggets: the stack goes into its hidden store (up to 640, config). The menu shows it (Bullets), a packed suit keeps it, a wreck drops it. The mind's chaingun uses it; yours too, after the nuggets in your own inventory |
@@ -81,6 +82,7 @@ balance pass), with what one piece of coal (1600) buys:
 | Chainsaw | 15 per log | ~20 oaks (5 logs each) |
 | Flamethrower | 6 per tick of flame (1.5 hearts per hit, then 5 s of burning) | ~13 s of flame |
 | TNT Launcher | no fuel (config `energy_per_shot`): one TNT per round | - |
+| Rail Cannon | 100 per shot + 1 iron ingot (20 hearts to everything on the beam) | 16 shots |
 | Sealing | 20 per point of fire/frost damage kept out, 100 per harmful effect, +0.5 per tick of air under water | 80 s of burning |
 
 The firebox burns what a furnace burns, as long as a furnace burns it: coal and charcoal 1600, blaze rod 2400, lava bucket 20000, coal block 16000, planks 300. Hover over any fuel for its walking time.
@@ -88,7 +90,7 @@ The firebox burns what a furnace burns, as long as a furnace burns it: coal and 
 ### Sounds
 A powered suit is quiet: no engine loop. Now and then its backpack makes a soft sound (the firebox crackles, the tidal
 pump bubbles under water, the star reactor hums), a little more often and louder as it works harder (walking, sprinting,
-a tool running). The drill whirs, the chainsaw buzzes, the chaingun's motor whines and the flamethrower roars while they run (subtitles included).
+a tool running). The drill whirs, the chainsaw buzzes, the chaingun's motor whines, the flamethrower roars and the rail cannon hums while charging (subtitles included).
 They are vanilla sounds re-pitched in `assets/powerarmor/sounds.json`: swap in your own `.ogg` files there.
 
 Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It burns whenever
@@ -157,6 +159,18 @@ config). The TNT comes from the suit's ammo slot, one block per shot (free in cr
 clicks. After each shot the drum turns a quarter turn to the next round. It's yours to fire only: the machine mind never
 uses it and rogue suits never carry one.
 
+**Rail Cannon** (crafted: iron ingots, copper ingots, an amethyst shard, an iron block). The chaingun's opposite: one
+slow, critical shot instead of a barrage. Two steel prongs with a blue core between them, after DOOM's gauss cannon.
+Hold right-click and it charges (1.5 s, config): the core glows brighter, a hum rises and a chime says it's full (the
+HUD's bar turns white); it holds the charge as long as you hold the button. Let go at full charge and it fires an
+instant beam along your crosshair, up to 64 blocks: every mob on the line takes 20 hearts (it goes through them all,
+and through any hit immunity), and on the way it breaks what a sprinting suit smashes through (glass, panes, leaves,
+ice, cobwebs; config `breaks_blocks`, claims can veto) until it meets anything solid. Let go early and it just winds
+down: nothing is spent. A shot costs an iron ingot from the suit's ammo slot (free in creative) and 100 fuel, then it
+cools for a second. With the machine mind it's a long-range guard: from home it shoots monsters it can see within 40
+blocks of home (config `rail_guard_radius`) and whatever attacks it or its owner, never with a friend anywhere on the
+beam (it goes on past the target), and its beam never breaks blocks. Rogue suits never carry one.
+
 **Right hand**: shows your selected hotbar item and carries it forward (`hold_item`), reaching out each time
 you use it (`use_item`). It's the suit's main hand, like yours: the tools sit on the left arm. In first person
 the suit's gauntlet holds it at the lower right (cockpit viewmodel). It's a normal hand: left click attacks and mines
@@ -169,7 +183,7 @@ dimmer when fuel runs low, embers dying out after shutdown), and the visor shows
 **amber** = a pilot (whatever they do), **green** = the friendly machine mind, **red** = a rogue mind (only rogues,
 so red always means danger), **dark** = powered off; it stutters while starting up or shutting down and drops out
 now and then on low fuel. Hits don't change it.
-The chaingun's barrels glow with heat and the EM projector's redstone with its field.
+The chaingun's barrels glow with heat, the EM projector's redstone with its field and the rail cannon's core with its charge.
 
 While inside: the suit takes hits instead of you, it has no fall damage, steps up full blocks,
 and the camera pulls back in third person (F5).
@@ -243,6 +257,8 @@ src/main/java/dev/ajaczero/powerarmor/
   item/SocketAim.java        muzzle position, crosshair aim point, entity under the crosshair
   item/DrillItem.java        the third tool: 3x3 digging at diamond pickaxe/shovel speed
   item/ChainsawItem.java     the fourth tool: cuts wood, fells natural trees top-down
+  item/RailCannonItem.java   charge, fire on release, the piercing beam (blocks it breaks, mobs it hits); the mind's job is
+                             SuitGoals.RailGuard; entity/RailBeamEffects + client/RailBeamRenderer draw the beam
   item/ToolMining.java       shared block breaking for both (BreakEvent, drops, crack overlay, progress)
   entity/EmBeamEffects.java  client-side redstone beam particles + sparks
   entity/Bullet.java         the tracer bullet (flight, hit without immunity, sparks off blocks)

@@ -218,14 +218,14 @@ Each tool: hidden `proto_*` drafts in Blockbench -> user picks -> game part (bon
   draft A (TF2's grenade launcher) with the drum closed all round, 3 px long, the barrel sunk into its outline, a fork sight;
   bone `tnt_launcher` + `tnt_launcher_drum` (a quarter turn per shot, `ToolRotors`). 8 GameTests (126); `runAutopilotTnt` (TntScene).
 - [ ] Water cannon (extinguishes, pushes mobs, waters crops)
-- [ ] Rail cannon (added 2026-10-26, user): the chaingun's opposite: slow, one shot at a time, critical damage (the chaingun
-  is rapid-fire damage per second, the rail cannon is the single big hit). Decided (user, 2026-10-26): **hold to charge**, it
-  fires **only at full charge** (fixed damage, no partial shots); an **instant beam** along the crosshair that **pierces every
-  mob** on the line and **breaks the blocks a sprinting suit smashes through** (`powerarmor:suit_smashes_sprinting`: glass,
-  panes, leaves, ice...; via `ToolMining.breakBlock`), stopping at anything solid; costs **an iron ingot (ammo slot) + fuel**
-  per shot; **no rogues**; the machine mind uses it as a **long-range guard**. Model inspired by DOOM (2016)'s gauss cannon
-  (twin rails over a glowing blue core, `.scratch/rail/doom_gauss_ref.png`). Numbers to tune (proposal): 30-tick charge,
-  40 damage, 64 blocks, ~100 fuel per shot.
+- [x] Rail cannon (added and built 2026-10-26, user: the chaingun's opposite, slow and critical). Decided (user): **hold to
+  charge**, fires **only at full charge**, an **instant beam** that **pierces every mob** on the line and **breaks the blocks a
+  sprinting suit smashes through** (stops at anything solid), **an iron ingot (ammo slot) + fuel** per shot, **no rogues**, the
+  machine mind is a **long-range guard** (`SuitGoals.RailGuard`, `rail_guard_radius` 40). Model: DOOM (2016)'s gauss cannon,
+  draft B5 of two rounds (`model/art/rail_drafts_art.py`) -> bone `rail_cannon`, core glowmask `rail`. `RailCannonItem`,
+  `RailBeamEffects` + `client/RailBeamRenderer` (the beam: geometry via NeoForge's custom geometry hooks), HUD charge bar,
+  config, icon, recipe; 6 GameTests (132); `runAutopilotRail` (RailScene). Open: from the cockpit the core barely shows
+  (seen edge-on between the prongs); the B5 band clips the thigh 0.65 px in jump_charge/jump (known arm/thigh clips there).
 
 ## Art (Blockbench, `model/power_armor.bbmodel`)
 Use the `blockbench-mcp` skill (`.agents/skills/blockbench-mcp/`), checkpoint
