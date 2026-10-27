@@ -14,6 +14,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -46,8 +47,9 @@ import org.jetbrains.annotations.Nullable;
  *   TNT launcher's drum and the arc its round will fly, the EM projector's box round what it holds. Tools with nothing
  *   to say draw nothing.</li>
  *   <li>Top centre, under the helmet's brow, as terminal text: a compass tape (one character per 5 degrees) with a
- *   {@code ^} under the heading, the heading in degrees, the day and the time. Like the vanilla items they only work in
- *   the overworld: elsewhere the tape spins and the numbers read {@code ---}.</li>
+ *   {@code ^} under the heading, the suit's coordinates to its left and the time to its right. Like the vanilla items
+ *   the compass and clock only work in the overworld: elsewhere the tape spins and the time reads {@code --:--} (the
+ *   coordinates work everywhere).</li>
  * </ul>
  * Three colours tell how urgent a readout is ({@link HudAlert}, user 2026-10-27): the visor colour, orange as a warning
  * (hull at half), red when critical (hull in its last 15%, fuel low). The suit's readouts and the compass take the
@@ -189,7 +191,7 @@ public final class SuitHud {
         HudView.bar(g, lx, y0 + 27, segments, 3, fuel, main, dim);
 
         // ---- top centre: compass and clock ------------------------------------------------------------------------
-        String clock = compassAndClock(g, mc, font, main, faint, delta);
+        String clock = compassAndClock(g, mc, suit, font, main, faint, delta);
 
         // ---- the socket tool's own readout (client/hud), if it has one ----------------------------------------------
         String toolShown = "";
@@ -206,12 +208,14 @@ public final class SuitHud {
     }
 
     /**
-     * The compass tape and, under it, the heading, a {@code ^} and the clock, in fixed-width cells like a terminal. The
-     * tape moves a whole cell (5 degrees) at a time. Compass headings count from north clockwise; Minecraft's yaw counts
-     * from south (0 south, 90 west), hence the 180. Returns what the readout row says (for the autopilot's log).
+     * The compass tape and, under it, a {@code ^} under the heading between the suit's coordinates (left) and the time
+     * (right), in fixed-width cells like a terminal (user, 2026-10-27: the heading in degrees and the day counter went,
+     * the coordinates took the heading's place). The tape moves a whole cell (5 degrees) at a time. Compass headings
+     * count from north clockwise; Minecraft's yaw counts from south (0 south, 90 west), hence the 180. Returns what the
+     * readout row says (for the autopilot's log).
      */
-    private static String compassAndClock(GuiGraphicsExtractor g, Minecraft mc, Font font, int main, int faint,
-                                          DeltaTracker delta) {
+    private static String compassAndClock(GuiGraphicsExtractor g, Minecraft mc, PowerArmorEntity suit, Font font, int main,
+                                          int faint, DeltaTracker delta) {
         // The suit's compass and clock work like the vanilla items they're made from: only in the overworld. Elsewhere
         // the tape spins (a little faster than the item's needle, steadily, so it reads as broken, not as turning).
         boolean overworld = mc.level.dimension() == Level.OVERWORLD;
@@ -242,22 +246,23 @@ public final class SuitHud {
         }
         int xc = x0 + mid * CELL;
         cell(g, font, "^", xc, READOUT_Y, main);
-        String direction = Component.translatable("hud.powerarmor.compass." + Math.round(heading / 45F) % 8).getString();
-        String bearing = overworld ? String.format(Locale.ROOT, "%03d %s", Math.round(heading) % 360, direction)
-                : Component.translatable("hud.powerarmor.compass.lost").getString();
-        cells(g, font, bearing, xc - (bearing.length() + 2) * CELL, READOUT_Y, main);
+        // The block the suit stands on, as F3 shows it ("Block:"), in every dimension: they come from the suit's own
+        // position, not from the compass. A world with reducedDebugInfo hides them from F3, so here too.
+        BlockPos at = suit.blockPosition();
+        String coords = mc.player.isReducedDebugInfo() ? "--- --- ---"
+                : String.format(Locale.ROOT, "%d %d %d", at.getX(), at.getY(), at.getZ());
+        // two cells clear of the ^ on both sides, the coordinates ending where the time starts, mirrored
+        cells(g, font, coords, xc - (coords.length() + 2) * CELL, READOUT_Y, faint);
         String clock;
         if (overworld) {
-            // Day 1 starts at sunrise, 06:00 (tick 0), like the game's own clock.
-            long t = mc.level.getOverworldClockTime();
-            long ofDay = Math.floorMod(t + 6000L, 24000L);
-            clock = Component.translatable("hud.powerarmor.clock", t / 24000L + 1,
-                    String.format(Locale.ROOT, "%02d:%02d", ofDay / 1000, ofDay % 1000 * 60 / 1000)).getString();
+            // 06:00 at sunrise (tick 0), like the game's own clock.
+            long ofDay = Math.floorMod(mc.level.getOverworldClockTime() + 6000L, 24000L);
+            clock = String.format(Locale.ROOT, "%02d:%02d", ofDay / 1000, ofDay % 1000 * 60 / 1000);
         } else {
-            clock = Component.translatable("hud.powerarmor.clock", "--", "--:--").getString();
+            clock = "--:--";
         }
         cells(g, font, clock, xc + 3 * CELL, READOUT_Y, faint);
-        return bearing + " " + clock;
+        return coords + " " + clock;
     }
 
     /** A string in fixed 6 px cells, each character centred in its cell (Minecraft's font is proportional). */

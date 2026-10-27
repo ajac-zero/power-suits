@@ -132,9 +132,10 @@ blinking. It's terminal green by default: pick your own colour under
     too heavy to lift, which it only drags and shoves) and its health, and the **arc** it would be thrown along if you
     let go now, to a diamond where it would land (moves with your aim); the marked mobs in its way light up.
 - **Top centre, compass and clock** (the helmet is crafted with both), as terminal text: a compass tape that slides a
-  character (5°) at a time with a `^` under where you face, your heading in degrees (0 north, 90 east), the day and the
-  time (`DAY 12  18:40`). Like the vanilla items they only work in the overworld: elsewhere the tape spins and they read
-  `---` / `--:--`.
+  character (5°) at a time with a `^` under where you face, the suit's coordinates to its left (the block it stands
+  on, like F3's `Block:`; `--- --- ---` in a world with reduced debug info) and the time to its right (`18:40`). Like
+  the vanilla items the compass and clock only work in the overworld: elsewhere the tape spins and the time reads
+  `--:--`; the coordinates work everywhere.
 - Three colours tell how urgent a readout is: the visor colour when all's well, **orange** as a warning (half gone),
   **red** when critical (the last 15%, or something you can't use yet). The suit's readouts and the compass turn orange
   with the hull under half, red in its last 15% or on low fuel. A tool's warnings colour only its own readout: the last

@@ -288,8 +288,6 @@
   "hud.powerarmor.compass.5": "SW",
   "hud.powerarmor.compass.6": "W",
   "hud.powerarmor.compass.7": "NW",
-  "hud.powerarmor.compass.lost": "---",
-  "hud.powerarmor.clock": "DAY %s  %s",
   "gui.powerarmor.flooded": "FLOODED",
   "gui.powerarmor.engine_slot": "Engine",
   "gui.powerarmor.engine_slot.hint": "The backpack: Firebox (burns fuel), Tidal Engine (free while wet) or Star Reactor (a Nether Star, forever).",
