@@ -203,7 +203,7 @@ final class RogueScene {
         try {
             csv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_rogue.csv"));
             csv.write("tick,phase,spawnDistance,rogueMind,rogueHealth,roguePowered,rogueStunned,rogueTarget,rogueShots,rogueEnergy,visorR,visorG,visorB,"
-                    + "rogueOwner,friendTarget,friendShots,cowsAlive,playerY,playerVy,playerHealth,playerVehicle,emHealth,emTarget,emBeam,emToolDropped,clientY,clientVy,clientNoGravity,vehicleSpeed\n");
+                    + "rogueOwner,friendTarget,friendShots,cowsAlive,playerY,playerVy,playerHealth,playerVehicle,emHealth,emTarget,emBeam,emToolDropped,clientY,clientVy,clientNoGravity,vehicleSpeed,friendDriven,friendState,friendToOwner,friendToEm,ownerToEm,friendSeesEm\n");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -220,7 +220,7 @@ final class RogueScene {
         boolean emDropped = !player.level().getEntitiesOfClass(ItemEntity.class, new AABB(base).inflate(40),
                 e -> e.getItem().is(ModItems.EM_PROJECTOR.get())).isEmpty();
         try {
-            csv.write(String.format(Locale.ROOT, "%d,%s,%.1f,%s,%.1f,%b,%b,%s,%d,%d,%.2f,%.2f,%.2f,%b,%s,%d,%d,%.2f,%.2f,%.1f,%s,%.1f,%s,%s,%b,%.2f,%.2f,%b,%.2f%n",
+            csv.write(String.format(Locale.ROOT, "%d,%s,%.1f,%s,%.1f,%b,%b,%s,%d,%d,%.2f,%.2f,%.2f,%b,%s,%d,%d,%.2f,%.2f,%.1f,%s,%.1f,%s,%s,%b,%.2f,%.2f,%b,%.2f,%b,%s,%.1f,%.1f,%.1f,%b%n",
                     s, phase, spawnDistance, r.getMind(), r.getHealth(), r.isPowered(), r.isStunned(), name(r.getTarget()), r.socket().getUses(),
                     r.power().getTotalEnergy(), visor[0], visor[1], visor[2], player.getUUID().equals(r.brain().getOwnerId()), name(f.getTarget()), f.socket().getUses(),
                     cows.stream().filter(LivingEntity::isAlive).count(), player.getY() - base.getY(), player.getDeltaMovement().y,
@@ -229,7 +229,13 @@ final class RogueScene {
                     em == null || em.socket().getBeamTarget() == null ? "-" : em.socket().getBeamTarget().getType().toShortString(), emDropped,
                     mc.player.getY() - base.getY(), mc.player.getDeltaMovement().y, mc.player.isNoGravity(),
                     mc.player.getVehicle() == null ? -1 : Math.hypot(mc.player.getVehicle().getX() - mc.player.getVehicle().xo,
-                            mc.player.getVehicle().getZ() - mc.player.getVehicle().zo) * 20));
+                            mc.player.getVehicle().getZ() - mc.player.getVehicle().zo) * 20,
+                    // why the friendly gunner does or doesn't join a fight: it guards within the guard range of its owner
+                    // (of itself when the owner is over 32 blocks away) and needs to see the target (SuitTargets.pick)
+                    f.isAiDriven(), (f.isAlive() ? "" : "dead/") + (f.isPowered() ? "on" : "off") + (f.isStunned() ? "/stunned" : "")
+                            + "/" + f.power().getTotalEnergy() + "/hp" + Math.round(f.getHealth()) + (f.isVehicle() ? "/piloted" : "")
+                            + "/last:" + (f.getLastDamageSource() == null ? "-" : f.getLastDamageSource().getMsgId()), f.distanceTo(player), em == null ? -1F : f.distanceTo(em), em == null ? -1F : player.distanceTo(em),
+                    em != null && f.getSensing().hasLineOfSight(em)));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] rogue csv", e);
         }
