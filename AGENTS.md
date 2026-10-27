@@ -101,6 +101,9 @@ Mojang's names are official since 26.1 (no Parchment). Porting primers: `neoforg
 macOS has no `timeout`; run game tasks in the background and poll the log for completion.
 Extend the autopilot scripts (`client/dev/AutoPilot.java`, `TerrainPilot.java`) with a scenario for each
 new feature and log numbers to CSV: measuring beat guessing every time in this project.
+New scenes go in their own `*Scene` class (ticks from 0, chained after the last one); in `AutoPilot.script()` the
+case labels count from their section's start (`WATER + 17`): adding a step changes only that section's length in the
+constants at the top, later sections move along by themselves.
 
 ## Lessons learned (each cost a debugging round)
 - **Saved attributes outlive code changes.** Entities store attribute base values in NBT; tuning lives in

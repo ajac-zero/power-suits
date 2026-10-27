@@ -108,7 +108,21 @@ public final class AutoPilot {
     private static final boolean TNT_ONLY = "tnt".equals(System.getProperty("powerarmor.autopilot"));
     /** "rail" mode: only the rail cannon scene (RailScene: glass, husks in a line, a wall, the mind's guard, the ammo slot), ~35 s. */
     private static final boolean RAIL_ONLY = "rail".equals(System.getProperty("powerarmor.autopilot"));
-    private static final int MECH_START = 1712;
+    // The main script's sections, each starting where the one before ends (its length is the difference). Case labels
+    // in script() count from their section's start, so a step added to one section only changes that section's length
+    // here; every later section (and the mech scenes, MECH_START) moves along by itself. Screenshot names keep the
+    // absolute tick (t).
+    private static final int BASICS = 0;                    // walk, sprint, look round, jump (cockpit and third person)
+    private static final int WATER = BASICS + 350;
+    private static final int FUEL = WATER + 300;
+    private static final int CHAINGUN = FUEL + 250;
+    private static final int COCKPIT_LOOK = CHAINGUN + 86;
+    private static final int RIGHT_HAND = COCKPIT_LOOK + 9;
+    private static final int EM = RIGHT_HAND + 100;
+    private static final int MINING = EM + 115;
+    private static final int ITEM_ON_FOOT = MINING + 130;
+    private static final int LIGHTS = ITEM_ON_FOOT + 60;
+    private static final int MECH_START = LIGHTS + 312;   // then mechanics(): smashing, stomp, lightning, the minds, ...
     /** A file run/cleanzap: no fire from the lightning scene's bolt, so the knock-out animation can be seen. */
     private static final boolean CLEAN_ZAP = Files.exists(Path.of("cleanzap"));
 
@@ -202,214 +216,214 @@ public final class AutoPilot {
         var o = mc.options;
         switch (t) {
             // GUI stays on in every scene: hiding it (F1) also skips the hand pass, i.e. the cockpit viewmodel.
-            case 0 -> { DevUtil.hideGui(mc, false); o.setCameraType(CameraType.FIRST_PERSON); }
-            case 10 -> shot(mc, "fp_idle");
-            case 15 -> hold(o.keyUp, true);
-            case 40, 41, 42, 43 -> { shot(mc, "fp_walk_" + t); logSpeed(mc, "walk"); }
-            case 55 -> hold(o.keySprint, true);
-            case 75, 76, 77 -> { shot(mc, "fp_run_" + t); logSpeed(mc, "run"); }
-            case 85 -> releaseAll();
-            case 90 -> yaw = 60;
-            case 92 -> shot(mc, "fp_look_right_now");
-            case 110 -> shot(mc, "fp_look_right_later");
-            case 115 -> pitch = 35;
-            case 120 -> shot(mc, "fp_look_down");
-            case 122 -> pitch = -30;
-            case 127 -> shot(mc, "fp_look_up");
-            case 130 -> { pitch = 10; yaw = 0; o.setCameraType(CameraType.THIRD_PERSON_BACK); }
-            case 177 -> shot(mc, "tp_idle");
-            case 142 -> yaw = 70;
-            case 144 -> shot(mc, "tp_twist_now");
-            case 170 -> shot(mc, "tp_twist_settled");
-            case 175 -> { yaw = 0; hold(o.keyUp, true); }
-            case 200 -> shot(mc, "tp_walk");
-            case 215 -> { hold(o.keyUp, false); hold(o.keyRight, true); }
-            case 235 -> shot(mc, "tp_strafe_right");
-            case 240 -> { releaseAll(); hold(o.keyUp, true); hold(o.keySprint, true); }
-            case 262 -> shot(mc, "tp_run");
-            case 270 -> releaseAll();
-            case 280 -> sideCamera(mc);
-            case 285 -> hold(o.keyJump, true);
-            case 288, 294 -> shot(mc, "side_charge_" + t);
-            case 298 -> hold(o.keyJump, false);
-            case 299, 300, 301, 302, 304, 306, 310, 316, 324, 334, 342 -> shot(mc, "side_jump_" + t);
+            case BASICS -> { DevUtil.hideGui(mc, false); o.setCameraType(CameraType.FIRST_PERSON); }
+            case BASICS + 10 -> shot(mc, "fp_idle");
+            case BASICS + 15 -> hold(o.keyUp, true);
+            case BASICS + 40, BASICS + 41, BASICS + 42, BASICS + 43 -> { shot(mc, "fp_walk_" + t); logSpeed(mc, "walk"); }
+            case BASICS + 55 -> hold(o.keySprint, true);
+            case BASICS + 75, BASICS + 76, BASICS + 77 -> { shot(mc, "fp_run_" + t); logSpeed(mc, "run"); }
+            case BASICS + 85 -> releaseAll();
+            case BASICS + 90 -> yaw = 60;
+            case BASICS + 92 -> shot(mc, "fp_look_right_now");
+            case BASICS + 110 -> shot(mc, "fp_look_right_later");
+            case BASICS + 115 -> pitch = 35;
+            case BASICS + 120 -> shot(mc, "fp_look_down");
+            case BASICS + 122 -> pitch = -30;
+            case BASICS + 127 -> shot(mc, "fp_look_up");
+            case BASICS + 130 -> { pitch = 10; yaw = 0; o.setCameraType(CameraType.THIRD_PERSON_BACK); }
+            case BASICS + 177 -> shot(mc, "tp_idle");
+            case BASICS + 142 -> yaw = 70;
+            case BASICS + 144 -> shot(mc, "tp_twist_now");
+            case BASICS + 170 -> shot(mc, "tp_twist_settled");
+            case BASICS + 175 -> { yaw = 0; hold(o.keyUp, true); }
+            case BASICS + 200 -> shot(mc, "tp_walk");
+            case BASICS + 215 -> { hold(o.keyUp, false); hold(o.keyRight, true); }
+            case BASICS + 235 -> shot(mc, "tp_strafe_right");
+            case BASICS + 240 -> { releaseAll(); hold(o.keyUp, true); hold(o.keySprint, true); }
+            case BASICS + 262 -> shot(mc, "tp_run");
+            case BASICS + 270 -> releaseAll();
+            case BASICS + 280 -> sideCamera(mc);
+            case BASICS + 285 -> hold(o.keyJump, true);
+            case BASICS + 288, BASICS + 294 -> shot(mc, "side_charge_" + t);
+            case BASICS + 298 -> hold(o.keyJump, false);
+            case BASICS + 299, BASICS + 300, BASICS + 301, BASICS + 302, BASICS + 304, BASICS + 306, BASICS + 310, BASICS + 316, BASICS + 324, BASICS + 334, BASICS + 342 -> shot(mc, "side_jump_" + t);
             // ---- water: walk off a lip into a 6-deep pool, along the bottom, up stairs on the far side
-            case 350 -> { mc.setCameraEntity(mc.player); releaseAll(); yaw = 0; pitch = 15; o.setCameraType(CameraType.THIRD_PERSON_BACK); buildPool(mc); }
-            case 360 -> { openWaterLog(mc); hold(o.keyUp, true); }
-            case 385, 400, 415, 430 -> shot(mc, "water_tp_" + t);
-            case 440 -> { o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); }
-            case 450, 470 -> shot(mc, "water_fp_" + t);
-            case 480 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 500, 520, 540, 560, 590 -> shot(mc, "water_tp_" + t);
-            case 640 -> { releaseAll(); closeWaterLog(); survival(mc, false);
+            case WATER -> { mc.setCameraEntity(mc.player); releaseAll(); yaw = 0; pitch = 15; o.setCameraType(CameraType.THIRD_PERSON_BACK); buildPool(mc); }
+            case WATER + 10 -> { openWaterLog(mc); hold(o.keyUp, true); }
+            case WATER + 35, WATER + 50, WATER + 65, WATER + 80 -> shot(mc, "water_tp_" + t);
+            case WATER + 90 -> { o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false); }
+            case WATER + 100, WATER + 120 -> shot(mc, "water_fp_" + t);
+            case WATER + 130 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case WATER + 150, WATER + 170, WATER + 190, WATER + 210, WATER + 240 -> shot(mc, "water_tp_" + t);
+            case WATER + 290 -> { releaseAll(); closeWaterLog(); survival(mc, false);
                           onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) { // the firebox back in (see buildPool)
                               s.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.FIREBOX.get()));
                               DevUtil.firebox(s); s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16)); } }); }
             // ---- fuel: nearly empty tank, walk until the engine dies, refuel through the menu
-            case 650 -> { DevUtil.hideGui(mc, false); o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 0; pitch = 15; fuelScenarioSetup(mc); }
-            case 660 -> { openFuelLog(mc); hold(o.keyUp, true); }
-            case 675 -> shot(mc, "fuel_tp_low");
-            case 690 -> o.setCameraType(CameraType.FIRST_PERSON);
-            case 700 -> shot(mc, "fuel_fp_hud");
-            case 712 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 720, 724 -> shot(mc, "fuel_tp_sputter_" + t);
-            case 732 -> sideCamera(mc);
+            case FUEL -> { DevUtil.hideGui(mc, false); o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 0; pitch = 15; fuelScenarioSetup(mc); }
+            case FUEL + 10 -> { openFuelLog(mc); hold(o.keyUp, true); }
+            case FUEL + 25 -> shot(mc, "fuel_tp_low");
+            case FUEL + 40 -> o.setCameraType(CameraType.FIRST_PERSON);
+            case FUEL + 50 -> shot(mc, "fuel_fp_hud");
+            case FUEL + 62 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case FUEL + 70, FUEL + 74 -> shot(mc, "fuel_tp_sputter_" + t);
+            case FUEL + 82 -> sideCamera(mc);
             // the engine dies at ~ t=738 (80 energy, walking burns 1 per tick); the slump plays for 1.6 s
-            case 736, 742, 750, 760, 785 -> shot(mc, "fuel_side_shutdown_" + t);
-            case 790 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); }
-            case 795 -> shot(mc, "fuel_fp_out_of_fuel");
-            case 800 -> { releaseAll(); hold(o.keyShift, true); }      // climb out
-            case 805 -> hold(o.keyShift, false);
-            case 815 -> openSuitMenu(mc);                             // sneak + right-click on the server side
-            case 825 -> shot(mc, "menu_empty");
-            case 830 -> refuel(mc);
-            case 836 -> shot(mc, "menu_fueled");
-            case 845 -> { mc.player.closeContainer(); sideCamera(mc); }
-            case 850, 858, 866, 874, 890 -> shot(mc, "fuel_side_startup_" + t);
+            case FUEL + 86, FUEL + 92, FUEL + 100, FUEL + 110, FUEL + 135 -> shot(mc, "fuel_side_shutdown_" + t);
+            case FUEL + 140 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); }
+            case FUEL + 145 -> shot(mc, "fuel_fp_out_of_fuel");
+            case FUEL + 150 -> { releaseAll(); hold(o.keyShift, true); }      // climb out
+            case FUEL + 155 -> hold(o.keyShift, false);
+            case FUEL + 165 -> openSuitMenu(mc);                             // sneak + right-click on the server side
+            case FUEL + 175 -> shot(mc, "menu_empty");
+            case FUEL + 180 -> refuel(mc);
+            case FUEL + 186 -> shot(mc, "menu_fueled");
+            case FUEL + 195 -> { mc.player.closeContainer(); sideCamera(mc); }
+            case FUEL + 200, FUEL + 208, FUEL + 216, FUEL + 224, FUEL + 240 -> shot(mc, "fuel_side_startup_" + t);
             // ---- chaingun: climb back in, hold the trigger (spin-up to a barrage) at three pigs 12 blocks ahead and a wall
-            case 900 -> { closeFuelLog(); mc.setCameraEntity(mc.player); yaw = 0; pitch = 9; cannonRangeSetup(mc); giveHeld(mc, ItemStack.EMPTY); } // empty hand: right click goes to the tool
-            case 910 -> { o.setCameraType(CameraType.FIRST_PERSON); openCannonLog(mc); }
-            case 920 -> hold(o.keyUse, true);
-            case 921, 922, 923, 924, 925, 926, 927, 928, 929, 930, 931, 932 -> shot(mc, "cannon_fp_" + t);
-            case 940 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 12; }
-            case 945, 946, 947, 949 -> shot(mc, "cannon_tp_" + t);
-            case 958 -> { yaw = -12; sideCamera(mc); }
-            case 969, 970, 971, 973, 976 -> shot(mc, "cannon_side_" + t);
-            case 978 -> hold(o.keyUse, false);                    // let go: the tool arm lowers to its hip carry
-            case 984 -> shot(mc, "cannon_side_lowered");
-            case 985 -> releaseAll();
+            case CHAINGUN -> { closeFuelLog(); mc.setCameraEntity(mc.player); yaw = 0; pitch = 9; cannonRangeSetup(mc); giveHeld(mc, ItemStack.EMPTY); } // empty hand: right click goes to the tool
+            case CHAINGUN + 10 -> { o.setCameraType(CameraType.FIRST_PERSON); openCannonLog(mc); }
+            case CHAINGUN + 20 -> hold(o.keyUse, true);
+            case CHAINGUN + 21, CHAINGUN + 22, CHAINGUN + 23, CHAINGUN + 24, CHAINGUN + 25, CHAINGUN + 26, CHAINGUN + 27, CHAINGUN + 28, CHAINGUN + 29, CHAINGUN + 30, CHAINGUN + 31, CHAINGUN + 32 -> shot(mc, "cannon_fp_" + t);
+            case CHAINGUN + 40 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); yaw = 12; }
+            case CHAINGUN + 45, CHAINGUN + 46, CHAINGUN + 47, CHAINGUN + 49 -> shot(mc, "cannon_tp_" + t);
+            case CHAINGUN + 58 -> { yaw = -12; sideCamera(mc); }
+            case CHAINGUN + 69, CHAINGUN + 70, CHAINGUN + 71, CHAINGUN + 73, CHAINGUN + 76 -> shot(mc, "cannon_side_" + t);
+            case CHAINGUN + 78 -> hold(o.keyUse, false);                    // let go: the tool arm lowers to its hip carry
+            case CHAINGUN + 84 -> shot(mc, "cannon_side_lowered");
+            case CHAINGUN + 85 -> releaseAll();
             // ---- cockpit while walking and looking down (cannon still installed): both arms and the feet in view,
             //      the tool must not clip into the upper arm
-            case 986 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 55; hold(o.keyUp, true); }
-            case 989, 990, 991, 992, 993 -> shot(mc, "fp_walkdown_" + t);
-            case 994 -> releaseAll();
+            case COCKPIT_LOOK -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 55; hold(o.keyUp, true); }
+            case COCKPIT_LOOK + 3, COCKPIT_LOOK + 4, COCKPIT_LOOK + 5, COCKPIT_LOOK + 6, COCKPIT_LOOK + 7 -> shot(mc, "fp_walkdown_" + t);
+            case COCKPIT_LOOK + 8 -> releaseAll();
             // ---- right hand: hold and place stone bricks from inside, then eat a golden apple
-            case 995 -> { closeCannonLog(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON);
+            case RIGHT_HAND -> { closeCannonLog(); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON);
                           giveHeld(mc, new ItemStack(Items.STONE_BRICKS, 64)); yaw = 0; pitch = 40; }
-            case 1003 -> shot(mc, "hand_fp_hold");
-            case 1005, 1026, 1042 -> hold(o.keyUse, true);
-            case 1006, 1007, 1008, 1009, 1010, 1011 -> shot(mc, "hand_fp_use_" + t);
-            case 1016 -> { hold(o.keyUse, false); o.setCameraType(CameraType.THIRD_PERSON_BACK); pitch = 25; }
-            case 1024 -> shot(mc, "hand_tp_hold");
-            case 1027, 1028, 1029, 1031 -> shot(mc, "hand_tp_use_" + t);
-            case 1034 -> { hold(o.keyUse, false); yaw = -90; pitch = 20;
+            case RIGHT_HAND + 8 -> shot(mc, "hand_fp_hold");
+            case RIGHT_HAND + 10, RIGHT_HAND + 31, RIGHT_HAND + 47 -> hold(o.keyUse, true);
+            case RIGHT_HAND + 11, RIGHT_HAND + 12, RIGHT_HAND + 13, RIGHT_HAND + 14, RIGHT_HAND + 15, RIGHT_HAND + 16 -> shot(mc, "hand_fp_use_" + t);
+            case RIGHT_HAND + 21 -> { hold(o.keyUse, false); o.setCameraType(CameraType.THIRD_PERSON_BACK); pitch = 25; }
+            case RIGHT_HAND + 29 -> shot(mc, "hand_tp_hold");
+            case RIGHT_HAND + 32, RIGHT_HAND + 33, RIGHT_HAND + 34, RIGHT_HAND + 36 -> shot(mc, "hand_tp_use_" + t);
+            case RIGHT_HAND + 39 -> { hold(o.keyUse, false); yaw = -90; pitch = 20;
                            giveHeld(mc, new ItemStack(Items.TORCH, 16)); }
-            case 1038 -> frontCamera(mc);
-            case 1040 -> shot(mc, "hand_front_hold");
-            case 1043, 1044, 1045, 1047 -> shot(mc, "hand_front_use_" + t);
-            case 1050 -> { hold(o.keyUse, false); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 10;
+            case RIGHT_HAND + 43 -> frontCamera(mc);
+            case RIGHT_HAND + 45 -> shot(mc, "hand_front_hold");
+            case RIGHT_HAND + 48, RIGHT_HAND + 49, RIGHT_HAND + 50, RIGHT_HAND + 52 -> shot(mc, "hand_front_use_" + t);
+            case RIGHT_HAND + 55 -> { hold(o.keyUse, false); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 10;
                            giveHeld(mc, new ItemStack(Items.GOLDEN_APPLE, 4));
                            socket(mc, null); } // no tool to pass the click on to: the "sealed in" message shows
-            case 1055 -> hold(o.keyUse, true);  // sealed in: eating is refused
-            case 1062, 1075 -> shot(mc, "hand_fp_food_refused_" + t);
-            case 1078 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1085 -> shot(mc, "hand_tp_food_refused");
-            case 1086 -> { releaseAll(); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 40;   // left click: the hand mines the bricks it placed
+            case RIGHT_HAND + 60 -> hold(o.keyUse, true);  // sealed in: eating is refused
+            case RIGHT_HAND + 67, RIGHT_HAND + 80 -> shot(mc, "hand_fp_food_refused_" + t);
+            case RIGHT_HAND + 83 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case RIGHT_HAND + 90 -> shot(mc, "hand_tp_food_refused");
+            case RIGHT_HAND + 91 -> { releaseAll(); o.setCameraType(CameraType.FIRST_PERSON); yaw = 0; pitch = 40;   // left click: the hand mines the bricks it placed
                            giveHeld(mc, new ItemStack(Items.DIAMOND_PICKAXE)); }
-            case 1087 -> hold(o.keyAttack, true);
-            case 1089, 1091 -> shot(mc, "hand_fp_mine_" + t);
-            case 1092 -> releaseAll();
+            case RIGHT_HAND + 92 -> hold(o.keyAttack, true);
+            case RIGHT_HAND + 94, RIGHT_HAND + 96 -> shot(mc, "hand_fp_mine_" + t);
+            case RIGHT_HAND + 97 -> releaseAll();
             // ---- EM projector: vacuum up dropped diamonds, then grab a pig, hold it and throw it
-            case 1095 -> { giveHeld(mc, ItemStack.EMPTY); emRangeSetup(mc); yaw = 180; pitch = 15; o.setCameraType(CameraType.THIRD_PERSON_BACK); openEmLog(mc); }
-            case 1104 -> emCloseCamera(mc, false);   // close-up of the mounted projector: faint idle glow
-            case 1107 -> shot(mc, "em_close_idle");
-            case 1109 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, false); }
-            case 1110 -> hold(o.keyUse, true);
-            case 1113, 1118, 1124 -> shot(mc, "em_tp_items_" + t);
-            case 1121 -> pitch = 10; // the next diamonds lie further out
-            case 1128 -> o.setCameraType(CameraType.FIRST_PERSON);
-            case 1132 -> shot(mc, "em_fp_items");
-            case 1140 -> hold(o.keyUse, false);
-            case 1146, 1149 -> aimAt(mc, emPig);
-            case 1150 -> hold(o.keyUse, true);
-            case 1156, 1164 -> shot(mc, "em_fp_pig_" + t);
-            case 1166 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1167 -> emCloseCamera(mc, true);    // close-up while the beam holds the pig: core + tips lit, sparks
-            case 1169 -> shot(mc, "em_close_pig");
-            case 1170 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, false); }
-            case 1172 -> shot(mc, "em_tp_pig");
-            case 1174 -> sideCamera(mc);
-            case 1180 -> shot(mc, "em_side_pig");
-            case 1182 -> pitch = -5;
-            case 1186 -> hold(o.keyUse, false);
-            case 1187, 1189, 1192, 1196 -> shot(mc, "em_side_throw_" + t);
-            case 1205 -> { closeEmLog(); mc.setCameraEntity(mc.player); releaseAll(); }
+            case EM -> { giveHeld(mc, ItemStack.EMPTY); emRangeSetup(mc); yaw = 180; pitch = 15; o.setCameraType(CameraType.THIRD_PERSON_BACK); openEmLog(mc); }
+            case EM + 9 -> emCloseCamera(mc, false);   // close-up of the mounted projector: faint idle glow
+            case EM + 12 -> shot(mc, "em_close_idle");
+            case EM + 14 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, false); }
+            case EM + 15 -> hold(o.keyUse, true);
+            case EM + 18, EM + 23, EM + 29 -> shot(mc, "em_tp_items_" + t);
+            case EM + 26 -> pitch = 10; // the next diamonds lie further out
+            case EM + 33 -> o.setCameraType(CameraType.FIRST_PERSON);
+            case EM + 37 -> shot(mc, "em_fp_items");
+            case EM + 45 -> hold(o.keyUse, false);
+            case EM + 51, EM + 54 -> aimAt(mc, emPig);
+            case EM + 55 -> hold(o.keyUse, true);
+            case EM + 61, EM + 69 -> shot(mc, "em_fp_pig_" + t);
+            case EM + 71 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case EM + 72 -> emCloseCamera(mc, true);    // close-up while the beam holds the pig: core + tips lit, sparks
+            case EM + 74 -> shot(mc, "em_close_pig");
+            case EM + 75 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); DevUtil.hideGui(mc, false); }
+            case EM + 77 -> shot(mc, "em_tp_pig");
+            case EM + 79 -> sideCamera(mc);
+            case EM + 85 -> shot(mc, "em_side_pig");
+            case EM + 87 -> pitch = -5;
+            case EM + 91 -> hold(o.keyUse, false);
+            case EM + 92, EM + 94, EM + 97, EM + 101 -> shot(mc, "em_side_throw_" + t);
+            case EM + 110 -> { closeEmLog(); mc.setCameraEntity(mc.player); releaseAll(); }
             // ---- mining tools: drill a 3x3 into a rock face with ores, then fell a real oak with the chainsaw
-            case 1210 -> { giveHeld(mc, ItemStack.EMPTY); miningSetup(mc); yaw = 0; pitch = 20; o.setCameraType(CameraType.THIRD_PERSON_BACK); openMineLog(mc); }
-            case 1225 -> aimTarget = Vec3.atCenterOf(mineBase.offset(0, 1, 4)).add(0, 0, -0.5); // re-aimed every tick (the eye moves as the suit turns)
-            case 1228 -> hold(o.keyUse, true);
-            case 1230, 1234, 1238, 1242 -> shot(mc, "drill_tp_" + t);
-            case 1246 -> o.setCameraType(CameraType.FIRST_PERSON);
-            case 1250, 1254, 1258 -> shot(mc, "drill_fp_" + t);
-            case 1262 -> lookCamera(mc, Vec3.atBottomCenterOf(mineBase).add(-4.5, 2.0, 3.0), Vec3.atBottomCenterOf(mineBase).add(-0.5, 1.9, 1.8));
-            case 1264, 1266, 1268 -> shot(mc, "drill_side_" + t);
-            case 1272 -> { aimTarget = null; hold(o.keyUse, false); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); }
-            case 1278 -> shot(mc, "drill_tp_after");
-            case 1280 -> treeSetup(mc);
-            case 1284 -> aimTarget = Vec3.atCenterOf(treeBase).add(-0.5, 0, 0);
-            case 1286 -> { hold(o.keyUse, true); o.setCameraType(CameraType.FIRST_PERSON); }
-            case 1289 -> shot(mc, "saw_fp_" + t);
-            case 1290 -> lookCamera(mc, Vec3.atBottomCenterOf(mineBase).add(-3.5, 3.0, -3.5), Vec3.atBottomCenterOf(mineBase).add(2.0, 1.6, 0.6)); // behind-left, clear of the rock and the canopy
-            case 1291, 1293, 1294, 1295, 1296, 1297, 1298, 1300, 1304 -> shot(mc, "saw_side_" + t);
-            case 1306 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); }
-            case 1310 -> shot(mc, "saw_fp_" + t);
-            case 1312 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1324 -> { aimTarget = null; hold(o.keyUse, false); mc.setCameraEntity(mc.player); }
-            case 1330 -> { shot(mc, "saw_tp_after"); closeMineLog(); }
+            case MINING -> { giveHeld(mc, ItemStack.EMPTY); miningSetup(mc); yaw = 0; pitch = 20; o.setCameraType(CameraType.THIRD_PERSON_BACK); openMineLog(mc); }
+            case MINING + 15 -> aimTarget = Vec3.atCenterOf(mineBase.offset(0, 1, 4)).add(0, 0, -0.5); // re-aimed every tick (the eye moves as the suit turns)
+            case MINING + 18 -> hold(o.keyUse, true);
+            case MINING + 20, MINING + 24, MINING + 28, MINING + 32 -> shot(mc, "drill_tp_" + t);
+            case MINING + 36 -> o.setCameraType(CameraType.FIRST_PERSON);
+            case MINING + 40, MINING + 44, MINING + 48 -> shot(mc, "drill_fp_" + t);
+            case MINING + 52 -> lookCamera(mc, Vec3.atBottomCenterOf(mineBase).add(-4.5, 2.0, 3.0), Vec3.atBottomCenterOf(mineBase).add(-0.5, 1.9, 1.8));
+            case MINING + 54, MINING + 56, MINING + 58 -> shot(mc, "drill_side_" + t);
+            case MINING + 62 -> { aimTarget = null; hold(o.keyUse, false); mc.setCameraEntity(mc.player); o.setCameraType(CameraType.THIRD_PERSON_BACK); }
+            case MINING + 68 -> shot(mc, "drill_tp_after");
+            case MINING + 70 -> treeSetup(mc);
+            case MINING + 74 -> aimTarget = Vec3.atCenterOf(treeBase).add(-0.5, 0, 0);
+            case MINING + 76 -> { hold(o.keyUse, true); o.setCameraType(CameraType.FIRST_PERSON); }
+            case MINING + 79 -> shot(mc, "saw_fp_" + t);
+            case MINING + 80 -> lookCamera(mc, Vec3.atBottomCenterOf(mineBase).add(-3.5, 3.0, -3.5), Vec3.atBottomCenterOf(mineBase).add(2.0, 1.6, 0.6)); // behind-left, clear of the rock and the canopy
+            case MINING + 81, MINING + 83, MINING + 84, MINING + 85, MINING + 86, MINING + 87, MINING + 88, MINING + 90, MINING + 94 -> shot(mc, "saw_side_" + t);
+            case MINING + 96 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); }
+            case MINING + 100 -> shot(mc, "saw_fp_" + t);
+            case MINING + 102 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case MINING + 114 -> { aimTarget = null; hold(o.keyUse, false); mc.setCameraEntity(mc.player); }
+            case MINING + 120 -> { shot(mc, "saw_tp_after"); closeMineLog(); }
             // ---- the cannon item on foot: hand (first / third person) and inventory icon
-            case 1340 -> { o.setCameraType(CameraType.FIRST_PERSON); hold(o.keyShift, true); }
-            case 1345 -> { hold(o.keyShift, false); giveCannon(mc); survival(mc, true); yaw = 120; pitch = 10; }
-            case 1355 -> shot(mc, "item_fp");
-            case 1357 -> o.setCameraType(CameraType.THIRD_PERSON_FRONT);
-            case 1365 -> shot(mc, "item_tp_front");
-            case 1367 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1375 -> shot(mc, "item_tp_back");
-            case 1377 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.gui.setScreen(new InventoryScreen(mc.player)); }
-            case 1385 -> shot(mc, "item_gui");
-            case 1387 -> mc.gui.setScreen(null);
-            case 1390 -> mc.gui.setScreen(new ConfigurationScreen(
+            case ITEM_ON_FOOT -> { o.setCameraType(CameraType.FIRST_PERSON); hold(o.keyShift, true); }
+            case ITEM_ON_FOOT + 5 -> { hold(o.keyShift, false); giveCannon(mc); survival(mc, true); yaw = 120; pitch = 10; }
+            case ITEM_ON_FOOT + 15 -> shot(mc, "item_fp");
+            case ITEM_ON_FOOT + 17 -> o.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            case ITEM_ON_FOOT + 25 -> shot(mc, "item_tp_front");
+            case ITEM_ON_FOOT + 27 -> o.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case ITEM_ON_FOOT + 35 -> shot(mc, "item_tp_back");
+            case ITEM_ON_FOOT + 37 -> { o.setCameraType(CameraType.FIRST_PERSON); mc.gui.setScreen(new InventoryScreen(mc.player)); }
+            case ITEM_ON_FOOT + 45 -> shot(mc, "item_gui");
+            case ITEM_ON_FOOT + 47 -> mc.gui.setScreen(null);
+            case ITEM_ON_FOOT + 50 -> mc.gui.setScreen(new ConfigurationScreen(
                     ModList.get().getModContainerById(PowerArmor.MODID).orElseThrow(), null));
-            case 1396 -> shot(mc, "config");
-            case 1398 -> mc.gui.setScreen(null);
+            case ITEM_ON_FOOT + 56 -> shot(mc, "config");
+            case ITEM_ON_FOOT + 58 -> mc.gui.setScreen(null);
             // ---- lights at night (SuitGlowLayer): piloted = amber (also with the tool and when hit), empty = the machine
             //      mind's green, then the fuel runs out: the visor stutters and goes dark, the firebox dies down to embers
-            case 1400 -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); lightsSetup(mc); }
-            case 1430 -> { yaw = 0; pitch = 0; boardNearestSuit(mc); } // (the client learns the new time once a second)
-            case 1440 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); lightsCamera(mc); }
-            case 1446 -> shot(mc, "lights_piloted");
-            case 1448 -> hold(o.keyUse, true);                    // a long barrage into the wall ahead: tracers, hot barrels
-            case 1454 -> shot(mc, "lights_tool");
-            case 1500, 1560, 1596 -> shot(mc, "lights_barrage_" + t);
-            case 1600 -> hold(o.keyUse, false);
-            case 1608 -> shot(mc, "lights_hot");                   // barrels still glowing as they coast down
-            case 1620 -> onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) s.hurtServer(p.level(), p.level().damageSources().generic(), 1F); });
-            case 1624 -> shot(mc, "lights_hit");
-            case 1630 -> hold(o.keyShift, true);                  // climb out: the machine mind takes over -> green
-            case 1632 -> hold(o.keyShift, false);
-            case 1644 -> shot(mc, "lights_parked");
-            case 1646 -> boardNearestSuit(mc);                  // back in, to watch it run dry from the cockpit
-            case 1650 -> onServer(mc, p -> p.level().getEntitiesOfClass(PowerArmorEntity.class, p.getBoundingBox().inflate(8)).forEach(s -> {
+            case LIGHTS -> { mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); lightsSetup(mc); }
+            case LIGHTS + 30 -> { yaw = 0; pitch = 0; boardNearestSuit(mc); } // (the client learns the new time once a second)
+            case LIGHTS + 40 -> { o.setCameraType(CameraType.THIRD_PERSON_BACK); lightsCamera(mc); }
+            case LIGHTS + 46 -> shot(mc, "lights_piloted");
+            case LIGHTS + 48 -> hold(o.keyUse, true);                    // a long barrage into the wall ahead: tracers, hot barrels
+            case LIGHTS + 54 -> shot(mc, "lights_tool");
+            case LIGHTS + 100, LIGHTS + 160, LIGHTS + 196 -> shot(mc, "lights_barrage_" + t);
+            case LIGHTS + 200 -> hold(o.keyUse, false);
+            case LIGHTS + 208 -> shot(mc, "lights_hot");                   // barrels still glowing as they coast down
+            case LIGHTS + 220 -> onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) s.hurtServer(p.level(), p.level().damageSources().generic(), 1F); });
+            case LIGHTS + 224 -> shot(mc, "lights_hit");
+            case LIGHTS + 230 -> hold(o.keyShift, true);                  // climb out: the machine mind takes over -> green
+            case LIGHTS + 232 -> hold(o.keyShift, false);
+            case LIGHTS + 244 -> shot(mc, "lights_parked");
+            case LIGHTS + 246 -> boardNearestSuit(mc);                  // back in, to watch it run dry from the cockpit
+            case LIGHTS + 250 -> onServer(mc, p -> p.level().getEntitiesOfClass(PowerArmorEntity.class, p.getBoundingBox().inflate(8)).forEach(s -> {
                               s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, ItemStack.EMPTY); s.power().setBurn(1, 1600); })); // out of fuel
-            case 1656, 1660, 1666 -> shot(mc, "lights_shutdown_" + t);
-            case 1710 -> shot(mc, "lights_off");
+            case LIGHTS + 256, LIGHTS + 260, LIGHTS + 266 -> shot(mc, "lights_shutdown_" + t);
+            case LIGHTS + 310 -> shot(mc, "lights_off");
             default -> {}
         }
         if (t >= MECH_START) {
             mechanics(mc, t - MECH_START);
         }
-        if (t >= 360 && t < 640) {
+        if (t >= WATER + 10 && t < WATER + 290) {
             logWater(mc, t);
         }
-        if (t >= 660 && t < 900) {
+        if (t >= FUEL + 10 && t < FUEL + 250) {
             logFuel(mc, t);
         }
-        if (t >= 910 && t < 995) {
+        if (t >= CHAINGUN + 10 && t < CHAINGUN + 95) {
             logCannon(mc, t);
         }
-        if (t >= 1095 && t < 1205) {
+        if (t >= EM && t < EM + 110) {
             logEm(mc, t);
         }
-        if (t >= 1210 && t < 1330) {
+        if (t >= MINING && t < MINING + 120) {
             logMine(mc, t);
         }
     }
