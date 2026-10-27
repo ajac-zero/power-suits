@@ -96,8 +96,9 @@ They are vanilla sounds re-pitched in `assets/powerarmor/sounds.json`: swap in y
 ### The visor and its HUD
 With the helmet on you see the inside of the helmet from the cockpit (first person): dark steel pieces in the four
 corners and the visor band in the middle of the top edge, like the pumpkin's view but only at the edges. While the suit
-has power the glass along them catches a line of light, and the visor shows a HUD floating on the glass (no helmet, no
-HUD: then vanilla's vehicle hearts show the hull). It's terminal green by default: pick your own colour under
+has power the visor shows the view through them (only a faint outline of their edges is left) and a HUD floating on the
+glass (no helmet, no HUD: then vanilla's vehicle hearts show the hull); without power they're solid again and close the
+view in. It's terminal green by default: pick your own colour under
 **Mods > Power Armor > Config > Visor** (`visor_colour` in `config/powerarmor-client.toml`, `#RRGGBB`; only you see it).
 - **Top left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
   with a **shield** that's lit while the suit is sealed (running with the helmet on) and faded when not, and **FUEL**: how long it lasts at walking pace (∞ on a wet
@@ -242,7 +243,7 @@ upgrades a world the first time it's opened and there's no way back: let it make
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
 | `uv run --with pillow python3 model/art/item_icons_art.py [--sheet out.png]` | Draws every item icon: hand-made 16 px pixel art (vanilla style), not rendered from the model; `--sheet` writes a review sheet |
 | `python3 tools/extract-view-geo.py` | Rebuilds the cockpit viewmodel (`geckolib/models/view`) from the suit model (run after `export-model.mjs`) |
-| `uv run --with pillow python3 tools/make-visor-textures.py` | Rebuilds the helmet edge pieces the pilot sees (`textures/gui/visor/`: corners, brow, their rim masks) |
+| `uv run --with pillow python3 tools/make-visor-textures.py` | Rebuilds the helmet edge pieces the pilot sees (`textures/gui/visor/`: corners, brow, and their lips alone, all that shows while powered) |
 | `uv run --with pillow python3 tools/make-glowmasks.py` | Rebuilds the glowmasks (`power_armor_glow_{fire,visor,heat,heat_barrel,em_core,em_arc}.png`) from the texture's reserved colours (run after `export-model.mjs`) |
 | `uv run --with pillow python3 tools/make-paint-textures.py` | Rebuilds the painted textures (`textures/entity/paint/power_armor_<dye>.png`, one per dye) from the steel texture (run after `export-model.mjs`) |
 | `./gradlew runAutopilotPaint` | Dev tool (~30 s): a suit right-clicked with dyes and a wet sponge; `run/screenshots/ap_paint_*.png` (in-game back view + front), `run/autopilot_paint.csv` (server/client paint, dyes left) |
@@ -319,7 +320,7 @@ src/main/java/dev/ajaczero/powerarmor/
     PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
     SuitHud.java             the pilot's HUD (suit + tool readouts, compass + clock) + low-fuel beep; moves boss bars
                              and effect icons out of its way
-    SuitVisor.java           the helmet's edge around the first-person view (pieces + the glass rim's light)
+    SuitVisor.java           the helmet's edge around the first-person view (solid pieces unpowered, only their outline powered)
     VisorConfig.java         the player's own visor colour (CLIENT config, powerarmor-client.toml)
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)

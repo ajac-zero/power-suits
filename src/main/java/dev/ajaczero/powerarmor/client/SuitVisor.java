@@ -13,8 +13,9 @@ import net.minecraft.util.ARGB;
  * The helmet seen from inside it (2026-10-27): like the pumpkin's overlay, but only at the edges of the view. Two dark
  * steel pieces in the top corners, two in the bottom corners and the visor band in the middle of the top edge, each on
  * its own (the user's sketches: corners that end at the sides instead of wrapping round to meet). While the suit has
- * power, the edge of the glass along each piece catches the visor's light: a 1 px line in the visor colour
- * ({@link VisorConfig}); without power it's just the helmet. The readouts are {@link SuitHud}'s.
+ * power the visor shows the view through the metal (user, 2026-10-27, option B of the see-through mockups): only each
+ * piece's 1 px steel lip is left, a faint outline of where the helmet is; without power the pieces are solid again, so
+ * losing power closes the view in. The readouts are {@link SuitHud}'s.
  * <p>
  * A GUI layer drawn right after vanilla's camera overlays (the pumpkin's layer), so the crosshair, the hotbar and the
  * HUD draw over it. First person only, like the pumpkin. The pieces are in GUI pixels and keep their size on any window
@@ -27,8 +28,8 @@ public final class SuitVisor {
     private static final Piece TOP = new Piece("corner_top", 101, 21);
     private static final Piece BOTTOM = new Piece("corner_bottom", 85, 30);
     private static final Piece BROW = new Piece("brow", 132, 8);
-    /** The rim's light, out of 255: bright but not solid, so it reads as light on glass. */
-    private static final int RIM_ALPHA = 200;
+    /** The lip's opacity while powered, out of 255: a faint outline, not a frame (the mockup's 0.75). */
+    private static final int LIP_ALPHA = 191;
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
@@ -37,24 +38,25 @@ public final class SuitVisor {
             return;
         }
         int w = g.guiWidth(), h = g.guiHeight();
-        int rim = suit.isPowered() ? ARGB.color(RIM_ALPHA, VisorConfig.colour()) : 0;
-        TOP.draw(g, 0, 0, false, rim);
-        TOP.draw(g, w - TOP.w, 0, true, rim);
-        BOTTOM.draw(g, 0, h - BOTTOM.h, false, rim);
-        BOTTOM.draw(g, w - BOTTOM.w, h - BOTTOM.h, true, rim);
-        BROW.draw(g, w / 2 - BROW.w / 2, 0, false, rim);
+        boolean powered = suit.isPowered();
+        TOP.draw(g, 0, 0, false, powered);
+        TOP.draw(g, w - TOP.w, 0, true, powered);
+        BOTTOM.draw(g, 0, h - BOTTOM.h, false, powered);
+        BOTTOM.draw(g, w - BOTTOM.w, h - BOTTOM.h, true, powered);
+        BROW.draw(g, w / 2 - BROW.w / 2, 0, false, powered);
     }
 
-    /** One piece: its texture (slate + steel lip) and its rim mask (white, tinted), drawn mirrored for the right side. */
-    private record Piece(Identifier texture, Identifier rimMask, int w, int h) {
+    /** One piece: its texture (slate + steel lip) and the lip alone, drawn mirrored for the right side. */
+    private record Piece(Identifier texture, Identifier lip, int w, int h) {
         Piece(String name, int w, int h) {
-            this(tex(name), tex(name + "_rim"), w, h);
+            this(tex(name), tex(name + "_lip"), w, h);
         }
 
-        void draw(GuiGraphicsExtractor g, int x, int y, boolean mirrored, int rim) {
-            blit(g, this.texture, x, y, mirrored, 0xFFFFFFFF);
-            if (rim != 0) {
-                blit(g, this.rimMask, x, y, mirrored, rim);
+        void draw(GuiGraphicsExtractor g, int x, int y, boolean mirrored, boolean powered) {
+            if (powered) {
+                blit(g, this.lip, x, y, mirrored, ARGB.color(LIP_ALPHA, 0xFFFFFF));
+            } else {
+                blit(g, this.texture, x, y, mirrored, 0xFFFFFFFF);
             }
         }
 

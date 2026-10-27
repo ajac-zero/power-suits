@@ -7,8 +7,9 @@ Writes src/main/resources/assets/powerarmor/textures/gui/visor/:
   corner_top.png / corner_bottom.png   the top-left / bottom-left corner pieces (the right ones are the same, drawn
                                        mirrored): dark slate with a 1 px steel lip along the edge facing the glass
   brow.png                             the middle piece of the top edge (the helmet's visor band), on its own
-  <piece>_rim.png                      white masks: the 1 px line of glass along each piece that catches the visor's
-                                       light; SuitVisor tints them with the visor colour while the suit has power
+  <piece>_lip.png                      the piece's steel lip alone: all that's left of it while the suit has power
+                                       (the visor shows the view through the metal, 2026-10-27 option B of
+                                       .scratch/hud/seethru.py); without power SuitVisor draws the whole piece
 
 The shapes are straight facets (pixel steps, like the suit's octagon joints) after the 2026-10-27 mockups
 (.scratch/hud/ours.py): the corners keep the first curve out to 80% of the way to the middle, then run straight to the
@@ -41,17 +42,17 @@ def main() -> None:
         ImageDraw.Draw(mask).polygon(poly, fill=255)
         glass = mask.point(lambda v: 255 - v)
         piece = Image.new("RGBA", size, (0, 0, 0, 0))
-        rim = Image.new("RGBA", size, (0, 0, 0, 0))
-        m, g, near_glass, near_piece = mask.load(), glass.load(), grow(glass).load(), grow(mask).load()
-        p, r = piece.load(), rim.load()
+        lip = Image.new("RGBA", size, (0, 0, 0, 0))
+        m, near_glass = mask.load(), grow(glass).load()
+        p, l = piece.load(), lip.load()
         for y in range(size[1]):
             for x in range(size[0]):
                 if m[x, y]:
                     p[x, y] = LIP if near_glass[x, y] else SLATE
-                elif near_piece[x, y]:
-                    r[x, y] = (255, 255, 255, 255)
+                    if near_glass[x, y]:
+                        l[x, y] = LIP
         piece.save(OUT / f"{name}.png")
-        rim.save(OUT / f"{name}_rim.png")
+        lip.save(OUT / f"{name}_lip.png")
         print("wrote", name, size)
 
 

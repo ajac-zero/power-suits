@@ -11,7 +11,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * PowerArmorConfig.)
  */
 public final class VisorConfig {
-    /** Classic terminal green (user, 2026-10-27): the colour of the visor's readouts and of the glass rim's light. */
+    /** Classic terminal green (user, 2026-10-27): the colour of the visor's readouts. */
     public static final String DEFAULT_COLOUR = "#5AFF6E";
 
     private static final ModConfigSpec.Builder B = new ModConfigSpec.Builder();
