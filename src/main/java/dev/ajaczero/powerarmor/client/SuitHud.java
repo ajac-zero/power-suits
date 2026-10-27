@@ -72,8 +72,9 @@ public final class SuitHud {
     private static final int MAX_BURN_PER_TICK = 20;
 
     /** Panel size and placement (GUI pixels): both panels sit in the bottom corners, the hotbar between them. 34 high:
-     *  3 px clear above the first row and below the last bar. */
-    private static final int MARGIN = 4, PANEL_H = 34, SUIT_W = 128, TOOL_W = 112, TOOL_BAR_SEGMENTS = 10;
+     *  3 px clear above the first row and below the last bar. Both 120 wide: the narrowest where the fuel row's longest
+     *  text (FLOODED, 41 px) still clears the embers (by 3 px). */
+    private static final int MARGIN = 4, PANEL_H = 34, PANEL_W = 120, TOOL_BAR_SEGMENTS = 12;
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
@@ -94,8 +95,9 @@ public final class SuitHud {
         boolean free = power.hasFreePower() && powered;
         int energy = power.getTotalEnergy();
         // Every word and sign on the HUD comes from the language file (hud.powerarmor.*), so a translation covers it all.
+        // No engine reads NO FUEL too (user, 2026-10-27: players get it; the menu still says NO ENGINE), so the longest
+        // text here is FLOODED and the panel can be 120 wide.
         Component fuelText = free ? Component.translatable("hud.powerarmor.endless")
-                : suit.getEngine() == null ? Component.translatable("gui.powerarmor.no_engine")
                 : power.isFlooded() ? Component.translatable("gui.powerarmor.flooded")
                 : energy > 0 ? Component.literal(PowerArmorItem.formatWalkTime(energy))
                 : Component.translatable("gui.powerarmor.no_fuel");
@@ -114,7 +116,7 @@ public final class SuitHud {
 
         // ---- left: the suit -------------------------------------------------------------------------------------
         int h = g.guiHeight();
-        int x0 = MARGIN, y0 = h - MARGIN - 1 - PANEL_H, x1 = x0 + SUIT_W;
+        int x0 = MARGIN, y0 = h - MARGIN - 1 - PANEL_H, x1 = x0 + PANEL_W;
         panel(g, x0, y0, x1, y0 + PANEL_H, backing, main);
         for (Identifier piece : FIGURE) {
             g.blit(RenderPipelines.GUI_TEXTURED, piece, x0 + 5, y0 + 4, 0F, 0F, FIGURE_W, FIGURE_H, FIGURE_W, FIGURE_H, main);
@@ -148,7 +150,7 @@ public final class SuitHud {
         // bar, and the ammo as a fixed 3-digit counter at twice the font's size, like Fallout's (006; 999 means "999 or
         // more"; a dim --- for a tool without ammo), so the panel never changes size.
         if (tool != null) {
-            int tx1 = g.guiWidth() - MARGIN, tx0 = tx1 - TOOL_W;
+            int tx1 = g.guiWidth() - MARGIN, tx0 = tx1 - PANEL_W;
             panel(g, tx0, y0, tx1, y0 + PANEL_H, backing, main);
             g.blit(RenderPipelines.GUI_TEXTURED, symbol(toolStack), tx0 + 5, y0 + 9, 0F, 0F, 16, 16, 16, 16, main);
             g.text(font, Component.translatable(tool.barLabel()), tx0 + 26, y0 + 9, main, false);
