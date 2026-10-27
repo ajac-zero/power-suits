@@ -53,16 +53,19 @@ lll.CCCCCCC.rrr
 PIECES = {"H": "helmet", "C": "chest", "l": "arm_left", "r": "arm_right", "L": "leg_left", "R": "leg_right"}
 
 # The seal, by HULL: a shield as tall as the font's capitals (7 px; amber while sealed, faded like an unlit ember
-# when not).
+# when not). Two shades like the embers: '#' full, '+' 60% grey (the HUD's tint multiplies, so it stays the darker
+# half of whatever colour the HUD is): lit from the left, the right side in shade, so it reads as a bevelled plate
+# (user's pick 2026-10-27 over a top band, a rim and a centre ridge).
 SEAL = """
-#####
-#####
-#####
-#####
-.###.
-.###.
+###++
+###++
+###++
+###++
+.##+.
+.##+.
 ..#..
 """
+SHADE = 153  # 60% of white
 
 EMBER = """
 ..#..
@@ -225,7 +228,12 @@ def main():
     (OUT / "suit.png").unlink(missing_ok=True)  # the one-piece silhouette before 2026-10-27
     for letter, name in PIECES.items():
         mask(FIGURE, mark=letter).save(OUT / f"suit_{name}.png")
-    mask(SEAL).save(OUT / "seal.png")
+    seal = mask(SEAL)
+    for y, row in enumerate(SEAL.strip("\n").split("\n")):
+        for x, ch in enumerate(row):
+            if ch == "+":
+                seal.putpixel((x, y), (SHADE, SHADE, SHADE, 255))
+    seal.save(OUT / "seal.png")
     mask(EMBER).save(OUT / "ember.png")
     # burning: a yellow tip over an orange body, like the firebox's own glow
     mask(EMBER, lambda x, y: (255, 220, 90, 255) if y < 3 else (255, 130, 30, 255)).save(OUT / "ember_lit.png")
