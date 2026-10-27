@@ -86,7 +86,8 @@ public final class SuitHud {
         var power = suit.power();
         boolean free = power.hasFreePower() && powered;
         int energy = power.getTotalEnergy();
-        Component fuelText = free ? Component.literal("\u221e") // endless
+        // Every word and sign on the HUD comes from the language file (hud.powerarmor.*), so a translation covers it all.
+        Component fuelText = free ? Component.translatable("hud.powerarmor.endless")
                 : suit.getEngine() == null ? Component.translatable("gui.powerarmor.no_engine")
                 : power.isFlooded() ? Component.translatable("gui.powerarmor.flooded")
                 : energy > 0 ? Component.literal(PowerArmorItem.formatWalkTime(energy))
@@ -111,7 +112,7 @@ public final class SuitHud {
         g.blit(RenderPipelines.GUI_TEXTURED, SUIT, x0 + 5, y0 + 5, 0F, 0F, 16, 22, 16, 22, main);
         int lx = x0 + 26, rx = x1 - 4, segments = (rx - lx + 1) / 4;
         g.text(font, Component.translatable("hud.powerarmor.hull"), lx, y0 + 4, main, false);
-        String hullText = Math.round(hull * 100) + "%";
+        Component hullText = Component.translatable("hud.powerarmor.percent", Math.round(hull * 100));
         if (!(hullCritical && blink)) {
             g.text(font, hullText, rx - font.width(hullText), y0 + 4, main, false);
         }
@@ -139,7 +140,9 @@ public final class SuitHud {
             g.blit(RenderPipelines.GUI_TEXTURED, symbol(toolStack), tx0 + 5, y0 + 8, 0F, 0F, 16, 16, 16, 16, main);
             g.text(font, Component.translatable(tool.barLabel()), tx0 + 26, y0 + 8, main, false);
             bar(g, tx0 + 26, y0 + 19, TOOL_BAR_SEGMENTS, 5, tool.bar(), main, dim);
-            String count = !tool.hasCount() ? "---" : tool.count() < 0 ? "\u221e" : String.format(Locale.ROOT, "%03d", Math.min(tool.count(), 999));
+            Component count = !tool.hasCount() ? Component.translatable("hud.powerarmor.no_ammo")
+                    : tool.count() < 0 ? Component.translatable("hud.powerarmor.endless")
+                    : Component.literal(String.format(Locale.ROOT, "%03d", Math.min(tool.count(), 999)));
             var pose = g.pose();
             pose.pushMatrix();
             pose.translate(tx1 - 5 - 2 * font.width(count) + 2, y0 + 9); // +2: the font's trailing gap, doubled
