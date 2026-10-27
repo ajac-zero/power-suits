@@ -81,6 +81,7 @@ Mojang's names are official since 26.1 (no Parchment). Porting primers: `neoforg
 |---|---|
 | `./gradlew build` | compile + jar |
 | `./gradlew runGameTestServer` | headless GameTests in `src/dev/java/.../test/PowerArmorTests.java` (must print "All N required tests passed") |
+| `./gradlew runGameTestOnly -Ptests='powerarmor:bullethits*' -Prepeat=40` | only the matching GameTests (ids = lower-cased method names, wildcards), each run N times side by side: hunts flaky tests. `-Prepeat=5` with no `-Ptests` runs the whole suite 5 times (all 655 must pass) |
 | `./gradlew runAutopilot` | scripted flat-world drive (cockpit, third person, jump, pool, run out of fuel + refuel via the menu, chaingun range, right hand, EM projector, drill + chainsaw, tool items on foot). Screenshots `run/screenshots/ap_*.png`, logs `run/autopilot_{water,fuel,cannon,em,mine}.csv`. Quits by itself (~75 s). |
 | `./gradlew runAutopilotMech` | only the autopilot's last scenes (~3 min): smashing blocks, stomp, lightning, punch, lava + poison (`ap_mech_*.png`, `run/autopilot_mech.csv`), then the machine mind: walk home, drill, chaingun follow/defend/fists, EM guard (`ap_ai_*`, `run/autopilot_mind.csv`), the workers (`client/dev/WorkScene`: `ap_work_*`, `run/autopilot_work.csv`), rogues (`RogueScene`) and the helmet (`HelmetScene`: `ap_helmet_*`, `ap_menu_helmet`, `run/autopilot_helmet.csv`) |
 | `./gradlew runAutopilotPose` | ~30 s pose check (`client/dev/PoseScene`): side shots looking level / down 40 / up 30 / tool raised, top shots with the view at yaw +40 (gold block) / -40 (redstone): looking down must lean forward, the torso and raised tool must face the shot's block (`ap_pose_*.png`, `run/autopilot_pose.csv`) |
@@ -256,6 +257,14 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
 - **Projectile orientation**: `ProjectileUtil.rotateTowardsMovement` stores yaw as `atan2(z, x) + 90` and pitch with up
   negative, unlike vanilla arrows: after `YP(yRot - 90)`, `ZP(xRot)` the model's forward is -X (`BulletRenderer`; the
   rivet gun's first rivet rendered backwards, shank out of the wall).
+- **Mock players look where their HEAD points** (2026-10-26): `getViewVector` uses `yHeadRot`, and a mock player's head
+  starts at a random yaw, so a test that only called `setYRot` aimed up to 5 degrees off (`bulletHitsWhatThePilotAimsAt`
+  missed 1 run in 5 for a week). Turn test pilots with `PowerArmorTests.lookAt` / `turn` (body, head, pitch, now and last
+  tick, like a real client).
+- **GameTests run side by side, also copies of the same test**: no shared mutable state in tests. World-wide settings
+  (game rules, weather) go in the batch's test environment (`SuitTests.environmentFor`: the framework sets them before the
+  batch and restores them after), never set-and-restore inside a test; test-only event listeners keep per-position data
+  (`ProtectedBlock.POSITIONS`, `BreakWatch.BREAKERS`), not one static field. Check with `runGameTestOnly -Prepeat=5`.
 - **Shared code never touches client classes** (`Minecraft`, cameras, screens): they don't exist on a dedicated server, which
   crashes the moment such a line runs (the compiler doesn't notice). Ask through a hook the client fills in at startup
   (`entity/ClientView`, `SocketAim.visualMuzzle`, set in `client/ClientSetup`).

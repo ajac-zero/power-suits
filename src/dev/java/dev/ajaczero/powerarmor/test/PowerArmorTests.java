@@ -27,6 +27,7 @@ import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
 import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -674,9 +675,7 @@ public final class PowerArmorTests {
         pig.setNoAi(true);
         Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
-        Vec3 toPig = pig.position().add(0, pig.getBbHeight() / 2, 0).subtract(pilot.getEyePosition());
-        pilot.setYRot((float) (Mth.atan2(-toPig.x, toPig.z) * Mth.RAD_TO_DEG));
-        pilot.setXRot((float) (-Mth.atan2(toPig.y, toPig.horizontalDistance()) * Mth.RAD_TO_DEG));
+        lookAt(pilot, pig.position().add(0, pig.getBbHeight() / 2, 0));
         suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(1, () -> suit.socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(15, () -> {
@@ -835,10 +834,29 @@ public final class PowerArmorTests {
         suit.setYBodyRot(0);
         Player pilot = boardedPilot(helper, suit);
         suit.positionRider(pilot);
-        Vec3 to = at.subtract(pilot.getEyePosition());
-        pilot.setYRot((float) (Mth.atan2(-to.x, to.z) * Mth.RAD_TO_DEG));
-        pilot.setXRot((float) (-Mth.atan2(to.y, to.horizontalDistance()) * Mth.RAD_TO_DEG));
+        lookAt(pilot, at);
         return pilot;
+    }
+
+    /**
+     * Turns a (mock) pilot to look at a point (world coordinates), the way a real player's client does: body yaw, head
+     * yaw and pitch together, this tick and last. A living thing looks where its HEAD points (getViewVector uses yHeadRot),
+     * and a mock player's head starts at a random yaw; setting only setYRot left the view off by up to 5 degrees, so a
+     * shot at a pig 5 blocks out missed about one run in five (bulletHitsWhatThePilotAimsAt, 2026-10-26).
+     */
+    static void lookAt(Player pilot, Vec3 at) {
+        Vec3 to = at.subtract(pilot.getEyePosition());
+        turn(pilot, (float) (Mth.atan2(-to.x, to.z) * Mth.RAD_TO_DEG), (float) (-Mth.atan2(to.y, to.horizontalDistance()) * Mth.RAD_TO_DEG));
+    }
+
+    /** Sets a (mock) pilot's view: yaw and pitch, body and head, now and last tick (see lookAt). */
+    static void turn(Player pilot, float yaw, float pitch) {
+        pilot.setYRot(yaw);
+        pilot.yRotO = yaw;
+        pilot.setYHeadRot(yaw);
+        pilot.yHeadRotO = yaw;
+        pilot.setXRot(pitch);
+        pilot.xRotO = pitch;
     }
 
     private static PowerArmorEntity emSuit(GameTestHelper helper) {
@@ -999,14 +1017,15 @@ public final class PowerArmorTests {
     // Mining tools (Phase 5): 3x3 drill, chainsaw
     // =========================================================================================
 
-    /** Protection-mod stand-in: cancels BreakEvents at this one position (null = off, as in normal play). */
+    /** Protection-mod stand-in: cancels BreakEvents at these positions (empty in normal play). A set, not one field:
+     *  copies of a test can run side by side (runGameTestOnly -Prepeat), each protecting its own block. */
     @EventBusSubscriber(modid = PowerArmor.MODID)
     public static final class ProtectedBlock {
-        static volatile BlockPos pos;
+        static final Set<BlockPos> POSITIONS = ConcurrentHashMap.newKeySet();
 
         @SubscribeEvent
         public static void veto(BreakBlockEvent event) {
-            if (event.getPos().equals(pos)) {
+            if (POSITIONS.contains(event.getPos())) {
                 event.setCanceled(true);
             }
         }
@@ -1107,7 +1126,7 @@ public final class PowerArmorTests {
     public static void drillRespectsProtection(GameTestHelper helper) {
         wall(helper, Blocks.STONE);
         BlockPos center = helper.absolutePos(new BlockPos(4, 3, 5));
-        ProtectedBlock.pos = center;
+        ProtectedBlock.POSITIONS.add(center);
         PowerArmorEntity suit = toolSuit(helper);
         Player pilot = toolPilot(helper, suit, new ItemStack(ModItems.DRILL.get()), new Vec3(4.5, 3.5, 5));
         var handBreak = new BreakBlockEvent(helper.getLevel(), helper.absolutePos(new BlockPos(3, 2, 5)), Blocks.STONE.defaultBlockState(), pilot);
@@ -1116,7 +1135,7 @@ public final class PowerArmorTests {
         suit.socket().setTriggerHeld(pilot, true);
         helper.runAfterDelay(14, () -> {
             suit.socket().setTriggerHeld(pilot, false);
-            ProtectedBlock.pos = null;
+            ProtectedBlock.POSITIONS.remove(center);
             helper.assertBlockPresent(Blocks.STONE, new BlockPos(4, 3, 5));
             helper.assertTrue(wallLeft(helper) == 1, "the 8 unprotected blocks should break, left " + wallLeft(helper));
             helper.succeed();
@@ -1406,7 +1425,7 @@ public final class PowerArmorTests {
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 4));
         suit.setYRot(0);
         Player pilot = boardedPilot(helper, suit);
-        pilot.setYRot(0);
+        turn(pilot, 0F, 0F);
         BlockPos pane = new BlockPos(4, 3, 3), leaves = new BlockPos(5, 4, 3), glass = new BlockPos(4, 2, 4), wall = new BlockPos(4, 2, 7);
         helper.setBlock(pane, Blocks.GLASS_PANE);
         helper.setBlock(leaves, Blocks.OAK_LEAVES);
@@ -1612,17 +1631,17 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    /** Breaks seen at this position (the BreakEvent's player), for checking who a tool breaks blocks as. */
+    /** Who broke the watched positions (the BreakEvent's player), for checking who a tool breaks blocks as. Per
+     *  position: copies of a test can run side by side (runGameTestOnly -Prepeat). */
     @EventBusSubscriber(modid = PowerArmor.MODID)
     public static final class BreakWatch {
-        static volatile BlockPos pos;
-        static volatile UUID breaker;
+        /** Watched position -> who broke it (NOBODY until it breaks). */
+        static final Map<BlockPos, UUID> BREAKERS = new ConcurrentHashMap<>();
+        static final UUID NOBODY = new UUID(0, 0);
 
         @SubscribeEvent
         public static void seen(BreakBlockEvent event) {
-            if (event.getPos().equals(pos)) {
-                breaker = event.getPlayer().getUUID();
-            }
+            BREAKERS.computeIfPresent(event.getPos(), (pos, old) -> event.getPlayer().getUUID());
         }
     }
 
@@ -1632,8 +1651,7 @@ public final class PowerArmorTests {
     public static void mindDrillsAsItsOwner(GameTestHelper helper) {
         wall(helper, Blocks.STONE);
         BlockPos center = helper.absolutePos(new BlockPos(4, 3, 5));
-        BreakWatch.pos = center;
-        BreakWatch.breaker = null;
+        BreakWatch.BREAKERS.put(center, BreakWatch.NOBODY);
         PowerArmorEntity suit = toolSuit(helper);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.DRILL.get()));
@@ -1647,10 +1665,10 @@ public final class PowerArmorTests {
         helper.runAfterDelay(5, () -> helper.assertTrue(suit.socket().isActive(), "the mind's trigger runs the tool"));
         helper.runAfterDelay(30, () -> {
             suit.socket().setAiTrigger(false);
-            BreakWatch.pos = null;
+            UUID breaker = BreakWatch.BREAKERS.remove(center);
             helper.assertTrue(wallLeft(helper) == 0, "the face should be gone, left " + wallLeft(helper));
             helper.assertTrue(dropped(helper, Items.COBBLESTONE) == 9, "9 cobblestone should drop, got " + dropped(helper, Items.COBBLESTONE));
-            helper.assertTrue(owner.equals(BreakWatch.breaker), "broken as the owner, got " + BreakWatch.breaker);
+            helper.assertTrue(owner.equals(breaker), "broken as the owner, got " + breaker);
             helper.succeed();
         });
     }
@@ -2687,9 +2705,7 @@ public final class PowerArmorTests {
     }
 
     private static void aim(GameTestHelper helper, Player pilot, Vec3 target) {
-        Vec3 to = helper.absoluteVec(target).subtract(pilot.getEyePosition());
-        pilot.setYRot((float) (Mth.atan2(-to.x, to.z) * Mth.RAD_TO_DEG));
-        pilot.setXRot((float) (-Mth.atan2(to.y, to.horizontalDistance()) * Mth.RAD_TO_DEG));
+        lookAt(pilot, helper.absoluteVec(target));
     }
 
     /** Held, it throws a gob of flame every tick (fuel per tick), and the stream reaches a pig 4 blocks out: hurt with
@@ -2983,18 +2999,17 @@ public final class PowerArmorTests {
         });
     }
 
-    /** With the tnt_explodes game rule off, a round is a dud: nothing breaks. Its own batch: the rule is world-wide. */
+    /** With the tnt_explodes game rule off, a round is a dud: nothing breaks. Its own batch, whose environment turns the
+     *  rule off and back on around the batch (SuitTests): the rule is world-wide. (Setting and restoring it in the test
+     *  broke every later TNT test when two copies ran at once: the second one "restored" the first one's off.) */
     @SuitTest(timeoutTicks = 60, batch = "tntrule")
     public static void tntLauncherObeysTheTntGameRule(GameTestHelper helper) {
-        var rules = helper.getLevel().getGameRules();
-        boolean before = rules.get(GameRules.TNT_EXPLODES);
-        rules.set(GameRules.TNT_EXPLODES, false, helper.getLevel().getServer());
+        helper.assertTrue(!helper.getLevel().getGameRules().get(GameRules.TNT_EXPLODES), "the batch turns tnt_explodes off");
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 6.5), 1);
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(3, () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(20, () -> {
-            rules.set(GameRules.TNT_EXPLODES, before, helper.getLevel().getServer());
             helper.assertTrue(suit[0].socket().getUses() == 1, "it still fires");
             helper.assertTrue(shellsInTest(helper).isEmpty(), "the round is gone");
             helper.assertTrue(helper.getBlockState(new BlockPos(4, 1, 6)).is(Blocks.SMOOTH_STONE), "but breaks nothing (the pad's smooth stone floor)");

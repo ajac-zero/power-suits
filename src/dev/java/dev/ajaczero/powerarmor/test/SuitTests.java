@@ -18,6 +18,8 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.gamerules.GameRuleMap;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
@@ -55,18 +57,30 @@ public final class SuitTests {
         TESTS.forEach((method, function) -> {
             SuitTest spec = method.getAnnotation(SuitTest.class);
             String batch = spec.batch().isEmpty() ? "default" : spec.batch();
-            // One environment per batch: tests are batched by environment.
+            // One environment per batch: tests are batched by environment. The framework sets an environment up when its
+            // batch starts and undoes it when the batch ends, so world-wide settings belong here, not in the tests.
             // The "rain" batch (the tidal engine runs in rain) sets the weather and leaves the pad open to the sky: by
-            // default the framework puts a barrier ceiling over each test, which keeps rain off.
+            // default the framework puts a barrier ceiling over each test, which keeps rain off. The "tntrule" batch turns
+            // the tnt_explodes game rule off.
             boolean rain = batch.equals("rain");
             Holder<TestEnvironmentDefinition<?>> environment = environments.computeIfAbsent(batch, b -> event.registerEnvironment(
-                    Identifier.fromNamespaceAndPath(PowerArmor.MODID, b), rain
-                            ? new TestEnvironmentDefinition.Weather(TestEnvironmentDefinition.Weather.Type.RAIN)
-                            : new TestEnvironmentDefinition.AllOf(List.of())));
+                    Identifier.fromNamespaceAndPath(PowerArmor.MODID, b), environmentFor(b)));
             event.registerTest(function.identifier(), new FunctionGameTestInstance(function, new TestData<>(environment,
                     Level.OVERWORLD, PAD, spec.timeoutTicks(), 0, true, Rotation.NONE,
                     false, 1, 1, rain, 0)));
         });
+    }
+
+    private static TestEnvironmentDefinition<?> environmentFor(String batch) {
+        return switch (batch) {
+            case "rain" -> new TestEnvironmentDefinition.Weather(TestEnvironmentDefinition.Weather.Type.RAIN);
+            case "tntrule" -> {
+                GameRuleMap rules = GameRuleMap.of();
+                rules.set(GameRules.TNT_EXPLODES, false);
+                yield new TestEnvironmentDefinition.SetGameRules(rules);
+            }
+            default -> new TestEnvironmentDefinition.AllOf(List.of());
+        };
     }
 
     private static void invoke(Method method, GameTestHelper helper) {

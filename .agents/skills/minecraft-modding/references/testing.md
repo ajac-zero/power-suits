@@ -4,6 +4,13 @@ Three layers, all used on every change: build, GameTests (logic, headless), auto
 screenshots + per-tick CSV). Example implementations: `src/dev/java/dev/ajaczero/powerarmor/test/`
 and `client/dev/` in `~/Developer/PowerArmor`.
 
+**Flaky tests**: run only the suspect, many times side by side, with a gameTestServer run that passes vanilla's
+`--tests <id with wildcards>` and `--repeatCount N` program arguments (Power Armor: `runGameTestOnly -Ptests=... -Prepeat=40`),
+make the failure message carry a per-tick trace (`helper.onEachTick`), and run the whole suite with a repeat count to
+find tests that share state. Two causes found that way: mock players aim with their head yaw (`yHeadRot`, random at
+spawn: set it with the body yaw), and tests that set a world-wide game rule and "restore" it (use a `SetGameRules` test
+environment for the batch instead).
+
 **Keep test and dev code out of the release jar**: a second source set (`src/dev/`) that compiles against main,
 loaded with main as one mod in every run. With ModDevGradle 2:
 ```groovy

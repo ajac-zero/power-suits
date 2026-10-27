@@ -200,6 +200,16 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        // Dev tool: only some GameTests, as often as you like (hunting a flaky one):
+        //   ./gradlew runGameTestOnly -Ptests='powerarmor:bullethits*' -Prepeat=40
+        // (--tests takes the test id with wildcards; ids are the lower-cased method names.)
+        gameTestOnly {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            programArguments.addAll '--tests', (project.findProperty('tests') ?: 'powerarmor:*').toString(),
+                    '--repeatCount', (project.findProperty('repeat') ?: '1').toString()
+        }
+
         data {
             clientData()
             // example of overriding the workingDirectory set in configureEach above, uncomment if you want to use it
