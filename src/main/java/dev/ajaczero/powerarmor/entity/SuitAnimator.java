@@ -24,7 +24,7 @@ public final class SuitAnimator {
     // ---- Gaits ------------------------------------------------------------------------------
     /** The ground speed each Blockbench animation was authored for (blocks/s, measured from the planted foot). Playing
      *  them at (real speed along the legs) / authored speed keeps the feet from sliding. Walk v6: 1.0 s cycle, 22 px
-     *  stance; the game walks faster (PowerArmorEntity.WALK_BLOCKS_PER_SECOND), so the walk steps quicker. */
+     *  stance; the game walks faster (SuitDriving.WALK_BLOCKS_PER_SECOND), so the walk steps quicker. */
     private static final double WALK_ANIM_AUTHORED = 2.218, RUN_ANIM_AUTHORED = 6.249;
     /** Step-rate limits: below, a near-stop would freeze mid-step; above, a walk would flail before the run takes over. */
     private static final double MIN_STEP_RATE = 0.25, MAX_STEP_RATE = 2.2;
@@ -76,7 +76,7 @@ public final class SuitAnimator {
     /** Client only: the same along the legs (where the boots point; negative = backing up), for the step rate. */
     private double visualForward;
     /** Client only: vertical offset (blocks) that eases the camera and model over step-ups/downs. */
-    private final StepSmoothing steps = new StepSmoothing(PowerArmorEntity.STEP_DOWN);
+    private final StepSmoothing steps = new StepSmoothing(SuitDriving.STEP_DOWN);
     /** Client only: airborne bookkeeping for the jump / fall / land animations. */
     private int airTicks;
     private boolean jumped;
@@ -168,7 +168,7 @@ public final class SuitAnimator {
         if (this.suit.getControllingPassenger() instanceof Player pilot) {
             return pilot.isSprinting();
         }
-        return this.visualSpeed > PowerArmorEntity.RUN_THRESHOLD; // the mind has no sprint key: between the walk and the sprint
+        return this.visualSpeed > SuitDriving.RUN_THRESHOLD; // the mind has no sprint key: between the walk and the sprint
     }
     private boolean isWalking() {
         return this.visualSpeed > 0.3;
@@ -221,7 +221,7 @@ public final class SuitAnimator {
         if (landing) {
             return state.setAndContinue(LAND);
         }
-        if (this.isWalking() || this.suit.isRealigning()) {
+        if (this.isWalking() || this.suit.driving().isRealigning()) {
             return state.setAndContinue(this.isRunning() ? RUN : this.isBackingUp() ? WALK_BACK : WALK);
         }
         return state.setAndContinue(IDLE);
@@ -265,8 +265,8 @@ public final class SuitAnimator {
             return 1.0;
         }
         if (!this.isWalking()) {
-            double water = this.suit.isInWater() ? PowerArmorEntity.UNDERWATER_SPEED : this.suit.isInLava() ? PowerArmorEntity.LAVA_SPEED : 1.0;
-            return (this.suit.isRealigning() ? 0.6 : 1.0) * water; // turning on the spot: a slower step cycle
+            double water = this.suit.isInWater() ? SuitDriving.UNDERWATER_SPEED : this.suit.isInLava() ? SuitDriving.LAVA_SPEED : 1.0;
+            return (this.suit.driving().isRealigning() ? 0.6 : 1.0) * water; // turning on the spot: a slower step cycle
         }
         double authored = this.isRunning() ? RUN_ANIM_AUTHORED : WALK_ANIM_AUTHORED;
         return Mth.clamp(Math.abs(this.visualForward) / authored, MIN_STEP_RATE, MAX_STEP_RATE);
@@ -275,7 +275,7 @@ public final class SuitAnimator {
      *  steps at: a planted foot slides by the difference to the real speed (GaitScene). GeckoLib's controller still
      *  names the previous animation during the 5-tick blend, so the log asks this instead. */
     public double getSteppedSpeed() {
-        if (!this.suit.isDriven() || !this.suit.canOperate() || !(this.isWalking() || this.suit.isRealigning()) || this.jumped || this.jumpAnimTicks > 0
+        if (!this.suit.isDriven() || !this.suit.canOperate() || !(this.isWalking() || this.suit.driving().isRealigning()) || this.jumped || this.jumpAnimTicks > 0
                 || this.airTicks >= FALL_POSE_AFTER_TICKS) {
             return 0;
         }

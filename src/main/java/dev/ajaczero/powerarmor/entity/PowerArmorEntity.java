@@ -30,7 +30,6 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -48,7 +47,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PlayerRideableJumping;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -85,6 +83,7 @@ import org.joml.Vector3fc;
  * synced data (everything the server sends to clients about a suit), the slots, and the tick that runs its parts in
  * order. The rules of each part live in its own class, one plain object per suit:
  * <ul>
+ *   <li>{@link SuitDriving} ({@code driving()}): how it moves: keys, speeds, ledges, water, the jump, the legs' turn;</li>
  *   <li>{@link SuitPower} ({@code power()}): the engine, fuel, flooding, free power, the lightning knock-out;</li>
  *   <li>{@link SuitSocket} ({@code socket()}): the tool in the arm socket as the suit works it (trigger, cooldown);</li>
  *   <li>{@link SuitBrain} ({@code brain()}): the machine mind's state: owner, home, aim, jobs, rogues;</li>
@@ -95,61 +94,6 @@ import org.joml.Vector3fc;
  */
 public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJumping {
     public static final int MAX_HEALTH = 100;
-
-    // ---- Movement tuning -----------------------------------------------------------------
-    // Attribute speed -> blocks per second on flat ground for ridden entities. Measured in game with
-    // ./gradlew runAutopilot: 42.14 on 1.21.1; on 26.3 the same speed attribute went 2.4% further (0.11865 gave
-    // 5.12 blocks/s instead of 5.00), so x43.15.
-    private static final double BLOCKS_PER_SECOND_PER_SPEED = 43.15;
-    // A heavy walk and a heavy sprint (2026-10-14 animation overhaul). The suit used to jog at 5 blocks/s and sprint at
-    // 10, but legs this long can't cover 5 blocks/s walking: the walk was really a run (both feet off the ground each
-    // step) with the hips dropped 3.6 px and the knees bent to 128 degrees. From 2026-10-19 the game walked at the walk
-    // animation's own speed (walk v6: 1.0 s cycle, 22 px stance = 2.218 blocks/s); since 2026-10-20 the step rate follows
-    // the real speed (SuitAnimator.movementAnimationRate), so the walk is a game choice: 3.0 (user: half a player's 4.3 was too slow to
-    // get anywhere; the walk steps 1.35x its authored cadence). The sprint stays at the run's own 6.25.
-    /** The walk on flat ground, blocks/s (tests compare against it). */
-    public static final double WALK_BLOCKS_PER_SECOND = 3.0;
-    private static final double WALK_SPEED = WALK_BLOCKS_PER_SECOND / BLOCKS_PER_SECOND_PER_SPEED; // 0.0695 (a player walks at 4.3)
-    /** Sprint / walk: 6.25 blocks/s sprint (a player sprints at 5.6). */
-    public static final float SPRINT_MULTIPLIER = 2.083F;
-    /** Ground speed (blocks/s) between the walk and the sprint: the mind, which has no sprint key, runs above it. */
-    static final double RUN_THRESHOLD = 4.5;
-
-    // ---- Terrain ----------------------------------------------------------------------------
-    /** Walking off a ledge up to this high keeps the suit planted (steps down instead of falling).
-     *  2 blocks: a 3-block-tall mech steps down mountain terraces; the step easing smooths it. */
-    static final double STEP_DOWN = 2.1;
-
-    // ---- Water (Fallout-style: the suit sinks and walks along the bottom) ----------------------
-    /** Speed on the bottom relative to dry land. */
-    static final float UNDERWATER_SPEED = 0.5F;
-    /** Lava is thicker: the suit wades through it (and its hull burns) at a third of its speed. */
-    static final float LAVA_SPEED = 0.35F;
-    /** Steering while sinking / rising, relative to UNDERWATER_SPEED. */
-    private static final float UNDERWATER_AIR_CONTROL = 0.3F;
-    /** Downward acceleration per tick and the vertical drag: terminal sink ~2.8 blocks/s. */
-    private static final double SINK_ACCEL = 0.025;
-    private static final double WATER_DRAG_Y = 0.85;
-    /** Horizontal drag per tick on the bottom (same as dry ground, so it feels like walking). */
-    private static final double WATER_DRAG_XZ = 0.546;
-    /** Jumps underwater are pushing off against water. */
-    private static final double UNDERWATER_JUMP_SCALE = 0.6;
-
-    // ---- Jumping ---------------------------------------------------------------------------
-    /** Delay between releasing jump and leaving the ground, so the push-off in the jump animation
-     *  (crouch -> legs extend at 0.1 s) happens while the feet are still on the ground. */
-    private static final int LAUNCH_DELAY_TICKS = 2;
-
-    // ---- Turning (legs vs torso) ---------------------------------------------------------------
-    /** The torso can twist this far from the legs before the legs are dragged along. */
-    private static final float MAX_TWIST = 90F;
-    /** Standing still, the legs shuffle round once the view is this far off... */
-    private static final float IDLE_REALIGN_START = 50F;
-    /** ...and stop once they're this close. */
-    private static final float IDLE_REALIGN_END = 8F;
-    /** Leg turn rates, degrees per tick. */
-    private static final float LEG_TURN_MOVING = 18F;
-    private static final float LEG_TURN_IDLE = 7F;
 
     /** Synced to every client: bumped by the server each time the pilot releases jump, so other
      *  players see the jump animation start at the same moment as the pilot does. */
@@ -208,7 +152,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final EntityDataAccessor<Integer> NUGGETS =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     /** Held in another suit's EM field (synced: the pilot's client moves a piloted suit, so it must know). */
-    private static final EntityDataAccessor<Boolean> FIELD_HELD =
+    static final EntityDataAccessor<Boolean> FIELD_HELD =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     /** True while a lightning strike has knocked the suit out (it restarts by itself): the slump starts with sparks. */
     static final EntityDataAccessor<Boolean> STUNNED =
@@ -246,6 +190,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
 
     /** The engine and its energy (fuel, flooding, free power, the lightning knock-out): see SuitPower. */
     private final SuitPower power = new SuitPower(this);
+    /** How it moves: the pilot's keys, speeds, ledges, water, the jump, the legs' turning: see SuitDriving. */
+    private final SuitDriving driving = new SuitDriving(this);
     /** The socket tool as the suit works it (trigger, cooldown, synced spin/shots...): see SuitSocket. */
     private final SuitSocket socket = new SuitSocket(this);
     /** Client: how this client draws the socket tool (raise, recoil, the tool's ToolEffects): see SocketVisuals. */
@@ -279,13 +225,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private static final int DEATH_TICKS = 60;
 
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
-
-    /** Pending jump strength 0..1, set by the jump bar when the pilot releases space. */
-    private float pendingJump;
-    /** Ticks left before a pending jump actually launches. */
-    private int launchDelay;
-    /** Legs are turning to catch up with the torso while standing still. */
-    private boolean realigning;
 
     public PowerArmorEntity(EntityType<? extends PowerArmorEntity> type, Level level) {
         super(type, level);
@@ -336,7 +275,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             Attributes.ARMOR, 12.0,
             Attributes.ARMOR_TOUGHNESS, 4.0,
             Attributes.KNOCKBACK_RESISTANCE, 1.0,
-            Attributes.MOVEMENT_SPEED, WALK_SPEED,
+            Attributes.MOVEMENT_SPEED, SuitDriving.WALK_SPEED,
             Attributes.FOLLOW_RANGE, 48.0, // how far the mind's paths may reach (vanilla's 16 lost an owner who walked on)
             Attributes.STEP_HEIGHT, 1.1); // walks up full blocks without jumping
 
@@ -435,7 +374,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** The head (and so the torso, which follows it) may turn as far from the legs as the model's torso twists. */
     @Override
     public int getMaxHeadYRot() {
-        return (int) MAX_TWIST;
+        return (int) SuitDriving.MAX_TWIST;
     }
 
     /**
@@ -485,6 +424,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     // Power and inventory (the engine's rules: SuitPower)
     // =========================================================================================
 
+    /** How the suit moves (keys, speeds, water, jump, legs). */
+    public SuitDriving driving() {
+        return this.driving;
+    }
+
     /** The suit's engine and energy. */
     public SuitPower power() {
         return this.power;
@@ -525,24 +469,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Both sides: the installed engine, or null (the engine slot is empty: no power). */
     public @Nullable SuitEngine getEngine() {
         return SuitEngine.byId(this.entityData.get(ENGINE));
-    }
-
-    /**
-     * The pilot's WASD as (strafe, 0, forward), each -1..1 (+x = left, +z = forward, like the player's xxa / zza).
-     * The pilot's own client moves the suit with its xxa / zza. The server learns the keys from the input packet vanilla
-     * sends for every passenger (that's how a boat knows you're paddling); since 1.21.2 that packet no longer fills the
-     * server player's xxa / zza, only its "last client input" (keys pressed). GameTests' mock players set xxa / zza.
-     */
-    public static Vec3 pilotInput(Player pilot) {
-        if (pilot instanceof ServerPlayer sp) {
-            var keys = sp.getLastClientInput();
-            float strafe = keys.left() == keys.right() ? 0F : keys.left() ? 1F : -1F;
-            float forward = keys.forward() == keys.backward() ? 0F : keys.forward() ? 1F : -1F;
-            if (strafe != 0F || forward != 0F) {
-                return new Vec3(strafe, 0, forward);
-            }
-        }
-        return new Vec3(pilot.xxa, 0, pilot.zza);
     }
 
     /**
@@ -713,7 +639,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.startupTicks--;
         }
         if (!this.canOperate()) {
-            this.pendingJump = 0;
+            this.driving.cancelJump();
         }
     }
 
@@ -907,28 +833,17 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     }
 
     // =========================================================================================
-    // Driving: vanilla calls these while a player controls the entity (same hooks horses use)
+    // Driving: vanilla calls these while a player controls the entity (same hooks horses use); the rules are SuitDriving's
     // =========================================================================================
 
     @Override
     protected Vec3 getRiddenInput(Player player, Vec3 travelVector) {
-        if (!this.canOperate()) {
-            return Vec3.ZERO; // out of fuel (or still booting): the legs don't move
-        }
-        // A/D: full speed since 2026-10-20 (was half). The legs turn to face the way the suit walks, so a strafe is a
-        // walk sideways with the torso twisted toward the view; at half speed its steps played in slow motion.
-        float strafe = player.xxa;
-        float forward = player.zza;        // W/S
-        if (forward < 0) {
-            forward *= 0.5F;               // backing up is slow
-        }
-        return new Vec3(strafe, 0, forward);
+        return this.driving.riddenInput(player);
     }
 
     @Override
     protected float getRiddenSpeed(Player player) {
-        float speed = (float) this.getAttributeValue(Attributes.MOVEMENT_SPEED);
-        return player.isSprinting() ? speed * SPRINT_MULTIPLIER : speed;
+        return this.driving.riddenSpeed(player);
     }
 
     @Override
@@ -941,148 +856,26 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         // torso aims along it. yBodyRot (the legs) is handled separately in tickHeadTurn().
         this.setRot(player.getYRot(), player.getXRot());
         this.yHeadRot = this.getYRot();
-
-        if (this.isLocalInstanceAuthoritative() && this.pendingJump > 0) {
-            if (this.launchDelay > 0) {
-                this.launchDelay--;
-            } else {
-                if (this.onGround()) {
-                    Vec3 motion = this.getDeltaMovement();
-                    double launch = (0.42 + 0.3 * this.pendingJump) * (this.isInWater() ? UNDERWATER_JUMP_SCALE : 1.0);
-                    this.setDeltaMovement(motion.x, launch, motion.z); // up to ~2.3 blocks on land
-                    this.needsSync = true; // (was hasImpulse) send the new motion right away
-                    this.playSound(SoundEvents.PISTON_EXTEND, 0.8F, 0.6F);
-                }
-                this.pendingJump = 0;
-            }
-        }
+        this.driving.launchPendingJump();
     }
 
-    /**
-     * Vanilla calls this every tick (server and clients) to turn the body. For a driven suit (pilot or mind) we
-     * turn the legs ourselves: toward the direction of travel while moving (or away from it when
-     * backing up), and in small catch-up shuffles when standing still. The renderer then twists
-     * the torso by (look - legs), so the upper body always faces where the pilot (or the mind) looks.
-     * The mind used vanilla's mob rule until 2026-10-19: it lets the head get past the torso's 90 degree twist before
-     * the body follows (the suit drilled a block while facing away from it), and each client works a mob's body yaw out
-     * from tiny position changes (the torso swung from side to side while it chased and punched). This rule depends
-     * only on the synced head yaw and the movement, so every side agrees.
-     */
+    /** Vanilla turns the body every tick; a driven suit turns its legs by its own rule (SuitDriving.turnLegs). */
     @Override
     protected void tickHeadTurn(float movementYaw) {
-        if (!this.isVehicle() && !this.isAiDriven()) {
-            this.realigning = false;
+        if (!this.driving.turnLegs()) {
             super.tickHeadTurn(movementYaw);
-            return;
-        }
-        float look = this.getYHeadRot();
-        double dx = this.getX() - this.xo, dz = this.getZ() - this.zo;
-        boolean moving = dx * dx + dz * dz > 0.0004; // > 0.4 blocks/s
-        float target = this.yBodyRot;
-        float step = LEG_TURN_IDLE;
-        if (moving) {
-            float heading = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90F;
-            if (Math.abs(Mth.wrapDegrees(heading - look)) > 100F) {
-                heading += 180F; // backing up: legs keep facing forward
-            }
-            target = heading;
-            step = LEG_TURN_MOVING;
-            this.realigning = false;
-        } else {
-            float twist = Math.abs(Mth.wrapDegrees(look - this.yBodyRot));
-            if (twist > IDLE_REALIGN_START) {
-                this.realigning = true;
-            } else if (twist < IDLE_REALIGN_END) {
-                this.realigning = false;
-            }
-            if (this.realigning) {
-                target = look;
-            }
-        }
-        this.yBodyRot = Mth.approachDegrees(this.yBodyRot, target, step);
-        // Never let the torso twist past its limit: drag the legs along instead.
-        float twist = Mth.wrapDegrees(look - this.yBodyRot);
-        if (Math.abs(twist) > MAX_TWIST) {
-            this.yBodyRot = look - Math.signum(twist) * MAX_TWIST;
         }
     }
 
-    /** Client: true while the legs are shuffling round to face the view (plays a step cycle). */
-    public boolean isRealigning() {
-        return this.realigning;
-    }
-
-    /** Server: tick the suit was last held by an EM field (EmProjectorItem refreshes it every tick it holds us). */
-    private int fieldHeldUntil;
-
-    /** Server: another suit's EM field holds us this tick. Too heavy to lift, the suit fights the field: it can only
-     *  crawl (a quarter of its speed) while held. */
-    public void holdInField() {
-        this.fieldHeldUntil = this.tickCount + 2;
-        this.entityData.set(FIELD_HELD, true);
-    }
-
-    /** Both sides: held in an EM field right now. */
-    public boolean isFieldHeld() {
-        return this.entityData.get(FIELD_HELD);
-    }
-
-    /** A suit held in an EM field crawls: a quarter of its speed. */
-    private static final float FIELD_HELD_SPEED = 0.25F;
-
-    /**
-     * Movement for the controlling client. After vanilla moves us, if we just walked off a small
-     * ledge (and aren't jumping), drop straight onto the ground below: stepping down instead of
-     * falling keeps full speed and avoids a fall pose on every block of a slope.
-     */
+    /** Movement for the side that moves the suit: SuitDriving.travel (ledges, water, the mind's input, EM fields). */
     @Override
     public void travel(Vec3 travelVector) {
-        if (!this.isVehicle() && !this.canOperate()) {
-            travelVector = Vec3.ZERO; // off (or booting): the legs don't move, whatever the AI's controls still say
-        } else if (!this.isVehicle() && travelVector.horizontalDistanceSqr() > 1.0E-6) {
-            // Driven by the mind: vanilla's MoveControl passes its speed as the forward input (zza), and the speed is
-            // applied again in moveRelative, so mobs move at speed squared. Pushing the stick all the way instead makes
-            // the mind's suit walk exactly like a piloted one: 1.0 = the pilot's jog, 2.0 = sprint (walk animation sync).
-            Vec3 flat = new Vec3(travelVector.x, 0, travelVector.z).normalize();
-            travelVector = new Vec3(flat.x, travelVector.y, flat.z);
-        }
-        if (this.isFieldHeld()) {
-            travelVector = travelVector.multiply(FIELD_HELD_SPEED, 1, FIELD_HELD_SPEED); // the pilot's or the mind's push
-        }
-        if ((this.isInWater() || this.isInLava()) && this.isLocalInstanceAuthoritative()) {
-            this.travelUnderwater(travelVector); // lava too: vanilla's lava swimming crawled at 0.4 blocks/s
-            return;
-        }
-        boolean wasOnGround = this.onGround();
-        super.travel(travelVector);
-        if (this.isVehicle() && this.isLocalInstanceAuthoritative() && wasOnGround && !this.onGround()
-                && this.getDeltaMovement().y <= 0 && this.pendingJump == 0) {
-            AABB below = this.getBoundingBox().expandTowards(0, -STEP_DOWN, 0);
-            if (!this.level().noCollision(this, below)) {
-                this.move(MoverType.SELF, new Vec3(0, -STEP_DOWN, 0)); // stops at the ground
-                this.setDeltaMovement(this.getDeltaMovement().multiply(1, 0, 1));
-            }
-        }
+        this.driving.travel(travelVector);
     }
 
-    /**
-     * Vanilla makes living things float and paddle in water. The suit is a ton of steel instead:
-     * no buoyancy, it sinks to the bottom and walks there at reduced speed. Runs on whichever side
-     * controls the suit (the pilot's client, or the server for an empty suit).
-     */
-    private void travelUnderwater(Vec3 input) {
-        float fluidSpeed = this.isInLava() ? LAVA_SPEED : UNDERWATER_SPEED;
-        float speed = this.getSpeed() * fluidSpeed * (this.onGround() ? 1.0F : UNDERWATER_AIR_CONTROL);
-        this.moveRelative(speed, input);
-        this.move(MoverType.SELF, this.getDeltaMovement());
-        Vec3 v = this.getDeltaMovement();
-        double vy = (v.y - SINK_ACCEL) * WATER_DRAG_Y;
-        // Vanilla's "climb out at the edge" help: pushing into a bank near the surface lifts us over.
-        if (this.horizontalCollision && this.isFree(v.x, v.y + 0.6 - this.getY() + this.yo, v.z)) {
-            vy = 0.3;
-        }
-        this.setDeltaMovement(v.x * WATER_DRAG_XZ, vy, v.z * WATER_DRAG_XZ);
-        this.calculateEntityAnimation(false);
+    /** Vanilla's own travel, for SuitDriving (a part can't call super). */
+    void vanillaTravel(Vec3 travelVector) {
+        super.travel(travelVector);
     }
 
     /** The suit itself is a sealed machine and never runs out of air (its pilot can, though). */
@@ -1103,15 +896,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return true;
     }
 
-    // Jumping uses the horse jump bar: hold space to charge (the suit crouches), release to jump.
+    // Jumping uses the horse jump bar: hold space to charge (the suit crouches), release to jump (SuitDriving).
     // Called on the pilot's client when space is released.
     @Override
     public void onPlayerJump(int jumpPower) {
-        if (jumpPower > 0 && this.onGround()) {
-            this.pendingJump = jumpPower >= 90 ? 1.0F : 0.4F + 0.6F * jumpPower / 90.0F;
-            this.launchDelay = LAUNCH_DELAY_TICKS;
-            this.animator.jumpStarted();
-        }
+        this.driving.onPlayerJump(jumpPower);
     }
 
     @Override
@@ -1119,17 +908,15 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.isAlive() && this.canOperate();
     }
 
-    /** No charging while airborne or while a launch is already pending. */
     @Override
     public int getJumpCooldown() {
-        return this.onGround() && this.pendingJump == 0 ? 0 : 1;
+        return this.driving.jumpCooldown();
     }
 
-    /** Called on the server when the pilot releases jump: tell all other clients. */
+    /** Called on the server when the pilot releases jump. */
     @Override
     public void handleStartJump(int jumpPower) {
-        this.entityData.set(JUMP_COUNTER, this.entityData.get(JUMP_COUNTER) + 1);
-        this.power.consume(PowerArmorConfig.JUMP_ENERGY.get()); // nothing for a wet tidal engine or a reactor
+        this.driving.jumpReleased();
     }
 
     @Override
@@ -1309,9 +1096,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.socket.tick();
             this.brain.tick();
             this.brain.updateToolGoals(); // the socket tool's own goals (PowerTool.mindGoals), after the goals ran this tick
-            if (this.isFieldHeld() && this.tickCount > this.fieldHeldUntil) {
-                this.entityData.set(FIELD_HELD, false); // the field let go
-            }
+            this.driving.tick(); // an EM field that stopped holding us lets go
             this.putOutFire();
             if (this.getControllingPassenger() instanceof Player pilot) {
                 PilotHands.refreshBonuses(pilot);

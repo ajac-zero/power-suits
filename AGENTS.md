@@ -141,7 +141,7 @@ constants at the top, later sections move along by themselves.
   GeckoLib's channels to the fake connection).
 - *(26.3)* **The server doesn't get a passenger's `xxa` / `zza` any more** (the input packet only fills
   `ServerPlayer.getLastClientInput()`, keys pressed): read the pilot's WASD on the server through
-  `PowerArmorEntity.pilotInput` (smashing blocks and the fuel drain both broke silently on 0 input).
+  `SuitDriving.pilotInput` (smashing blocks and the fuel drain both broke silently on 0 input).
 - *(26.3)* **No `ItemStack` in static initializers** ("Components not bound yet" crashed the client at startup):
   create them on first use.
 - *(26.3)* **Items need `assets/<mod>/items/<item>.json`** (which model to show) next to `models/item/`; recipe
@@ -405,7 +405,7 @@ constants at the top, later sections move along by themselves.
 - **26.3 asks "Upgrading World Completed" after upgrading an old world's files**: the terrain pilot sat on it and drove
   nothing (no CSV, no shots) until it learned to press Yes. Check output file dates before trusting a report: an old
   `autopilot_terrain.csv` was read as a fresh "cockpit OK".
-- **The mind's legs use the pilot's leg rule** (`tickHeadTurn`): vanilla's mob body rotation let the head get past the
+- **The mind's legs use the pilot's leg rule** (`SuitDriving.turnLegs`): vanilla's mob body rotation let the head get past the
   torso's 90 deg twist (drilled while facing away) and each client derived the unsynced body yaw from tiny moves (the
   torso swung side to side). Judge facing from the client: the mind CSV logs clientHead/clientBody/twist/aimErr.
 - **A ternary of double and int inside String.format can box as Integer** (javac boxed each branch): `cond ? d : -1`
@@ -425,9 +425,9 @@ constants at the top, later sections move along by themselves.
   ground speed with `scripts/speed.mjs` and keep `WALK_ANIM_AUTHORED` / `RUN_ANIM_AUTHORED` in sync.
 
 ## Code map (see README for the full list)
-`entity/PowerArmorEntity.java` is the suit as Minecraft sees it (riding, movement, terrain/water, jump, turning, damage,
-saving, the synced data table, the slots) and runs its parts, one class each (since 2026-10-26): `SuitPower` (engine,
-fuel), `SuitSocket` (the tool's trigger/cooldown/synced state), `SuitBrain` (the mind's owner/home/aim/jobs), and on the
+`entity/PowerArmorEntity.java` is the suit as Minecraft sees it (the vanilla hooks for riding, movement, damage, saving;
+the synced data table, the slots) and runs its parts, one class each (since 2026-10-26): `SuitDriving` (keys, speeds,
+ledges, water, jump, the legs' turn), `SuitPower` (engine, fuel), `SuitSocket` (the tool's trigger/cooldown/synced state), `SuitBrain` (the mind's owner/home/aim/jobs), and on the
 client `SocketVisuals`, `SuitAnimator`, `SuitLights`. A tool lives in its own files: its item (`PowerTool`: what it does,
 `mindUse()` its mind job, `mindGoals()` the goals that do it, `createEffects()` its looks) and its `ToolEffects` (moving parts, `ToolLight`s, shot effects): a
 new tool shouldn't need changes to the entity or the renderers beyond its bone name and glowmask;

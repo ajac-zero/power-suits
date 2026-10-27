@@ -232,7 +232,7 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
             target.setDeltaMovement(v.x * 0.2 + drag.x, v.y, v.z * 0.2 + drag.z);
             target.syncVelocity = true;
             if (target instanceof PowerArmorEntity held) {
-                held.holdInField(); // a piloted suit is moved by its pilot's client: tell it to crawl
+                held.driving().holdInField(); // a piloted suit is moved by its pilot's client: tell it to crawl
             }
             if (beam.heldTicks % 20 == 0) {
                 suit.playSound(SoundEvents.BEACON_AMBIENT, 0.8F, 1.2F); // the field straining

@@ -122,7 +122,7 @@ final class GaitScene {
         double slip = Math.hypot(fwd - expected, lat);
         try {
             csv.write(String.format(Locale.ROOT, "%d,%s,%s,%s,%.3f,%b,%.1f,%.1f,%.1f,%.1f,%.3f,%.3f,%.3f,%.3f,%.3f%n", s, phase,
-                    keys.isEmpty() ? "-" : keys, anim, rate, suit.isRealigning(), mc.player.getYRot(), body,
+                    keys.isEmpty() ? "-" : keys, anim, rate, suit.driving().isRealigning(), mc.player.getYRot(), body,
                     Mth.wrapDegrees(mc.player.getYRot() - body), legTurn, v.length(), fwd, lat, expected, slip));
         } catch (IOException ignored) {
             // closed

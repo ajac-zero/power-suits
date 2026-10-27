@@ -238,6 +238,8 @@ src/main/java/dev/ajaczero/powerarmor/
   registry/ModMenus.java     the suit menu type; ModDataComponents.java: the loadout stored on a packed item
   entity/PowerArmorEntity.java  the suit as Minecraft sees it: vanilla hooks (riding, movement, water, jumping, damage,
                              death, saving), the synced data table, the slots, the tick that runs its parts:
+    entity/SuitDriving.java  how it moves: the pilot's keys, walk/sprint speeds, stepping down ledges, sinking and walking
+                             in water and lava, the charged jump, crawling in an EM field, the legs turning under the torso
     entity/SuitPower.java    the engine and its energy: burning fuel, flooding, free power, the lightning knock-out
     entity/SuitSocket.java   the arm socket's tool as the suit works it: trigger (pilot / mind), cooldown, synced spin/shots
     entity/SuitBrain.java    the machine mind's state: owner, home, aim, the job its tool gives it, rogues' gear and lifetime
@@ -334,7 +336,7 @@ src/main/resources/
   pose), and step-ups/downs are eased for the camera and the model over ~6 ticks.
 - Saved suits: Minecraft stores attribute base values with each entity. `readAdditionalSaveData`
   resets them to the current tuning (`BASE_STATS`), so suits placed with older versions get new speeds.
-  If you change `WALK_SPEED` / `SPRINT_MULTIPLIER`, the rates follow automatically.
+  If you change `SuitDriving.WALK_BLOCKS_PER_SECOND` / `SPRINT_MULTIPLIER`, the rates follow automatically.
 - Jumping: holding Space plays `jump_charge` (crouch); release plays `jump` (push-off) and the suit
   launches 2 ticks later, then `fall` loops; `land` plays after ~0.5 s in the air. Other players
   see the jump via a synced counter bumped by the server.

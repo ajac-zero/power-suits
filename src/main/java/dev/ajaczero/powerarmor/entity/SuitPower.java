@@ -109,7 +109,7 @@ public final class SuitPower {
 
     /** Load on the engine, from the pilot's keys (pilotInput). */
     private static float drainPerTick(Player pilot) {
-        boolean moving = PowerArmorEntity.pilotInput(pilot).lengthSqr() > 1e-4;
+        boolean moving = SuitDriving.pilotInput(pilot).lengthSqr() > 1e-4;
         if (!moving) {
             return PowerArmorConfig.DRAIN_IDLE.get().floatValue();
         }
@@ -124,7 +124,7 @@ public final class SuitPower {
         if (blocksPerSecond < 0.7) {
             return PowerArmorConfig.DRAIN_IDLE.get().floatValue();
         }
-        return (blocksPerSecond > PowerArmorEntity.RUN_THRESHOLD ? PowerArmorConfig.DRAIN_SPRINT : PowerArmorConfig.DRAIN_WALK)
+        return (blocksPerSecond > SuitDriving.RUN_THRESHOLD ? PowerArmorConfig.DRAIN_SPRINT : PowerArmorConfig.DRAIN_WALK)
                 .get().floatValue();
     }
 

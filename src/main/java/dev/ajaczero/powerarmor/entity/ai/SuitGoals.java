@@ -1,6 +1,7 @@
 package dev.ajaczero.powerarmor.entity.ai;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.SuitDriving;
 import java.util.EnumSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
@@ -336,7 +337,7 @@ public final class SuitGoals {
             Player owner = this.suit.brain().getOwner();
             if (owner != null && --this.repath <= 0) {
                 this.repath = 10;
-                this.suit.getNavigation().moveTo(owner, owner.distanceTo(this.suit) > SPRINT ? PowerArmorEntity.SPRINT_MULTIPLIER : 1.0);
+                this.suit.getNavigation().moveTo(owner, owner.distanceTo(this.suit) > SPRINT ? SuitDriving.SPRINT_MULTIPLIER : 1.0);
             }
         }
 

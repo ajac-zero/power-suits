@@ -70,5 +70,8 @@ For model and animation work use the Blockbench skill:
   `travel` for a vehicle that must walk like it's piloted); `Mob.serverAiStep` is final (gate goals in `canUse` +
   `updateControlFlags`); apply your own aim in `customServerAiStep` (after the goals, before `LookControl`, which
   zeroes the pitch every tick); paths of wide mobs end short of the target (finish with `setWantedPosition`).
+  Goals that depend on equipment come and go with it (vanilla's skeletons: `reassessWeaponGoal`): let each item list
+  its goals and swap them outside the selector's tick (Power Armor: `PowerTool.mindGoals`, `SuitBrain.updateToolGoals`),
+  so the shared goal file never learns about items.
 - **Tool caching**: the image `read` tool may return a cached image for a path it read before; write
   regenerated images to a new filename.

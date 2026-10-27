@@ -61,7 +61,7 @@ public static void sinks(GameTestHelper h) { ...; h.runAfterDelay(150, () -> { h
   (open it server-side with `entity.interact(serverPlayer, hand)` while `setShiftKeyDown(true)`, then screenshot).
 - Things that tick on the server (fuel burn, timers) work with a mock pilot: set `pilot.zza = 1` /
   `setSprinting(true)` to simulate WASD. On 26.x a real `ServerPlayer`'s `xxa/zza` stay 0 (the input packet fills
-  `getLastClientInput()` instead), so server code reads both (Power Armor: `PowerArmorEntity.pilotInput`).
+  `getLastClientInput()` instead), so server code reads both (Power Armor: `SuitDriving.pilotInput`).
 - Build scenes with `helper.setBlock`; use `helper.absolutePos/absoluteVec` for world coordinates.
 - Trace a mystery failure by sampling state every few ticks (`runAfterDelay` loop) and putting it in the
   assertion message; `getLastDamageSource()` forgets after 40 ticks.

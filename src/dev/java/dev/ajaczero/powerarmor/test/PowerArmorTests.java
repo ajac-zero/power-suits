@@ -8,6 +8,7 @@ import dev.ajaczero.powerarmor.entity.FlameJet;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.RogueSpawner;
 import dev.ajaczero.powerarmor.entity.StepSmoothing;
+import dev.ajaczero.powerarmor.entity.SuitDriving;
 import dev.ajaczero.powerarmor.entity.SuitEngine;
 import dev.ajaczero.powerarmor.entity.SuitFuel;
 import dev.ajaczero.powerarmor.entity.SuitLights;
@@ -1608,7 +1609,7 @@ public final class PowerArmorTests {
         });
         helper.runAfterDelay(100, () -> {
             helper.assertTrue(!suit.brain().isAwayFromHome(0.5), "should be back home after 5 s, at " + suit.position().subtract(Vec3.atBottomCenterOf(home)));
-            double walk = PowerArmorEntity.WALK_BLOCKS_PER_SECOND; // the mind's speed 1.0 = the pilot's walk
+            double walk = SuitDriving.WALK_BLOCKS_PER_SECOND; // the mind's speed 1.0 = the pilot's walk
             helper.assertTrue(fastest[0] > walk * 0.88 && fastest[0] < walk * 1.27, "walks (~" + walk + " blocks/s), fastest " + fastest[0]);
             helper.succeed();
         });

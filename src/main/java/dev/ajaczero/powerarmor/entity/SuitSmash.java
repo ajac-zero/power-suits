@@ -40,7 +40,7 @@ public final class SuitSmash {
             return 0;
         }
         // The pilot's WASD, turned into a world direction the same way vanilla does for movement (yaw = where they look).
-        Vec3 input = PowerArmorEntity.pilotInput(pilot);
+        Vec3 input = SuitDriving.pilotInput(pilot);
         if (input.lengthSqr() < 1e-4) {
             return 0; // standing still: you can stand on a glass roof or in a bush
         }
