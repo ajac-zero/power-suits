@@ -532,7 +532,7 @@ public final class PowerArmorTests {
         return pilot;
     }
 
-    /** A tap fires one heavy shot at once: one nugget, one bullet's fuel plus a tick of spin. */
+    /** A tap fires one heavy shot at once: one nugget, and only a tick of slow spin's fuel (bullets cost no fuel). */
     @SuitTest(timeoutTicks = 40)
     public static void chaingunTapFiresOneHeavyShot(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2)); // 4800 energy
@@ -543,8 +543,35 @@ public final class PowerArmorTests {
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(suit.socket().getUses() == 1, "a tap fires exactly one shot, got " + suit.socket().getUses());
             helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 63, "one nugget used");
-            int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit.power().getTotalEnergy(), shot = PowerArmorConfig.CHAINGUN_ENERGY.get();
-            helper.assertTrue(used >= shot && used < shot + 10, "one bullet costs " + shot + " energy (+ spin, idle), used " + used);
+            int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit.power().getTotalEnergy();
+            int most = (int) Math.ceil(2 * ChaingunItem.spinBurn(0.05F)) + 6;
+            helper.assertTrue(used <= most, "a tap burns a tick or two of slow spin (+ idle): at most " + most + ", used " + used);
+            helper.succeed();
+        });
+    }
+
+    /** The barrels' fuel follows the spin (user, 2026-10-27: the burn embers show it): a second at full spin burns
+     *  full_spin_energy_per_tick a tick, the first second of the spin-up much less. */
+    @SuitTest(timeoutTicks = 140)
+    public static void chaingunBurnFollowsTheSpin(GameTestHelper helper) {
+        PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
+        Player pilot = creativePilot(helper, suit);
+        suit.positionRider(pilot);
+        int spinUp = PowerArmorConfig.CHAINGUN_SPIN_UP.get();
+        int[] energy = new int[3];
+        helper.runAfterDelay(2, () -> {
+            energy[0] = suit.power().getTotalEnergy();
+            suit.socket().setTriggerHeld(pilot, true);
+        });
+        helper.runAfterDelay(22, () -> energy[1] = suit.power().getTotalEnergy());
+        helper.runAfterDelay(spinUp + 10, () -> energy[2] = suit.power().getTotalEnergy());
+        helper.runAfterDelay(spinUp + 30, () -> {
+            float idle = PowerArmorConfig.DRAIN_IDLE.get().floatValue() * 20;
+            float early = energy[0] - energy[1], full = energy[2] - suit.power().getTotalEnergy();
+            float fullRate = PowerArmorConfig.CHAINGUN_FULL_SPIN_ENERGY.get().floatValue() * 20;
+            helper.assertTrue(Math.abs(full - idle - fullRate) <= 3, "a second at full spin burns " + fullRate + " (+ idle), burnt " + full);
+            helper.assertTrue(early < full - 10, "the spin-up's first second burns less: " + early + " vs " + full);
+            suit.socket().setTriggerHeld(pilot, false);
             helper.succeed();
         });
     }
@@ -570,7 +597,7 @@ public final class PowerArmorTests {
         });
     }
 
-    /** Each bullet uses one iron nugget; without nuggets the gun only clicks and burns no fuel for bullets. */
+    /** Each bullet uses one iron nugget; without nuggets the gun only clicks (the barrels still burn their spin). */
     @SuitTest(timeoutTicks = 80)
     public static void chaingunUsesOneNuggetPerBullet(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.BLAZE_ROD, 2));
@@ -582,8 +609,8 @@ public final class PowerArmorTests {
             helper.assertTrue(suit.socket().getUses() == 3, "three nuggets, three bullets, got " + suit.socket().getUses());
             helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 0, "all nuggets used");
             int used = 2 * fireboxEnergy(helper, Items.BLAZE_ROD) - suit.power().getTotalEnergy();
-            int most = 3 * PowerArmorConfig.CHAINGUN_ENERGY.get() + 61 * PowerArmorConfig.CHAINGUN_SPIN_ENERGY.get() + 20;
-            helper.assertTrue(used <= most, "only three bullets (+ spin, idle) cost fuel: at most " + most + ", used " + used);
+            int most = (int) Math.ceil(61 * ChaingunItem.spinBurn(1F)) + 20;
+            helper.assertTrue(used <= most, "only the spin (+ idle) costs fuel: at most " + most + ", used " + used);
             helper.succeed();
         });
     }
@@ -677,8 +704,7 @@ public final class PowerArmorTests {
     @SuitTest
     public static void shotLightsTheNextFuelItem(GameTestHelper helper) {
         PowerArmorEntity suit = armedSuit(helper, SUIT_POS, new ItemStack(Items.COAL, 1));
-        int start = PowerArmorConfig.CHAINGUN_ENERGY.get() / 2;
-        suit.power().setBurn(start, 1600); // not enough for a bullet by itself
+        suit.power().setBurn(1, 1600); // not enough to turn the barrels for long by itself
         Player pilot = armedPilot(helper, suit);
         suit.positionRider(pilot);
         suit.socket().setTriggerHeld(pilot, true);

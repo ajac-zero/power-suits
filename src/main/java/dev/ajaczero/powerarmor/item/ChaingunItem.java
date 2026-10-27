@@ -36,8 +36,9 @@ import org.jetbrains.annotations.Nullable;
  * it and the barrels spin up, firing faster and faster until it's a barrage (10 bullets/s by default). Let go and they
  * coast down; grab the trigger again before they stop and it picks up where it was.
  *
- * <p>Each bullet costs fuel and one iron nugget from the pilot's inventory (off hand first, like a bow's arrows; free in
- * creative); spinning costs a little fuel per tick. Heavy single shots hit harder than the barrage's bullets. With
+ * <p>Each bullet costs one iron nugget from the pilot's inventory (off hand first, like a bow's arrows; free in
+ * creative); the fuel goes with the spin: while the trigger is held it burns from walking's worth a tick with the barrels
+ * just turning to three times that at full spin (user, 2026-10-27: the visor's burn embers then show the spin). Heavy single shots hit harder than the barrage's bullets. With
  * overheat on (config), too many bullets in a row overheat the barrels: the gun stops until they've cooled.
  *
  * <p>A continuous tool (the suit calls {@link #holdTick} every tick the trigger is held and {@link #serverTick} every
@@ -68,15 +69,22 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
         int timer;           // ticks until the next shot may fire
         int sinceShot = 100; // ticks since the last shot
         int noAmmoMessage;   // ticks until the "no bullets" message may show again
+        float burnOwed;      // the spin's fuel not burnt yet (it's fractional a tick, the suit burns whole units)
     }
 
     private static State state(PowerArmorEntity suit) {
         return suit.socket().toolData(State.class, State::new);
     }
 
+    /** None per shot: the fuel goes with the spin while the trigger is held ({@link #spinBurn}). */
     @Override
     public int energyPerUse() {
-        return PowerArmorConfig.CHAINGUN_ENERGY.get();
+        return 0;
+    }
+
+    /** 1, 1.5: a per-tick figure for the tooltip without a needless ".0". */
+    private static String perTick(double energy) {
+        return energy == Math.rint(energy) ? String.format("%.0f", energy) : String.format("%.1f", energy);
     }
 
     @Override
@@ -168,7 +176,7 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
     public void holdTick(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
         State s = state(suit);
         s.held = true;
-        if (s.overheated || !suit.power().tryUseEnergy(PowerArmorConfig.CHAINGUN_SPIN_ENERGY.get())) {
+        if (s.overheated || !this.burnSpin(suit, s)) {
             return; // overheated (or no fuel to turn the barrels): it can only coast
         }
         s.spin = Math.min(1F, s.spin + 1F / PowerArmorConfig.CHAINGUN_SPIN_UP.get());
@@ -177,9 +185,9 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
         }
         s.timer = Math.max(1, Math.round(interval(s.spin)));
         Vec3 muzzle = SocketAim.muzzlePosition(suit, operator);
-        if (!suit.power().hasEnergyFor(this.energyPerUse()) || !takeBullet(suit, operator)) {
+        if (!takeBullet(suit, operator)) {
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.6F);
-            if (s.noAmmoMessage == 0 && suit.power().hasEnergyFor(this.energyPerUse())) {
+            if (s.noAmmoMessage == 0) {
                 if (operator instanceof Player pilot) {
                     pilot.sendOverlayMessage(Component.translatable("message.powerarmor.no_bullets"));
                 }
@@ -187,8 +195,26 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
             }
             return;
         }
-        suit.power().tryUseEnergy(this.energyPerUse());
         this.fire(level, suit, operator, muzzle, s);
+    }
+
+    /** Fuel per tick the held barrels burn at this spin: slow_spin_energy_per_tick just turning, full_spin_energy_per_tick
+     *  at full speed, in between along the spin. */
+    public static float spinBurn(float spin) {
+        return (float) Mth.lerp(spin, PowerArmorConfig.CHAINGUN_SLOW_SPIN_ENERGY.get(), PowerArmorConfig.CHAINGUN_FULL_SPIN_ENERGY.get());
+    }
+
+    /** This tick's spin fuel (whole units as they add up): false when there's none to burn (the barrels only coast). */
+    private boolean burnSpin(PowerArmorEntity suit, State s) {
+        s.burnOwed += spinBurn(s.spin);
+        int whole = (int) s.burnOwed;
+        if (!suit.power().hasEnergyFor(Math.max(1, whole))) {
+            s.burnOwed = Math.min(s.burnOwed, 1F); // don't run up a debt while it's dry
+            return false;
+        }
+        suit.power().consume(whole);
+        s.burnOwed -= whole;
+        return true;
     }
 
     private void fire(ServerLevel level, PowerArmorEntity suit, LivingEntity operator, Vec3 muzzle, State s) {
@@ -309,7 +335,9 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
         tooltip.accept(Component.translatable("item.powerarmor.chaingun.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.chaingun.stats",
                 String.format("%.1f", damage(0F) / 2), String.format("%.1f", damage(1F) / 2),
-                String.format("%.0f", 20F / PowerArmorConfig.CHAINGUN_FAST_INTERVAL.get()), this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
+                String.format("%.0f", 20F / PowerArmorConfig.CHAINGUN_FAST_INTERVAL.get()),
+                perTick(PowerArmorConfig.CHAINGUN_SLOW_SPIN_ENERGY.get()), perTick(PowerArmorConfig.CHAINGUN_FULL_SPIN_ENERGY.get()))
+                .withStyle(ChatFormatting.DARK_AQUA));
         tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

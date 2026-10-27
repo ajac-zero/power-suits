@@ -43,12 +43,15 @@ public final class PowerArmorConfig {
             .defineInRange("low_fuel", 600, 0, 1_000_000);
 
     // ---- chaingun ---------------------------------------------------------------------------------------
-    public static final ModConfigSpec.IntValue CHAINGUN_ENERGY = B.pop().translation(key("chaingun")).push("chaingun")
-            .comment("Energy per bullet (each bullet also takes an iron nugget).").translation(key("chaingun_energy"))
-            .defineInRange("energy_per_shot", 15, 0, 100_000);
-    public static final ModConfigSpec.IntValue CHAINGUN_SPIN_ENERGY = B
-            .comment("Energy per tick while the trigger is held and the barrels spin (walking burns 1).").translation(key("chaingun_spin_energy"))
-            .defineInRange("spin_energy_per_tick", 1, 0, 1000);
+    // (energy_per_shot 15 and spin_energy_per_tick 1 until 2026-10-27: the fuel now follows the spin, user: so the burn
+    // embers show how fast the barrels turn)
+    public static final ModConfigSpec.DoubleValue CHAINGUN_SLOW_SPIN_ENERGY = B.pop().translation(key("chaingun")).push("chaingun")
+            .comment("Energy per tick while the trigger is held and the barrels have just started turning (walking burns 1).",
+                    "It rises with the spin to full_spin_energy_per_tick. Bullets themselves cost only an iron nugget.").translation(key("chaingun_slow_spin_energy"))
+            .defineInRange("slow_spin_energy_per_tick", 1.0, 0, 1000);
+    public static final ModConfigSpec.DoubleValue CHAINGUN_FULL_SPIN_ENERGY = B
+            .comment("Energy per tick while the trigger is held at full spin (the barrage).").translation(key("chaingun_full_spin_energy"))
+            .defineInRange("full_spin_energy_per_tick", 3.0, 0, 1000);
     public static final ModConfigSpec.IntValue CHAINGUN_SLOW_INTERVAL = B
             .comment("Ticks between shots with the barrels at rest (the first shot of a burst, or tapping).").translation(key("chaingun_slow_interval"))
             .defineInRange("slow_interval_ticks", 12, 1, 200);

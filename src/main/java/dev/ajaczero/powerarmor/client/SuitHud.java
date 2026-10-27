@@ -41,7 +41,7 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  *   <li>Top left, the suit: its figure (one block per armour piece, like Fallout's), HULL (health) with the seal shield,
  *   and FUEL (time left at walking pace, a bar for how full the fuel slot is) with three embers for the burn rate:
- *   1 idling or walking, 2 sprinting, 3 a hungry tool at work (a charging rail cannon, the flamethrower), dark when
+ *   1 idling or walking, 2 sprinting, 3 a hungry tool at work (a charging rail cannon, the chaingun at full spin, the flamethrower), dark when
  *   nothing burns (a free engine). The embers
  *   burn in the visor colour, orange with two lit and red with all three (user, 2026-10-27).</li>
  *   <li>The socket tool's own readout, wherever it wants it (2026-10-27: each tool brings its own, client/hud/ToolHuds):

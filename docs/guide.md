@@ -76,7 +76,7 @@ balance pass), with what one piece of coal (1600) buys:
 |---|---|---|
 | Walking / standing / sprinting (piloted or the machine mind) | 1 / 0.25 / 2 per tick | 80 s / 5:20 / 40 s |
 | Jump | 20 | 80 jumps |
-| Chaingun | 15 per bullet + 1 iron nugget, 1 per tick while spinning (4 hearts heavy, 1.5 barrage) | ~100 bullets |
+| Chaingun | 1 per tick with the barrels just turning up to 3 at full spin, while the trigger is held; 1 iron nugget per bullet (4 hearts heavy, 1.5 barrage) | ~25 s of barrage (~250 bullets) |
 | EM Projector | 1 per tick holding, 80 per throw | 80 s of holding, or 20 throws |
 | Mining Drill | 20 per block (180 per 3x3) | ~9 faces (80 blocks) |
 | Chainsaw | 15 per log | ~20 oaks (5 logs each) |
@@ -108,7 +108,8 @@ blinking. It's terminal green by default: pick your own colour under
   with a **shield** that's lit while the suit is sealed (running with the helmet on) and faded when not, and **FUEL**: how long it lasts at walking pace (∞ on a wet
   tidal engine or a star reactor; NO FUEL, also with no engine; FLOODED), a bar for how full the fuel slot is, and three
   **embers** for how fast it burns, about one per walking's worth: one idling or walking, two sprinting, three with a
-  hungry tool at work (a charging rail cannon, the flamethrower), none when nothing burns. They burn in the visor colour with one lit, orange with two, red with three.
+  hungry tool at work (a charging rail cannon, the chaingun at full spin, the flamethrower; the chaingun's climb from one
+  to three as its barrels spin up), none when nothing burns. They burn in the visor colour with one lit, orange with two, red with three.
 - **The socket tool's own readout**, where that tool needs it (tools with nothing to say show nothing: the drill, the
   chainsaw, the flamethrower):
   - **Chaingun**, top right: a big 3-digit counter (006; 999 means 999 or more; ∞ in creative) with **AMMO** beside
@@ -152,8 +153,10 @@ start empty: give them some coal.
 **Chaingun** (crafted: iron ingots top and bottom rows; piston, iron block and dispenser in the middle). A cluster of
 four barrels driven by the engine. **Tap** right-click for heavy single shots (4 hearts); **hold** it and the barrels
 spin up over 2.5 s, firing faster and faster up to a barrage of 10 bullets a second (1.5 hearts each). Let go and they
-coast down over 1.5 s; grab the trigger again before they stop and it picks up where it was. Each bullet uses fuel and
-**one iron nugget** from your inventory (off hand first, like a bow's arrows; free in creative); the HUD shows how many
+coast down over 1.5 s; grab the trigger again before they stop and it picks up where it was. While you hold the trigger it burns
+fuel with the spin: a walking's worth a tick with the barrels just turning, up to three times that at full spin (the
+HUD's burn embers climb from one to three; config `slow_spin_energy_per_tick`, `full_spin_energy_per_tick`). Each
+bullet uses **one iron nugget** from your inventory (off hand first, like a bow's arrows; free in creative); the HUD shows how many
 you carry and the barrels' heat. Bullets are hot tracers at 80 blocks/s that fly along your line of sight (whatever is in the crosshair is what gets hit;
 they're drawn coming out of the gun and meet that line at the target). They ignore the half-second of immunity mobs
 get after a hit (so every bullet of a barrage counts), push lightly instead of vanilla's knockback, and spark off
