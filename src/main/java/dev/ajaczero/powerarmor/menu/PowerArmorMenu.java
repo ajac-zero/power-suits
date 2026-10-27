@@ -24,14 +24,16 @@ import org.jetbrains.annotations.Nullable;
  * {@code client/PowerArmorScreen}.
  */
 public class PowerArmorMenu extends AbstractContainerMenu {
-    public static final int FUEL_SLOT = PowerArmorEntity.FUEL_SLOT;
-    public static final int SOCKET_SLOT = PowerArmorEntity.SOCKET_SLOT;
-    public static final int HELMET_SLOT = PowerArmorEntity.HELMET_SLOT;
-    public static final int ENGINE_SLOT = PowerArmorEntity.ENGINE_SLOT;
-    public static final int AMMO_SLOT = PowerArmorEntity.AMMO_SLOT;
-    /** Menu slot order: socket (0), fuel (1), helmet (2), engine (3), ammo (4), then the player's inventory. */
+    // Two numberings, don't mix them up: the suit's own slots (PowerArmorEntity.FUEL_SLOT etc.: where an item lives in
+    // the suit's inventory, and in saves) and the menu's slots (MENU_*: the order they were added here, which is what
+    // clicks and shift-clicks talk about). The menu shows the suit's slots in this order, then the player's inventory.
+    public static final int MENU_SOCKET = 0, MENU_FUEL = 1, MENU_HELMET = 2, MENU_ENGINE = 3, MENU_AMMO = 4;
     private static final int SUIT_SLOTS = 5;
-    private static final int INV_START = SUIT_SLOTS, HOTBAR_START = INV_START + 27, END = HOTBAR_START + 9;
+    /** Menu slots of the player's inventory (27, top-left first) and hotbar (9). */
+    public static final int INV_START = SUIT_SLOTS, HOTBAR_START = INV_START + 27, END = HOTBAR_START + 9;
+    /** Where a shift-click from the player's side tries to put an item, first that takes it (the fuel slot last: it takes
+     *  the most). */
+    private static final int[] SHIFT_CLICK_ORDER = {MENU_SOCKET, MENU_HELMET, MENU_ENGINE, MENU_AMMO, MENU_FUEL};
     /** Button id sent by the "Pack up" button (vanilla's built-in menu button packet carries it). */
     public static final int BUTTON_PACK = 0;
 
@@ -50,7 +52,8 @@ public class PowerArmorMenu extends AbstractContainerMenu {
         checkContainerSize(suitInventory, SUIT_SLOTS);
         suitInventory.startOpen(playerInventory.player);
 
-        this.addSlot(new Slot(suitInventory, SOCKET_SLOT, SLOT_X, SOCKET_Y) {
+        // Added in MENU_* order: the n-th addSlot is menu slot n.
+        this.addSlot(new Slot(suitInventory, PowerArmorEntity.SOCKET_SLOT, SLOT_X, SOCKET_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.getItem() instanceof PowerTool;
@@ -61,7 +64,7 @@ public class PowerArmorMenu extends AbstractContainerMenu {
                 return 1;
             }
         });
-        this.addSlot(new Slot(suitInventory, FUEL_SLOT, FUEL_X, FUEL_Y) {
+        this.addSlot(new Slot(suitInventory, PowerArmorEntity.FUEL_SLOT, FUEL_X, FUEL_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 // Any engine's fuel, like a furnace's slot (what the installed engine can't use just sits there), and
@@ -69,7 +72,7 @@ public class PowerArmorMenu extends AbstractContainerMenu {
                 return SuitFuel.fitsFuelSlot(stack);
             }
         });
-        this.addSlot(new Slot(suitInventory, HELMET_SLOT, SLOT_X, HELMET_Y) {
+        this.addSlot(new Slot(suitInventory, PowerArmorEntity.HELMET_SLOT, SLOT_X, HELMET_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.is(ModItems.SUIT_HELMET.get());
@@ -80,7 +83,7 @@ public class PowerArmorMenu extends AbstractContainerMenu {
                 return 1;
             }
         });
-        this.addSlot(new Slot(suitInventory, ENGINE_SLOT, SLOT_X, ENGINE_Y) {
+        this.addSlot(new Slot(suitInventory, PowerArmorEntity.ENGINE_SLOT, SLOT_X, ENGINE_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.getItem() instanceof EngineItem;
@@ -91,7 +94,7 @@ public class PowerArmorMenu extends AbstractContainerMenu {
                 return 1;
             }
         });
-        this.addSlot(new Slot(suitInventory, AMMO_SLOT, AMMO_X, SOCKET_Y) {
+        this.addSlot(new Slot(suitInventory, PowerArmorEntity.AMMO_SLOT, AMMO_X, SOCKET_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.is(PowerArmorEntity.AMMO);
@@ -134,8 +137,23 @@ public class PowerArmorMenu extends AbstractContainerMenu {
         return false;
     }
 
+    /** The suit's menu slot a shift-click from the player's side sends this item to, or -1 (then it hops between
+     *  inventory and hotbar, as in vanilla). The empty bucket and glass bottle burnt fuel leaves behind may sit in the
+     *  fuel slot but are never shift-clicked into it. */
+    private int shiftClickTarget(ItemStack stack) {
+        for (int target : SHIFT_CLICK_ORDER) {
+            if (target == MENU_FUEL && (stack.is(Items.BUCKET) || stack.is(Items.GLASS_BOTTLE))) {
+                continue;
+            }
+            if (this.slots.get(target).mayPlace(stack)) {
+                return target;
+            }
+        }
+        return -1;
+    }
+
     /** Shift-click: suit slots -> player; player -> socket (tools), helmet slot (a helmet), engine slot (an engine), ammo
-     *  slot (TNT) or fuel slot (fuel). */
+     *  slot (TNT, iron ingots) or fuel slot (fuel). */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         Slot slot = this.slots.get(index);
@@ -148,33 +166,19 @@ public class PowerArmorMenu extends AbstractContainerMenu {
             if (!this.moveItemStackTo(stack, INV_START, END, true)) {
                 return ItemStack.EMPTY;
             }
-        } else if (this.slots.get(0).mayPlace(stack)) {
-            if (!this.moveItemStackTo(stack, 0, 1, false)) {
+        } else {
+            int target = this.shiftClickTarget(stack);
+            if (target >= 0) {
+                if (!this.moveItemStackTo(stack, target, target + 1, false)) {
+                    return ItemStack.EMPTY; // that slot is full: nothing moves (like a furnace)
+                }
+            } else if (index < HOTBAR_START) {
+                if (!this.moveItemStackTo(stack, HOTBAR_START, END, false)) {
+                    return ItemStack.EMPTY;
+                }
+            } else if (!this.moveItemStackTo(stack, INV_START, HOTBAR_START, false)) {
                 return ItemStack.EMPTY;
             }
-        } else if (this.slots.get(2).mayPlace(stack)) {
-            if (!this.moveItemStackTo(stack, 2, 3, false)) {
-                return ItemStack.EMPTY;
-            }
-        } else if (this.slots.get(3).mayPlace(stack)) {
-            if (!this.moveItemStackTo(stack, 3, 4, false)) {
-                return ItemStack.EMPTY;
-            }
-        } else if (this.slots.get(4).mayPlace(stack)) {
-            if (!this.moveItemStackTo(stack, 4, 5, false)) {
-                return ItemStack.EMPTY;
-            }
-        } else if (SuitFuel.fitsFuelSlot(stack) && !stack.is(Items.BUCKET)
-                && !stack.is(Items.GLASS_BOTTLE)) {
-            if (!this.moveItemStackTo(stack, 1, 2, false)) {
-                return ItemStack.EMPTY;
-            }
-        } else if (index < HOTBAR_START) {
-            if (!this.moveItemStackTo(stack, HOTBAR_START, END, false)) {
-                return ItemStack.EMPTY;
-            }
-        } else if (!this.moveItemStackTo(stack, INV_START, HOTBAR_START, false)) {
-            return ItemStack.EMPTY;
         }
         if (stack.isEmpty()) {
             slot.setByPlayer(ItemStack.EMPTY);

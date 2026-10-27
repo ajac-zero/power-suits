@@ -434,28 +434,38 @@ public final class PowerArmorTests {
         player.snapTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
         PowerArmorMenu menu = new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit);
         helper.assertTrue(menu.stillValid(player), "menu should be usable next to a parked suit");
-        helper.assertTrue(menu.getSlot(1).mayPlace(new ItemStack(Items.BLAZE_ROD)), "fuel slot takes blaze rods");
-        helper.assertTrue(!menu.getSlot(1).mayPlace(new ItemStack(Items.DIRT)), "fuel slot refuses dirt");
-        helper.assertTrue(!menu.getSlot(0).mayPlace(new ItemStack(Items.COAL)), "socket only takes power tools");
-        helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(ModItems.CHAINGUN.get())), "socket takes the chaingun");
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_FUEL).mayPlace(new ItemStack(Items.BLAZE_ROD)), "fuel slot takes blaze rods");
+        helper.assertTrue(!menu.getSlot(PowerArmorMenu.MENU_FUEL).mayPlace(new ItemStack(Items.DIRT)), "fuel slot refuses dirt");
+        helper.assertTrue(!menu.getSlot(PowerArmorMenu.MENU_SOCKET).mayPlace(new ItemStack(Items.COAL)), "socket only takes power tools");
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_SOCKET).mayPlace(new ItemStack(ModItems.CHAINGUN.get())), "socket takes the chaingun");
         player.getInventory().setItem(10, new ItemStack(ModItems.CHAINGUN.get()));
-        menu.quickMoveStack(player, 6); // menu slot 6 = player inventory slot 10 (menu: socket, fuel, helmet, engine, ammo, then the player's)
-        helper.assertTrue(menu.getSlot(0).getItem().is(ModItems.CHAINGUN.get()), "shift-click should install the chaingun");
-        helper.assertTrue(menu.getSlot(1).getItem().getCount() == 4, "menu shows the suit's fuel");
+        menu.quickMoveStack(player, PowerArmorMenu.INV_START + 1); // the player's inventory slot 10
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_SOCKET).getItem().is(ModItems.CHAINGUN.get()), "shift-click should install the chaingun");
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_FUEL).getItem().getCount() == 4, "menu shows the suit's fuel");
 
         // Shift-click coal from the player's inventory: it joins the coal in the fuel slot.
         player.getInventory().setItem(9, new ItemStack(Items.COAL, 10));
-        menu.quickMoveStack(player, 5); // menu slot 5 = player inventory slot 9
-        helper.assertTrue(menu.getSlot(1).getItem().getCount() == 14, "shift-click should move coal into the fuel slot, got " + menu.getSlot(1).getItem());
+        menu.quickMoveStack(player, PowerArmorMenu.INV_START + 0); // the player's inventory slot 9
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_FUEL).getItem().getCount() == 14, "shift-click should move coal into the fuel slot, got " + menu.getSlot(PowerArmorMenu.MENU_FUEL).getItem());
 
         // The helmet slot (2026-10-19) takes only the suit's helmet, one; shift-click puts a helmet there.
-        helper.assertTrue(menu.getSlot(2).getItem().is(ModItems.SUIT_HELMET.get()), "menu shows the suit's helmet");
-        helper.assertTrue(!menu.getSlot(2).mayPlace(new ItemStack(Items.IRON_HELMET)), "helmet slot refuses an iron helmet");
-        menu.getSlot(2).set(ItemStack.EMPTY);
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_HELMET).getItem().is(ModItems.SUIT_HELMET.get()), "menu shows the suit's helmet");
+        helper.assertTrue(!menu.getSlot(PowerArmorMenu.MENU_HELMET).mayPlace(new ItemStack(Items.IRON_HELMET)), "helmet slot refuses an iron helmet");
+        menu.getSlot(PowerArmorMenu.MENU_HELMET).set(ItemStack.EMPTY);
         helper.assertTrue(!suit.hasHelmet(), "taking it out of the menu takes it off the suit");
         player.getInventory().setItem(11, new ItemStack(ModItems.SUIT_HELMET.get()));
-        menu.quickMoveStack(player, 7); // menu slot 7 = player inventory slot 11
-        helper.assertTrue(menu.getSlot(2).getItem().is(ModItems.SUIT_HELMET.get()) && suit.hasHelmet(), "shift-click should put the helmet on");
+        menu.quickMoveStack(player, PowerArmorMenu.INV_START + 2); // the player's inventory slot 11
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_HELMET).getItem().is(ModItems.SUIT_HELMET.get()) && suit.hasHelmet(), "shift-click should put the helmet on");
+
+        // The empty bucket burnt lava leaves may sit in the fuel slot, but a shift-click never sends one there: it hops to
+        // the hotbar like any other item. And a shift-click on a suit slot takes the item out to the player.
+        player.getInventory().setItem(12, new ItemStack(Items.BUCKET));
+        menu.quickMoveStack(player, PowerArmorMenu.INV_START + 3); // the player's inventory slot 12
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_FUEL).getItem().is(Items.COAL), "the bucket stays out of the fuel slot");
+        helper.assertTrue(player.getInventory().countItem(Items.BUCKET) == 1 && player.getInventory().getItem(12).isEmpty(), "it moved to the hotbar");
+        menu.quickMoveStack(player, PowerArmorMenu.MENU_SOCKET);
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_SOCKET).getItem().isEmpty() && player.getInventory().countItem(ModItems.CHAINGUN.get()) == 1,
+                "shift-clicking the socket takes the tool out");
 
         Player pilot = boardedPilot(helper, suit);
         helper.assertTrue(!menu.stillValid(player), "menu closes when someone climbs in");
@@ -2393,22 +2403,22 @@ public final class PowerArmorTests {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         player.snapTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
         PowerArmorMenu menu = new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit);
-        helper.assertTrue(menu.getSlot(3).getItem().is(ModItems.FIREBOX.get()), "menu slot 3 shows the engine");
-        helper.assertTrue(menu.getSlot(3).mayPlace(new ItemStack(ModItems.TIDAL_ENGINE.get())), "engine slot takes a tidal engine");
-        helper.assertTrue(!menu.getSlot(3).mayPlace(new ItemStack(Items.FURNACE)), "engine slot refuses a furnace");
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_ENGINE).getItem().is(ModItems.FIREBOX.get()), "menu slot 3 shows the engine");
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_ENGINE).mayPlace(new ItemStack(ModItems.TIDAL_ENGINE.get())), "engine slot takes a tidal engine");
+        helper.assertTrue(!menu.getSlot(PowerArmorMenu.MENU_ENGINE).mayPlace(new ItemStack(Items.FURNACE)), "engine slot refuses a furnace");
         for (ItemStack fuel : List.of(new ItemStack(Items.COAL), new ItemStack(Items.WATER_BUCKET), new ItemStack(Items.NETHER_STAR),
                 PotionContents.createItemStack(Items.POTION, Potions.WATER),
                 new ItemStack(Items.BUCKET), new ItemStack(Items.GLASS_BOTTLE))) {
-            helper.assertTrue(menu.getSlot(1).mayPlace(fuel), "fuel slot should take " + fuel);
+            helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_FUEL).mayPlace(fuel), "fuel slot should take " + fuel);
         }
-        helper.assertTrue(!menu.getSlot(1).mayPlace(new ItemStack(Items.HEART_OF_THE_SEA)), "the heart goes into the recipe, not the slot");
-        menu.getSlot(3).set(ItemStack.EMPTY);
+        helper.assertTrue(!menu.getSlot(PowerArmorMenu.MENU_FUEL).mayPlace(new ItemStack(Items.HEART_OF_THE_SEA)), "the heart goes into the recipe, not the slot");
+        menu.getSlot(PowerArmorMenu.MENU_ENGINE).set(ItemStack.EMPTY);
         player.getInventory().setItem(9, new ItemStack(ModItems.STAR_REACTOR.get()));
         player.getInventory().setItem(10, new ItemStack(Items.NETHER_STAR));
-        menu.quickMoveStack(player, 5); // menu slot 5 = player inventory slot 9
-        menu.quickMoveStack(player, 6);
-        helper.assertTrue(menu.getSlot(3).getItem().is(ModItems.STAR_REACTOR.get()), "shift-click installs the engine");
-        helper.assertTrue(menu.getSlot(1).getItem().is(Items.NETHER_STAR), "shift-click puts the star in the fuel slot");
+        menu.quickMoveStack(player, PowerArmorMenu.INV_START + 0); // the player's inventory slot 9
+        menu.quickMoveStack(player, PowerArmorMenu.INV_START + 1); // the player's inventory slot 10
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_ENGINE).getItem().is(ModItems.STAR_REACTOR.get()), "shift-click installs the engine");
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_FUEL).getItem().is(Items.NETHER_STAR), "shift-click puts the star in the fuel slot");
         helper.succeed();
     }
 
@@ -2916,11 +2926,11 @@ public final class PowerArmorTests {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         player.snapTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
         PowerArmorMenu menu = new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit);
-        helper.assertTrue(menu.getSlot(4).mayPlace(new ItemStack(Items.TNT)), "the ammo slot takes TNT");
-        helper.assertTrue(!menu.getSlot(4).mayPlace(new ItemStack(Items.GUNPOWDER)) && !menu.getSlot(4).mayPlace(new ItemStack(Items.COAL)),
+        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_AMMO).mayPlace(new ItemStack(Items.TNT)), "the ammo slot takes TNT");
+        helper.assertTrue(!menu.getSlot(PowerArmorMenu.MENU_AMMO).mayPlace(new ItemStack(Items.GUNPOWDER)) && !menu.getSlot(PowerArmorMenu.MENU_AMMO).mayPlace(new ItemStack(Items.COAL)),
                 "and nothing else");
         player.getInventory().setItem(9, new ItemStack(Items.TNT, 16));
-        menu.quickMoveStack(player, 5); // menu slot 5 = player inventory slot 9
+        menu.quickMoveStack(player, PowerArmorMenu.INV_START + 0); // the player's inventory slot 9
         helper.assertTrue(ammoLeft(suit) == 16, "shift-click loads the TNT into the ammo slot, got " + suit.getInventory().getItem(PowerArmorEntity.AMMO_SLOT));
         helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.COAL), "not into the fuel slot");
         // A loadout from before the ammo slot (no "ammo" field) loads with it empty.
@@ -3196,7 +3206,7 @@ public final class PowerArmorTests {
 
     private static boolean menuSlotTakes(GameTestHelper helper, PowerArmorEntity suit, ItemStack stack) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        return new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit).getSlot(4).mayPlace(stack);
+        return new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit).getSlot(PowerArmorMenu.MENU_AMMO).mayPlace(stack);
     }
 
     private static PowerArmorEntity railGuard(GameTestHelper helper, BlockPos at, int ingots) {
