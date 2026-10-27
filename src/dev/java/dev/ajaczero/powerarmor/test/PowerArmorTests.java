@@ -3107,9 +3107,10 @@ public final class PowerArmorTests {
         return pilot;
     }
 
+    /** Rounds over this test's own structure (+2 blocks): copies of the tests run side by side ~14 blocks apart, and
+     *  the old 12-block box round the centre reached a neighbour's round still in the air (2026-10-27, flaky x5). */
     private static List<TntShell> shellsInTest(GameTestHelper helper) {
-        return helper.getLevel().getEntitiesOfClass(TntShell.class,
-                new AABB(helper.absolutePos(new BlockPos(4, 2, 4))).inflate(12));
+        return helper.getLevel().getEntitiesOfClass(TntShell.class, helper.getBounds().inflate(2));
     }
 
     private static int ammoLeft(PowerArmorEntity suit) {
@@ -3386,20 +3387,23 @@ public final class PowerArmorTests {
         return pilot;
     }
 
-    /** Let go early and nothing happens (nothing spent); hold to a full charge and let go: one shot, one ingot, the
-     *  shot's fuel. */
+    /** Let go early and nothing fires (no ingot spent; the charge's fuel is burnt); hold to a full charge and let go:
+     *  one shot, one ingot. The fuel goes while the trigger is held (charge_energy_per_tick), none at the release. */
     @SuitTest(timeoutTicks = 120, batch = "rail")
     public static void railCannonFiresOnlyAtFullCharge(GameTestHelper helper) {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = railPilot(helper, suit, new Vec3(4.5, 3, 7.5), 3);
         int full = PowerArmorConfig.RAIL_CHARGE.get();
-        int[] energy = new int[1];
+        int[] energy = new int[2];
+        int perTick = PowerArmorConfig.RAIL_CHARGE_ENERGY.get();
         helper.runAfterDelay(2, () -> {
             energy[0] = suit[0].power().getTotalEnergy();
             suit[0].socket().setTriggerHeld(pilot, true);
         });
         helper.runAfterDelay(2 + full - 5, () -> {
             helper.assertTrue(suit[0].socket().getSpin() > 0.5F && suit[0].socket().getSpin() < 1F, "charging, got " + suit[0].socket().getSpin());
+            int burnt = energy[0] - suit[0].power().getTotalEnergy();
+            helper.assertTrue(burnt >= (full - 6) * perTick && burnt <= (full - 4) * perTick + 10, "charging burns " + perTick + " a tick, burnt " + burnt);
             suit[0].socket().setTriggerHeld(pilot, false);
         });
         helper.runAfterDelay(2 + full + 5, () -> {
@@ -3410,13 +3414,14 @@ public final class PowerArmorTests {
         helper.runAfterDelay(2 + 2 * full + 15, () -> {
             helper.assertTrue(suit[0].socket().getSpin() >= 0.999F, "fully charged, " + suit[0].socket().getSpin());
             helper.assertTrue(suit[0].socket().getUses() == 0, "it holds the charge while the trigger is down");
+            energy[1] = suit[0].power().getTotalEnergy();
             suit[0].socket().setTriggerHeld(pilot, false);
         });
         helper.runAfterDelay(2 + 2 * full + 17, () -> {
             helper.assertTrue(suit[0].socket().getUses() == 1, "let go at full charge: one shot, got " + suit[0].socket().getUses());
             helper.assertTrue(ammoLeft(suit[0]) == 2 && suit[0].getAmmoStack().getCount() == 2, "one ingot used, left " + ammoLeft(suit[0]));
-            int used = energy[0] - suit[0].power().getTotalEnergy(), shot = PowerArmorConfig.RAIL_ENERGY.get();
-            helper.assertTrue(used >= shot && used < shot + 40, "a shot costs " + shot + " energy (+ idle), used " + used);
+            int used = energy[1] - suit[0].power().getTotalEnergy();
+            helper.assertTrue(used <= perTick + 2, "the release itself burns no fuel (at most the last held tick + idle), used " + used);
             helper.assertTrue(suit[0].socket().getSpin() == 0F, "the charge is spent");
             helper.succeed();
         });

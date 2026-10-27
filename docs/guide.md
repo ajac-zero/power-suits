@@ -28,7 +28,7 @@ Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outs
 | Chainsaw | Hold right-click on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 15 fuel per log |
 | Flamethrower | Hold right-click: a stream of fire about 7 blocks toward your crosshair. Sets mobs and blocks alight, melts ice and snow, lights campfires and candles, sets off TNT, cooks food lying on the ground. Dead under water. 6 fuel per tick |
 | TNT Launcher | Right-click: lobs a block of primed TNT toward your crosshair that blows up the moment it hits something (real TNT: it breaks blocks). A 4-round drum: hold to fire it empty, a round every half second; it then loads its chambers back one a second with TNT from the suit's **ammo slot** (beside the socket in the menu; the HUD shows the drum and counts what's left); free in creative. No fuel |
-| Rail Cannon | Hold right-click to charge (1.5 s, the core between its prongs glows brighter, the HUD shows a charge bar), let go at full charge: an instant beam along your crosshair, 20 hearts to every mob on the line (it goes through them all), breaking glass, panes, leaves and ice on the way; it stops at anything solid. Let go early and nothing happens. Each shot is an iron ingot from the suit's ammo slot + 100 fuel |
+| Rail Cannon | Hold right-click to charge (1.5 s, the core between its prongs glows brighter, the HUD shows a charge bar), let go at full charge: an instant beam along your crosshair, 20 hearts to every mob on the line (it goes through them all), breaking glass, panes, leaves and ice on the way; it stops at anything solid. Let go early and nothing fires. Each shot is an iron ingot from the suit's ammo slot; charging (and holding the charge) burns 3 fuel a tick |
 | Fire | Right-click while piloting (Chaingun): tap for heavy single shots, hold to spin up to a 10-a-second barrage toward your crosshair; one iron nugget per bullet (yours first, then the suit's store) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
 | Sealed suit | While powered and wearing its helmet: fire, frost, magma, cactus/berry bushes and harmful effects (poison, wither, slowness...) don't reach you or the hull; keeping them out costs fuel. You breathe under water (0.5 fuel/tick extra). A running suit never catches fire (lava excepted: it burns while in it, the flames die as it steps out). Lava still eats the hull (wade through at a third of your speed). No power, no seal: an empty or knocked-out suit burns like anything else. What's already inside you stays yours: poison or wither you had when you climbed in (food poisoning) hurts you, not the suit |
@@ -82,7 +82,7 @@ balance pass), with what one piece of coal (1600) buys:
 | Chainsaw | 15 per log | ~20 oaks (5 logs each) |
 | Flamethrower | 6 per tick of flame (1.5 hearts per hit, then 5 s of burning) | ~13 s of flame |
 | TNT Launcher | no fuel (config `energy_per_shot`): one TNT per round | - |
-| Rail Cannon | 100 per shot + 1 iron ingot (20 hearts to everything on the beam) | 16 shots |
+| Rail Cannon | 3 per tick while the trigger is held (90 per 1.5 s charge) + 1 iron ingot per shot (20 hearts to everything on the beam) | ~17 shots |
 | Sealing | 20 per point of fire/frost damage kept out, 100 per harmful effect, +0.5 per tick of air under water | 80 s of burning |
 
 The firebox burns what a furnace burns, as long as a furnace burns it: coal and charcoal 1600, blaze rod 2400, lava bucket 20000, coal block 16000, planks 300. Hover over any fuel for its walking time.
@@ -107,8 +107,8 @@ blinking. It's terminal green by default: pick your own colour under
 - **Top left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
   with a **shield** that's lit while the suit is sealed (running with the helmet on) and faded when not, and **FUEL**: how long it lasts at walking pace (∞ on a wet
   tidal engine or a star reactor; NO FUEL, also with no engine; FLOODED), a bar for how full the fuel slot is, and three
-  **embers** for how fast it burns: one idling, two walking, three sprinting or with a hungry tool at work (the
-  flamethrower), none when nothing burns. They burn in the visor colour with one lit, orange with two, red with three.
+  **embers** for how fast it burns, about one per walking's worth: one idling or walking, two sprinting, three with a
+  hungry tool at work (a charging rail cannon, the flamethrower), none when nothing burns. They burn in the visor colour with one lit, orange with two, red with three.
 - **The socket tool's own readout**, where that tool needs it (tools with nothing to say show nothing: the drill, the
   chainsaw, the flamethrower):
   - **Chaingun**, top right: a big 3-digit counter (006; 999 means 999 or more; ∞ in creative) with **AMMO** beside
@@ -223,8 +223,9 @@ HUD's brackets lock); it holds the charge as long as you hold the button. Let go
 instant beam along your crosshair, up to 64 blocks: every mob on the line takes 20 hearts (it goes through them all,
 and through any hit immunity), and on the way it breaks what a sprinting suit smashes through (glass, panes, leaves,
 ice, cobwebs; config `breaks_blocks`, claims can veto) until it meets anything solid. Let go early and it just winds
-down: nothing is spent. A shot costs an iron ingot from the suit's ammo slot (free in creative) and 100 fuel, then it
-cools for a second. With the machine mind it's a long-range guard: from home it shoots monsters it can see within 40
+down without firing (no ingot spent, but the fuel it burnt charging is gone). Charging burns 3 fuel a tick (three
+times walking, config `charge_energy_per_tick`), and so does holding a full charge; a shot costs an iron ingot from the
+suit's ammo slot (free in creative) and no more fuel, then it cools for a second. With the machine mind it's a long-range guard: from home it shoots monsters it can see within 40
 blocks of home (config `rail_guard_radius`) and whatever attacks it or its owner, never with a friend anywhere on the
 beam (it goes on past the target), and its beam never breaks blocks. Rogue suits never carry one.
 

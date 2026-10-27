@@ -156,9 +156,11 @@ public final class PowerArmorConfig {
     public static final ModConfigSpec.DoubleValue RAIL_RANGE = B
             .comment("How far the beam reaches, blocks (it stops at the first solid block before that).").translation(key("rail_range"))
             .defineInRange("range", 64.0, 1, 256);
-    public static final ModConfigSpec.IntValue RAIL_ENERGY = B
-            .comment("Fuel energy per shot, on top of the iron ingot it uses up (walking burns 1 per tick; a coal holds 1600).").translation(key("rail_energy"))
-            .defineInRange("energy_per_shot", 100, 0, 100_000);
+    // (energy_per_shot, 100 at the release, until 2026-10-27: the charge burns the fuel now, so the burn embers show it)
+    public static final ModConfigSpec.IntValue RAIL_CHARGE_ENERGY = B
+            .comment("Fuel energy per tick while the trigger is held: charging, and holding a full charge (walking burns 1;",
+                    "a coal holds 1600). The shot itself costs only the iron ingot.").translation(key("rail_charge_energy"))
+            .defineInRange("charge_energy_per_tick", 3, 0, 1000);
     public static final ModConfigSpec.IntValue RAIL_COOLDOWN = B
             .comment("Ticks after a shot before it can charge again.").translation(key("rail_cooldown"))
             .defineInRange("cooldown_ticks", 20, 0, 1200);

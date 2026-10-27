@@ -38,7 +38,7 @@ import net.neoforged.fml.loading.FMLPaths;
 /**
  * Autopilot scene for the pilot's HUD (client/SuitHud, 2026-10-26): every state it can show, from the cockpit, on flat
  * grass by day. A survival pilot (so ammo counts) in a suit with a firebox, coal, a helmet and a chaingun: idle (one
- * ember, visor colour), walking (two, orange), sprinting (three, red); a long burst until the barrels overheat (the
+ * ember, visor colour), walking (one), sprinting (two, orange); the charging rail cannon later (three, red); a long burst until the barrels overheat (the
  * chaingun's corner readout: HEAT orange from half, red in its last 15%, then OVERHEAT, staying red while it cools all
  * the way down: {@code ap_hud_chaingun_cooling}; the rest of the HUD stays in the visor colour); down to the last
  * bullets (the AMMO counter red); the hull under half (orange), then in its last 15% (red); low fuel (red, beeping); no fuel (faded, NO FUEL); then each tool in turn with its

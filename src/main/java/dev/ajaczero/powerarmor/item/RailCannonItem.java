@@ -90,10 +90,11 @@ public class RailCannonItem extends Item implements PowerTool, ModTooltip {
         return suit.socket().toolData(State.class, State::new);
     }
 
-    /** Fuel per shot (paid when it fires). */
+    /** The fuel a shot takes: a full charge's worth (it's burnt while charging, not when it fires: user, 2026-10-27,
+     *  so the visor's burn embers read three while it charges and drop back once it's let go). */
     @Override
     public int energyPerUse() {
-        return PowerArmorConfig.RAIL_ENERGY.get();
+        return PowerArmorConfig.RAIL_CHARGE_ENERGY.get() * PowerArmorConfig.RAIL_CHARGE.get();
     }
 
     @Override
@@ -182,7 +183,8 @@ public class RailCannonItem extends Item implements PowerTool, ModTooltip {
         suit.socket().setSpin(s.charge / (float) PowerArmorConfig.RAIL_CHARGE.get(), 0F);
     }
 
-    /** Every tick the trigger is held: charge up. It won't start charging without an ingot and the fuel for a shot. */
+    /** Every tick the trigger is held: charge up, burning the charge's fuel (also while holding a full charge). It won't
+     *  start charging without an ingot and the fuel for a whole charge; out of fuel halfway, the charge stalls. */
     @Override
     public void holdTick(PowerArmorEntity suit, LivingEntity operator, ItemStack tool) {
         State s = state(suit);
@@ -203,6 +205,9 @@ public class RailCannonItem extends Item implements PowerTool, ModTooltip {
             }
             return;
         }
+        if (!suit.power().tryUseEnergy(PowerArmorConfig.RAIL_CHARGE_ENERGY.get())) {
+            return;
+        }
         if (s.charge < full && ++s.charge == full) {
             // Charged: a bright little chime over the hum, so the pilot knows it's ready to let go.
             Vec3 muzzle = SocketAim.muzzlePosition(suit, operator);
@@ -220,11 +225,10 @@ public class RailCannonItem extends Item implements PowerTool, ModTooltip {
         s.charge = 0;
         Vec3 muzzle = SocketAim.muzzlePosition(suit, operator);
         boolean free = operator instanceof Player p && p.hasInfiniteMaterials();
-        if (!suit.power().hasEnergyFor(this.energyPerUse()) || !free && !suit.takeAmmo(RailCannonItem::isRound)) {
+        if (!free && !suit.takeAmmo(RailCannonItem::isRound)) {
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.4F);
-            return; // (the ingot or the fuel went while it charged)
+            return; // (the ingot went while it charged; the fuel was paid while charging)
         }
-        suit.power().tryUseEnergy(this.energyPerUse());
         s.lastShot = fire(level, suit, operator);
         s.cooldown = this.cooldownTicks();
         suit.socket().countUse();
@@ -338,7 +342,7 @@ public class RailCannonItem extends Item implements PowerTool, ModTooltip {
         tooltip.accept(Component.translatable("item.powerarmor.rail_cannon.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.rail_cannon.stats",
                 String.format("%.0f", PowerArmorConfig.RAIL_DAMAGE.get() / 2), String.format("%.1f", PowerArmorConfig.RAIL_CHARGE.get() / 20F),
-                this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
+                PowerArmorConfig.RAIL_CHARGE_ENERGY.get()).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

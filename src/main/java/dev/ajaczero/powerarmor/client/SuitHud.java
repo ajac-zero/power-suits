@@ -2,6 +2,7 @@ package dev.ajaczero.powerarmor.client;
 
 import dev.ajaczero.powerarmor.HudAlert;
 import dev.ajaczero.powerarmor.PowerArmor;
+import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
 import dev.ajaczero.powerarmor.client.hud.HudView;
@@ -40,7 +41,8 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  *   <li>Top left, the suit: its figure (one block per armour piece, like Fallout's), HULL (health) with the seal shield,
  *   and FUEL (time left at walking pace, a bar for how full the fuel slot is) with three embers for the burn rate:
- *   1 idling, 2 walking, 3 sprinting or a hungry tool at work, dark when nothing burns (a free engine). The embers
+ *   1 idling or walking, 2 sprinting, 3 a hungry tool at work (a charging rail cannon, the flamethrower), dark when
+ *   nothing burns (a free engine). The embers
  *   burn in the visor colour, orange with two lit and red with all three (user, 2026-10-27).</li>
  *   <li>The socket tool's own readout, wherever it wants it (2026-10-27: each tool brings its own, client/hud/ToolHuds):
  *   the chaingun's ammo and heat in the top right corner, the rail cannon's charge brackets round the crosshair, the
@@ -77,9 +79,10 @@ public final class SuitHud {
     private static final int RED = HudView.RED;
     /** Unlit segments (and the compass's dots) at this fraction of the colour: an empty bar must read as empty. */
     private static final float DIM = HudView.DIM, FAINT = HudView.FAINT;
-    /** Burn-rate embers: energy per tick at or above which 2 and 3 are lit (idle 0.25, walking 1, sprinting 2 by default;
-     *  a flamethrower burns 6). Measured from the fuel actually going, so tools, jumps and air all count. */
-    private static final float TWO_EMBERS = 0.6F, THREE_EMBERS = 1.5F;
+    /** Burn-rate embers: one per walking's worth of fuel a tick, rounded (user, 2026-10-27): 1 idling or walking, 2
+     *  sprinting, 3 for 2.5x walking and up (a charging rail cannon burns 3, a flamethrower 6). Measured from the fuel
+     *  actually going, so tools, jumps and air all count. */
+    private static final float TWO_EMBERS = 1.5F, THREE_EMBERS = 2.5F;
     private static final int MAX_BURN_PER_TICK = 20;
 
     /** Placement (GUI pixels). Both readouts sit under the helmet's top corners ({@link SuitVisor}: 19 px deep at the
@@ -368,7 +371,8 @@ public final class SuitHud {
         if (!suit.isPowered() || suit.power().hasFreePower() || suit.getId() != rateSuit) {
             return 0;
         }
-        return rate >= THREE_EMBERS ? 3 : rate >= TWO_EMBERS ? 2 : 1;
+        float walks = rate / (float) Math.max(0.01, PowerArmorConfig.DRAIN_WALK.get());
+        return walks >= THREE_EMBERS ? 3 : walks >= TWO_EMBERS ? 2 : 1;
     }
 
     /** How urgent the burn rate looks: two embers a warning, three critical (burning fast). */
