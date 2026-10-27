@@ -2,6 +2,7 @@ package dev.ajaczero.powerarmor.client;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.neoforged.api.distmarker.Dist;
@@ -11,39 +12,70 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 
 /**
  * The visor's power-up and power-down, for both of its layers ({@link SuitVisor}'s metal, {@link SuitHud}'s readouts),
- * on one clock so they stay in step (2026-10-27, after the user's "do the readouts, both the opening and the closing").
+ * on one clock so they stay in step (2026-10-27). A scan from the middle of the screen (user: the effect comes from the
+ * middle, and must sweep over the visor's elements, not just appear):
  * <ul>
- *   <li>Power on (fuel is back, or you climb into a running suit): the helmet's metal fades out over 0.6 s; the readouts
- *   start as a 1 px line across the middle of the screen that widens from the centre (0.12 s), then stretch up out of
- *   it to their places at the top (0.3 s), like an old TV's picture warming up.</li>
- *   <li>Power off (out of fuel, flooded): the metal is solid at once (the picture through it dies with the power); the
- *   readouts are pulled down into the line (0.25 s), the line shrinks to the centre (0.15 s), and only then does the red
- *   NO FUEL start blinking.</li>
+ *   <li>Power on (fuel is back, or you climb into a running suit): a 1 px line across the middle of the screen widens
+ *   from the centre (0.12 s), then splits into two lines that sweep up and down to the screen's edges (0.45 s). What
+ *   lies between them is on: the readouts are there, the helmet's metal is see-through (only its lip); what they haven't
+ *   reached yet is still off (no readouts, solid black metal).</li>
+ *   <li>Power off (out of fuel, flooded): two lines come in from the top and bottom edges (0.35 s), switching off what
+ *   they pass, meet in the middle, and the line left there shrinks to the centre (0.15 s); only then does the red NO FUEL
+ *   start blinking.</li>
  * </ul>
- * Timed on the wall clock (ms), not game ticks: a tick is 50 ms, a frame far less, and a fade stepped per tick shows its
- * steps. Climbing into a suit that's already off shows it off at once (no closing to watch). Client-only state, per
- * world: entity ids start over in the next one.
+ * Timed on the wall clock (ms), not game ticks: a tick is 50 ms, a frame far less, and a sweep stepped per tick shows
+ * its steps. Climbing into a suit that's already off shows it off at once (no shutdown to watch). Client-only state,
+ * per world: entity ids start over in the next one.
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class VisorPower {
-    static final long METAL_MS = 600;
-    static final long LINE_MS = 120, OPEN_MS = 300;
-    static final long CLOSE_MS = 250, SHRINK_MS = 150;
+    static final long LINE_MS = 120, SWEEP_OUT_MS = 450;
+    static final long SWEEP_IN_MS = 350, SHRINK_MS = 150;
 
     /** The suit being watched (its entity id, -1 none), whether it was powered and since when (wall-clock ms). */
     private static int suitId = -1;
     private static boolean powered;
     private static long since;
 
-    /** How far the readouts are open: band = how far the picture is stretched out of the screen's middle line (0 = all
-     *  in the line, 1 = in place), line = how much of the line is drawn (from the centre out), lineAlpha = its brightness. */
-    public record Readouts(float band, float line, float lineAlpha) {
-        static final Readouts OPEN = new Readouts(1F, 0F, 0F);
-        static final Readouts CLOSED = new Readouts(0F, 0F, 0F);
+    /**
+     * Where the scan is: sweep = how much of the screen's height is on, from the middle out (0 = none, 1 = all);
+     * line = how much of the middle line is drawn while nothing is on yet (from the centre out); lit = whether the scan
+     * lines show at all.
+     */
+    public record Scan(float sweep, float line, boolean lit) {
+        static final Scan ON = new Scan(1F, 0F, false);
+        static final Scan OFF = new Scan(0F, 0F, false);
 
         /** Nothing on the glass any more: the powered-down HUD (the blinking NO FUEL) takes over. */
-        public boolean closed() {
-            return this.band <= 0F && this.lineAlpha <= 0F;
+        public boolean off() {
+            return this.sweep <= 0F && !this.lit;
+        }
+
+        /** The band that's on, in GUI pixels: [top, bottom). */
+        int top(int screenHeight) {
+            return Math.round(screenHeight / 2F * (1F - this.sweep));
+        }
+
+        int bottom(int screenHeight) {
+            return screenHeight - this.top(screenHeight);
+        }
+
+        /** The scan lines in the colour {@code rgb}: the middle line while nothing is on, else the band's two edges. */
+        void drawLines(GuiGraphicsExtractor g, int rgb) {
+            if (!this.lit) {
+                return;
+            }
+            int w = g.guiWidth(), h = g.guiHeight(), colour = 0xFF000000 | rgb;
+            if (this.sweep <= 0F) {
+                int half = Math.round(this.line * w / 2F);
+                if (half > 0) {
+                    g.fill(w / 2 - half, h / 2, w / 2 + half, h / 2 + 1, colour);
+                }
+                return;
+            }
+            int top = this.top(h), bottom = this.bottom(h);
+            g.fill(0, top - 1, w, top, colour);
+            g.fill(0, bottom, w, bottom + 1, colour);
         }
     }
 
@@ -54,8 +86,8 @@ public final class VisorPower {
         if (suit.getId() != suitId) {
             suitId = suit.getId();
             powered = now;
-            // a running suit warms up when you climb in; a dead one is simply dark (its closing is long over)
-            since = now ? t : t - CLOSE_MS - SHRINK_MS;
+            // a running suit warms up when you climb in; a dead one is simply dark (its shutdown is long over)
+            since = now ? t : t - SWEEP_IN_MS - SHRINK_MS;
         } else if (now != powered) {
             powered = now;
             since = t;
@@ -67,38 +99,24 @@ public final class VisorPower {
         suitId = -1;
     }
 
-    private static long elapsed() {
-        return Util.getMillis() - since;
-    }
-
-    /** How solid the helmet's metal is: 1 without power, fading to 0 over the warm-up. */
-    static float metal() {
-        if (!powered) {
-            return 1F;
-        }
-        return 1F - Mth.smoothstep(Mth.clamp(elapsed() / (float) METAL_MS, 0F, 1F));
-    }
-
-    static Readouts readouts() {
-        long t = elapsed();
+    static Scan scan() {
+        long t = Util.getMillis() - since;
         if (powered) {
             if (t < LINE_MS) {
-                return new Readouts(0F, Mth.smoothstep(t / (float) LINE_MS), 1F);
+                return new Scan(0F, Mth.smoothstep(t / (float) LINE_MS), true);
             }
-            if (t < LINE_MS + OPEN_MS) {
-                float band = Mth.smoothstep((t - LINE_MS) / (float) OPEN_MS);
-                return new Readouts(band, 1F, 1F - band); // the line fades as the picture opens over it
+            if (t < LINE_MS + SWEEP_OUT_MS) {
+                return new Scan(Mth.smoothstep((t - LINE_MS) / (float) SWEEP_OUT_MS), 1F, true);
             }
-            return Readouts.OPEN;
+            return Scan.ON;
         }
-        if (t < CLOSE_MS) {
-            float band = 1F - Mth.smoothstep(t / (float) CLOSE_MS);
-            return new Readouts(band, 1F, 1F - band); // the line brightens as the picture squeezes into it
+        if (t < SWEEP_IN_MS) {
+            return new Scan(1F - Mth.smoothstep(t / (float) SWEEP_IN_MS), 1F, true);
         }
-        if (t < CLOSE_MS + SHRINK_MS) {
-            return new Readouts(0F, 1F - Mth.smoothstep((t - CLOSE_MS) / (float) SHRINK_MS), 1F);
+        if (t < SWEEP_IN_MS + SHRINK_MS) {
+            return new Scan(0F, 1F - Mth.smoothstep((t - SWEEP_IN_MS) / (float) SHRINK_MS), true);
         }
-        return Readouts.CLOSED;
+        return Scan.OFF;
     }
 
     @SubscribeEvent

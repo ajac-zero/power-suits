@@ -98,10 +98,11 @@ With the helmet on you see the inside of the helmet from the cockpit (first pers
 corners and the visor band in the middle of the top edge, like the pumpkin's view but only at the edges. While the suit
 has power the visor shows the view through them (only a faint outline of their edges is left) and a HUD floating on the
 glass (no helmet, no HUD: then vanilla's vehicle hearts show the hull); without power they're solid again and close the
-view in. When the power comes on (fuel is back, or you climb into a running suit) the visor warms up like an old TV:
-the metal fades out over about half a second while a line appears across the middle of the screen, widens, and the
-readouts stretch up out of it to their places. When the power goes, the readouts are pulled down into that line, it
-shrinks away, and the red NO FUEL starts blinking. It's terminal green by default: pick your own colour under
+view in. When the power comes on (fuel is back, or you climb into a running suit) the visor scans itself on: a line
+appears across the middle of the screen, widens, and splits into two lines that sweep up and down to the edges; what
+they pass is on (the metal turns see-through, the readouts appear). When the power goes, two lines sweep in from the
+top and bottom, switching everything off behind them, meet in the middle and shrink away; then the red NO FUEL starts
+blinking. It's terminal green by default: pick your own colour under
 **Mods > Power Armor > Config > Visor** (`visor_colour` in `config/powerarmor-client.toml`, `#RRGGBB`; only you see it).
 - **Top left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
   with a **shield** that's lit while the suit is sealed (running with the helmet on) and faded when not, and **FUEL**: how long it lasts at walking pace (∞ on a wet
@@ -325,7 +326,7 @@ src/main/java/dev/ajaczero/powerarmor/
                              and effect icons out of its way
     SuitVisor.java           the helmet's edge around the first-person view (solid pieces unpowered, only their outline powered)
     VisorConfig.java         the player's own visor colour (CLIENT config, powerarmor-client.toml)
-    VisorPower.java          the visor's warm-up and shutdown clock (metal fade, readouts opening and closing)
+    VisorPower.java          the visor's warm-up and shutdown scan (lines sweeping from the screen's middle)
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
     SuitGlowLayer.java       the suit's lights + the tool's ToolLights (glowmasks, tinted per frame)
