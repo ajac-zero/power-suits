@@ -96,15 +96,8 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
             pilot.sendOverlayMessage(Component.translatable("message.powerarmor.no_tnt"));
             return false;
         }
-        // Like the chaingun's bullets the round leaves from the eye toward the crosshair (TntShell draws it from the
-        // muzzle), and it carries the suit's own motion so running forward doesn't overtake it.
-        Vec3 eye = operator.getEyePosition();
-        Vec3 direction = SocketAim.aimPoint(suit, operator, AIM_RANGE).subtract(eye).normalize();
-        if (direction.lengthSqr() < 0.5) {
-            direction = operator.getViewVector(1F);
-        }
-        Vec3 velocity = direction.scale(TntShell.SPEED).add(suit.getDeltaMovement().multiply(1, 0, 1));
-        level.addFreshEntity(new TntShell(level, operator, eye, velocity,
+        Launch launch = launch(suit, operator, 1F);
+        level.addFreshEntity(new TntShell(level, operator, launch.from(), launch.velocity(),
                 PowerArmorConfig.TNT_LAUNCHER_POWER.get().floatValue(), PowerArmorConfig.TNT_LAUNCHER_BREAKS_BLOCKS.get()));
         // The launch: a deep thunk, the whoosh of the round leaving and the hiss of its fuse.
         level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_LAUNCH, SoundSource.PLAYERS, 1.0F, 0.5F);
@@ -117,6 +110,24 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
             }
         }
         return true;
+    }
+
+    /** Where a round starts and how fast it goes. */
+    public record Launch(Vec3 from, Vec3 velocity) {}
+
+    /**
+     * Both sides: the round this operator would fire now. Like the chaingun's bullets it leaves from the eye toward the
+     * crosshair (TntShell draws it from the muzzle), and it carries the suit's own motion so running forward doesn't
+     * overtake it. The server fires it ({@code partial} 1); the pilot's HUD draws its arc every frame from the same
+     * numbers ({@code partial} the frame's, client/hud/TntLauncherHud), so the arc is the flight.
+     */
+    public static Launch launch(PowerArmorEntity suit, LivingEntity operator, float partial) {
+        Vec3 eye = operator.getEyePosition(partial);
+        Vec3 direction = SocketAim.aimPoint(suit, operator, AIM_RANGE, partial).subtract(eye).normalize();
+        if (direction.lengthSqr() < 0.5) {
+            direction = operator.getViewVector(partial);
+        }
+        return new Launch(eye, direction.scale(TntShell.SPEED).add(suit.getDeltaMovement().multiply(1, 0, 1)));
     }
 
     /** The puff at the muzzle after a shot: smoke and a few sparks (no big flash: the charge only lobs the round). The

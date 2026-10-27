@@ -26,8 +26,9 @@ import org.jetbrains.annotations.Nullable;
  *    {@link #release} when the button goes up or something interrupts (power, pilot gone, tool removed).
  *    These pay their own fuel through {@link PowerArmorEntity#tryUseEnergy}.
  *
- * What the pilot sees of it on the HUD: its symbol, {@code textures/gui/hud/tool/<item id>.png} (drawn by
- * tools/make-hud-icons.py), and its effects' {@link ToolEffects#hud} readout (ammo, one bar).
+ * What the pilot sees of it on the visor: its own HUD, if it has anything to say (client/hud: one class per tool,
+ * registered by item in ClientSetup; none for the drill, the chainsaw and the flamethrower), drawn from its effects'
+ * {@link ToolEffects#hud} numbers (ammo, one gauge) and the suit's synced state.
  */
 public interface PowerTool {
     /** Fuel energy per use (walking burns 1 per tick, so 300 = 15 s of walking). */

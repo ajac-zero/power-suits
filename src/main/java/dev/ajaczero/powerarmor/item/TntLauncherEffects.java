@@ -52,13 +52,12 @@ final class TntLauncherEffects implements ToolEffects {
         }
     }
 
-    /** HUD: rounds left (TNT in the ammo slot) and the reload since the last shot (full = ready); critical on the last
-     *  round. */
+    /** HUD: rounds left (TNT in the ammo slot), low on the last one; the reload since the last shot (1 = ready). */
     @Override
     public HudReadout hud(PowerArmorEntity suit, Player pilot) {
         int rounds = TntLauncherItem.countRounds(suit, pilot);
         float reload = Math.min(1F, this.sinceShot / (float) Math.max(1, PowerArmorConfig.TNT_LAUNCHER_RELOAD.get()));
-        return new HudReadout(rounds, "hud.powerarmor.reload", reload, rounds >= 0 && rounds <= 1);
+        return new HudReadout(rounds, rounds >= 0 && rounds <= 1, reload, false);
     }
 
     @Override

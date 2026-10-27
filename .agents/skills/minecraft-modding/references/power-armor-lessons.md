@@ -185,6 +185,17 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
   with a diff of a frame with and without them, not by eye.
 - **`AABB.clip` misses a segment that starts inside the box**: line-of-fire checks also test `box.contains(start)`.
 - **Floats don't sum to whole numbers**: 80 x (1/80) < 1 (overheat came one bullet late); compare with a tolerance.
+- **A tool's visor HUD** (2026-10-27) is a client class in `client/hud`, paired with the item in `ClientSetup`
+  (`ToolHuds`): the item is shared code and can't name `GuiGraphicsExtractor`. Its numbers stay on the shared side
+  (`ToolEffects.hud`), so tests and the server can read them. To put a mark on the world (the TNT arc, the EM box) use
+  vanilla's projection, `mc.gameRenderer.projectPointToScreen(p)` (NDC; `z > 1` = behind the camera; GUI x =
+  (x + 1) / 2 * guiWidth, y = (1 - y) / 2 * guiHeight): it's this frame's camera, so marks sit on the world as drawn.
+  A mob's model reaches past its hit box (a pig's head by a third of a block): don't put text right beside the box.
+- **A predicted path must replay the projectile's own tick** (`TntShell.predict`): the same order (hit check on this
+  tick's move, move, drag, gravity), the same ray casts (`clipIncludingBorder`, COLLIDER, the shell's box expanded by
+  its move and inflated 1 for the entity search) and the entity margin vanilla grows from the projectile's tickCount
+  (`(t - 2) / 20`, max 0.3; tickCount is already 1 in the first tick). Then a test can demand it to 1e-6
+  (`tntArcPredictsTheRound`). Fire and predict from one function (`TntLauncherItem.launch`, partial 1 on the server).
 
 ## Items, recipes and data (26.3)
 - *(26.3)* **Items need `assets/<mod>/items/<item>.json`** (which model to show) next to `models/item/`; recipe

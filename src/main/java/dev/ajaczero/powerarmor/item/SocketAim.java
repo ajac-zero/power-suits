@@ -54,8 +54,14 @@ public final class SocketAim {
 
     /** What's under the operator's crosshair: the first entity or block along the view, or a far point. */
     public static Vec3 aimPoint(PowerArmorEntity suit, LivingEntity operator, double range) {
-        Vec3 eye = operator.getEyePosition();
-        Vec3 blockEnd = blockHit(suit, operator, range);
+        return aimPoint(suit, operator, range, 1F);
+    }
+
+    /** The same between two ticks ({@code partial}: 0 last tick .. 1 this one): a client drawing the aim every frame
+     *  (the TNT launcher's arc on the HUD) follows the view smoothly. At 1 it's exactly the server's. */
+    public static Vec3 aimPoint(PowerArmorEntity suit, LivingEntity operator, double range, float partial) {
+        Vec3 eye = operator.getEyePosition(partial);
+        Vec3 blockEnd = blockHit(suit, operator, range, partial);
         EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(suit.level(), operator, eye, blockEnd,
                 new AABB(eye, blockEnd).inflate(1), e -> e != suit && e != operator && e.isPickable() && !e.isSpectator(), 0.3F);
         return entityHit != null ? entityHit.getLocation() : blockEnd;
@@ -66,15 +72,15 @@ public final class SocketAim {
     @Nullable
     public static Entity entityInView(PowerArmorEntity suit, LivingEntity operator, double range, Predicate<Entity> filter, float inflate) {
         Vec3 eye = operator.getEyePosition();
-        Vec3 blockEnd = blockHit(suit, operator, range);
+        Vec3 blockEnd = blockHit(suit, operator, range, 1F);
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(suit.level(), operator, eye, blockEnd,
                 new AABB(eye, blockEnd).inflate(inflate + 1), e -> e != suit && e != operator && filter.test(e), inflate);
         return hit == null ? null : hit.getEntity();
     }
 
-    private static Vec3 blockHit(PowerArmorEntity suit, LivingEntity operator, double range) {
-        Vec3 eye = operator.getEyePosition();
-        Vec3 end = eye.add(operator.getViewVector(1F).scale(range));
+    private static Vec3 blockHit(PowerArmorEntity suit, LivingEntity operator, double range, float partial) {
+        Vec3 eye = operator.getEyePosition(partial);
+        Vec3 end = eye.add(operator.getViewVector(partial).scale(range));
         return suit.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, operator)).getLocation();
     }
 

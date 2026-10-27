@@ -8,8 +8,7 @@ Writes src/main/resources/assets/powerarmor/textures/gui/hud/:
   seal.png              the seal shield by HULL
   ember.png             one burn-rate ember, unlit (white mask, tinted dim)
   ember_lit.png         the same ember burning (its own fire colours)
-  tool/<item id>.png    each socket tool's 16x16 symbol in the tool section (white, tinted)
-A new tool needs its symbol here, named after its item id (the HUD finds it by that name).
+(The socket tools had 16x16 symbols here until 2026-10-27; now each tool draws its own HUD: client/hud/ToolHuds.)
 '#' = drawn, anything else = clear.
 """
 from pathlib import Path
@@ -76,142 +75,6 @@ EMBER = """
 .###.
 """
 
-TOOLS = {
-    # the barrel cluster seen from the muzzle end
-    "chaingun": """
-.....######.....
-...##......##...
-..#..........#..
-.#....##..##..#.
-.#....##..##..#.
-#..............#
-#.##........##.#
-#.##...##...##.#
-#......##......#
-#..............#
-.#....##..##..#.
-.#....##..##..#.
-..#..........#..
-...##......##...
-.....######.....
-................
-""",
-    # the two prongs with the charge leaping between them
-    "rail_cannon": """
-................
-.#............#.
-.##..........##.
-.##....##....##.
-.###..##....###.
-.###.##.....###.
-.###.#####..###.
-.###...##...###.
-.###..##....###.
-.###.##.....###.
-.###.#......###.
-.####......####.
-.##############.
-.##############.
-......####......
-......####......
-""",
-    # a round with its fuse lit
-    "tnt_launcher": """
-...........#.#..
-............#...
-...........#.#..
-..........#.....
-.........#......
-.....######.....
-...##########...
-..####..######..
-..###..#######..
-.###..#########.
-.##############.
-.##############.
-..############..
-..############..
-...##########...
-.....######.....
-""",
-    "flamethrower": """
-.......#........
-......##........
-......###.......
-.....####...#...
-....#####..##...
-...######.###...
-...##########...
-..####.#######..
-..###...######..
-..###....#####..
-..##......####..
-..##.......###..
-...#.......##...
-....##...##.....
-.....#####......
-................
-""",
-    # the bit, point to the right, its spiral flutes
-    "drill": """
-................
-##########......
-###########.....
-############....
-#############...
-##.##.##.######.
-#.##.##.##.#####
-##.##.##.##.####
-#.##.##.##.#####
-##.##.##.######.
-#############...
-############....
-###########.....
-##########......
-................
-................
-""",
-    # the motor block and the toothed bar
-    "chainsaw": """
-................
-................
-####............
-####.#.#.#.#.#..
-################
-####............
-####...........#
-####............
-####...........#
-####............
-################
-####.#.#.#.#.#..
-####............
-................
-................
-................
-""",
-    # a magnet and its field
-    "em_projector": """
-................
-..####....####..
-..####....####..
-..####....####..
-..####....####..
-..####....####..
-..####....####..
-..####....####..
-..####....####..
-..#####..#####..
-...##########...
-....########....
-......####......
-................
-.#..#..##..#..#.
-................
-""",
-}
-
-
 def mask(text, colours=None, mark="#"):
     rows = [r for r in text.strip("\n").split("\n")]
     w, h = max(len(r) for r in rows), len(rows)
@@ -224,7 +87,11 @@ def mask(text, colours=None, mark="#"):
 
 
 def main():
-    (OUT / "tool").mkdir(parents=True, exist_ok=True)
+    # the socket tools' 16x16 symbols until 2026-10-27 (each tool now draws its own HUD: client/hud)
+    if (OUT / "tool").exists():
+        for old in (OUT / "tool").glob("*.png"):
+            old.unlink()
+        (OUT / "tool").rmdir()
     (OUT / "suit.png").unlink(missing_ok=True)  # the one-piece silhouette before 2026-10-27
     for letter, name in PIECES.items():
         mask(FIGURE, mark=letter).save(OUT / f"suit_{name}.png")
@@ -237,10 +104,6 @@ def main():
     mask(EMBER).save(OUT / "ember.png")
     # burning: a yellow tip over an orange body, like the firebox's own glow
     mask(EMBER, lambda x, y: (255, 220, 90, 255) if y < 3 else (255, 130, 30, 255)).save(OUT / "ember_lit.png")
-    for name, text in TOOLS.items():
-        img = mask(text)
-        assert img.size == (16, 16), (name, img.size)
-        img.save(OUT / "tool" / f"{name}.png")
     print("wrote", OUT)
 
 

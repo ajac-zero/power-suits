@@ -18,26 +18,38 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Autopilot scene for the pilot's HUD (client/SuitHud, 2026-10-26): every state it can show, from the cockpit, on flat
  * grass by day. A survival pilot (so ammo counts) in a suit with a firebox, coal, a helmet and a chaingun: idle (one
- * ember), walking (two), sprinting (three); a long burst until the barrels overheat (heat bar, red); down to the last
- * bullets (red); a low hull (red); low fuel (red, beeping); no fuel (faded, NO FUEL); then each tool in turn: the rail
- * cannon charging and ready, the TNT launcher reloading, the flamethrower (three embers), the drill, the EM projector,
- * the chainsaw (symbol only); a star reactor (endless fuel, no embers); and without the helmet (no HUD, vanilla's hearts).
+ * ember), walking (two), sprinting (three); a long burst until the barrels overheat (the chaingun's corner readout:
+ * HEAT turns red and reads OVERHEAT, the rest of the HUD stays in the visor colour); down to the last bullets (the AMMO
+ * counter red); a low hull (red); low fuel (red, beeping); no fuel (faded, NO FUEL); then each tool in turn with its
+ * own visor HUD (client/hud, 2026-10-27): the rail cannon's brackets closing in as it charges and locking at READY; the
+ * TNT launcher's drum reloading, its arc near and far, ending on a cow, and a real round flying along it; the
+ * flamethrower and the drill (nothing); the EM projector idle (nothing), searching (SCAN...) and holding a pig (a box
+ * round it, FIELD, its name and health); the chainsaw (nothing); a star reactor (endless fuel, no embers); boss bars
+ * and effects moved out of the way; and without the helmet (no HUD, vanilla's hearts).
  * Shots {@code ap_hud_*.png}; log run/autopilot_hud.csv: per tick what the HUD drew (hull, fuel bar and text, embers,
- * critical, powered, tool, count, bar; hud_open / visor_sweep: how much of the screen the visor's scan
- * had turned on as the HUD and SuitVisor drew it, 0 .. 1: sweeping in after the fuel runs out ({@code ap_hud_close_*}),
- * sweeping out after the refuel ({@code ap_hud_warm_*})) next to the server's own numbers. Runs alone with ./gradlew runAutopilotHud (~40 s).
+ * critical (the suit's), powered, tool, tool_hud: what the tool's own readout said it drew, e.g. the TNT arc's
+ * impact distance and flight ticks; hud_open / visor_sweep: how much of the screen the visor's scan had turned on as
+ * the HUD and SuitVisor drew it, 0 .. 1: sweeping in after the fuel runs out ({@code ap_hud_close_*}), sweeping out
+ * after the refuel ({@code ap_hud_warm_*})) next to the server's own numbers. Runs alone with ./gradlew
+ * runAutopilotHud (~45 s).
  */
 final class HudScene {
     private static volatile PowerArmorEntity suit;
@@ -96,33 +108,62 @@ final class HudScene {
             case 512 -> AutoPilot.shot(mc, "hud_rail_charging");
             case 532 -> AutoPilot.shot(mc, "hud_rail_ready");
             case 534 -> AutoPilot.hold(o.keyUse, false);
-            // the TNT launcher: a shot, the reload bar refilling
+            // the TNT launcher: a shot, the drum's top chamber refilling (TntLauncherHud)
             case 550 -> { phase = "tnt"; tool(mc, ModItems.TNT_LAUNCHER.get(), new ItemStack(Items.TNT, 8)); AutoPilot.setView(0, -35); }
             case 562 -> AutoPilot.hold(o.keyUse, true);
             case 564 -> AutoPilot.hold(o.keyUse, false);
             case 570 -> AutoPilot.shot(mc, "hud_tnt_reload");
             case 600 -> AutoPilot.shot(mc, "hud_tnt_ready");
-            // the flamethrower, burning hard
-            case 610 -> { phase = "flame"; tool(mc, ModItems.FLAMETHROWER.get(), ItemStack.EMPTY); AutoPilot.setView(0, 10); }
-            case 620 -> AutoPilot.hold(o.keyUse, true);
-            case 646 -> AutoPilot.shot(mc, "hud_flame");
-            case 648 -> AutoPilot.hold(o.keyUse, false);
-            // the tools with only a symbol
-            case 660 -> { phase = "drill"; tool(mc, ModItems.DRILL.get(), ItemStack.EMPTY); AutoPilot.setView(0, 5); }
-            case 670 -> AutoPilot.shot(mc, "hud_drill");
-            case 672 -> { phase = "em"; tool(mc, ModItems.EM_PROJECTOR.get(), ItemStack.EMPTY); }
-            case 682 -> AutoPilot.shot(mc, "hud_em");
-            case 684 -> { phase = "chainsaw"; tool(mc, ModItems.CHAINSAW.get(), ItemStack.EMPTY); }
-            case 694 -> AutoPilot.shot(mc, "hud_chainsaw");
+            // its arc: where a round would land, looking down a little (near) and lobbing it (far); then on a cow 14
+            // blocks out (the arc ends on it); then a real round in flight along the arc it showed
+            case 602 -> { phase = "tnt_arc"; AutoPilot.setView(0, 8); }
+            case 610 -> AutoPilot.shot(mc, "hud_tnt_arc_near");
+            case 612 -> AutoPilot.setView(0, -8);
+            case 620 -> AutoPilot.shot(mc, "hud_tnt_arc_far");
+            case 622 -> { phase = "tnt_mob"; server(mc, (p, x) -> target = statue(p, EntityTypes.COW, x.position().add(0, 0, 14))); }
+            case 624 -> AutoPilot.aimTarget = mc.player.getVehicle().position().add(0, 0.7, 14);
+            case 634 -> AutoPilot.shot(mc, "hud_tnt_on_mob");
+            case 636 -> { AutoPilot.aimTarget = null; AutoPilot.setView(0, -8); server(mc, (p, x) -> discardTarget()); }
+            case 640 -> { phase = "tnt_flight"; AutoPilot.hold(o.keyUse, true); }
+            case 642 -> AutoPilot.hold(o.keyUse, false);
+            case 648 -> AutoPilot.shot(mc, "hud_tnt_flight");
+            // the flamethrower, burning hard (no HUD of its own)
+            case 670 -> { phase = "flame"; tool(mc, ModItems.FLAMETHROWER.get(), ItemStack.EMPTY); AutoPilot.setView(0, 10); }
+            case 680 -> AutoPilot.hold(o.keyUse, true);
+            case 706 -> AutoPilot.shot(mc, "hud_flame");
+            case 708 -> AutoPilot.hold(o.keyUse, false);
+            // the drill: nothing on the visor
+            case 720 -> { phase = "drill"; tool(mc, ModItems.DRILL.get(), ItemStack.EMPTY); AutoPilot.setView(0, 5); }
+            case 730 -> AutoPilot.shot(mc, "hud_drill");
+            // the EM projector (EmProjectorHud): idle (nothing), searching the sky (SCAN...), then holding a pig (a box
+            // round it, FIELD, PIG, its health); a slowed pig 6 blocks out (4 to the side) so it waits to be picked up
+            case 732 -> { phase = "em"; tool(mc, ModItems.EM_PROJECTOR.get(), ItemStack.EMPTY);
+                          server(mc, (p, x) -> {
+                              Pig pig = EntityTypes.PIG.create(p.level(), EntitySpawnReason.COMMAND);
+                              pig.snapTo(x.getX() - 4, x.getY(), x.getZ() + 6, 0, 0); // off to the side: the flamethrower left fires ahead
+                              pig.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 400, 10));
+                              p.level().addFreshEntity(pig);
+                              target = pig; }); }
+            case 742 -> AutoPilot.shot(mc, "hud_em");
+            case 744 -> { phase = "em_scan"; AutoPilot.setView(0, -30); AutoPilot.hold(o.keyUse, true); }
+            case 754 -> AutoPilot.shot(mc, "hud_em_scan");
+            case 756 -> AutoPilot.hold(o.keyUse, false);
+            case 760 -> { phase = "em_held"; Entity pig = target; if (pig != null) { AutoPilot.aimTarget = pig.position().add(0, 0.45, 0); } }
+            case 766 -> { AutoPilot.aimTarget = null; AutoPilot.hold(o.keyUse, true); }
+            case 786 -> AutoPilot.shot(mc, "hud_em_held");
+            case 788 -> { AutoPilot.hold(o.keyUse, false); AutoPilot.setView(0, 5); }
+            case 800 -> server(mc, (p, x) -> discardTarget());
+            case 802 -> { phase = "chainsaw"; tool(mc, ModItems.CHAINSAW.get(), ItemStack.EMPTY); }
+            case 812 -> AutoPilot.shot(mc, "hud_chainsaw");
             // a star reactor: endless, nothing burns
-            case 700 -> { phase = "reactor"; tool(mc, ModItems.CHAINGUN.get(), ItemStack.EMPTY);
+            case 820 -> { phase = "reactor"; tool(mc, ModItems.CHAINGUN.get(), ItemStack.EMPTY);
                           server(mc, (p, x) -> {
                               x.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.STAR_REACTOR.get()));
                               x.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.NETHER_STAR)); }); }
-            case 730 -> AutoPilot.shot(mc, "hud_reactor");
+            case 850 -> AutoPilot.shot(mc, "hud_reactor");
             // two boss bars and two effects: vanilla draws them where the compass and the tool readout are; with the
-            // HUD up they move down (boss bars under the compass, effect icons under the tool readout)
-            case 734 -> { phase = "bosses"; server(mc, (p, x) -> {
+            // HUD up they move down (boss bars under the compass, effect icons under the top right corner)
+            case 854 -> { phase = "bosses"; server(mc, (p, x) -> {
                               command(p, "bossbar add powerarmor:hud_a \"Wither\"");
                               command(p, "bossbar set powerarmor:hud_a color purple");
                               command(p, "bossbar set powerarmor:hud_a value 70");
@@ -133,21 +174,41 @@ final class HudScene {
                               command(p, "bossbar set powerarmor:hud_b players @a");
                               p.addEffect(new MobEffectInstance(MobEffects.SPEED, 600));
                               p.addEffect(new MobEffectInstance(MobEffects.POISON, 600)); }); }
-            case 744 -> AutoPilot.shot(mc, "hud_bosses");
-            case 746 -> server(mc, (p, x) -> {
+            case 864 -> AutoPilot.shot(mc, "hud_bosses");
+            case 866 -> server(mc, (p, x) -> {
                               command(p, "bossbar remove powerarmor:hud_a");
                               command(p, "bossbar remove powerarmor:hud_b");
                               p.removeAllEffects(); });
             // no helmet: no HUD (vanilla's vehicle hearts are back)
-            case 750 -> { phase = "no_helmet"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, ItemStack.EMPTY)); }
-            case 760 -> AutoPilot.shot(mc, "hud_no_helmet");
-            case 762 -> { close(); return false; }
+            case 870 -> { phase = "no_helmet"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, ItemStack.EMPTY)); }
+            case 880 -> AutoPilot.shot(mc, "hud_no_helmet");
+            case 882 -> { close(); return false; }
             default -> {}
         }
         if (s >= 6) {
             log(mc, s);
         }
         return true;
+    }
+
+    /** A mob the scene put out (the TNT arc's cow, the EM projector's pig), to remove after. */
+    private static volatile Entity target;
+
+    /** A mob that stands still (no AI) on the ground at {@code at}: what the TNT arc lands on. */
+    private static Entity statue(net.minecraft.server.level.ServerPlayer p, EntityType<? extends Mob> type, Vec3 at) {
+        Mob mob = type.create(p.level(), EntitySpawnReason.COMMAND);
+        mob.snapTo(at.x, at.y, at.z, 180, 0);
+        mob.setNoAi(true);
+        p.level().addFreshEntity(mob);
+        return mob;
+    }
+
+    private static void discardTarget() {
+        Entity t = target;
+        if (t != null) {
+            t.discard();
+        }
+        target = null;
     }
 
     /** Run on the server with the pilot and the scene's suit. */
@@ -216,7 +277,7 @@ final class HudScene {
     private static void open() {
         try {
             csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_hud.csv"));
-            csv.write("tick,phase,shown,hull,fuel_bar,fuel_text,embers,critical,powered,tool,count,bar,compass,hud_open,visor_sweep,server_health,server_energy,server_powered\n");
+            csv.write("tick,phase,shown,hull,fuel_bar,fuel_text,embers,critical,powered,tool,tool_hud,compass,hud_open,visor_sweep,server_health,server_energy,server_powered\n");
         } catch (IOException e) {
             PowerArmor.LOGGER.error("hud csv", e);
         }
@@ -230,8 +291,8 @@ final class HudScene {
         }
         String p = phase;
         SuitHud.Shown h = SuitHud.shown();
-        String client = (h == null ? "0,,,,,,,,,,," : String.format(Locale.ROOT, "1,%.2f,%.2f,%s,%d,%b,%b,%s,%d,%.2f,%s,%.2f", h.hull(), h.fuel(),
-                h.fuelText().replace(',', ' '), h.embers(), h.critical(), h.powered(), h.tool(), h.count(), h.bar(),
+        String client = (h == null ? "0,,,,,,,,,," : String.format(Locale.ROOT, "1,%.2f,%.2f,%s,%d,%b,%b,%s,%s,%s,%.2f", h.hull(), h.fuel(),
+                h.fuelText().replace(',', ' '), h.embers(), h.critical(), h.powered(), h.tool(), h.toolHud().replace(',', ';'),
                 h.compass().replace(',', ' '), h.open())) + String.format(Locale.ROOT, ",%.2f", SuitVisor.lastSweep());
         Consumer<net.minecraft.server.level.ServerPlayer> write = player -> {
             try {

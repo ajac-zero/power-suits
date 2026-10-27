@@ -26,6 +26,7 @@ import dev.ajaczero.powerarmor.item.PowerTool;
 import dev.ajaczero.powerarmor.item.RailCannonItem;
 import dev.ajaczero.powerarmor.item.SuitHelmetItem;
 import dev.ajaczero.powerarmor.item.SuitLoadout;
+import dev.ajaczero.powerarmor.item.TntLauncherItem;
 import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
 import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
@@ -3117,6 +3118,49 @@ public final class PowerArmorTests {
             var src = husk.getLastDamageSource();
             helper.assertTrue(src != null && src.is(DamageTypeTags.IS_EXPLOSION), "explosion damage, got " + src);
             helper.assertTrue(src.getEntity() == pilot, "credited to the pilot, got " + src.getEntity());
+            helper.succeed();
+        });
+    }
+
+    /** The visor's TNT arc (TntShell.predict from TntLauncherItem.launch, drawn by client/hud/TntLauncherHud) is the
+     *  round's flight: a round fired from where the launcher would fire it passes every point of the arc, tick by tick,
+     *  and goes off on the floor on the arc's last tick. */
+    @SuitTest(timeoutTicks = 60, batch = "tnt")
+    public static void tntArcPredictsTheRound(GameTestHelper helper) {
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 2.6, 8.5), 1);
+        TntShell[] shell = new TntShell[1];
+        TntShell.Flight[] flight = new TntShell.Flight[1];
+        int[] lastSeen = {-1};
+        String[] off = {null};
+        helper.runAfterDelay(2, () -> {
+            TntLauncherItem.Launch launch = TntLauncherItem.launch(suit[0], pilot, 1F);
+            flight[0] = TntShell.predict(helper.getLevel(), pilot, launch.from(), launch.velocity());
+            // the launcher's own round, without the blast's damage to the pad (power 1, no blocks broken)
+            shell[0] = new TntShell(helper.getLevel(), pilot, launch.from(), launch.velocity(), 1F, false);
+            helper.getLevel().addFreshEntity(shell[0]);
+        });
+        helper.onEachTick(() -> {
+            TntShell s = shell[0];
+            if (s == null || s.isRemoved()) {
+                return;
+            }
+            int t = s.tickCount;
+            List<Vec3> path = flight[0].path();
+            if (off[0] == null && (t >= path.size() || s.position().distanceTo(path.get(t)) > 1e-6)) {
+                off[0] = "tick " + t + ": at " + s.position() + ", the arc says " + (t < path.size() ? path.get(t) : "gone off");
+            }
+            lastSeen[0] = Math.max(lastSeen[0], t);
+        });
+        helper.runAfterDelay(40, () -> {
+            helper.assertTrue(off[0] == null, "the round follows the arc: " + off[0]);
+            helper.assertTrue(flight[0].hit() && flight[0].entity() == null, "the arc ends on a block");
+            double floor = helper.absoluteVec(new Vec3(0, 2, 0)).y;
+            helper.assertTrue(Math.abs(flight[0].end().y - floor) < 0.2, "on the floor's top (y " + floor + "), ends at " + flight[0].end());
+            helper.assertTrue(flight[0].ticks() > 3, "a real arc, " + flight[0].ticks() + " ticks");
+            helper.assertTrue(shell[0].isRemoved(), "the round has gone off");
+            helper.assertTrue(lastSeen[0] == flight[0].ticks() - 1, "on the arc's last tick (" + flight[0].ticks()
+                    + "): last seen in the air at tick " + lastSeen[0]);
             helper.succeed();
         });
     }

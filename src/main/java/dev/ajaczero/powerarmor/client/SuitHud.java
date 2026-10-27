@@ -3,7 +3,9 @@ package dev.ajaczero.powerarmor.client;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
-import dev.ajaczero.powerarmor.item.ToolEffects.HudReadout;
+import dev.ajaczero.powerarmor.client.hud.HudView;
+import dev.ajaczero.powerarmor.client.hud.ToolHud;
+import dev.ajaczero.powerarmor.client.hud.ToolHuds;
 import java.util.Locale;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -17,7 +19,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
@@ -38,15 +39,17 @@ import org.jetbrains.annotations.Nullable;
  *   <li>Top left, the suit: its figure (one block per armour piece, like Fallout's), HULL (health) with the seal shield,
  *   and FUEL (time left at walking pace, a bar for how full the fuel slot is) with three embers for the burn rate:
  *   1 idling, 2 walking, 3 sprinting or a hungry tool at work, dark when nothing burns (a free engine).</li>
- *   <li>Top right, the socket tool: its symbol, one labelled bar (heat, charge, reload) and its ammo on a 3-digit
- *   counter, each tool's own ({@link dev.ajaczero.powerarmor.item.ToolEffects#hud}).</li>
+ *   <li>The socket tool's own readout, wherever it wants it (2026-10-27: each tool brings its own, client/hud/ToolHuds):
+ *   the chaingun's ammo and heat in the top right corner, the rail cannon's charge brackets round the crosshair, the
+ *   TNT launcher's drum and the arc its round will fly, the EM projector's box round what it holds. Tools with nothing
+ *   to say draw nothing.</li>
  *   <li>Top centre, under the helmet's brow, as terminal text: a compass tape (one character per 5 degrees) with a
  *   {@code ^} under the heading, the heading in degrees, the day and the time. Like the vanilla items they only work in
  *   the overworld: elsewhere the tape spins and the numbers read {@code ---}.</li>
  * </ul>
- * The whole HUD turns red while anything is critical (hull at a quarter, fuel low, the last rounds, an overheated
- * barrel). Without power the projector is dark: only a red blinking NO FUEL (or FLOODED) is left. The helmet carries the
- * projector: no helmet, no HUD (vanilla's vehicle hearts then stand in for the hull, as on any mount). With the HUD up
+ * The suit's readouts and the compass turn red while the suit is critical (hull at a quarter, fuel low); a tool's
+ * warnings (the last rounds, an overheated barrel) turn only that tool's readout red. Without power the projector is
+ * dark: only a red blinking NO FUEL (or FLOODED) is left. The helmet carries the projector: no helmet, no HUD (vanilla's vehicle hearts then stand in for the hull, as on any mount). With the HUD up
  * those hearts are hidden, and vanilla's boss bars and effect icons move down out of its way.
  * <p>
  * It's a "GUI layer" (registered in ClientSetup), drawn every frame after the vanilla hotbar. Everything it shows comes
@@ -65,9 +68,9 @@ public final class SuitHud {
     private static final Identifier EMBER_LIT = hud("ember_lit");
 
     /** Warnings, whatever the visor colour. */
-    private static final int RED = 0xFF5555;
+    private static final int RED = HudView.RED;
     /** Unlit segments (and the compass's dots) at this fraction of the colour: an empty bar must read as empty. */
-    private static final float DIM = 0.35F, FAINT = 0.65F;
+    private static final float DIM = HudView.DIM, FAINT = HudView.FAINT;
     /** The hull is critical from a quarter left. */
     private static final float HULL_CRITICAL = 0.25F;
     /** Burn-rate embers: energy per tick at or above which 2 and 3 are lit (idle 0.25, walking 1, sprinting 2 by default;
@@ -78,12 +81,13 @@ public final class SuitHud {
     /** Placement (GUI pixels). Both readouts sit under the helmet's top corners ({@link SuitVisor}: 19 px deep at the
      *  side), 120 wide: the narrowest where the fuel row's longest text (FLOODED, 41 px) still clears the embers. TOP is
      *  the readouts' first row, below the compass's second (12 + 9 + 8). */
-    private static final int MARGIN = 4, WIDTH = 120, TOP = 30, TOOL_BAR_SEGMENTS = 12;
+    private static final int MARGIN = 4, WIDTH = 120, TOP = 30;
     /** The compass: a tape of 31 characters in 6 px cells (fixed width, like a terminal), 5 degrees each; its row and
      *  the readout row under it. */
     private static final int CELL = 6, TAPE = 31, DEGREES_PER_CELL = 5, TAPE_Y = 12, READOUT_Y = 21;
     /** Vanilla's boss bars start at y 12 and its effect icons at y 1 (the top right): moved down this far under the
-     *  compass and the tool readout while the HUD is up (user's pick A, 2026-10-27: vanilla's own bars, moved). */
+     *  compass and the top right corner (the chaingun's readout, client/hud/ChaingunHud) while the HUD is up (user's
+     *  pick A, 2026-10-27: vanilla's own bars, moved). */
     private static final int BOSS_SHIFT = 30, EFFECTS_SHIFT = 62;
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
@@ -118,7 +122,7 @@ public final class SuitHud {
             if (blink) {
                 g.text(font, fuelText, x0 + 26, y0 + 4, colour(RED), false);
             }
-            shown = new Shown(hull, power.fuelGauge(), blink ? fuelText.getString() : "", 0, true, false, "", HudReadout.NO_COUNT, 0F, "", 0F);
+            shown = new Shown(hull, power.fuelGauge(), blink ? fuelText.getString() : "", 0, true, false, "", "", "", 0F);
             return;
         }
 
@@ -127,10 +131,9 @@ public final class SuitHud {
         float fuel = power.fuelGauge();
         int embers = embers(suit);
 
-        ItemStack toolStack = suit.getSocketStack();
-        HudReadout tool = suit.socket().tool() == null ? null : suit.socketVisuals().effects().hud(suit, pilot);
-
-        boolean critical = hullCritical || fuelCritical || (tool != null && tool.critical());
+        // the tool's warnings are its own readout's (ToolHud), not the whole HUD's
+        boolean critical = hullCritical || fuelCritical;
+        String toolId = suit.socket().tool() == null ? "" : BuiltInRegistries.ITEM.getKey(suit.getSocketStack().getItem()).getPath();
         int rgb = critical ? RED : VisorConfig.colour();
         int main = colour(rgb);
         int dim = colour(VisorConfig.dim(rgb, DIM));
@@ -141,7 +144,7 @@ public final class SuitHud {
         int h = g.guiHeight(), bandTop = scan.top(h), bandBottom = scan.bottom(h);
         if (bandBottom <= bandTop) {
             scan.drawLines(g, rgb);
-            shown = new Shown(hull, power.fuelGauge(), fuelText.getString(), 0, critical, powered, "", HudReadout.NO_COUNT, 0F, "", 0F);
+            shown = new Shown(hull, power.fuelGauge(), fuelText.getString(), 0, critical, powered, toolId, "", "", 0F);
             return;
         }
         boolean clipped = scan.sweep() < 1F;
@@ -165,7 +168,7 @@ public final class SuitHud {
         if (!(hullCritical && blink)) {
             g.text(font, hullText, rx - font.width(hullText), y0 + 4, main, false);
         }
-        bar(g, lx, y0 + 13, segments, 3, hull, main, dim);
+        HudView.bar(g, lx, y0 + 13, segments, 3, hull, main, dim);
         g.text(font, fuelLabel, lx, y0 + 18, main, false);
         for (int i = 0; i < 3; i++) {
             boolean lit = i < embers;
@@ -175,38 +178,23 @@ public final class SuitHud {
         if (!(fuelCritical && blink)) {
             g.text(font, fuelText, rx - font.width(fuelText), y0 + 18, main, false);
         }
-        bar(g, lx, y0 + 27, segments, 3, fuel, main, dim);
-
-        // ---- top right: the socket tool ---------------------------------------------------------------------------
-        // Three columns on the readout's middle line (2026-10-27, user's pick B): the symbol, the bar's label over the
-        // bar, and the ammo as a fixed 3-digit counter at twice the font's size, like Fallout's (006; 999 means "999 or
-        // more"; a dim --- for a tool without ammo), so it never changes size.
-        if (tool != null) {
-            int tx1 = g.guiWidth() - MARGIN, tx0 = tx1 - WIDTH;
-            g.blit(RenderPipelines.GUI_TEXTURED, symbol(toolStack), tx0 + 5, y0 + 9, 0F, 0F, 16, 16, 16, 16, main);
-            g.text(font, Component.translatable(tool.barLabel()), tx0 + 26, y0 + 9, main, false);
-            bar(g, tx0 + 26, y0 + 20, TOOL_BAR_SEGMENTS, 5, tool.bar(), main, dim);
-            Component count = !tool.hasCount() ? Component.translatable("hud.powerarmor.no_ammo")
-                    : tool.count() < 0 ? Component.translatable("hud.powerarmor.endless")
-                    : Component.literal(String.format(Locale.ROOT, "%03d", Math.min(tool.count(), 999)));
-            var pose = g.pose();
-            pose.pushMatrix();
-            pose.translate(tx1 - 5 - 2 * font.width(count) + 2, y0 + 10); // +2: the font's trailing gap, doubled
-            pose.scale(2F, 2F);
-            g.text(font, count, 0, 0, tool.hasCount() ? main : dim, false);
-            pose.popMatrix();
-        }
+        HudView.bar(g, lx, y0 + 27, segments, 3, fuel, main, dim);
 
         // ---- top centre: compass and clock ------------------------------------------------------------------------
         String clock = compassAndClock(g, mc, font, main, faint, delta);
+
+        // ---- the socket tool's own readout (client/hud), if it has one ----------------------------------------------
+        String toolShown = "";
+        ToolHud toolHud = suit.socket().tool() == null ? null : ToolHuds.get(suit.getSocketStack().getItem());
+        if (toolHud != null) {
+            toolShown = toolHud.render(g, new HudView(g, mc, suit, pilot, VisorConfig.colour(), delta.getGameTimeDeltaPartialTick(false)));
+        }
 
         if (clipped) {
             g.disableScissor();
         }
         scan.drawLines(g, rgb);
-        shown = new Shown(hull, fuel, fuelText.getString(), embers, critical, powered,
-                tool == null ? "" : BuiltInRegistries.ITEM.getKey(toolStack.getItem()).getPath(),
-                tool == null ? HudReadout.NO_COUNT : tool.count(), tool == null ? 0F : tool.bar(), clock, scan.sweep());
+        shown = new Shown(hull, fuel, fuelText.getString(), embers, critical, powered, toolId, toolShown, clock, scan.sweep());
     }
 
     /**
@@ -318,26 +306,12 @@ public final class SuitHud {
     @Nullable
     private static Identifier shifted;
 
-    /** A segmented bar: {@code n} 3-pixel segments with 1-pixel gaps, the first {@code frac} of them lit. */
-    private static void bar(GuiGraphicsExtractor g, int x, int y, int n, int height, float frac, int lit, int unlit) {
-        int on = Math.round(n * Mth.clamp(frac, 0F, 1F));
-        for (int i = 0; i < n; i++) {
-            g.fill(x + i * 4, y, x + i * 4 + 3, y + height, i < on ? lit : unlit);
-        }
-    }
-
     private static int colour(int rgb) {
         return 0xFF000000 | rgb;
     }
 
     private static Identifier hud(String name) {
         return Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/gui/hud/" + name + ".png");
-    }
-
-    /** A tool's symbol, by its item id (tools/make-hud-icons.py draws them): textures/gui/hud/tool/&lt;id&gt;.png. */
-    private static Identifier symbol(ItemStack tool) {
-        Identifier id = BuiltInRegistries.ITEM.getKey(tool.getItem());
-        return Identifier.fromNamespaceAndPath(id.getNamespace(), "textures/gui/hud/tool/" + id.getPath() + ".png");
     }
 
     // ---- The burn rate: measured from the fuel going down ---------------------------------------------------------
@@ -393,10 +367,11 @@ public final class SuitHud {
 
     // ---- For the autopilot's logs ---------------------------------------------------------------------------------
 
-    /** What the HUD drew last frame (dev/autopilot logs), or null when it wasn't shown; open: how much of the screen's
-     *  height the visor's scan had turned on (VisorPower, 0 = none, 1 = all). */
+    /** What the HUD drew last frame (dev/autopilot logs), or null when it wasn't shown: critical is the suit's (the
+     *  tool's warnings are in toolHud, what its own readout said it drew: ToolHud.render); open: how much of the
+     *  screen's height the visor's scan had turned on (VisorPower, 0 = none, 1 = all). */
     public record Shown(float hull, float fuel, String fuelText, int embers, boolean critical, boolean powered,
-                        String tool, int count, float bar, String compass, float open) {}
+                        String tool, String toolHud, String compass, float open) {}
 
     @Nullable
     private static volatile Shown shown;

@@ -1,18 +1,25 @@
 package dev.ajaczero.powerarmor.entity;
 
 import dev.ajaczero.powerarmor.item.SocketAim;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Predicate;
+import net.minecraft.core.BlockPos;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gamerules.GameRules;
@@ -22,7 +29,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.neoforged.neoforge.event.EventHooks;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The TNT launcher's round (Phase 11, 2026-10-25): a primed block of TNT that flies in an arc and goes off the moment
@@ -125,8 +134,59 @@ public class TntShell extends Projectile {
     /** Never hit the suit that fired us (its pilot is the owner). */
     @Override
     protected boolean canHitEntity(Entity target) {
-        return super.canHitEntity(target) && target != this.getOwner()
-                && !(target instanceof PowerArmorEntity suit && suit.hasPassenger(e -> e == this.getOwner()));
+        return super.canHitEntity(target) && !ownSide(this.getOwner(), target);
+    }
+
+    /** The one who fired it, or the suit they sit in. */
+    private static boolean ownSide(@Nullable Entity owner, Entity target) {
+        return target == owner || target instanceof PowerArmorEntity suit && suit.hasPassenger(e -> e == owner);
+    }
+
+    // ---- where it will go (the pilot's HUD) ---------------------------------------------------------------
+
+    /**
+     * A round's flight, worked out ahead: {@code path} its position after each tick (0 = where it starts), {@code end}
+     * where it goes off, {@code ticks} when, {@code hit} whether it hit something there (false: its fuse ran out in the
+     * air) and {@code entity} what it hit, if that was an entity.
+     */
+    public record Flight(List<Vec3> path, Vec3 end, int ticks, boolean hit, @Nullable Entity entity) {}
+
+    /**
+     * Both sides: where a round fired by {@code owner} from {@code from} at {@code velocity} will fly and go off. The
+     * same steps as {@link #tick} (what it would hit on this tick's move, then the move, then drag and gravity; the
+     * entity margin vanilla grows over a projectile's first ticks), in the world as it is now: so it's exact for a
+     * still target (PowerArmorTests.tntArcPredictsTheRound) and as good as anyone's guess for a moving one. The pilot's
+     * HUD draws it every frame (client/hud/TntLauncherHud): at most {@link #FUSE} ray casts, a fraction of a frame.
+     */
+    public static Flight predict(Level level, Entity owner, Vec3 from, Vec3 velocity) {
+        List<Vec3> path = new ArrayList<>();
+        path.add(from);
+        Vec3 pos = from, v = velocity;
+        EntityDimensions size = ModEntities.TNT_SHELL.get().getDimensions();
+        Predicate<Entity> hittable = e -> e.canBeHitByProjectile() && !ownSide(owner, e) && !owner.isPassengerOfSameVehicle(e);
+        for (int tick = 1; tick <= FUSE; tick++) {
+            Vec3 to = pos.add(v);
+            HitResult block = level.clipIncludingBorder(new ClipContext(pos, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
+                    CollisionContext.empty()));
+            if (block.getType() != HitResult.Type.MISS) {
+                to = block.getLocation();
+            }
+            float margin = Math.max(0F, Math.min(0.3F, (tick - 2) / 20F)); // ProjectileUtil.computeMargin, by tickCount
+            EntityHitResult entity = ProjectileUtil.getEntityHitResult(level, owner, pos, to,
+                    size.makeBoundingBox(pos).expandTowards(v).inflate(1), hittable, margin);
+            if (entity != null) {
+                return new Flight(path, entity.getLocation(), tick, true, entity.getEntity());
+            }
+            if (block.getType() != HitResult.Type.MISS) {
+                return new Flight(path, to.subtract(v.normalize().scale(0.1)), tick, true, null); // onHitBlock's step back
+            }
+            // drag by where it was at the start of the tick (isInWater is updated before the move)
+            boolean water = level.getFluidState(BlockPos.containing(pos)).is(FluidTags.WATER);
+            pos = to;
+            v = v.scale(water ? WATER_DRAG : DRAG).add(0, -GRAVITY, 0);
+            path.add(pos);
+        }
+        return new Flight(path, pos, FUSE, false, null);
     }
 
     @Override

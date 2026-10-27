@@ -47,27 +47,27 @@ public interface ToolEffects {
     }
 
     /**
-     * What the pilot's HUD shows in its tool section (client/SuitHud), next to the tool's symbol: one labelled bar
-     * ({@code barLabel} a translation key; every tool has one, design sec. 6: its heat, charge or reload, 1 = ready), a
-     * count (the ammo, shown as 3 digits; {@link #NO_COUNT} for a tool without ammo, {@link #ENDLESS} in creative) and
-     * whether something is critical (the last rounds, an overheated barrel): that turns the whole HUD red, like a low hull
-     * or low fuel.
+     * The numbers the pilot's HUD shows for this tool, worked out by the tool (client, every frame): a count (its ammo;
+     * {@link #NO_COUNT} for none, {@link #ENDLESS} in creative) and whether it's down to the last ({@code lowAmmo}),
+     * and one gauge 0..1 (heat, charge or reload) and whether that's critical (an overheated barrel). How they're drawn
+     * is each tool's own visor HUD (client/hud/ToolHuds, 2026-10-27: no shared tool panel any more); a warning turns only
+     * that readout red, not the whole HUD. Here, in shared code, stays what the numbers are (the client's drawing classes
+     * can't be named in shared code: a dedicated server would crash loading them).
      */
-    record HudReadout(int count, String barLabel, float bar, boolean critical) {
+    record HudReadout(int count, boolean lowAmmo, float bar, boolean barCritical) {
         public static final int NO_COUNT = Integer.MIN_VALUE;
         public static final int ENDLESS = -1;
-        /** A tool whose own cooldown isn't built yet (the drill, the chainsaw, the EM projector, the flamethrower: user,
-         *  2026-10-27, every tool will get one): no ammo, always cool and ready. */
-        public static final HudReadout READY = new HudReadout(NO_COUNT, "hud.powerarmor.cool", 1F, false);
 
         public boolean hasCount() {
             return this.count != NO_COUNT;
         }
     }
 
-    /** Client: this tool's readout on its pilot's HUD this frame (the pilot is this client's own player). */
+    /** Client: this tool's numbers on its pilot's HUD this frame (the pilot is this client's own player), or null for a
+     *  tool with none (the drill, the chainsaw, the flamethrower; the EM projector's HUD reads the socket itself). */
+    @Nullable
     default HudReadout hud(PowerArmorEntity suit, Player pilot) {
-        return HudReadout.READY;
+        return null;
     }
 
     // ---- Helpers the tools share ---------------------------------------------------------------------------------

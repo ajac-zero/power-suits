@@ -109,17 +109,30 @@ blinking. It's terminal green by default: pick your own colour under
   tidal engine or a star reactor; NO FUEL, also with no engine; FLOODED), a bar for how full the fuel slot is, and three
   **embers** for how fast it burns: one idling, two walking, three sprinting or with a hungry tool at work (the
   flamethrower), none when nothing burns.
-- **Top right, the socket tool:** its symbol, one labelled bar and the ammo on a 3-digit counter (006; 999 means 999 or
-  more; ∞ in creative; --- for a tool without ammo). The bar is the chaingun's **HEAT**, the rail cannon's **CHARGE**,
-  the TNT launcher's **RELOAD**; the drill, chainsaw, EM projector and flamethrower show **COOL** (always ready, for now).
+- **The socket tool's own readout**, where that tool needs it (tools with nothing to say show nothing: the drill, the
+  chainsaw, the flamethrower):
+  - **Chaingun**, top right: **AMMO** on a big 3-digit counter (006; 999 means 999 or more; ∞ in creative) and the
+    barrels' **HEAT** bar under it.
+  - **Rail cannon**, round the crosshair: four corner brackets that wait wide and faint, close in as it charges (the
+    charge in % under them) and lock with a second, inner set over **READY** at full charge; one pip per ingot left.
+  - **TNT launcher**, round the crosshair: the **arc** the round will fly, dotted from the crosshair down to a diamond
+    where it will go off, with the distance (`22m`); it moves with your aim and is worked out with the round's own
+    physics, so it's where the round really goes (a round that hits nothing goes off in the air at the end of its fuse:
+    a small x). Aim the diamond, not the crosshair: the round drops. Right of the crosshair, a revolver **drum** whose
+    top chamber fills while it reloads and is lit when a round is ready, the rounds left beside it (`x07`) and LOAD
+    while it reloads.
+  - **EM projector**: nothing while idle; **SCAN...** under the crosshair while you hold the button and it's still
+    looking; and while it holds something, corner brackets round it with **FIELD** (or **HEAVY** for something too
+    heavy to lift, which it only drags) and its name over them, and its health.
 - **Top centre, compass and clock** (the helmet is crafted with both), as terminal text: a compass tape that slides a
   character (5°) at a time with a `^` under where you face, your heading in degrees (0 north, 90 east), the day and the
   time (`DAY 12  18:40`). Like the vanilla items they only work in the overworld: elsewhere the tape spins and they read
   `---` / `--:--`.
-- The whole HUD turns **red** while something is critical: a quarter of the hull left, low fuel, the last rounds (16
-  bullets, the last TNT or ingot), an overheated chaingun. With **no power** the glass goes dark: only the helmet's
-  edge and a blinking red **NO FUEL** (or FLOODED) are left.
-- While the HUD is up, vanilla's boss bars move down under the compass and the effect icons under the tool readout.
+- The suit's readouts and the compass turn **red** while the suit is critical: a quarter of the hull left, low fuel. A
+  tool's warnings turn only its own readout red: the last rounds (16 bullets, the last TNT or ingot), an overheated
+  chaingun (its HEAT reads OVERHEAT). With **no power** the glass goes dark: only the helmet's edge and a blinking red
+  **NO FUEL** (or FLOODED) are left.
+- While the HUD is up, vanilla's boss bars move down under the compass and the effect icons under the top right corner.
 
 Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It burns whenever
 the suit is powered, piloted or not (the machine mind runs it): standing still uses a quarter of the walking rate, sprinting double, and each
@@ -182,13 +195,14 @@ fat barrel. Right-click lobs a block of primed TNT toward your crosshair (it arc
 hits a block or a mob, as real TNT: strength 4, breaking blocks unless the config says not to (`breaks_blocks`), and it
 obeys the `tnt_explodes` game rule and land-claim mods. Hold to keep firing, one round each time it has reloaded (1 s,
 config). The TNT comes from the suit's ammo slot, one block per shot (free in creative); with none left the trigger only
-clicks. After each shot the drum turns a quarter turn to the next round. It's yours to fire only: the machine mind never
+clicks. After each shot the drum turns a quarter turn to the next round. With the helmet on, the visor shows where the
+round will land (the arc and a diamond with the distance: aim the diamond). It's yours to fire only: the machine mind never
 uses it and rogue suits never carry one.
 
 **Rail Cannon** (crafted: iron ingots, copper ingots, an amethyst shard, an iron block). The chaingun's opposite: one
 slow, critical shot instead of a barrage. Two steel prongs with a blue core between them, after DOOM's gauss cannon.
 Hold right-click and it charges (1.5 s, config): the core glows brighter, a hum rises and a chime says it's full (the
-HUD's bar turns white); it holds the charge as long as you hold the button. Let go at full charge and it fires an
+HUD's brackets lock); it holds the charge as long as you hold the button. Let go at full charge and it fires an
 instant beam along your crosshair, up to 64 blocks: every mob on the line takes 20 hearts (it goes through them all,
 and through any hit immunity), and on the way it breaks what a sprinting suit smashes through (glass, panes, leaves,
 ice, cobwebs; config `breaks_blocks`, claims can veto) until it meets anything solid. Let go early and it just winds
@@ -322,7 +336,10 @@ src/main/java/dev/ajaczero/powerarmor/
     CockpitHands.java        first-person viewmodel: socket tool on the left, gauntlet + held item on the right
     CockpitView*.java        its GeckoLib animatable/renderer (geckolib/models/view, cut from the suit by tools/extract-view-geo.py)
     PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
-    SuitHud.java             the pilot's HUD (suit + tool readouts, compass + clock) + low-fuel beep; moves boss bars
+    SuitHud.java             the pilot's HUD (suit readout, compass + clock, the tool's own HUD) + low-fuel beep; moves boss bars
+    hud/                     each socket tool's own visor HUD: ToolHud, ToolHuds (item -> HUD, filled in by ClientSetup),
+                             HudView (colours, crosshair, world-to-screen, shared shapes), ChaingunHud, RailCannonHud,
+                             TntLauncherHud (drum + the round's arc), EmProjectorHud
                              and effect icons out of its way
     SuitVisor.java           the helmet's edge around the first-person view (solid pieces unpowered, only their outline powered)
     VisorConfig.java         the player's own visor colour (CLIENT config, powerarmor-client.toml)

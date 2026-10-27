@@ -2,9 +2,15 @@ package dev.ajaczero.powerarmor.client;
 
 import com.google.common.reflect.TypeToken;
 import dev.ajaczero.powerarmor.PowerArmor;
+import dev.ajaczero.powerarmor.client.hud.ChaingunHud;
+import dev.ajaczero.powerarmor.client.hud.EmProjectorHud;
+import dev.ajaczero.powerarmor.client.hud.RailCannonHud;
+import dev.ajaczero.powerarmor.client.hud.TntLauncherHud;
+import dev.ajaczero.powerarmor.client.hud.ToolHuds;
 import dev.ajaczero.powerarmor.entity.ClientView;
 import dev.ajaczero.powerarmor.item.SocketAim;
 import dev.ajaczero.powerarmor.registry.ModEntities;
+import dev.ajaczero.powerarmor.registry.ModItems;
 import dev.ajaczero.powerarmor.registry.ModMenus;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.NoopRenderer;
@@ -13,6 +19,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
@@ -44,6 +51,22 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.POWER_ARMOR.get(), PowerArmorScreen::new);
+    }
+
+    /**
+     * Each socket tool's own visor HUD (client/hud), paired with its item here, the way renderers are paired with
+     * entity types above: the items are shared code and can't hold drawing code. Tools left out (the drill, the
+     * chainsaw, the flamethrower) show nothing on the visor. Queued onto the main thread: client setup runs alongside
+     * other mods' setup.
+     */
+    @SubscribeEvent
+    public static void clientSetup(FMLClientSetupEvent event) {
+        event.enqueueWork(() -> {
+            ToolHuds.register(ModItems.CHAINGUN.get(), new ChaingunHud());
+            ToolHuds.register(ModItems.RAIL_CANNON.get(), new RailCannonHud());
+            ToolHuds.register(ModItems.TNT_LAUNCHER.get(), new TntLauncherHud());
+            ToolHuds.register(ModItems.EM_PROJECTOR.get(), new EmProjectorHud());
+        });
     }
 
     @SubscribeEvent
