@@ -27,7 +27,7 @@ Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outs
 | Mining Drill | Hold right-click on a block: digs it and the 8 around it (a 3x3 face of a wall, floor or ceiling) like a diamond pickaxe + shovel. 20 fuel per block |
 | Chainsaw | Hold right-click on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 15 fuel per log |
 | Flamethrower | Hold right-click: a stream of fire about 7 blocks toward your crosshair. Sets mobs and blocks alight, melts ice and snow, lights campfires and candles, sets off TNT, cooks food lying on the ground. Dead under water. 6 fuel per tick |
-| TNT Launcher | Right-click: lobs a block of primed TNT toward your crosshair that blows up the moment it hits something (real TNT: it breaks blocks). Hold to keep firing, one round a second. Each shot uses one TNT from the suit's **ammo slot** (beside the socket in the menu; the HUD counts what's left); free in creative. No fuel |
+| TNT Launcher | Right-click: lobs a block of primed TNT toward your crosshair that blows up the moment it hits something (real TNT: it breaks blocks). A 4-round drum: hold to fire it empty, a round every half second; it then loads its chambers back one a second with TNT from the suit's **ammo slot** (beside the socket in the menu; the HUD shows the drum and counts what's left); free in creative. No fuel |
 | Rail Cannon | Hold right-click to charge (1.5 s, the core between its prongs glows brighter, the HUD shows a charge bar), let go at full charge: an instant beam along your crosshair, 20 hearts to every mob on the line (it goes through them all), breaking glass, panes, leaves and ice on the way; it stops at anything solid. Let go early and nothing happens. Each shot is an iron ingot from the suit's ammo slot + 100 fuel |
 | Fire | Right-click while piloting (Chaingun): tap for heavy single shots, hold to spin up to a 10-a-second barrage toward your crosshair; one iron nugget per bullet (yours first, then the suit's store) |
 | Repair | Anvil + iron ingots (the item's durability bar is the suit's health) |
@@ -121,8 +121,8 @@ blinking. It's terminal green by default: pick your own colour under
     over the gun (a round that hits nothing goes off in the air at the end of
     its fuse: a small x). Aim the diamond, not the crosshair: the round drops. When it would go off close enough for its
     blast to reach you (twice its strength: 8 blocks by default) the arc and the diamond turn **red**. Top right, where
-    the chaingun's ammo is: a revolver **drum**, one chamber per round (filled while loaded; the top one, under the
-    barrel, fills while it reloads), AMMO and the rounds left, LOAD while it reloads.
+    the chaingun's ammo is: the revolver **drum**, a filled chamber per round loaded (the next empty one fills while
+    it's being loaded), AMMO and the TNT left in the ammo slot, LOAD while it loads.
   - **EM projector**: nothing while idle; **SCAN...** under the crosshair while you hold the button and it's still
     looking; and while it holds something, corner brackets round it with its name over them (**HEAVY** first for
     something too heavy to lift, which it only drags and shoves) and its health, and the **arc** it would be thrown
@@ -196,9 +196,14 @@ rogue suits sometimes carry one (and set fires if mobs may grief).
 **TNT Launcher** (crafted: iron ingots, a dispenser, an iron block, gunpowder, copper). A revolver drum of TNT under a
 fat barrel. Right-click lobs a block of primed TNT toward your crosshair (it arcs like an arrow) that blows up the moment it
 hits a block or a mob, as real TNT: strength 4, breaking blocks unless the config says not to (`breaks_blocks`), and it
-obeys the `tnt_explodes` game rule and land-claim mods. Hold to keep firing, one round each time it has reloaded (1 s,
-config). The TNT comes from the suit's ammo slot, one block per shot (free in creative); with none left the trigger only
-clicks. After each shot the drum turns a quarter turn to the next round. With the helmet on, the visor shows where the
+obeys the `tnt_explodes` game rule and land-claim mods. The drum holds 4 rounds: a tap fires one, holding fires them a
+half second apart (config `shot_interval_ticks`), so a full drum empties in under two seconds. Reloading is filling the
+chambers back up, one a second (`reload_ticks`) with TNT from the suit's ammo slot (free in creative), starting half a
+second after your last shot (`reload_delay_ticks`); a shot restarts the chamber being loaded, so you can fire whatever
+is loaded at any time, and holding the trigger on an empty drum fires each round as it's loaded. With an empty drum
+and no TNT the trigger only clicks. The rounds in the drum stay in the launcher when you take it out (or pack the
+suit), and a powered suit loads its drum even with nobody inside. After each shot the drum turns a quarter turn to the
+next round. With the helmet on, the visor shows where the
 round will land (the arc and a diamond with the distance: aim the diamond). It's yours to fire only: the machine mind never
 uses it and rogue suits never carry one.
 

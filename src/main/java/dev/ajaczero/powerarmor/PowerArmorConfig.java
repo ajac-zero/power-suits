@@ -123,9 +123,17 @@ public final class PowerArmorConfig {
             .define("ignites_blocks", true);
 
     // ---- TNT launcher (Phase 11) ---------------------------------------------------------------------------
+    // A 4-round drum (2026-10-27): rounds fire quickly while there are rounds in it, then the chambers are loaded back one
+    // at a time from the ammo slot once the trigger has rested. (reload_ticks was the time between shots before.)
     public static final ModConfigSpec.IntValue TNT_LAUNCHER_RELOAD = B.pop().translation(key("tnt_launcher")).push("tnt_launcher")
-            .comment("Ticks between shots (20 = one a second): a tap fires one, holding fires again each time it's reloaded.").translation(key("tnt_launcher_reload"))
+            .comment("Ticks to load one chamber of the 4-round drum from the ammo slot (20 = a second each).").translation(key("tnt_launcher_reload"))
             .defineInRange("reload_ticks", 20, 1, 1200);
+    public static final ModConfigSpec.IntValue TNT_LAUNCHER_SHOT_INTERVAL = B
+            .comment("Ticks between shots while the drum has rounds (10 = two a second): a tap fires one, holding keeps firing.").translation(key("tnt_launcher_shot_interval"))
+            .defineInRange("shot_interval_ticks", 10, 1, 1200);
+    public static final ModConfigSpec.IntValue TNT_LAUNCHER_RELOAD_DELAY = B
+            .comment("Ticks after the last shot before the drum starts loading again (a shot also restarts the chamber being loaded).").translation(key("tnt_launcher_reload_delay"))
+            .defineInRange("reload_delay_ticks", 10, 0, 1200);
     public static final ModConfigSpec.IntValue TNT_LAUNCHER_ENERGY = B
             .comment("Fuel energy per shot on top of the TNT it uses up (0: the TNT is the cost; walking burns 1 per tick).").translation(key("tnt_launcher_energy"))
             .defineInRange("energy_per_shot", 0, 0, 100_000);

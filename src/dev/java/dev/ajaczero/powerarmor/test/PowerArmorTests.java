@@ -3030,12 +3030,16 @@ public final class PowerArmorTests {
     // TNT launcher and the ammo slot (Phase 11, 2026-10-25)
     // =========================================================================================
 
-    /** A suit at (4, 2, 1) facing +Z with the TNT launcher, fuel, {@code tnt} blocks of TNT in its ammo slot and a
-     *  survival pilot looking at {@code target} (relative). */
-    private static Player tntPilot(GameTestHelper helper, PowerArmorEntity[] out, Vec3 target, int tnt) {
+    /** A suit at (4, 2, 1) facing +Z with the TNT launcher ({@code drum} rounds loaded), fuel, {@code tnt} blocks of TNT
+     *  in its ammo slot and a survival pilot looking at {@code target} (relative). */
+    private static Player tntPilot(GameTestHelper helper, PowerArmorEntity[] out, Vec3 target, int drum, int tnt) {
         PowerArmorEntity suit = suitAt(helper, new BlockPos(4, 2, 1));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 4));
-        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.TNT_LAUNCHER.get()));
+        ItemStack launcher = new ItemStack(ModItems.TNT_LAUNCHER.get());
+        if (drum > 0) {
+            launcher.set(ModDataComponents.LOADED_ROUNDS.get(), drum);
+        }
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, launcher);
         suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, tnt > 0 ? new ItemStack(Items.TNT, tnt) : ItemStack.EMPTY);
         suit.setYRot(0);
         suit.setYBodyRot(0);
@@ -3053,6 +3057,10 @@ public final class PowerArmorTests {
 
     private static int ammoLeft(PowerArmorEntity suit) {
         return suit.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).getCount();
+    }
+
+    private static int drumOf(PowerArmorEntity suit) {
+        return TntLauncherItem.loaded(suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT));
     }
 
     /** The ammo slot (menu slot 4) takes TNT only, shift-click puts TNT there, and the suit's item keeps it when packed. */
@@ -3082,11 +3090,11 @@ public final class PowerArmorTests {
         helper.succeed();
     }
 
-    /** Without TNT the trigger only clicks: no round, nothing used. */
+    /** With an empty drum and no TNT the trigger only clicks: no round, nothing used. */
     @SuitTest(timeoutTicks = 40)
     public static void tntLauncherClicksWithoutTnt(GameTestHelper helper) {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
-        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.5, 6.5), 0);
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.5, 6.5), 0, 0);
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(8, () -> {
             suit[0].socket().setTriggerHeld(pilot, false);
@@ -3096,19 +3104,20 @@ public final class PowerArmorTests {
         });
     }
 
-    /** A tap fires one round from the ammo slot; it flies to the floor 5 blocks ahead and blows a hole in it (credited
-     *  to the pilot), and the suit that fired it isn't the thing it hits. */
+    /** A tap fires one round from the drum; it flies to the floor 5 blocks ahead and blows a hole in it (credited to
+     *  the pilot), and the suit that fired it isn't the thing it hits. */
     @SuitTest(timeoutTicks = 60, batch = "tnt")
     public static void tntLauncherFiresARoundThatExplodesOnHit(GameTestHelper helper) {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
-        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 6.5), 3);
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 6.5), 1, 3);
         BlockPos floor = new BlockPos(4, 1, 6);
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(3, () -> {
             suit[0].socket().setTriggerHeld(pilot, false);
             helper.assertTrue(suit[0].socket().getUses() == 1, "a tap fires one round, got " + suit[0].socket().getUses());
-            helper.assertTrue(ammoLeft(suit[0]) == 2, "using one TNT from the ammo slot, left " + ammoLeft(suit[0]));
-            helper.assertTrue(suit[0].getAmmoStack().getCount() == 2, "the synced copy (HUD) follows");
+            helper.assertTrue(drumOf(suit[0]) == 0, "the drum's round, left " + drumOf(suit[0]));
+            helper.assertTrue(TntLauncherItem.loaded(suit[0].getSocketStack()) == 0, "the synced copy (HUD) follows");
+            helper.assertTrue(ammoLeft(suit[0]) == 3, "the ammo slot is only touched by the reload, left " + ammoLeft(suit[0]));
         });
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(shellsInTest(helper).isEmpty(), "the round has gone off");
@@ -3120,19 +3129,70 @@ public final class PowerArmorTests {
         });
     }
 
-    /** Held, it fires again each time it has reloaded: in 2 reloads + a tick, 3 rounds. */
-    @SuitTest(timeoutTicks = 120, batch = "tnt")
-    public static void tntLauncherFiresOncePerReloadWhileHeld(GameTestHelper helper) {
+    /** The drum (2026-10-27): held, it fires its 4 rounds one shot interval apart, then only clicks; let go, it loads
+     *  the chambers back one per reload_ticks from the ammo slot, starting reload_delay_ticks after the last shot. */
+    @SuitTest(timeoutTicks = 200, batch = "tnt")
+    public static void tntLauncherEmptiesItsDrumThenReloadsChamberByChamber(GameTestHelper helper) {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
-        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 7.5), 10);
-        int reload = PowerArmorConfig.TNT_LAUNCHER_RELOAD.get();
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 7.5), TntLauncherItem.DRUM, 10);
+        int interval = PowerArmorConfig.TNT_LAUNCHER_SHOT_INTERVAL.get();
+        int reload = PowerArmorConfig.TNT_LAUNCHER_RELOAD.get(), delay = PowerArmorConfig.TNT_LAUNCHER_RELOAD_DELAY.get();
+        int lastShot = 2 + 3 * interval;
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
-        helper.runAfterDelay(2 + 2 * reload + 1, () -> {
+        helper.runAfterDelay(lastShot - interval + 1, () -> helper.assertTrue(suit[0].socket().getUses() == 3,
+                "one shot an interval apart: 3 by now, got " + suit[0].socket().getUses()));
+        helper.runAfterDelay(lastShot + interval + 2, () -> {
             suit[0].socket().setTriggerHeld(pilot, false);
-            helper.assertTrue(suit[0].socket().getUses() == 3, "3 rounds in two reloads, got " + suit[0].socket().getUses());
-            helper.assertTrue(ammoLeft(suit[0]) == 7, "3 TNT used, left " + ammoLeft(suit[0]));
+            helper.assertTrue(suit[0].socket().getUses() == 4, "the whole drum, then dry clicks: 4 rounds, got " + suit[0].socket().getUses());
+            helper.assertTrue(drumOf(suit[0]) == 0 && ammoLeft(suit[0]) == 10, "an empty drum, the ammo slot untouched while firing: drum "
+                    + drumOf(suit[0]) + ", ammo " + ammoLeft(suit[0]));
+        });
+        helper.runAfterDelay(lastShot + delay + 2 * reload + reload / 2, () -> {
+            helper.assertTrue(drumOf(suit[0]) == 2 && ammoLeft(suit[0]) == 8, "two chambers loaded from the ammo slot by now: drum "
+                    + drumOf(suit[0]) + ", ammo " + ammoLeft(suit[0]));
+        });
+        helper.runAfterDelay(lastShot + delay + 4 * reload + reload / 2, () -> {
+            helper.assertTrue(drumOf(suit[0]) == TntLauncherItem.DRUM && ammoLeft(suit[0]) == 6, "full again and it stops: drum "
+                    + drumOf(suit[0]) + ", ammo " + ammoLeft(suit[0]));
             helper.succeed();
         });
+    }
+
+    /** A shot restarts the chamber being loaded (and the reload waits for the trigger to rest). */
+    @SuitTest(timeoutTicks = 120, batch = "tnt")
+    public static void tntLauncherShotRestartsTheChamberBeingLoaded(GameTestHelper helper) {
+        PowerArmorEntity[] suit = new PowerArmorEntity[1];
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 7.5), 1, 5);
+        int reload = PowerArmorConfig.TNT_LAUNCHER_RELOAD.get(), delay = PowerArmorConfig.TNT_LAUNCHER_RELOAD_DELAY.get();
+        int shot = Math.max(3, reload - 4); // most of the way through loading the second chamber
+        helper.runAfterDelay(shot, () -> {
+            helper.assertTrue(drumOf(suit[0]) == 1 && suit[0].socket().getSpin() > 0.5F, "loading the next chamber: drum "
+                    + drumOf(suit[0]) + ", progress " + suit[0].socket().getSpin());
+            suit[0].socket().setTriggerHeld(pilot, true);
+        });
+        helper.runAfterDelay(shot + 1, () -> suit[0].socket().setTriggerHeld(pilot, false));
+        helper.runAfterDelay(shot + delay + reload - 3, () -> helper.assertTrue(drumOf(suit[0]) == 0 && ammoLeft(suit[0]) == 5,
+                "the half-loaded chamber started over: drum " + drumOf(suit[0]) + ", ammo " + ammoLeft(suit[0])));
+        helper.runAfterDelay(shot + delay + reload + 4, () -> {
+            helper.assertTrue(drumOf(suit[0]) == 1 && ammoLeft(suit[0]) == 4, "then loads it: drum " + drumOf(suit[0]) + ", ammo " + ammoLeft(suit[0]));
+            helper.succeed();
+        });
+    }
+
+    /** The rounds in the drum stay on the launcher: packed up with the suit and back when it's deployed. */
+    @SuitTest
+    public static void tntDrumStaysWithTheLauncher(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 2));
+        ItemStack launcher = new ItemStack(ModItems.TNT_LAUNCHER.get());
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, launcher);
+        TntLauncherItem.setLoaded(suit, launcher, 3);
+        helper.assertTrue(TntLauncherItem.loaded(suit.getSocketStack()) == 3, "the synced copy has the drum");
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.snapTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
+        suit.packUp(player);
+        SuitLoadout loadout = packedSuit(player).get(ModDataComponents.LOADOUT.get());
+        helper.assertTrue(loadout != null && TntLauncherItem.loaded(loadout.socket()) == 3, "packed with 3 rounds in its drum, got " + loadout);
+        helper.succeed();
     }
 
     /** A round that hits a mob goes off on it, and the blast is the pilot's (kill credit). */
@@ -3140,7 +3200,7 @@ public final class PowerArmorTests {
     public static void tntLauncherBlastIsThePilots(GameTestHelper helper) {
         var husk = statueHusk(helper, new Vec3(4.5, 2, 6.5));
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
-        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 3, 6.5), 1);
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 3, 6.5), 1, 0);
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(3, () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(20, () -> {
@@ -3158,7 +3218,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 60, batch = "tnt")
     public static void tntArcPredictsTheRound(GameTestHelper helper) {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
-        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 2.6, 8.5), 1);
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 2.6, 8.5), 0, 0);
         TntShell[] shell = new TntShell[1];
         Trajectory[] flight = new Trajectory[1];
         int[] lastSeen = {-1};
@@ -3195,16 +3255,17 @@ public final class PowerArmorTests {
         });
     }
 
-    /** A creative pilot fires without TNT. */
-    @SuitTest(timeoutTicks = 40, batch = "tnt")
+    /** A creative pilot loads the drum without TNT (it still takes the reload's time). */
+    @SuitTest(timeoutTicks = 80, batch = "tnt")
     public static void tntLauncherIsFreeInCreative(GameTestHelper helper) {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
-        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 7.5), 0);
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 7.5), 0, 0);
         pilot.getAbilities().instabuild = true;
+        int reload = PowerArmorConfig.TNT_LAUNCHER_RELOAD.get();
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
-        helper.runAfterDelay(3, () -> {
+        helper.runAfterDelay(reload + PowerArmorConfig.TNT_LAUNCHER_SHOT_INTERVAL.get() + 4, () -> {
             suit[0].socket().setTriggerHeld(pilot, false);
-            helper.assertTrue(suit[0].socket().getUses() == 1, "creative fires with an empty ammo slot, got " + suit[0].socket().getUses());
+            helper.assertTrue(suit[0].socket().getUses() >= 1, "creative loads and fires with an empty ammo slot, got " + suit[0].socket().getUses());
             helper.succeed();
         });
     }
@@ -3216,7 +3277,7 @@ public final class PowerArmorTests {
     public static void tntLauncherObeysTheTntGameRule(GameTestHelper helper) {
         helper.assertTrue(!helper.getLevel().getGameRules().get(GameRules.TNT_EXPLODES), "the batch turns tnt_explodes off");
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
-        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 6.5), 1);
+        Player pilot = tntPilot(helper, suit, new Vec3(4.5, 1.9, 6.5), 1, 0);
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(3, () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(20, () -> {
@@ -3240,7 +3301,9 @@ public final class PowerArmorTests {
         helper.runAfterDelay(100, () -> {
             dismiss(helper, owner);
             helper.assertTrue(!suit.brain().followsOwner() && !suit.brain().hasGun(), "the launcher is no weapon for the mind");
-            helper.assertTrue(suit.socket().getUses() == 0 && ammoLeft(suit) == 8, "it never fired, uses " + suit.socket().getUses());
+            // (a powered suit loads its drum on its own: the TNT moves from the ammo slot into the drum, none is spent)
+            helper.assertTrue(suit.socket().getUses() == 0 && ammoLeft(suit) + drumOf(suit) == 8, "it never fired, uses "
+                    + suit.socket().getUses() + ", ammo " + ammoLeft(suit) + " + drum " + drumOf(suit));
             helper.assertTrue(shellsInTest(helper).isEmpty(), "no rounds");
             helper.succeed();
         });

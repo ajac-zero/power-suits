@@ -4,6 +4,7 @@ import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.client.SuitHud;
 import dev.ajaczero.powerarmor.client.SuitVisor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.TntLauncherItem;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import java.io.BufferedWriter;
@@ -40,7 +41,8 @@ import net.neoforged.fml.loading.FMLPaths;
  * HEAT turns red and reads OVERHEAT, the rest of the HUD stays in the visor colour); down to the last bullets (the AMMO
  * counter red); a low hull (red); low fuel (red, beeping); no fuel (faded, NO FUEL); then each tool in turn with its
  * own visor HUD (client/hud, 2026-10-27): the rail cannon's brackets closing in as it charges and locking at READY; the
- * TNT launcher's drum reloading, its arc near and far, ending on a cow, and a real round flying along it; the
+ * TNT launcher's drum full, firing, empty and loading back chamber by chamber, its arc near and far, ending on a cow,
+ * and a real round flying along it; the
  * flamethrower and the drill (nothing); the EM projector idle (nothing), searching (SCAN...) and holding a pig (a box
  * round it, its name and health, the arc it would be thrown along); the chainsaw (nothing); a star reactor (endless fuel, no embers); boss bars
  * and effects moved out of the way; and without the helmet (no HUD, vanilla's hearts).
@@ -108,12 +110,15 @@ final class HudScene {
             case 512 -> AutoPilot.shot(mc, "hud_rail_charging");
             case 532 -> AutoPilot.shot(mc, "hud_rail_ready");
             case 534 -> AutoPilot.hold(o.keyUse, false);
-            // the TNT launcher: a shot, the drum's top chamber refilling (TntLauncherHud)
-            case 550 -> { phase = "tnt"; tool(mc, ModItems.TNT_LAUNCHER.get(), new ItemStack(Items.TNT, 8)); AutoPilot.setView(0, -35); }
-            case 562 -> AutoPilot.hold(o.keyUse, true);
-            case 564 -> AutoPilot.hold(o.keyUse, false);
-            case 570 -> AutoPilot.shot(mc, "hud_tnt_reload");
-            case 600 -> AutoPilot.shot(mc, "hud_tnt_ready");
+            // the TNT launcher (TntLauncherHud): a full drum, the trigger held until it's empty (4 rounds, one every half
+            // second), then the chambers loading back one by one from the ammo slot
+            case 550 -> { phase = "tnt"; tool(mc, ModItems.TNT_LAUNCHER.get(), new ItemStack(Items.TNT, 8)); AutoPilot.setView(0, -35);
+                          server(mc, (p, x) -> TntLauncherItem.setLoaded(x, x.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT), TntLauncherItem.DRUM)); }
+            case 556 -> AutoPilot.shot(mc, "hud_tnt_ready");
+            case 558 -> AutoPilot.hold(o.keyUse, true);
+            case 574 -> AutoPilot.shot(mc, "hud_tnt_firing");
+            case 592 -> { AutoPilot.hold(o.keyUse, false); AutoPilot.shot(mc, "hud_tnt_empty"); }
+            case 606 -> AutoPilot.shot(mc, "hud_tnt_reload");
             // its arc from the muzzle: where a round would land, looking down a little (near), at our feet (red: inside
             // the blast) and lobbing it (far); then on a cow 14
             // blocks out (the arc ends on it); then a real round in flight along the arc it showed

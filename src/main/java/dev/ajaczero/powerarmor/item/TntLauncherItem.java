@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor.item;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.TntShell;
+import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
@@ -27,14 +28,21 @@ import net.minecraft.world.phys.Vec3;
  * Team Fortress 2's grenade launcher in the suit's steel. Each shot lobs a primed TNT block (TntShell) that blows up the
  * moment it hits something, as real TNT.
  *
- * <p>Decided with the user: the TNT comes from the suit's ammo slot (one block per shot; a creative pilot fires for
- * free), a tap fires one round and holding fires again each time it has reloaded (a second by default), the shot costs
- * no fuel unless the config says so, and the machine mind never fires it (no suit of yours lobs TNT round your base on
- * its own; rogues never carry one).
+ * <p>Decided with the user: the TNT comes from the suit's ammo slot (a creative pilot loads for free), the shot costs no
+ * fuel unless the config says so, and the machine mind never fires it (no suit of yours lobs TNT round your base on its
+ * own; rogues never carry one).
  *
- * <p>A repeating tool: while the trigger is held, the suit calls {@link #use} whenever the reload ({@link
- * #cooldownTicks}) has run out. After each shot the drum turns a quarter turn to bring the next round under the barrel
- * (client side, from the synced shot counter: TntLauncherEffects, drawn by ToolRotors).
+ * <p>The drum (user, 2026-10-27): it holds {@link #DRUM} rounds. While there are rounds in it, a tap fires one and
+ * holding fires one every half second ({@link #cooldownTicks}: shot_interval_ticks), so a full drum empties in under two
+ * seconds. Reloading is filling the chambers back up, one at a time (a second each, reload_ticks), from the ammo slot,
+ * starting half a second after the last shot (reload_delay_ticks); a shot interrupts the chamber being loaded, so you
+ * can fire whatever is loaded at any time. The rounds in the drum stay on the launcher item ({@link
+ * ModDataComponents#LOADED_ROUNDS}): take it out loaded and it goes back in loaded. The chamber being loaded is synced
+ * as the socket's spin (0..1), for the HUD's drum.
+ *
+ * <p>A repeating tool: while the trigger is held, the suit calls {@link #use} whenever {@link #cooldownTicks} have
+ * passed; the loading runs in {@link #serverTick}. After each shot the drum turns a quarter turn to bring the next round
+ * under the barrel (client side, from the synced shot counter: TntLauncherEffects, drawn by ToolRotors).
  */
 public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
     /** How far ahead the operator's aim is worked out (blocks): the round flies at what the crosshair is on. */
@@ -55,10 +63,59 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
         return new TntLauncherEffects();
     }
 
-    /** The reload: ticks between shots while the trigger is held. */
+    /** Rounds the drum holds (the model's four chambers). */
+    public static final int DRUM = 4;
+
+    /** Ticks between shots while the trigger is held (and between dry clicks on an empty drum). */
     @Override
     public int cooldownTicks() {
-        return PowerArmorConfig.TNT_LAUNCHER_RELOAD.get();
+        return PowerArmorConfig.TNT_LAUNCHER_SHOT_INTERVAL.get();
+    }
+
+    /** Both sides: rounds loaded in this launcher's drum. */
+    public static int loaded(ItemStack launcher) {
+        return Math.min(DRUM, launcher.getOrDefault(ModDataComponents.LOADED_ROUNDS.get(), 0));
+    }
+
+    /** Server: set the rounds in the drum of the launcher in this suit's socket (stored on the item, synced with it). */
+    public static void setLoaded(PowerArmorEntity suit, ItemStack launcher, int rounds) {
+        if (rounds <= 0) {
+            launcher.remove(ModDataComponents.LOADED_ROUNDS.get());
+        } else {
+            launcher.set(ModDataComponents.LOADED_ROUNDS.get(), Math.min(DRUM, rounds));
+        }
+        suit.getInventory().setChanged(); // a component changed in place: sync the socket's copy (the HUD's drum)
+    }
+
+    /** Server: one suit's loading state (not saved: a chamber half loaded when the world closes starts over). */
+    private static final class Drum {
+        int sinceShot = Integer.MAX_VALUE / 2;
+        int progress;
+    }
+
+    /** Server, every tick while it's in the socket: load the next chamber once the trigger has rested, from the ammo
+     *  slot (free for a creative pilot), while the suit has power; the chamber's progress goes to the clients as spin. */
+    @Override
+    public void serverTick(PowerArmorEntity suit) {
+        ItemStack launcher = suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT);
+        Drum drum = suit.socket().toolData(Drum.class, Drum::new);
+        drum.sinceShot = Math.min(drum.sinceShot + 1, Integer.MAX_VALUE / 2);
+        int loaded = loaded(launcher);
+        boolean free = suit.getControllingPassenger() instanceof Player pilot && pilot.hasInfiniteMaterials();
+        int reload = Math.max(1, PowerArmorConfig.TNT_LAUNCHER_RELOAD.get());
+        boolean loading = loaded < DRUM && suit.isPowered() && drum.sinceShot >= PowerArmorConfig.TNT_LAUNCHER_RELOAD_DELAY.get()
+                && (free || isRound(suit.getAmmoStack()));
+        if (!loading) {
+            drum.progress = 0;
+        } else if (++drum.progress >= reload) {
+            if (free || suit.takeAmmo(TntLauncherItem::isRound)) {
+                setLoaded(suit, launcher, loaded + 1);
+                // a round dropping into its chamber and the drum clicking round
+                suit.playSound(SoundEvents.CROSSBOW_LOADING_END.value(), 0.6F, 0.7F);
+            }
+            drum.progress = 0;
+        }
+        suit.socket().setSpin(drum.progress / (float) reload, 0F);
     }
 
     @Override
@@ -90,12 +147,21 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
             return false;
         }
         Vec3 muzzle = SocketAim.muzzlePosition(suit, operator);
-        if (!pilot.hasInfiniteMaterials() && !suit.takeAmmo(TntLauncherItem::isRound)) {
-            // An empty drum: the hammer clicks on nothing (once per reload while the trigger is held).
+        int loaded = loaded(tool);
+        if (loaded == 0) {
+            // An empty drum: the hammer clicks on nothing (once per shot interval while the trigger is held). With TNT in
+            // the ammo slot it's only reloading; with none, say so.
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.2F);
-            pilot.sendOverlayMessage(Component.translatable("message.powerarmor.no_tnt"));
+            if (!pilot.hasInfiniteMaterials() && !isRound(suit.getAmmoStack())) {
+                pilot.sendOverlayMessage(Component.translatable("message.powerarmor.no_tnt"));
+            }
             return false;
         }
+        setLoaded(suit, tool, loaded - 1);
+        Drum drum = suit.socket().toolData(Drum.class, Drum::new);
+        drum.sinceShot = 0; // the reload waits, and the chamber being loaded starts over
+        drum.progress = 0;
+        suit.socket().setSpin(0F, 0F); // (serverTick ran first this tick and may have counted it on)
         Launch launch = launch(suit, operator, 1F);
         level.addFreshEntity(new TntShell(level, operator, launch.from(), launch.velocity(),
                 PowerArmorConfig.TNT_LAUNCHER_POWER.get().floatValue(), PowerArmorConfig.TNT_LAUNCHER_BREAKS_BLOCKS.get()));
@@ -141,7 +207,8 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
         out.add(ParticleTypes.SMALL_FLAME, at.x, at.y, at.z, 2, 0.04, 0.04);
     }
 
-    /** Both sides: rounds left for this pilot's launcher (the ammo slot's TNT), or -1 for endless (creative). */
+    /** Both sides: rounds in reserve for this pilot's launcher (the ammo slot's TNT, not the drum), or -1 for endless
+     *  (creative). */
     public static int countRounds(PowerArmorEntity suit, Player pilot) {
         if (pilot.hasInfiniteMaterials()) {
             return -1;
@@ -162,8 +229,9 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
     @Override
     public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.tnt_launcher.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.translatable("item.powerarmor.tnt_launcher.stats",
-                String.format("%.1f", this.cooldownTicks() / 20F)).withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.accept(Component.translatable("item.powerarmor.tnt_launcher.stats", loaded(stack),
+                String.format("%.1f", this.cooldownTicks() / 20F),
+                String.format("%.1f", PowerArmorConfig.TNT_LAUNCHER_RELOAD.get() / 20F)).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

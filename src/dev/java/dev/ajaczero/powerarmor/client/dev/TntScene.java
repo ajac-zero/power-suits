@@ -3,6 +3,8 @@ package dev.ajaczero.powerarmor.client.dev;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.TntShell;
+import dev.ajaczero.powerarmor.item.TntLauncherItem;
+import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import java.io.BufferedWriter;
@@ -31,8 +33,9 @@ import net.neoforged.fml.loading.FMLPaths;
  * Autopilot scene for the TNT launcher (Phase 11): a suit with the launcher and 8 TNT in its ammo slot on flat grass by
  * day, facing +Z, a survival pilot inside (so the TNT really runs out). In front: a cobblestone wall 13 blocks out, and
  * three husks (no AI) 8 out and 6 to the side (clear of the shots at the wall). The pilot taps a round into the wall (third person, from behind; then a still side camera),
- * films the drum's quarter turn up close, taps one at the husks (cockpit), holds the trigger for a volley (one round per
- * reload), empties the drum (dry click, the HUD's red 0), and opens the menu with its ammo slot. Shots
+ * films the drum's quarter turn up close, taps one at the husks (cockpit), holds the trigger for a volley (the drum's
+ * rounds half a second apart), keeps holding on the empty drum (dry clicks; a round each time a chamber is loaded), and
+ * opens the menu with its ammo slot. The launcher starts with a loaded drum. Shots
  * {@code ap_tnt_*.png}, {@code ap_menu_ammo.png}; log run/autopilot_tnt.csv (tool uses, ammo on the server and the
  * client's synced copy, rounds in the air, husks alive, wall blocks left, the client's drum angle and recoil).
  * Runs alone with ./gradlew runAutopilotTnt (~35 s).
@@ -79,12 +82,19 @@ final class TntScene {
             case 122 -> AutoPilot.hold(o.keyUse, true);
             case 124 -> AutoPilot.hold(o.keyUse, false);
             case 123, 125, 127, 129, 131, 133, 135 -> AutoPilot.shot(mc, "tnt_husks_fp_" + s);
-            // hold: a volley, one round per reload, into what's left of the wall
-            case 140 -> { phase = "volley"; aim(b, 0, 1.0, WALL_Z); o.setCameraType(CameraType.THIRD_PERSON_BACK); }
+            // hold: a volley, a full drum half a second apart (topped up first: the taps above kept interrupting its
+            // reload), then one more each time a chamber is loaded, into what's left of the wall
+            case 140 -> { phase = "volley"; aim(b, 0, 1.0, WALL_Z); o.setCameraType(CameraType.THIRD_PERSON_BACK);
+                          AutoPilot.onServer(mc, p -> {
+                              PowerArmorEntity x = suit;
+                              if (x != null) {
+                                  TntLauncherItem.setLoaded(x, x.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT), TntLauncherItem.DRUM);
+                              }
+                          }); }
             case 144 -> AutoPilot.hold(o.keyUse, true);
             case 170 -> AutoPilot.shot(mc, "tnt_volley_back");
             case 186 -> AutoPilot.hold(o.keyUse, false);
-            // the last rounds, then an empty drum: dry clicks and a red 0
+            // still held on the empty drum: dry clicks, and a round each time a chamber is loaded (every 1.5 s)
             case 196 -> { phase = "empty"; o.setCameraType(CameraType.FIRST_PERSON); AutoPilot.hold(o.keyUse, true); }
             case 256 -> AutoPilot.shot(mc, "tnt_empty_fp");
             case 258 -> AutoPilot.hold(o.keyUse, false);
@@ -156,7 +166,9 @@ final class TntScene {
             DevUtil.firebox(s);
             s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 16));
             s.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
-            s.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.TNT_LAUNCHER.get()));
+            ItemStack launcher = new ItemStack(ModItems.TNT_LAUNCHER.get());
+            launcher.set(ModDataComponents.LOADED_ROUNDS.get(), TntLauncherItem.DRUM); // a loaded drum: the scene fires at once
+            s.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, launcher);
             s.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.TNT, 8));
             s.snapTo(x + 0.5, g, z + 0.5, 0, 0);
             s.setYBodyRot(0);
@@ -206,7 +218,7 @@ final class TntScene {
     private static void open() {
         try {
             csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_tnt.csv"));
-            csv.write("tick,phase,tool_uses,ammo,client_ammo,shells,husks,wall_blocks,client_drum,client_recoil,client_raise\n");
+            csv.write("tick,phase,tool_uses,ammo,drum_loaded,client_ammo,shells,husks,wall_blocks,client_drum,client_recoil,client_raise\n");
         } catch (IOException e) {
             PowerArmor.LOGGER.error("tnt csv", e);
         }
@@ -237,8 +249,9 @@ final class TntScene {
                 }
             }
             try {
-                w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%d,%.1f,%.2f,%.2f%n", s, p, x.socket().getUses(),
-                        x.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).getCount(), clientAmmo, shells, husks, wall, drum, recoil, raise));
+                w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%d,%d,%.1f,%.2f,%.2f%n", s, p, x.socket().getUses(),
+                        x.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).getCount(),
+                        TntLauncherItem.loaded(x.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT)), clientAmmo, shells, husks, wall, drum, recoil, raise));
             } catch (IOException ignored) {
                 // closed at the end of the scene
             }

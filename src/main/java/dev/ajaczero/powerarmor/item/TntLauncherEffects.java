@@ -1,6 +1,5 @@
 package dev.ajaczero.powerarmor.item;
 
-import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -19,12 +18,9 @@ final class TntLauncherEffects implements ToolEffects {
     private float drumAngle, drumAngleO;
     /** Degrees the drum still has to turn. */
     private float drumTurn;
-    /** Ticks since this client saw the last shot (the HUD's reload bar); starts loaded. */
-    private int sinceShot = Integer.MAX_VALUE / 2;
 
     @Override
     public void tick(PowerArmorEntity suit) {
-        this.sinceShot = Math.min(this.sinceShot + 1, Integer.MAX_VALUE / 2);
         this.drumAngleO = this.drumAngle;
         if (this.drumTurn > 0F) {
             float step = Math.min(DRUM_SPEED, this.drumTurn);
@@ -44,7 +40,6 @@ final class TntLauncherEffects implements ToolEffects {
 
     @Override
     public void shot(PowerArmorEntity suit) {
-        this.sinceShot = 0;
         this.drumTurn += 90F;
         LocalMuzzle muzzle = ToolEffects.localMuzzle(suit);
         if (muzzle != null) {
@@ -52,12 +47,13 @@ final class TntLauncherEffects implements ToolEffects {
         }
     }
 
-    /** HUD: rounds left (TNT in the ammo slot), low on the last one; the reload since the last shot (1 = ready). */
+    /** HUD: the rounds in reserve (TNT in the ammo slot; the drum's own rounds are on the launcher: TntLauncherItem.loaded),
+     *  low on the last round anywhere; the chamber being loaded (synced as the socket's spin, 0..1). */
     @Override
     public HudReadout hud(PowerArmorEntity suit, Player pilot) {
-        int rounds = TntLauncherItem.countRounds(suit, pilot);
-        float reload = Math.min(1F, this.sinceShot / (float) Math.max(1, PowerArmorConfig.TNT_LAUNCHER_RELOAD.get()));
-        return new HudReadout(rounds, rounds >= 0 && rounds <= 1, reload, false);
+        int reserve = TntLauncherItem.countRounds(suit, pilot);
+        int all = TntLauncherItem.loaded(suit.getSocketStack()) + Math.max(0, reserve);
+        return new HudReadout(reserve, reserve != HudReadout.ENDLESS && all <= 1, suit.socket().getSpin(), false);
     }
 
     @Override

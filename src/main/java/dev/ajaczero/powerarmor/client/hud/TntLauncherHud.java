@@ -27,9 +27,9 @@ import net.minecraft.world.phys.Vec3;
  *   the aim. Where the blast would reach the suit (an explosion's reach is twice its strength) the arc and the diamond
  *   turn red. A round that would hit nothing goes off in the air when its fuse runs out: a small x there.</li>
  *   <li>The drum, in the top right corner like the chaingun's ammo (user, 2026-10-27): a revolver drum seen from behind,
- *   one chamber per round (filled while it holds one, the next rounds clockwise from the top), the top one under the
- *   barrel filling while it reloads; AMMO and the rounds left on the big counter beside it, LOAD under them while it
- *   reloads. Red on the last round.</li>
+ *   one chamber per round loaded (filled, from the top clockwise), the next empty one filling up while it's being
+ *   loaded; AMMO and the rounds in reserve (the ammo slot) on the big counter beside it, LOAD under them while it
+ *   loads. Red on the last round.</li>
  * </ul>
  */
 public final class TntLauncherHud implements ToolHud {
@@ -51,13 +51,14 @@ public final class TntLauncherHud implements ToolHud {
             return "";
         }
         String arc = arc(g, v);
-        boolean last = r.lowAmmo() || r.count() == 0;
+        boolean last = r.lowAmmo();
         v.ammoRow(g, r.count(), last);
-        if (r.bar() < 1F) {
+        int loaded = TntLauncherItem.loaded(v.suit.getSocketStack());
+        if (r.bar() > 0F) {
             v.cornerLabel(g, Component.translatable("hud.powerarmor.load"), HudView.CORNER_Y0 + 18, v.faint(last));
         }
-        drum(g, v, v.cornerLeft() - DRUM_GAP - (2 * SPREAD + CHAMBER) / 2, HudView.CORNER_Y0 + 16, r, last);
-        return String.format(Locale.ROOT, "rounds=%d reload=%.2f %s", r.count(), r.bar(), arc);
+        drum(g, v, v.cornerLeft() - DRUM_GAP - (2 * SPREAD + CHAMBER) / 2, HudView.CORNER_Y0 + 16, loaded, r.bar(), last);
+        return String.format(Locale.ROOT, "drum=%d reserve=%d loading=%.2f %s", loaded, r.count(), r.bar(), arc);
     }
 
     /** The arc and where it ends; returns that for the log. */
@@ -116,21 +117,20 @@ public final class TntLauncherHud implements ToolHud {
     }
 
     /**
-     * The drum seen from behind, centred on (x, y): a hub and four chambers round it, one per round it holds. The top one
-     * is under the barrel: it fills from the bottom while the launcher reloads (lit when the round is ready); the others,
-     * clockwise, are filled for the rounds behind it and left as rings once there are fewer than four.
+     * The drum seen from behind, centred on (x, y): a hub and four chambers round it, one per round. The loaded ones are
+     * filled, from the top (under the barrel: the next to fire) clockwise; the first empty one fills from the bottom while
+     * it's being loaded ({@code loading} 0..1); the rest are rings.
      */
-    private static void drum(GuiGraphicsExtractor g, HudView v, int x, int y, HudReadout r, boolean warn) {
+    private static void drum(GuiGraphicsExtractor g, HudView v, int x, int y, int rounds, float loading, boolean warn) {
         int lit = v.main(warn), faint = v.faint(warn);
-        int rounds = r.count() == HudReadout.ENDLESS ? 4 : Math.max(0, r.count());
         g.fill(x - HUB / 2, y - HUB / 2, x - HUB / 2 + HUB, y - HUB / 2 + HUB, faint);
         int[][] chambers = {{0, -SPREAD}, {SPREAD, 0}, {0, SPREAD}, {-SPREAD, 0}};
         for (int i = 0; i < chambers.length; i++) {
             int x0 = x + chambers[i][0] - CHAMBER / 2, y0 = y + chambers[i][1] - CHAMBER / 2;
             boolean loaded = i < rounds;
-            if (i == 0 && loaded) {
+            if (i == rounds && loading > 0F) {
                 g.fill(x0, y0, x0 + CHAMBER, y0 + CHAMBER, v.dim(warn));
-                int h = Math.round(CHAMBER * Math.min(1F, Math.max(0F, r.bar())));
+                int h = Math.round(CHAMBER * Math.min(1F, loading));
                 if (h > 0) {
                     g.fill(x0, y0 + CHAMBER - h, x0 + CHAMBER, y0 + CHAMBER, lit);
                 }
