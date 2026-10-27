@@ -5,7 +5,7 @@ inside it, drawn on Minecraft's GUI pixel grid like the pumpkin overlay but only
 
 Writes src/main/resources/assets/powerarmor/textures/gui/visor/:
   corner_top.png / corner_bottom.png   the top-left / bottom-left corner pieces (the right ones are the same, drawn
-                                       mirrored): dark slate with a 1 px steel lip along the edge facing the glass
+                                       mirrored), solid black like the pumpkin's overlay: what you see without power
   brow.png                             the middle piece of the top edge (the helmet's visor band), on its own
   <piece>_lip.png                      the piece's steel lip alone: all that's left of it while the suit has power
                                        (the visor shows the view through the metal, 2026-10-27 option B of
@@ -19,7 +19,9 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter
 
 OUT = Path(__file__).resolve().parent.parent / "src/main/resources/assets/powerarmor/textures/gui/visor"
-SLATE, LIP = (22, 25, 31, 245), (54, 60, 70, 250)
+# The solid piece (no power) is pure black and opaque, like the pumpkin's overlay (user, 2026-10-27: dark slate at 96%
+# read as grey and see-through). The lip texture keeps its steel: it's what's left of the piece while the visor has power.
+BLACK, LIP = (0, 0, 0, 255), (54, 60, 70, 250)
 
 # Each piece: its canvas size and outline polygon (GUI px, top-left piece / bottom-left piece / brow). The top corner
 # is 19 px deep at the side and ends 100 px in; the bottom one 28 deep, ending 84 in; the brow 132 wide, 6 deep, with
@@ -48,7 +50,7 @@ def main() -> None:
         for y in range(size[1]):
             for x in range(size[0]):
                 if m[x, y]:
-                    p[x, y] = LIP if near_glass[x, y] else SLATE
+                    p[x, y] = BLACK
                     if near_glass[x, y]:
                         l[x, y] = LIP
         piece.save(OUT / f"{name}.png")

@@ -85,14 +85,20 @@ public final class SuitHud {
     /** Vanilla's boss bars start at y 12 and its effect icons at y 1 (the top right): moved down this far under the
      *  compass and the tool readout while the HUD is up (user's pick A, 2026-10-27: vanilla's own bars, moved). */
     private static final int BOSS_SHIFT = 30, EFFECTS_SHIFT = 62;
+    /** The readouts' height, top to bottom (the compass tape's first row to the fuel bar's last), around whose middle
+     *  line they open and close (VisorPower); BAND_HALF covers half of it. */
+    private static final int BAND_TOP = TAPE_Y - 1, BAND_BOTTOM = TOP - 4 + 30, BAND_HALF = (BAND_BOTTOM - BAND_TOP) / 2 + 1;
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
         PowerArmorEntity suit = shownFor(mc);
         if (suit == null) {
             shown = null;
+            VisorPower.forget();
             return;
         }
+        VisorPower.watch(suit);
+        VisorPower.Readouts open = VisorPower.readouts();
         Player pilot = mc.player;
         Font font = mc.font;
         boolean powered = suit.isPowered();
@@ -109,12 +115,13 @@ public final class SuitHud {
                 : energy > 0 ? Component.literal(PowerArmorItem.formatWalkTime(energy))
                 : Component.translatable("gui.powerarmor.no_fuel");
         float hull = Mth.clamp(suit.getHealth() / suit.getMaxHealth(), 0F, 1F);
-        if (!powered) {
-            // The projector runs on the suit's power: with none, the glass is dark but for the reason, blinking red.
+        if (!powered && open.closed()) {
+            // The projector runs on the suit's power: with none, the glass is dark but for the reason, blinking red
+            // (once the readouts have squeezed shut: VisorPower).
             if (blink) {
                 g.text(font, fuelText, x0 + 26, y0 + 4, colour(RED), false);
             }
-            shown = new Shown(hull, power.fuelGauge(), blink ? fuelText.getString() : "", 0, true, false, "", HudReadout.NO_COUNT, 0F, "");
+            shown = new Shown(hull, power.fuelGauge(), blink ? fuelText.getString() : "", 0, true, false, "", HudReadout.NO_COUNT, 0F, "", 0F);
             return;
         }
 
@@ -131,6 +138,20 @@ public final class SuitHud {
         int main = colour(rgb);
         int dim = colour(VisorConfig.dim(rgb, DIM));
         int faint = colour(VisorConfig.dim(rgb, FAINT));
+
+        // Warming up or shutting down (VisorPower): the readouts show only in a band around their middle line, opening
+        // out of it or squeezing into it, in whole GUI pixels; the line itself is drawn after them.
+        int bandHalf = Math.round(open.band() * BAND_HALF);
+        int cy = (BAND_TOP + BAND_BOTTOM) / 2;
+        if (bandHalf <= 0) {
+            line(g, open, rgb);
+            shown = new Shown(hull, power.fuelGauge(), fuelText.getString(), 0, critical, powered, "", HudReadout.NO_COUNT, 0F, "", 0F);
+            return;
+        }
+        boolean clipped = bandHalf < BAND_HALF;
+        if (clipped) {
+            g.enableScissor(0, cy - bandHalf, g.guiWidth(), cy + 1 + bandHalf);
+        }
 
         // ---- top left: the suit ---------------------------------------------------------------------------------
         for (Identifier piece : FIGURE) {
@@ -183,9 +204,25 @@ public final class SuitHud {
         // ---- top centre: compass and clock ------------------------------------------------------------------------
         String clock = compassAndClock(g, mc, font, main, faint, delta);
 
-        shown = new Shown(hull, fuel, fuelText.getString(), embers, critical, true,
+        if (clipped) {
+            g.disableScissor();
+        }
+        line(g, open, rgb);
+        shown = new Shown(hull, fuel, fuelText.getString(), embers, critical, powered,
                 tool == null ? "" : BuiltInRegistries.ITEM.getKey(toolStack.getItem()).getPath(),
-                tool == null ? HudReadout.NO_COUNT : tool.count(), tool == null ? 0F : tool.bar(), clock);
+                tool == null ? HudReadout.NO_COUNT : tool.count(), tool == null ? 0F : tool.bar(), clock, open.band());
+    }
+
+    /** The warm-up's line across the middle of the readouts (from the left readout's edge to the right one's), drawn
+     *  from the centre out as far as {@code open.line()} says, in the readouts' colour. */
+    private static void line(GuiGraphicsExtractor g, VisorPower.Readouts open, int rgb) {
+        int alpha = Math.round(open.lineAlpha() * 255);
+        int half = Math.round(open.line() * (g.guiWidth() / 2 - MARGIN));
+        if (alpha <= 0 || half <= 0) {
+            return;
+        }
+        int cx = g.guiWidth() / 2, cy = (BAND_TOP + BAND_BOTTOM) / 2;
+        g.fill(cx - half, cy, cx + half, cy + 1, (alpha << 24) | rgb);
     }
 
     /**
@@ -372,9 +409,10 @@ public final class SuitHud {
 
     // ---- For the autopilot's logs ---------------------------------------------------------------------------------
 
-    /** What the HUD drew last frame (dev/autopilot logs), or null when it wasn't shown. */
+    /** What the HUD drew last frame (dev/autopilot logs), or null when it wasn't shown; open: how far the readouts were
+     *  open (VisorPower, 0 = only the line or nothing, 1 = all). */
     public record Shown(float hull, float fuel, String fuelText, int embers, boolean critical, boolean powered,
-                        String tool, int count, float bar, String compass) {}
+                        String tool, int count, float bar, String compass, float open) {}
 
     @Nullable
     private static volatile Shown shown;
