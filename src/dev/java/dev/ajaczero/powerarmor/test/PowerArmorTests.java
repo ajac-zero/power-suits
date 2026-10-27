@@ -2405,6 +2405,43 @@ public final class PowerArmorTests {
     }
 
     // =========================================================================================
+    // The power switch (user, 2026-10-27): off = unpowered with the fuel kept
+    // =========================================================================================
+
+    /** A running suit switched off goes down and burns nothing with its fuel in; it stays off through saving, packing and
+     *  deploying (and an item from before the switch comes out on); switched on again it runs. */
+    @SuitTest(timeoutTicks = 80)
+    public static void powerSwitchParksASuitWithItsFuel(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 2));
+        helper.runAfterDelay(3, () -> {
+            helper.assertTrue(suit.isPowered() && suit.power().isSwitchedOn(), "fuel and a helmet: it runs");
+            suit.flipPowerSwitch();
+            helper.assertTrue(!suit.power().isSwitchedOn() && !suit.isPowered(), "switched off: down at once");
+        });
+        int[] energy = new int[1];
+        helper.runAfterDelay(5, () -> energy[0] = suit.power().getTotalEnergy());
+        helper.runAfterDelay(45, () -> {
+            helper.assertTrue(!suit.isPowered() && suit.power().getTotalEnergy() == energy[0],
+                    "off, nothing burns: " + energy[0] + " -> " + suit.power().getTotalEnergy());
+            CompoundTag saved = saveTag(helper, suit);
+            PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
+            loadTag(helper, loaded, saved);
+            helper.assertTrue(!loaded.power().isSwitchedOn() && !loaded.isPowered(), "saved switched off");
+            helper.assertTrue(!suit.getLoadout().switchedOn(), "packed switched off");
+            var ops = helper.getLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE);
+            helper.assertTrue(SuitLoadout.CODEC.parse(ops, new CompoundTag()).getOrThrow().switchedOn(), "an old item: on");
+            PowerArmorEntity deployed = suitAt(helper, new BlockPos(6, 2, 6));
+            deployed.applyLoadout(suit.getLoadout());
+            helper.assertTrue(!deployed.power().isSwitchedOn() && !deployed.isPowered(), "deployed switched off");
+            suit.flipPowerSwitch();
+        });
+        helper.runAfterDelay(48, () -> {
+            helper.assertTrue(suit.power().isSwitchedOn() && suit.isPowered(), "switched on: it runs again");
+            helper.succeed();
+        });
+    }
+
+    // =========================================================================================
     // The helmet (2026-10-19): seals the suit and lets the machine mind run
     // =========================================================================================
 
@@ -2721,7 +2758,7 @@ public final class PowerArmorTests {
                 "the packed item carries its engine, got " + loadout);
         // A loadout's codec must keep "taken out" (an empty stack) apart from "from before the engines" (no field).
         var ops = helper.getLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE);
-        SuitLoadout noEngine = new SuitLoadout(ItemStack.EMPTY, ItemStack.EMPTY, 0, 0, 0, ItemStack.EMPTY, Optional.of(ItemStack.EMPTY), ItemStack.EMPTY);
+        SuitLoadout noEngine = new SuitLoadout(ItemStack.EMPTY, ItemStack.EMPTY, 0, 0, 0, ItemStack.EMPTY, Optional.of(ItemStack.EMPTY), ItemStack.EMPTY, true);
         SuitLoadout back = SuitLoadout.CODEC.parse(ops, SuitLoadout.CODEC.encodeStart(ops, noEngine).getOrThrow()).getOrThrow();
         helper.assertTrue(back.engine().isPresent() && back.engine().get().isEmpty(), "an empty engine slot survives the codec, got " + back);
         SuitLoadout before = SuitLoadout.CODEC.parse(ops, SuitLoadout.CODEC.encodeStart(ops, SuitLoadout.EMPTY).getOrThrow()).getOrThrow();

@@ -101,7 +101,7 @@ Why each rule exists is in `power-armor-lessons.md`.
 - **GameTests:** no shared mutable state (tests and their copies run side by side; world settings go in the batch's test
   environment); turn mock pilots with `lookAt` / `turn`; create mock server players with `mockServerPlayer`; search for
   entities near your own position only. A suit that should run needs an engine, fuel and a helmet (`suitAt` gives the
-  engine and helmet; scenes call `DevUtil.firebox`); a powered suit's mind acts: take the fuel out to park one.
+  engine and helmet; scenes call `DevUtil.firebox`); a powered suit's mind acts: switch it off (`flipPowerSwitch`) or take the fuel out to park one.
 - **Autopilot worlds are peaceful** (set the difficulty in a scene that needs monsters); scripts that use a tool empty the
   pilot's hand first; call `setSprinting(false)` after a sprint.
 

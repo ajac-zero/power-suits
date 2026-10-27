@@ -293,5 +293,9 @@
   "powerarmor.configuration.tidal_dry_grace": "Tidal grace out of water",
   "powerarmor.configuration.tidal_dry_grace.tooltip": "Tidal engine: ticks it keeps running free after leaving the water (a shoreline mustn't flicker it).",
   "tooltip.powerarmor.tidal_fuel": "Tidal Engine on land: %s of walking",
-  "tooltip.powerarmor.reactor_fuel": "Powers a Star Reactor forever"
+  "tooltip.powerarmor.reactor_fuel": "Powers a Star Reactor forever",
+  "key.category.powerarmor.power_armor": "Power Armor",
+  "key.powerarmor.power_switch": "Power switch (while piloting)",
+  "message.powerarmor.switched_off": "Power switched off",
+  "hud.powerarmor.switched_off": "POWER OFF"
 }

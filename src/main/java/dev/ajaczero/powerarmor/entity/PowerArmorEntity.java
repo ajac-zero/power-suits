@@ -139,6 +139,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Who the machine mind works for (SuitMind ordinal): the visor shows it. */
     private static final EntityDataAccessor<Byte> MIND =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BYTE);
+    /** The power switch (SuitPower): off, the suit is unpowered even with fuel in it. Synced: the HUD and menu say OFF. */
+    static final EntityDataAccessor<Boolean> SWITCHED_ON =
+            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
     /** Held in another suit's EM field (synced: the pilot's client moves a piloted suit, so it must know). */
     static final EntityDataAccessor<Boolean> FIELD_HELD =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
@@ -242,6 +245,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(STUNNED, false);
         builder.define(MIND, (byte) SuitMind.FRIENDLY.ordinal());
         builder.define(FIELD_HELD, false);
+        builder.define(SWITCHED_ON, true);
         builder.define(PAINT, (byte) -1);
         builder.define(ENGINE, (byte) -1);
         builder.define(ENGINE_UNDER_WATER, false);
@@ -562,7 +566,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public SuitLoadout getLoadout() {
         return new SuitLoadout(this.inventory.getItem(FUEL_SLOT).copy(), this.inventory.getItem(SOCKET_SLOT).copy(),
                 Mth.ceil(this.power.getBurnLeftExact()), this.power.getBurnTotal(), this.oldNuggets, this.inventory.getItem(HELMET_SLOT).copy(),
-                Optional.of(this.inventory.getItem(ENGINE_SLOT).copy()), this.inventory.getItem(OLD_AMMO_SLOT).copy());
+                Optional.of(this.inventory.getItem(ENGINE_SLOT).copy()), this.inventory.getItem(OLD_AMMO_SLOT).copy(),
+                this.power.isSwitchedOn());
     }
 
     public void applyLoadout(SuitLoadout loadout) {
@@ -576,7 +581,21 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.power.slotsRestored(); // not a swap: keep the half-burnt item
         this.power.setBurn(loadout.burnLeft(), loadout.burnTotal());
         this.oldNuggets = loadout.nuggets();
+        this.power.restoreSwitch(loadout.switchedOn()); // a suit packed switched off comes out off
         this.entityData.set(POWERED, this.power.shouldRun(null));
+    }
+
+    /**
+     * Server: flip the power switch (user, 2026-10-27; the menu's button, or the pilot's key: PowerSwitchPayload). Off,
+     * the suit is unpowered like one with nothing to burn (it slumps, its mind stops, the visor goes dark) but keeps its
+     * fuel: the way to park a suit. A rogue's switch is out of reach.
+     */
+    public void flipPowerSwitch() {
+        if (this.isRogue() || this.level().isClientSide()) {
+            return;
+        }
+        this.playSound(SoundEvents.LEVER_CLICK, 1.0F, this.power.isSwitchedOn() ? 0.5F : 0.6F);
+        this.power.setSwitchedOn(!this.power.isSwitchedOn());
     }
 
     /** Server: turn this parked suit back into an item (with its fuel and tool) for the player. Refused while its

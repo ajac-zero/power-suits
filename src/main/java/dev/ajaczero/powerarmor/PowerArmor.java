@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.HelmetStyle;
 import dev.ajaczero.powerarmor.item.ModTooltip;
+import dev.ajaczero.powerarmor.network.PowerSwitchPayload;
 import dev.ajaczero.powerarmor.network.ToolTriggerPayload;
 import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
@@ -48,6 +49,7 @@ public class PowerArmor {
         modBus.addListener(PowerArmor::addToCreativeTab);
         // Network messages (client -> server: socket tool button (right click) pressed/released).
         modBus.addListener(ToolTriggerPayload::register);
+        modBus.addListener(PowerSwitchPayload::register); // the pilot's power switch key
         // Our items' own tooltip lines (item/ModTooltip), where vanilla's deprecated appendHoverText used to put them.
         modBus.addListener(PowerArmor::registerTooltips);
         // GameTests and the autopilot live in src/dev/ (not shipped): they register from dev/PowerArmorDev.

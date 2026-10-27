@@ -47,6 +47,9 @@ public final class SuitPower {
     private int dryTicks = Integer.MAX_VALUE / 2;
     /** Server: ticks left of a lightning knock-out (0 = none). */
     private int stunTicks;
+    /** Server: the power switch (user, 2026-10-27): off, the suit is unpowered whatever it has to burn, so fuel can stay
+     *  in it. Only {@link #setSwitchedOn} writes it (it also syncs it: the HUD and the menu say OFF). */
+    private boolean switchedOn = true;
 
     SuitPower(PowerArmorEntity suit) {
         this.suit = suit;
@@ -168,6 +171,7 @@ public final class SuitPower {
             if (this.suit.getControllingPassenger() instanceof Player pilot) {
                 SuitEngine engine = this.suit.getEngine();
                 pilot.sendOverlayMessage(Component.translatable(this.stunTicks > 0 ? "message.powerarmor.lightning"
+                        : !this.switchedOn ? "message.powerarmor.switched_off"
                         : engine == null ? "message.powerarmor.no_engine"
                         : this.isFlooded() ? "message.powerarmor.flooded"
                         : engine == SuitEngine.TIDAL ? "message.powerarmor.tidal_dry"
@@ -249,9 +253,23 @@ public final class SuitPower {
 
     // ---- Energy -----------------------------------------------------------------------------------------------------
 
-    /** Should the engine run: energy on board and someone to drive, the pilot or the mind (which needs the helmet). */
+    /** Should the engine run: switched on, energy on board and someone to drive, the pilot or the mind (which needs the
+     *  helmet). A rogue has no switch anyone can reach. */
     boolean shouldRun(@Nullable Player pilot) {
-        return this.hasEnergy() && (pilot != null || this.suit.hasHelmet());
+        return (this.switchedOn || this.suit.isRogue()) && this.hasEnergy() && (pilot != null || this.suit.hasHelmet());
+    }
+
+    // ---- The power switch -------------------------------------------------------------------------------------------
+
+    /** Both sides: the power switch is on (synced). Off, the suit acts just as if it had nothing to burn. */
+    public boolean isSwitchedOn() {
+        return this.suit.getEntityData().get(PowerArmorEntity.SWITCHED_ON);
+    }
+
+    /** Server: flip the switch; the engine follows on this tick (setPowered: the slump or the stand-up, the sounds). */
+    void setSwitchedOn(boolean on) {
+        this.restoreSwitch(on);
+        this.setPowered(this.shouldRun(this.suit.getControllingPassenger() instanceof Player p ? p : null) && this.stunTicks == 0);
     }
 
     /** Energy available right now: the burning item, or an item waiting in the slot. */
@@ -360,6 +378,12 @@ public final class SuitPower {
 
     /** The slots were just filled from a save or a packed item: whatever engine is in is the one that was running (not a
      *  swap, so the half-burnt item stays). */
+    /** The switch as it was saved (a save, a packed item): set, no sounds (the caller sets the powered flag). */
+    void restoreSwitch(boolean on) {
+        this.switchedOn = on;
+        this.suit.getEntityData().set(PowerArmorEntity.SWITCHED_ON, on);
+    }
+
     void slotsRestored() {
         this.lastEngine = SuitEngine.of(this.slots().getItem(PowerArmorEntity.ENGINE_SLOT));
         this.engineSeen = true;
@@ -369,6 +393,7 @@ public final class SuitPower {
         this.dryTicks = tag.getIntOr("TidalDry", Integer.MAX_VALUE / 2);
         this.suit.getEntityData().set(PowerArmorEntity.ENGINE_UNDER_WATER, tag.getBooleanOr("EngineUnderWater", false));
         this.setBurnState(tag.getFloatOr("BurnLeft", 0F), tag.getIntOr("BurnTotal", 0));
+        this.restoreSwitch(tag.getBooleanOr("SwitchedOn", true)); // suits from before the switch: on
         this.slotsRestored();
     }
 
@@ -377,5 +402,6 @@ public final class SuitPower {
         tag.putBoolean("EngineUnderWater", this.isEngineUnderWater());
         tag.putFloat("BurnLeft", this.burnLeft);
         tag.putInt("BurnTotal", this.burnTotal);
+        tag.putBoolean("SwitchedOn", this.switchedOn);
     }
 }

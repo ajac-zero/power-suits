@@ -76,7 +76,7 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
 ## The machine mind (AI)
 - **A powered suit always runs (the machine mind, Phase 8)**: with fuel and nobody inside it burns the idle rate, looks at
   players and walks back to its home; anything that leaves fuelled suits around (tests, autopilot scenes) gets that.
-  To park one, take the fuel out. Its state is only set on its first tick: tests wait 2 ticks before boarding/aiming.
+  To park one, switch it off (`flipPowerSwitch`, 2026-10-27) or take the fuel out. Its state is only set on its first tick: tests wait 2 ticks before boarding/aiming.
 - **Vanilla mobs move at speed squared**: `MoveControl` passes the speed as the forward input (zza) and `moveRelative`
   applies it again (a 0.119 suit crawled at 0.6 blocks/s). `PowerArmorEntity.travel` normalises the mind's input, so
   a navigation speed of 1.0 = the pilot's walk. Measure position deltas, not `getDeltaMovement()` (it already holds the
