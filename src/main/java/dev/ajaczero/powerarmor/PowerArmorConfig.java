@@ -85,8 +85,9 @@ public final class PowerArmorConfig {
             .comment("How far away (blocks) the beam can grab something.").translation(key("em_range"))
             .defineInRange("range", 16.0, 2, 64);
     public static final ModConfigSpec.DoubleValue EM_SLAM_DAMAGE = B
-            .comment("Wall-slam damage per block/tick of speed above 0.5 (a full-speed throw: about 13).").translation(key("em_slam_damage"))
-            .defineInRange("slam_damage", 12.0, 0, 1000);
+            .comment("Damage of a full-speed throw's impact: a thrown mob slamming into a wall, or bowling into another mob (both",
+                    "take it). Slower impacts do less, in proportion to the speed above 0.5 blocks/tick.").translation(key("em_slam_damage"))
+            .defineInRange("slam_damage", 20.0, 0, 1000);
 
     // ---- mining drill --------------------------------------------------------------------------------
     public static final ModConfigSpec.IntValue DRILL_ENERGY = B.pop().translation(key("drill")).push("drill")

@@ -23,7 +23,7 @@ Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outs
 | Install a tool | Put a power tool (Chaingun, EM Projector, Mining Drill, Chainsaw, Flamethrower, TNT Launcher, Rail Cannon) in the menu's socket slot; it appears on the suit's left arm |
 | Your hand | Works as normal while piloting: the suit's right hand holds your selected item; left click punches, fights and mines, right click places, opens doors, throws potions... 1.5 blocks extra reach. No eating or drinking (you're sealed in): food in your hand counts as nothing to do, so right click goes to the tool |
 | Use the tool | Right-click when your hand has nothing to do (empty hand, a sword, aiming at the air with blocks...), like a shield in the off hand; hold it as long as you need. The tool arm raises while in use |
-| EM Projector | Hold right-click on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it, tap to shove. 1 fuel/tick while holding, 80 per throw |
+| EM Projector | Hold right-click on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it (into a wall, or bowling through other mobs: 10 hearts each at full speed), tap to shove. The visor marks what it can pull. 1 fuel/tick while holding, 80 per throw |
 | Mining Drill | Hold right-click on a block: digs it and the 8 around it (a 3x3 face of a wall, floor or ceiling) like a diamond pickaxe + shovel. 20 fuel per block |
 | Chainsaw | Hold right-click on wood or leaves to cut it; cutting a tree's trunk fells everything above the cut. 15 fuel per log |
 | Flamethrower | Hold right-click: a stream of fire about 7 blocks toward your crosshair. Sets mobs and blocks alight, melts ice and snow, lights campfires and candles, sets off TNT, cooks food lying on the ground. Dead under water. 6 fuel per tick |
@@ -123,10 +123,12 @@ blinking. It's terminal green by default: pick your own colour under
     blast to reach you (twice its strength: 8 blocks by default) the arc and the diamond turn **red**. Top right, where
     the chaingun's ammo is: the revolver **drum**, a filled chamber per round loaded (the next empty one fills while
     it's being loaded), AMMO and the TNT left in the ammo slot, LOAD while it loads.
-  - **EM projector**: nothing while idle; **SCAN...** under the crosshair while you hold the button and it's still
-    looking; and while it holds something, corner brackets round it with its name over them (**HEAVY** first for
-    something too heavy to lift, which it only drags and shoves) and its health, and the **arc** it would be thrown
-    along if you let go now, to a diamond where it would land (moves with your aim).
+  - **EM projector**: it scans on its own: everything within its range (16 blocks) you can see that it could pull
+    (mobs, dropped items) gets small faint corner brackets, and so does every other player (whether PvP lets you grab
+    them or not); the nearest 10. What a click would grab now (under the crosshair) gets bright brackets, its name
+    and its health. While it holds something: brackets round it with its name over them (**HEAVY** first for something
+    too heavy to lift, which it only drags and shoves) and its health, and the **arc** it would be thrown along if you
+    let go now, to a diamond where it would land (moves with your aim); the marked mobs in its way light up.
 - **Top centre, compass and clock** (the helmet is crafted with both), as terminal text: a compass tape that slides a
   character (5°) at a time with a `^` under where you face, your heading in degrees (0 north, 90 east), the day and the
   time (`DAY 12  18:40`). Like the vanilla items they only work in the overworld: elsewhere the tape spins and they read
@@ -162,7 +164,10 @@ mount. Other suits and the heavyweights in the entity tag `powerarmor:em_heavy` 
 datapack can add more) are too heavy to lift:
 they fight the field, held in place and slowed to a crawl (a piloted suit moves at a quarter speed), dragged a little,
 and letting go only shoves them. Never spectators, creative players or no-AI "statue" mobs.
-Thrown mobs that hit a wall take damage ("slammed into a wall"). Socket only. A redstone electromagnet: four
+Thrown mobs that hit a wall take damage ("slammed into a wall"), and they bowl through any mob in their way: each one
+they hit takes the impact ("bowled over", credited to you) and is knocked along, and so does the thrown mob, which flies
+on to the next. A full-speed impact does 10 hearts (config `slam_damage`: enough to kill a zombie, a skeleton or a
+creeper), a slower one less. Socket only. A redstone electromagnet: four
 copper-wound prongs round a redstone lens; the lens glows faintly while it's mounted in a powered suit and the prong
 tips light up and spark while it holds something; the beam is redstone dust.
 
@@ -318,7 +323,7 @@ src/main/java/dev/ajaczero/powerarmor/
   entity/ai/SuitWork.java    where the drill and chainsaw minds may work (the hall, natural trees)
   entity/RogueSpawner.java   rogue suits turning up once in a while (saved day countdown, like the wandering trader)
   item/ChaingunItem.java     the first tool: spin-up, nugget ammo, overheat (continuous tool; also a GeckoLib item)
-  item/EmProjectorItem.java  the second tool: grab / hold / collect / throw, slam damage (per-suit state in Beam)
+  item/EmProjectorItem.java  the second tool: grab / hold / collect / throw, slam and bowling damage (per-suit state in Beam)
   item/SocketAim.java        muzzle position, crosshair aim point, entity under the crosshair
   item/DrillItem.java        the third tool: 3x3 digging at diamond pickaxe/shovel speed
   item/ChainsawItem.java     the fourth tool: cuts wood, fells natural trees top-down
@@ -377,6 +382,7 @@ src/main/resources/
   assets/powerarmor/textures/item/*.png               every item icon, 16 px pixel art drawn by model/art/item_icons_art.py
   data/powerarmor/damage_type/bullet.json             "shredded" damage type (+ minecraft is_projectile, no_knockback, bypasses_cooldown tags)
   data/powerarmor/damage_type/em_slam.json            "slammed into a wall" (EM throws)
+  data/powerarmor/damage_type/em_struck.json          "bowled over" (a thrown mob hitting another)
   data/powerarmor/recipe/*.json                       crafting recipes (suit parts, suit + 4 tools)
 ```
 

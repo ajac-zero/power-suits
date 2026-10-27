@@ -966,6 +966,41 @@ public final class PowerArmorTests {
         });
     }
 
+    /** A thrown mob bowls through the mobs in its way (2026-10-27): each takes the impact (a full-speed throw's: the
+     *  config's slam damage) as "bowled over", credited to the pilot, and so does the thrown one, which flies on to the
+     *  next even if the first hit killed it. Two husks (no AI) stand in its path, 1 and 2 blocks on. */
+    @SuitTest(timeoutTicks = 80)
+    public static void emThrownMobBowlsThroughMobs(GameTestHelper helper) {
+        PowerArmorEntity suit = emSuit(helper);
+        Pig pig = floatingPigTarget(helper);
+        Player pilot = emPilotLookingAt(helper, suit, pig.position().add(0, 0.45, 0));
+        suit.socket().setTriggerHeld(pilot, true);
+        net.minecraft.world.entity.monster.zombie.Husk[] husks = new net.minecraft.world.entity.monster.zombie.Husk[2];
+        helper.runAfterDelay(25, () -> {
+            helper.assertTrue(suit.socket().getBeamTarget() == pig, "holding the pig");
+            Vec3 rel = helper.relativeVec(pig.position());
+            // standing on the floor in its path (it's held low: the pilot looked down at it)
+            husks[0] = statueHusk(helper, new Vec3(rel.x, 2, rel.z + 1.0));
+            husks[1] = statueHusk(helper, new Vec3(rel.x, 2, rel.z + 2.0)); // (the pad's barrier wall is at z 9)
+            turn(pilot, 0, 0); // look straight ahead along +Z, then let go
+            suit.socket().setTriggerHeld(pilot, false);
+        });
+        // checked a few ticks after the throw: later, the knocked-back husks suffocate in the test's barrier wall
+        helper.runAfterDelay(29, () -> {
+            for (int i = 0; i < 2; i++) {
+                var h = husks[i];
+                helper.assertTrue(h.getHealth() < h.getMaxHealth() || !h.isAlive(), "husk " + (i + 1) + " was hit, health " + h.getHealth());
+                var src = h.getLastDamageSource();
+                helper.assertTrue(src != null && src.is(EmProjectorItem.EM_STRUCK) && src.getEntity() == pilot,
+                        "husk " + (i + 1) + " bowled over, by the pilot: " + src + " at " + helper.relativeVec(h.position()) + ", pig at " + helper.relativeVec(pig.position()));
+            }
+            helper.assertTrue(husks[0].getMaxHealth() - Math.max(0, husks[0].getHealth()) >= PowerArmorConfig.EM_SLAM_DAMAGE.get() * 0.7,
+                    "a near full-speed hit does most of the slam damage, husk health " + husks[0].getHealth());
+            helper.assertTrue(pig.getHealth() < pig.getMaxHealth() || !pig.isAlive(), "the pig takes it too");
+            helper.succeed();
+        });
+    }
+
     /** The visor's throw arc (EmProjectorItem.predictThrow, drawn by client/hud/EmProjectorHud) is where a thrown mob
      *  lands: a pig sent off at a throw's speed from 2 blocks up lands where and when the arc says. (Slowed so it
      *  doesn't walk in the air: a mob's own steering is the one thing the arc can't know.) */

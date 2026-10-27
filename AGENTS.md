@@ -58,7 +58,7 @@ API: grep the sources.
 |---|---|
 | `./gradlew build` | compiles (also compiles `src/dev`) |
 | `./gradlew runGameTestServer` | "All N required tests passed" |
-| `./gradlew runGameTestOnly -Prepeat=5` | the whole suite 5 times side by side: all 700 pass (hunts flaky tests; `-Ptests='powerarmor:name*'` narrows it) |
+| `./gradlew runGameTestOnly -Prepeat=5` | the whole suite 5 times side by side: all 705 pass (hunts flaky tests; `-Ptests='powerarmor:name*'` narrows it) |
 | the autopilot scene for the area you touched | screenshots + CSV look right: pick it from `power-armor-runs.md` (`runAutopilot`, `...Mech`, `...Gait`, `...Pose`, `...Terrain`, `...Hud`, a tool's own scene...) |
 
 - Run game tasks in the background under `caffeinate -d -u -i` and poll the log (no `timeout` on macOS; the game can't

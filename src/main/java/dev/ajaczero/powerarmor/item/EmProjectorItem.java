@@ -20,9 +20,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -46,7 +48,8 @@ import org.jetbrains.annotations.Nullable;
  *  - Hold use (right click) on a dropped item, a mob or a player: the beam pulls it in front of the suit and holds it
  *    there. Items that arrive go straight into the pilot's inventory.
  *  - Release: whatever is held is launched along the view. A quick tap shoves a target away.
- *  - Thrown mobs and players that hit a wall take damage.
+ *  - Thrown mobs and players that hit a wall take damage, and bowl through any mob in their way (2026-10-27, user: a
+ *    combat move): each one they hit takes the impact too, and so do they, and they fly on.
  *  - Heavy things fight the field (decided 2026-10-13): other power armor suits and the entity tag powerarmor:em_heavy
  *    (bosses, iron golems, ravagers, wardens; datapacks can add more) aren't lifted. The beam holds them in place (they slow to a crawl) and drags them a little; letting go only
  *    shoves them.
@@ -67,8 +70,14 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
      *  and other mods add their own heavyweights. */
     public static final TagKey<EntityType<?>> HEAVY = TagKey.create(Registries.ENTITY_TYPE,
             Identifier.fromNamespaceAndPath(PowerArmor.MODID, "em_heavy"));
-    /** Wall impacts faster than this (blocks per tick) hurt: damage = (speed - this) * config slam damage. */
+    /** Impacts faster than this (blocks per tick) hurt: a full-speed throw's ({@link #MOB_PUSH}) does the config's
+     *  slam damage, slower ones less in proportion to the speed above this. */
     private static final double SLAM_SPEED = 0.5;
+    /** "powerarmor:em_struck" (data/powerarmor/damage_type/em_struck.json): "bowled over" by something thrown. */
+    public static final ResourceKey<DamageType> EM_STRUCK = ResourceKey.create(Registries.DAMAGE_TYPE,
+            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "em_struck"));
+    /** How hard a mob that's bowled over is knocked along the throw (vanilla's knockback strength; a sword's is 0.4). */
+    private static final double STRUCK_KNOCKBACK = 0.8;
     private static final int COOLDOWN_TICKS = 8;
     /** Heavy things are only shoved: this fraction of a throw. */
     private static final double HEAVY_SHOVE = 0.25;
@@ -95,13 +104,15 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
         }
     }
 
-    /** A mob we launched, followed for 2 s to see if it slams into something. */
+    /** A mob we launched, followed for 2 s to see if it slams into something: a wall, or the mobs it bowls through. */
     private static final class Thrown {
         final LivingEntity entity;
         @Nullable
         final LivingEntity thrower;
         int ticks;
         double lastSpeed;
+        /** The mobs it has already hit (each one once). */
+        final java.util.Set<Entity> struck = new java.util.HashSet<>();
 
         Thrown(LivingEntity entity, @Nullable LivingEntity thrower) {
             this.entity = entity;
@@ -340,20 +351,52 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
         Beam beam = suit.socket().toolData(Beam.class, Beam::new);
         beam.thrown.removeIf(t -> {
             t.ticks++;
-            if (!t.entity.isAlive() || t.ticks > 40) {
+            // (a thrown mob killed by its first hit still flies on, and still bowls: only a removed one is done)
+            if (t.entity.isRemoved() || t.ticks > 40 || !(t.entity.level() instanceof ServerLevel level)) {
                 return true;
             }
             double speed = t.entity.getDeltaMovement().length();
             if (t.ticks > 1 && t.entity.horizontalCollision && t.lastSpeed > SLAM_SPEED) {
-                float damage = (float) ((t.lastSpeed - SLAM_SPEED) * PowerArmorConfig.EM_SLAM_DAMAGE.get());
-                if (t.entity.level() instanceof ServerLevel level) {
-                    t.entity.hurtServer(level, suit.damageSources().source(EM_SLAM, suit, t.thrower), damage); // (direct, causing)
-                }
+                t.entity.hurtServer(level, suit.damageSources().source(EM_SLAM, suit, t.thrower), impact(t.lastSpeed)); // (direct, causing)
                 return true;
+            }
+            if (speed > SLAM_SPEED) {
+                bowl(suit, t, level, speed);
             }
             t.lastSpeed = speed;
             return false;
         });
+    }
+
+    /** Damage of an impact at {@code speed} (blocks per tick): the config's slam damage at a full-speed throw. */
+    private static float impact(double speed) {
+        return (float) (PowerArmorConfig.EM_SLAM_DAMAGE.get() * Math.max(0, speed - SLAM_SPEED) / (MOB_PUSH - SLAM_SPEED));
+    }
+
+    /**
+     * A thrown mob ploughing through others: every living thing in the space it swept through since last tick (its hit
+     * box stretched back to where it was: at 1.6 blocks a tick it would jump clean over a mob between two ticks) takes
+     * the impact and is knocked along the throw, and so does the thrown mob, which flies on. Not the suit, its pilot,
+     * the thrower or anything it already hit.
+     */
+    private static void bowl(PowerArmorEntity suit, Thrown t, ServerLevel level, double speed) {
+        LivingEntity flying = t.entity;
+        Vec3 back = new Vec3(flying.xo - flying.getX(), flying.yo - flying.getY(), flying.zo - flying.getZ());
+        AABB swept = flying.getBoundingBox().expandTowards(back);
+        List<Entity> hit = level.getEntities(flying, swept, e -> e instanceof LivingEntity && e.isAlive() && !e.isSpectator()
+                && e != suit && e != t.thrower && !suit.hasPassenger(e) && !t.struck.contains(e));
+        Vec3 along = flying.getDeltaMovement().multiply(1, 0, 1).normalize();
+        float damage = impact(speed);
+        for (Entity e : hit) {
+            t.struck.add(e);
+            LivingEntity struck = (LivingEntity) e;
+            DamageSource source = suit.damageSources().source(EM_STRUCK, suit, t.thrower); // (direct, causing)
+            struck.hurtServer(level, source, damage);
+            struck.knockback(STRUCK_KNOCKBACK, -along.x, -along.z, source, damage); // (it pushes away from the given direction)
+            flying.hurtServer(level, source, damage);
+            suit.level().playSound(null, struck.getX(), struck.getY(), struck.getZ(), SoundEvents.PLAYER_ATTACK_CRIT,
+                    SoundSource.PLAYERS, 1.0F, 0.7F);
+        }
     }
 
     private static void grab(PowerArmorEntity suit, Beam beam, Entity target) {

@@ -25,6 +25,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -43,8 +44,9 @@ import net.neoforged.fml.loading.FMLPaths;
  * own visor HUD (client/hud, 2026-10-27): the rail cannon's brackets closing in as it charges and locking at READY; the
  * TNT launcher's drum full, firing, empty and loading back chamber by chamber, its arc near and far, ending on a cow,
  * and a real round flying along it; the
- * flamethrower and the drill (nothing); the EM projector idle (nothing), searching (SCAN...) and holding a pig (a box
- * round it, its name and health, the arc it would be thrown along); the chainsaw (nothing); a star reactor (endless fuel, no embers); boss bars
+ * flamethrower and the drill (nothing); the EM projector scanning on its own (two pigs and some ingots marked), aimed
+ * at a pig (named), holding it (a box round it, its name and health, the arc it would be thrown along, the other pig
+ * lit up in the way) and bowling it into the other pig ({@code ap_hud_em_bowl_5..9}); the chainsaw (nothing); a star reactor (endless fuel, no embers); boss bars
  * and effects moved out of the way; and without the helmet (no HUD, vanilla's hearts).
  * Shots {@code ap_hud_*.png}; log run/autopilot_hud.csv: per tick what the HUD drew (hull, fuel bar and text, embers,
  * critical (the suit's), powered, tool, tool_hud: what the tool's own readout said it drew, e.g. the TNT arc's
@@ -143,26 +145,28 @@ final class HudScene {
             // the drill: nothing on the visor
             case 720 -> { phase = "drill"; tool(mc, ModItems.DRILL.get(), ItemStack.EMPTY); AutoPilot.setView(0, 5); }
             case 730 -> AutoPilot.shot(mc, "hud_drill");
-            // the EM projector (EmProjectorHud): idle (nothing), searching the sky (SCAN...), then holding a pig (a box
-            // round it, PIG, its health, the arc it would be thrown along); a slowed pig 6 blocks out (4 to the side) so it waits to be picked up
-            case 732 -> { phase = "em"; tool(mc, ModItems.EM_PROJECTOR.get(), ItemStack.EMPTY);
+            // the EM projector (EmProjectorHud): it scans on its own: two slowed pigs and a few dropped ingots get faint
+            // brackets ("hud_em"); the one under the crosshair is named ("hud_em_aim"); held, its throw arc runs at the
+            // other pig, which lights up (in the way: "hud_em_held"); let go, it bowls the other pig over ("hud_em_bowl")
+            case 732 -> { phase = "em"; tool(mc, ModItems.EM_PROJECTOR.get(), ItemStack.EMPTY); AutoPilot.setView(0, 12);
                           server(mc, (p, x) -> {
-                              Pig pig = EntityTypes.PIG.create(p.level(), EntitySpawnReason.COMMAND);
-                              pig.snapTo(x.getX() - 4, x.getY(), x.getZ() + 6, 0, 0); // off to the side: the flamethrower left fires ahead
-                              pig.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 400, 10));
-                              p.level().addFreshEntity(pig);
-                              target = pig; }); }
+                              // off to the side of where the flamethrower left fires
+                              target = slowPig(p, x.position().add(-4, 0, 6));
+                              second = slowPig(p, x.position().add(3, 0, 10));
+                              ItemEntity ingots = new ItemEntity(p.level(), x.getX() + 1, x.getY(), x.getZ() + 5, new ItemStack(Items.IRON_INGOT, 3));
+                              ingots.setPickUpDelay(32767);
+                              p.level().addFreshEntity(ingots);
+                              third = ingots; }); }
             case 742 -> AutoPilot.shot(mc, "hud_em");
-            case 744 -> { phase = "em_scan"; AutoPilot.setView(0, -30); AutoPilot.hold(o.keyUse, true); }
-            case 754 -> AutoPilot.shot(mc, "hud_em_scan");
-            case 756 -> AutoPilot.hold(o.keyUse, false);
-            case 760 -> { phase = "em_held"; Entity pig = target; if (pig != null) { AutoPilot.aimTarget = pig.position().add(0, 0.45, 0); } }
-            case 766 -> { AutoPilot.aimTarget = null; AutoPilot.hold(o.keyUse, true); }
-            // caught: look up a little, the way you'd aim a throw (the arc then runs out to where it would land)
-            case 776 -> AutoPilot.setView(mc.player.getYRot(), -12);
-            case 786 -> AutoPilot.shot(mc, "hud_em_held");
-            case 788 -> { AutoPilot.hold(o.keyUse, false); AutoPilot.setView(0, 5); }
-            case 800 -> server(mc, (p, x) -> discardTarget());
+            case 744 -> { phase = "em_aim"; Entity pig = target; if (pig != null) { AutoPilot.aimTarget = pig.position().add(0, 0.45, 0); } }
+            case 752 -> AutoPilot.shot(mc, "hud_em_aim");
+            case 754 -> { phase = "em_held"; AutoPilot.aimTarget = null; AutoPilot.hold(o.keyUse, true); }
+            // caught: aim the throw at the other pig (the arc runs at it, and it lights up: it's in the way)
+            case 772 -> { Entity pig = second; if (pig != null) { AutoPilot.aimTarget = pig.position().add(0, 2.2, 0); } } // above it: the throw drops
+            case 782 -> AutoPilot.shot(mc, "hud_em_held");
+            case 784 -> { phase = "em_bowl"; AutoPilot.aimTarget = null; AutoPilot.hold(o.keyUse, false); }
+            case 789, 791, 793 -> AutoPilot.shot(mc, "hud_em_bowl_" + (s - 784));
+            case 800 -> { AutoPilot.setView(0, 5); server(mc, (p, x) -> discardTarget()); }
             case 802 -> { phase = "chainsaw"; tool(mc, ModItems.CHAINSAW.get(), ItemStack.EMPTY); }
             case 812 -> AutoPilot.shot(mc, "hud_chainsaw");
             // a star reactor: endless, nothing burns
@@ -201,8 +205,8 @@ final class HudScene {
         return true;
     }
 
-    /** A mob the scene put out (the TNT arc's cow, the EM projector's pig), to remove after. */
-    private static volatile Entity target;
+    /** What the scene put out (the TNT arc's cow; the EM projector's pigs and ingots), to remove after. */
+    private static volatile Entity target, second, third;
 
     /** A mob that stands still (no AI) on the ground at {@code at}: what the TNT arc lands on. */
     private static Entity statue(net.minecraft.server.level.ServerPlayer p, EntityType<? extends Mob> type, Vec3 at) {
@@ -214,11 +218,21 @@ final class HudScene {
     }
 
     private static void discardTarget() {
-        Entity t = target;
-        if (t != null) {
-            t.discard();
+        for (Entity t : new Entity[] {target, second, third}) {
+            if (t != null) {
+                t.discard();
+            }
         }
-        target = null;
+        target = second = third = null;
+    }
+
+    /** A pig too slowed to walk off (so it waits to be picked up, or bowled over). */
+    private static Pig slowPig(net.minecraft.server.level.ServerPlayer p, Vec3 at) {
+        Pig pig = EntityTypes.PIG.create(p.level(), EntitySpawnReason.COMMAND);
+        pig.snapTo(at.x, at.y, at.z, 0, 0);
+        pig.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 400, 10));
+        p.level().addFreshEntity(pig);
+        return pig;
     }
 
     /** Run on the server with the pilot and the scene's suit. */
