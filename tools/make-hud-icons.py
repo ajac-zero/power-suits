@@ -3,7 +3,9 @@
     uv run --with pillow python3 tools/make-hud-icons.py
 
 Writes src/main/resources/assets/powerarmor/textures/gui/hud/:
-  suit.png              the suit's silhouette by the hull bar (white: the HUD tints it amber / red)
+  suit_<piece>.png      the suit figure by the hull bar, one mask per armour piece, all on one canvas (white: the HUD
+                        tints each piece)
+  seal.png              the seal shield by HULL
   ember.png             one burn-rate ember, unlit (white mask, tinted dim)
   ember_lit.png         the same ember burning (its own fire colours)
   tool/<item id>.png    each socket tool's 16x16 symbol in the tool section (white, tinted)
@@ -15,29 +17,47 @@ from PIL import Image
 
 OUT = Path(__file__).resolve().parent.parent / "src/main/resources/assets/powerarmor/textures/gui/hud"
 
-SUIT = """
-......####......
-.....######.....
-.....#....#.....
-.....######.....
-......####......
-.###.######.###.
-####.######.####
-####.######.####
-.##..######..##.
-.##..######..##.
-.##..######..##.
-.##...####...##.
-.##..######..##.
-.##..######..##.
-.###.##..##.###.
-.....##..##.....
-.....##..##.....
-.....##..##.....
-.....##..##.....
-.....##..##.....
-....###..###....
-....###..###....
+# The suit as the pilot sits in it (seen from behind: its left is the suit's left, the tool arm), blocky like a player
+# model: a square head, the body, arms and legs as plain blocks, a 1 px gap between pieces. One letter per armour piece
+# (H helmet, C chest, l/r left/right arm, L/R left/right leg): each becomes its own mask, so the HUD can colour every
+# piece on its own (today all follow the hull; with modular armour, a critical piece flashes red alone).
+FIGURE = """
+....HHHHHHH....
+....HHHHHHH....
+....HHHHHHH....
+....HHHHHHH....
+....HHHHHHH....
+....HHHHHHH....
+....HHHHHHH....
+...............
+lll.CCCCCCC.rrr
+lll.CCCCCCC.rrr
+lll.CCCCCCC.rrr
+lll.CCCCCCC.rrr
+lll.CCCCCCC.rrr
+lll.CCCCCCC.rrr
+lll.CCCCCCC.rrr
+lll.CCCCCCC.rrr
+lll.CCCCCCC.rrr
+...............
+....LLL.RRR....
+....LLL.RRR....
+....LLL.RRR....
+....LLL.RRR....
+....LLL.RRR....
+....LLL.RRR....
+....LLL.RRR....
+....LLL.RRR....
+"""
+PIECES = {"H": "helmet", "C": "chest", "l": "arm_left", "r": "arm_right", "L": "leg_left", "R": "leg_right"}
+
+# The seal, by HULL: a shield (amber while sealed, faded like an unlit ember when not).
+SEAL = """
+#####
+#####
+#####
+.###.
+..#..
 """
 
 EMBER = """
@@ -185,20 +205,23 @@ TOOLS = {
 }
 
 
-def mask(text, colours=None):
+def mask(text, colours=None, mark="#"):
     rows = [r for r in text.strip("\n").split("\n")]
     w, h = max(len(r) for r in rows), len(rows)
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     for y, row in enumerate(rows):
         for x, ch in enumerate(row):
-            if ch == "#":
+            if ch == mark:
                 img.putpixel((x, y), colours(x, y) if colours else (255, 255, 255, 255))
     return img
 
 
 def main():
     (OUT / "tool").mkdir(parents=True, exist_ok=True)
-    mask(SUIT).save(OUT / "suit.png")
+    (OUT / "suit.png").unlink(missing_ok=True)  # the one-piece silhouette before 2026-10-27
+    for letter, name in PIECES.items():
+        mask(FIGURE, mark=letter).save(OUT / f"suit_{name}.png")
+    mask(SEAL).save(OUT / "seal.png")
     mask(EMBER).save(OUT / "ember.png")
     # burning: a yellow tip over an orange body, like the firebox's own glow
     mask(EMBER, lambda x, y: (255, 220, 90, 255) if y < 3 else (255, 130, 30, 255)).save(OUT / "ember_lit.png")

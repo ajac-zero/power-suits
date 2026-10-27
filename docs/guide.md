@@ -96,7 +96,8 @@ They are vanilla sounds re-pitched in `assets/powerarmor/sounds.json`: swap in y
 ### The HUD
 With the helmet on, the visor shows a HUD in amber, in two panels by the hotbar (no helmet, no HUD: then vanilla's
 vehicle hearts show the hull):
-- **Left, the suit:** **HULL** (its health, % and a bar) and **FUEL**: how long it lasts at walking pace (∞ on a wet
+- **Left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
+  with a **shield** that's lit while the suit is sealed (running with the helmet on) and faded when not, and **FUEL**: how long it lasts at walking pace (∞ on a wet
   tidal engine or a star reactor; NO FUEL, FLOODED, NO ENGINE), a bar for how full the fuel slot is, and three
   **embers** for how fast it burns: one idling, two walking, three sprinting or with a hungry tool at work (the
   flamethrower), none when nothing burns.

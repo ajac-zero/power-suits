@@ -31,7 +31,8 @@ import org.jetbrains.annotations.Nullable;
  * The pilot's HUD, projected on the helmet's visor (design sec. 6, 2026-10-26, after players called the old fuel gauge
  * bland; laid out after Fallout's power armour HUD): flat amber readouts in two corner panels.
  * <ul>
- *   <li>Left, the suit: its silhouette, HULL (health) and FUEL (time left at walking pace, a bar for how full the
+ *   <li>Left, the suit: its figure (one block per armour piece, like Fallout's), HULL (health) with the seal shield,
+ *   and FUEL (time left at walking pace, a bar for how full the
  *   fuel slot is) with three embers for the burn rate: 1 idling, 2 walking, 3 sprinting or a hungry tool at work, dark
  *   when nothing burns (a free engine, or off).</li>
  *   <li>Right, the socket tool: its symbol, one labelled bar (heat, charge, reload) and its ammo on a 3-digit counter,
@@ -47,7 +48,12 @@ import org.jetbrains.annotations.Nullable;
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class SuitHud {
     public static final Identifier ID = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "suit_hud");
-    private static final Identifier SUIT = hud("suit");
+    /** The suit figure, one mask per armour piece on one 15x26 canvas (tools/make-hud-icons.py), so each piece can take
+     *  its own colour: today all follow the hull; with modular armour a critical piece will flash red on its own. */
+    private static final Identifier[] FIGURE = {hud("suit_helmet"), hud("suit_chest"), hud("suit_arm_left"),
+            hud("suit_arm_right"), hud("suit_leg_left"), hud("suit_leg_right")};
+    private static final int FIGURE_W = 15, FIGURE_H = 26;
+    private static final Identifier SEAL = hud("seal");
     private static final Identifier EMBER = hud("ember");
     private static final Identifier EMBER_LIT = hud("ember_lit");
 
@@ -65,8 +71,9 @@ public final class SuitHud {
     private static final float TWO_EMBERS = 0.6F, THREE_EMBERS = 1.5F;
     private static final int MAX_BURN_PER_TICK = 20;
 
-    /** Panel size and placement (GUI pixels): both panels sit in the bottom corners, the hotbar between them. */
-    private static final int MARGIN = 4, PANEL_H = 31, SUIT_W = 128, TOOL_W = 112, TOOL_BAR_SEGMENTS = 10;
+    /** Panel size and placement (GUI pixels): both panels sit in the bottom corners, the hotbar between them. 34 high:
+     *  3 px clear above the first row and below the last bar. */
+    private static final int MARGIN = 4, PANEL_H = 34, SUIT_W = 128, TOOL_W = 112, TOOL_BAR_SEGMENTS = 10;
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
@@ -109,20 +116,26 @@ public final class SuitHud {
         int h = g.guiHeight();
         int x0 = MARGIN, y0 = h - MARGIN - 1 - PANEL_H, x1 = x0 + SUIT_W;
         panel(g, x0, y0, x1, y0 + PANEL_H, backing, main);
-        g.blit(RenderPipelines.GUI_TEXTURED, SUIT, x0 + 5, y0 + 5, 0F, 0F, 16, 22, 16, 22, main);
+        for (Identifier piece : FIGURE) {
+            g.blit(RenderPipelines.GUI_TEXTURED, piece, x0 + 5, y0 + 4, 0F, 0F, FIGURE_W, FIGURE_H, FIGURE_W, FIGURE_H, main);
+        }
         int lx = x0 + 26, rx = x1 - 4, segments = (rx - lx + 1) / 4;
-        g.text(font, Component.translatable("hud.powerarmor.hull"), lx, y0 + 4, main, false);
+        Component hullLabel = Component.translatable("hud.powerarmor.hull");
+        Component fuelLabel = Component.translatable("hud.powerarmor.fuel");
+        // the seal shield and the embers start in one column, past the longer label
+        int ix = lx + Math.max(font.width(hullLabel), font.width(fuelLabel)) + 4;
+        g.text(font, hullLabel, lx, y0 + 4, main, false);
+        // sealed (running with the helmet on: fire, frost, gas and water kept out) or faded like an unlit ember
+        g.blit(RenderPipelines.GUI_TEXTURED, SEAL, ix, y0 + 5, 0F, 0F, 5, 5, 5, 5, suit.isSealed() ? main : dim);
         Component hullText = Component.translatable("hud.powerarmor.percent", Math.round(hull * 100));
         if (!(hullCritical && blink)) {
             g.text(font, hullText, rx - font.width(hullText), y0 + 4, main, false);
         }
         bar(g, lx, y0 + 13, segments, 3, hull, main, dim);
-        Component fuelLabel = Component.translatable("hud.powerarmor.fuel");
         g.text(font, fuelLabel, lx, y0 + 18, main, false);
-        int ex = lx + font.width(fuelLabel) + 4;
         for (int i = 0; i < 3; i++) {
             boolean lit = i < embers;
-            g.blit(RenderPipelines.GUI_TEXTURED, lit ? EMBER_LIT : EMBER, ex + i * 7, y0 + 19, 0F, 0F, 5, 6, 5, 6,
+            g.blit(RenderPipelines.GUI_TEXTURED, lit ? EMBER_LIT : EMBER, ix + i * 7, y0 + 19, 0F, 0F, 5, 6, 5, 6,
                     lit ? colour(0xFFFFFF, fade) : dim);
         }
         if (!(fuelCritical && blink && powered)) {
@@ -137,15 +150,15 @@ public final class SuitHud {
         if (tool != null) {
             int tx1 = g.guiWidth() - MARGIN, tx0 = tx1 - TOOL_W;
             panel(g, tx0, y0, tx1, y0 + PANEL_H, backing, main);
-            g.blit(RenderPipelines.GUI_TEXTURED, symbol(toolStack), tx0 + 5, y0 + 8, 0F, 0F, 16, 16, 16, 16, main);
-            g.text(font, Component.translatable(tool.barLabel()), tx0 + 26, y0 + 8, main, false);
-            bar(g, tx0 + 26, y0 + 19, TOOL_BAR_SEGMENTS, 5, tool.bar(), main, dim);
+            g.blit(RenderPipelines.GUI_TEXTURED, symbol(toolStack), tx0 + 5, y0 + 9, 0F, 0F, 16, 16, 16, 16, main);
+            g.text(font, Component.translatable(tool.barLabel()), tx0 + 26, y0 + 9, main, false);
+            bar(g, tx0 + 26, y0 + 20, TOOL_BAR_SEGMENTS, 5, tool.bar(), main, dim);
             Component count = !tool.hasCount() ? Component.translatable("hud.powerarmor.no_ammo")
                     : tool.count() < 0 ? Component.translatable("hud.powerarmor.endless")
                     : Component.literal(String.format(Locale.ROOT, "%03d", Math.min(tool.count(), 999)));
             var pose = g.pose();
             pose.pushMatrix();
-            pose.translate(tx1 - 5 - 2 * font.width(count) + 2, y0 + 9); // +2: the font's trailing gap, doubled
+            pose.translate(tx1 - 5 - 2 * font.width(count) + 2, y0 + 10); // +2: the font's trailing gap, doubled
             pose.scale(2F, 2F);
             g.text(font, count, 0, 0, tool.hasCount() ? main : dim, false);
             pose.popMatrix();
