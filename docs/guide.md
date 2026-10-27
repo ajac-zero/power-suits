@@ -98,7 +98,8 @@ With the helmet on you see the inside of the helmet from the cockpit (first pers
 corners and the visor band in the middle of the top edge, like the pumpkin's view but only at the edges. While the suit
 has power the visor shows the view through them (only a faint outline of their edges is left) and a HUD floating on the
 glass (no helmet, no HUD: then vanilla's vehicle hearts show the hull); without power they're solid again and close the
-view in. It's terminal green by default: pick your own colour under
+view in. When the power comes on (fuel is back, or you climb into a running suit) the visor warms up: the metal fades
+out over about half a second. It's terminal green by default: pick your own colour under
 **Mods > Power Armor > Config > Visor** (`visor_colour` in `config/powerarmor-client.toml`, `#RRGGBB`; only you see it).
 - **Top left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
   with a **shield** that's lit while the suit is sealed (running with the helmet on) and faded when not, and **FUEL**: how long it lasts at walking pace (∞ on a wet

@@ -2,6 +2,7 @@ package dev.ajaczero.powerarmor.client.dev;
 
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.client.SuitHud;
+import dev.ajaczero.powerarmor.client.SuitVisor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
@@ -34,7 +35,8 @@ import net.neoforged.fml.loading.FMLPaths;
  * cannon charging and ready, the TNT launcher reloading, the flamethrower (three embers), the drill, the EM projector,
  * the chainsaw (symbol only); a star reactor (endless fuel, no embers); and without the helmet (no HUD, vanilla's hearts).
  * Shots {@code ap_hud_*.png}; log run/autopilot_hud.csv: per tick what the HUD drew (hull, fuel bar and text, embers,
- * critical, powered, tool, count, bar) next to the server's own numbers. Runs alone with ./gradlew runAutopilotHud (~40 s).
+ * critical, powered, tool, count, bar; visor_metal: how solid SuitVisor drew the helmet's edge, 1 solid .. 0 see-through,
+ * fading out in the warm-up after the refuel, shots {@code ap_hud_warm_*}) next to the server's own numbers. Runs alone with ./gradlew runAutopilotHud (~40 s).
  */
 final class HudScene {
     private static volatile PowerArmorEntity suit;
@@ -80,6 +82,8 @@ final class HudScene {
             case 460 -> AutoPilot.shot(mc, "hud_off");
             case 465 -> AutoPilot.shot(mc, "hud_off_blink"); // NO FUEL blinks every 5 ticks: one of the two shows it
             case 468 -> { phase = "refuel"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 40))); }
+            // the visor's warm-up: the helmet's metal fades out over 0.6 s once the power is back (visor_metal column)
+            case 470, 472, 474, 476, 478 -> AutoPilot.shot(mc, "hud_warm_" + (s - 468));
             // the rail cannon: charging, then full (it fires on release)
             case 480 -> { phase = "rail"; tool(mc, ModItems.RAIL_CANNON.get(), new ItemStack(Items.IRON_INGOT, 6)); }
             case 492 -> AutoPilot.shot(mc, "hud_rail_idle");
@@ -207,7 +211,7 @@ final class HudScene {
     private static void open() {
         try {
             csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_hud.csv"));
-            csv.write("tick,phase,shown,hull,fuel_bar,fuel_text,embers,critical,powered,tool,count,bar,compass,server_health,server_energy,server_powered\n");
+            csv.write("tick,phase,shown,hull,fuel_bar,fuel_text,embers,critical,powered,tool,count,bar,compass,visor_metal,server_health,server_energy,server_powered\n");
         } catch (IOException e) {
             PowerArmor.LOGGER.error("hud csv", e);
         }
@@ -221,9 +225,9 @@ final class HudScene {
         }
         String p = phase;
         SuitHud.Shown h = SuitHud.shown();
-        String client = h == null ? "0,,,,,,,,,," : String.format(Locale.ROOT, "1,%.2f,%.2f,%s,%d,%b,%b,%s,%d,%.2f,%s", h.hull(), h.fuel(),
+        String client = (h == null ? "0,,,,,,,,,," : String.format(Locale.ROOT, "1,%.2f,%.2f,%s,%d,%b,%b,%s,%d,%.2f,%s", h.hull(), h.fuel(),
                 h.fuelText().replace(',', ' '), h.embers(), h.critical(), h.powered(), h.tool(), h.count(), h.bar(),
-                h.compass().replace(',', ' '));
+                h.compass().replace(',', ' '))) + String.format(Locale.ROOT, ",%.2f", SuitVisor.lastMetal());
         Consumer<net.minecraft.server.level.ServerPlayer> write = player -> {
             try {
                 w.write(String.format(Locale.ROOT, "%d,%s,%s,%.1f,%d,%b%n", s, p, client, x.getHealth(),
