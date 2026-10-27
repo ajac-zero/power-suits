@@ -27,13 +27,13 @@ public class PowerArmorMenu extends AbstractContainerMenu {
     // Two numberings, don't mix them up: the suit's own slots (PowerArmorEntity.FUEL_SLOT etc.: where an item lives in
     // the suit's inventory, and in saves) and the menu's slots (MENU_*: the order they were added here, which is what
     // clicks and shift-clicks talk about). The menu shows the suit's slots in this order, then the player's inventory.
-    public static final int MENU_SOCKET = 0, MENU_FUEL = 1, MENU_HELMET = 2, MENU_ENGINE = 3, MENU_AMMO = 4;
-    private static final int SUIT_SLOTS = 5;
+    public static final int MENU_SOCKET = 0, MENU_FUEL = 1, MENU_HELMET = 2, MENU_ENGINE = 3;
+    private static final int SUIT_SLOTS = 4;
     /** Menu slots of the player's inventory (27, top-left first) and hotbar (9). */
     public static final int INV_START = SUIT_SLOTS, HOTBAR_START = INV_START + 27, END = HOTBAR_START + 9;
     /** Where a shift-click from the player's side tries to put an item, first that takes it (the fuel slot last: it takes
      *  the most). */
-    private static final int[] SHIFT_CLICK_ORDER = {MENU_SOCKET, MENU_HELMET, MENU_ENGINE, MENU_AMMO, MENU_FUEL};
+    private static final int[] SHIFT_CLICK_ORDER = {MENU_SOCKET, MENU_HELMET, MENU_ENGINE, MENU_FUEL};
     /** Button id sent by the "Pack up" button (vanilla's built-in menu button packet carries it). */
     public static final int BUTTON_PACK = 0;
 
@@ -94,12 +94,6 @@ public class PowerArmorMenu extends AbstractContainerMenu {
                 return 1;
             }
         });
-        this.addSlot(new Slot(suitInventory, PowerArmorEntity.AMMO_SLOT, AMMO_X, SOCKET_Y) {
-            @Override
-            public boolean mayPlace(ItemStack stack) {
-                return stack.is(PowerArmorEntity.AMMO);
-            }
-        });
         // Player inventory and hotbar, same place as in a furnace.
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -152,8 +146,8 @@ public class PowerArmorMenu extends AbstractContainerMenu {
         return -1;
     }
 
-    /** Shift-click: suit slots -> player; player -> socket (tools), helmet slot (a helmet), engine slot (an engine), ammo
-     *  slot (TNT, iron ingots) or fuel slot (fuel). */
+    /** Shift-click: suit slots -> player; player -> socket (tools), helmet slot (a helmet), engine slot (an engine) or
+     *  fuel slot (fuel). */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         Slot slot = this.slots.get(index);

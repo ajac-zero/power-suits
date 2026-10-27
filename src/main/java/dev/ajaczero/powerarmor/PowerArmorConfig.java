@@ -128,9 +128,9 @@ public final class PowerArmorConfig {
 
     // ---- TNT launcher (Phase 11) ---------------------------------------------------------------------------
     // A 4-round drum (2026-10-27): rounds fire quickly while there are rounds in it, then the chambers are loaded back one
-    // at a time from the ammo slot once the trigger has rested. (reload_ticks was the time between shots before.)
+    // at a time with TNT from the pilot's inventory once the trigger has rested. (reload_ticks was the time between shots before.)
     public static final ModConfigSpec.IntValue TNT_LAUNCHER_RELOAD = B.pop().translation(key("tnt_launcher")).push("tnt_launcher")
-            .comment("Ticks to load one chamber of the 4-round drum from the ammo slot (20 = a second each).").translation(key("tnt_launcher_reload"))
+            .comment("Ticks to load one chamber of the 4-round drum with TNT from the pilot's inventory (20 = a second each).").translation(key("tnt_launcher_reload"))
             .defineInRange("reload_ticks", 20, 1, 1200);
     public static final ModConfigSpec.IntValue TNT_LAUNCHER_SHOT_INTERVAL = B
             .comment("Ticks between shots while the drum has rounds (10 = two a second): a tap fires one, holding keeps firing.").translation(key("tnt_launcher_shot_interval"))
@@ -205,11 +205,8 @@ public final class PowerArmorConfig {
             .define("smash_blocks", true);
 
     // ---- The machine mind (design sec. 8): what a powered suit does with nobody inside
-    public static final ModConfigSpec.IntValue NUGGET_STORE_MAX = B.pop().translation(key("mind")).push("mind")
-            .comment("Most iron nuggets a suit's hidden ammo store holds (right-click the suit with nuggets to load it). The",
-                    "chaingun uses it: the machine mind always, a pilot after the nuggets in their own inventory.").translation(key("nugget_store_max"))
-            .defineInRange("nugget_store_max", 640, 0, 100_000);
-    public static final ModConfigSpec.DoubleValue GUARD_RANGE = B
+    // (nugget_store_max went 2026-10-27 with the hidden nugget store: the mind's tools never run out of ammo.)
+    public static final ModConfigSpec.DoubleValue GUARD_RANGE = B.pop().translation(key("mind")).push("mind")
             .comment("A friendly suit with a chaingun shoots monsters within this many blocks of its owner (or of itself).").translation(key("guard_range"))
             .defineInRange("guard_range", 16.0, 0, 64);
     public static final ModConfigSpec.DoubleValue WORK_RADIUS = B

@@ -104,7 +104,7 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
 
     /** How the mind fights with it (GunAttack). */
     private static final GunAttack.Gun MIND_GUN =
-            new GunAttack.Gun(28, false, suit -> suit.getStoredNuggets() > 0, suit -> !isOverheated(suit));
+            new GunAttack.Gun(28, false, suit -> true, suit -> !isOverheated(suit)); // the mind never runs out (SuitAmmo)
 
     @Override
     public ToolUse mindUse() {
@@ -265,37 +265,20 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
         out.add(ParticleTypes.SMOKE, at.x, at.y, at.z, 1, 0.05, 0.02);
     }
 
-    /** One bullet for this operator: a pilot pays from their own inventory first, then from the suit's hidden store
-     *  (decided 2026-10-13: what you loaded is never wasted); the machine mind only has the store. */
+    /** A bullet: an iron nugget. */
+    public static boolean isBullet(ItemStack stack) {
+        return stack.is(Items.IRON_NUGGET);
+    }
+
+    /** One bullet for this operator: an iron nugget from a pilot's inventory (off hand first, like a bow's arrows; free
+     *  in creative); the machine mind's never run out (SuitAmmo). */
     public static boolean takeBullet(PowerArmorEntity suit, LivingEntity operator) {
-        return operator instanceof Player player && takeBullet(player) || suit.takeStoredNugget();
+        return SuitAmmo.take(operator, ChaingunItem::isBullet);
     }
 
-    /** Use up one iron nugget (off hand first, like a bow's arrows). False if there is none. Creative: free. */
-    public static boolean takeBullet(Player player) {
-        if (player.hasInfiniteMaterials()) {
-            return true;
-        }
-        ItemStack offhand = player.getOffhandItem();
-        if (offhand.is(Items.IRON_NUGGET)) {
-            offhand.shrink(1);
-            return true;
-        }
-        Inventory inventory = player.getInventory();
-        for (int i = 0; i < inventory.getContainerSize(); i++) {
-            ItemStack stack = inventory.getItem(i);
-            if (stack.is(Items.IRON_NUGGET)) {
-                stack.shrink(1);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** Both sides: how many bullets (iron nuggets) the pilot can fire: their own plus the suit's store (HUD). */
+    /** Both sides: how many bullets (iron nuggets) the pilot carries (HUD); SuitAmmo.ENDLESS in creative. */
     public static int countBullets(Player player) {
-        int own = player.getInventory().countItem(Items.IRON_NUGGET);
-        return player.getVehicle() instanceof PowerArmorEntity suit ? own + suit.getStoredNuggets() : own;
+        return SuitAmmo.count(player, ChaingunItem::isBullet);
     }
 
     /** Keep the motor whine going while the barrels coast down. */

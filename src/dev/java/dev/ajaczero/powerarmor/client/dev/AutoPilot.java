@@ -1283,18 +1283,14 @@ public final class AutoPilot {
             case 520 -> { mindPhase = "after"; onServer(mc, p -> { if (mindSuit != null) { mindSuit.socket().setAiTrigger(false); mindSuit.brain().setAim(null); } }); }
             case 522 -> mindVisorCamera(mc);
             case 532 -> shot(mc, "ai_visor");
-            // chaingun job (step 2): load the hidden store by right-clicking with nuggets, then the suit follows its owner,
-            // shoots the zombies that come for them, and punches the last one once the store is empty
+            // chaingun job (step 2): the suit's menu, then the suit follows its owner and shoots the zombies that come for
+            // them (the mind's bullets never run out since 2026-10-27), and a last one that comes later
             case 534 -> { mindPhase = "load"; mc.setCameraEntity(mc.player); o.setCameraType(CameraType.FIRST_PERSON); DevUtil.hideGui(mc, false);
                           onServer(mc, p -> { if (mindSuit != null) {
                               mindSuit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
                               p.setGameMode(GameType.SURVIVAL);
                               p.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 1200, 4));
-                              for (int i = 0; i < 2; i++) {   // two right-clicks with a stack each: 128 in the store
-                                  p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_NUGGET, 64));
-                                  mindSuit.interact(p, InteractionHand.MAIN_HAND, mindSuit.position());
-                              }
-                              p.setShiftKeyDown(true);          // sneak + right-click: the menu with its new Ammo line
+                              p.setShiftKeyDown(true);          // sneak + right-click: the menu
                               mindSuit.interact(p, InteractionHand.MAIN_HAND, mindSuit.position());
                               p.setShiftKeyDown(false); } }); }
             case 542 -> shot(mc, "ai_menu_ammo");
@@ -1313,14 +1309,13 @@ public final class AutoPilot {
                                   mindMobs.add(zombie);
                               } }); }
             case 593, 597, 601, 606, 612, 620, 630 -> shot(mc, "ai_defend_" + (m - 420));
-            case 640 -> { mindPhase = "fists"; onServer(mc, p -> { if (mindSuit != null) {
-                              mindSuit.setStoredNuggets(0);
+            case 640 -> { mindPhase = "late"; onServer(mc, p -> { if (mindSuit != null) {
                               var zombie = EntityTypes.ZOMBIE.create(p.level(), EntitySpawnReason.COMMAND);
                               zombie.snapTo(p.getX() + 4, p.getY(), p.getZ() + 6, 180, 0);
                               zombie.setTarget(p);
                               p.level().addFreshEntity(zombie);
                               mindMobs.add(zombie); } }); }
-            case 650, 658, 666, 674, 684, 696 -> shot(mc, "ai_fists_" + (m - 420));
+            case 650, 658, 666, 674, 684, 696 -> shot(mc, "ai_late_" + (m - 420));
             // EM guard job (step 3): the suit goes home with an EM projector; zombies, a skeleton and a creeper wander in
             // round home: each one is caught, lifted overhead and flung ~24 blocks up (the creeper: away from home)
             case 700 -> { mindPhase = "em"; onServer(mc, p -> { if (mindSuit != null && mindBase != null) {
@@ -1474,7 +1469,7 @@ public final class AutoPilot {
     private static void openMindLog(Minecraft mc) {
         try {
             mindCsv = Files.newBufferedWriter(mc.gameDirectory.toPath().resolve("autopilot_mind.csv"));
-            mindCsv.write("tick,phase,dxHome,dzHome,speed,driven,anim,headYaw,bodyYaw,xRot,toolActive,clientRaise,faceLeft,drops,energy,visorR,visorG,visorB,navDone,goals,ownerDist,target,store,shots,mobsAlive,mobHealth,beam,mobTopY,clientHead,clientBody,twist,drawnYaw,aimYaw,aimErr,mobs\n");
+            mindCsv.write("tick,phase,dxHome,dzHome,speed,driven,anim,headYaw,bodyYaw,xRot,toolActive,clientRaise,faceLeft,drops,energy,visorR,visorG,visorB,navDone,goals,ownerDist,target,shots,mobsAlive,mobHealth,beam,mobTopY,clientHead,clientBody,twist,drawnYaw,aimYaw,aimErr,mobs\n");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -1501,13 +1496,13 @@ public final class AutoPilot {
         float aimYaw = aim == null ? Float.NaN : (float) (Mth.atan2(aim.z - server.getZ(), aim.x - server.getX()) * Mth.RAD_TO_DEG) - 90F;
         float aimErr = aim == null ? Float.NaN : Mth.wrapDegrees(aimYaw - drawnYaw);
         try {
-            mindCsv.write(String.format(Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%s,%.1f,%.1f,%.1f,%b,%.2f,%d,%d,%d,%.2f,%.2f,%.2f,%b,%s,%.2f,%s,%d,%d,%d,%.1f,%s,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%s%n",
+            mindCsv.write(String.format(Locale.ROOT, "%d,%s,%.2f,%.2f,%.2f,%b,%s,%.1f,%.1f,%.1f,%b,%.2f,%d,%d,%d,%.2f,%.2f,%.2f,%b,%s,%.2f,%s,%d,%d,%.1f,%s,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%s%n",
                     m, mindPhase, server.getX() - (b.getX() + 0.5), server.getZ() - (b.getZ() + 0.5),
                     Math.hypot(server.getX() - server.xo, server.getZ() - server.zo) * 20, server.isAiDriven(), client.animator().getMovementAnimationName(),
                     server.getYHeadRot(), server.yBodyRot, server.getXRot(), server.socket().isActive(), client.socketVisuals().raise(1F), faceLeft, drops,
                     server.power().getTotalEnergy(), visor[0], visor[1], visor[2], server.getNavigation().isDone(),
                     server.brain().runningGoalNames(), server.brain().getOwner() == null ? -1F : server.distanceTo(server.brain().getOwner()),
-                    server.getTarget() == null ? "-" : server.getTarget().getType().toShortString(), server.getStoredNuggets(), server.socket().getUses(),
+                    server.getTarget() == null ? "-" : server.getTarget().getType().toShortString(), server.socket().getUses(),
                     mindMobs.stream().filter(e -> e.isAlive()).count(), mindMobs.stream().filter(e -> e.isAlive()).mapToDouble(e -> e.getHealth()).sum(),
                     server.socket().getBeamTarget() == null ? "-" : server.socket().getBeamTarget().getType().toShortString(),
                     mindMobs.stream().filter(e -> e.isAlive()).mapToDouble(e -> e.getY() - b.getY()).max().orElse(0),

@@ -58,7 +58,7 @@ final class ChaingunEffects implements ToolEffects {
         out[ToolLight.HEAT_BARREL.ordinal()] = barrelGlow(heat);
     }
 
-    /** HUD: bullets left (iron nuggets carried + the suit's store), low at the last {@link #LOW_BULLETS}; the barrel
+    /** HUD: bullets left (the iron nuggets the pilot carries), low at the last {@link #LOW_BULLETS}; the barrel
      *  heat, a warning from half, critical in the last 15% and all the way down while an overheat locks the barrels
      *  (until they're cold: the pilot sees they can't fire until the bar is empty). */
     @Override

@@ -47,7 +47,7 @@ public final class RailCannonEffects implements ToolEffects {
      *  gone (in rings; faster as it charges). */
     private float glow, flow, flowO;
 
-    /** HUD: shots left (iron ingots in the ammo slot), low on the last one; the charge (it fires at full). */
+    /** HUD: shots left (the iron ingots the pilot carries), low on the last one; the charge (it fires at full). */
     @Override
     public HudReadout hud(PowerArmorEntity suit, Player pilot) {
         int rounds = RailCannonItem.countRounds(suit, pilot);

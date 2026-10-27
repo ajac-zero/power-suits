@@ -52,7 +52,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>Decided with the user: hold to charge, fires only at full charge (no weaker partial shots), an instant beam that
  * pierces, breaking the blocks a sprinting suit smashes through on its way (glass, panes, leaves, ice: the
  * {@code powerarmor:suit_smashes_sprinting} tag) and stopping at anything solid; each shot costs an iron ingot from the
- * suit's ammo slot plus fuel; the machine mind uses it as a long-range guard (entity/ai/RailGuard); rogues never carry it.
+ * pilot's inventory (2026-10-27; it was the suit's ammo slot) plus fuel; the machine mind uses it as a long-range guard (entity/ai/RailGuard); rogues never carry it.
  *
  * <p>A continuous tool: the suit calls {@link #holdTick} every tick the trigger is held (the charge builds), and
  * {@link #release} when it goes up (a full charge fires). The charge (0..1) is synced to every client through the suit's
@@ -138,14 +138,15 @@ public class RailCannonItem extends Item implements PowerTool, ModTooltip {
         return false; // continuous: holdTick and release do the work
     }
 
-    /** Does this go in the cannon? An iron ingot, from the ammo slot. */
+    /** Does this go in the cannon? An iron ingot, from the pilot's inventory. */
     public static boolean isRound(ItemStack stack) {
         return stack.is(Items.IRON_INGOT);
     }
 
-    /** Server: can this operator fire a shot now (ammo and fuel)? A creative pilot needs no ingot. */
+    /** Server: can this operator fire a shot now (ammo and fuel)? A creative pilot needs no ingot, the machine mind never
+     *  runs out (SuitAmmo). */
     public boolean canPay(PowerArmorEntity suit, LivingEntity operator) {
-        boolean ammo = operator instanceof Player p && p.hasInfiniteMaterials() || isRound(suit.getInventory().getItem(PowerArmorEntity.AMMO_SLOT));
+        boolean ammo = SuitAmmo.has(operator, RailCannonItem::isRound);
         return ammo && suit.power().hasEnergyFor(this.energyPerUse());
     }
 
@@ -224,8 +225,7 @@ public class RailCannonItem extends Item implements PowerTool, ModTooltip {
         }
         s.charge = 0;
         Vec3 muzzle = SocketAim.muzzlePosition(suit, operator);
-        boolean free = operator instanceof Player p && p.hasInfiniteMaterials();
-        if (!free && !suit.takeAmmo(RailCannonItem::isRound)) {
+        if (!SuitAmmo.take(operator, RailCannonItem::isRound)) {
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.4F);
             return; // (the ingot went while it charged; the fuel was paid while charging)
         }
@@ -319,13 +319,9 @@ public class RailCannonItem extends Item implements PowerTool, ModTooltip {
         return 0.3F + 0.7F * suit.socket().getSpin();
     }
 
-    /** Both sides: shots left for this pilot (the ammo slot's iron ingots), or -1 for endless (creative). */
+    /** Both sides: shots left for this pilot (the iron ingots they carry), or -1 for endless (creative). */
     public static int countRounds(PowerArmorEntity suit, Player pilot) {
-        if (pilot.hasInfiniteMaterials()) {
-            return -1;
-        }
-        ItemStack ammo = suit.getAmmoStack();
-        return isRound(ammo) ? ammo.getCount() : 0;
+        return SuitAmmo.count(pilot, RailCannonItem::isRound);
     }
 
     /** On foot it's just a heavy piece of kit: say where it goes. */

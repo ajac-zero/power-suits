@@ -688,7 +688,6 @@ public final class ShowcaseScene {
             suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, helmet);
             suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(loadout.tool()));
             suit.setPaint(loadout.paint());
-            suit.setStoredNuggets(128);
             suit.snapTo(pos.x, pos.y, pos.z, yaw, 0);
             suit.setYBodyRot(yaw);
             suit.setYHeadRot(yaw);

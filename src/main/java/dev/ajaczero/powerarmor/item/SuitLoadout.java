@@ -9,11 +9,12 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * What a packed-up suit carries: its fuel slot, its socket tool, the half-burnt fuel item, the nuggets in its
- * hidden ammo store, its helmet (2026-10-19; items packed before load without one) and its engine (2026-10-21).
+ * What a packed-up suit carries: its fuel slot, its socket tool, the half-burnt fuel item, its helmet (2026-10-19;
+ * items packed before load without one) and its engine (2026-10-21).
  * The engine is optional on purpose: "no field" (items packed or crafted before the engines, or a fresh suit) means
- * the built-in firebox, while a present but empty stack means the engine was taken out. The ammo slot (2026-10-25) is
- * packed too; older items load with it empty.
+ * the built-in firebox, while a present but empty stack means the engine was taken out. {@code nuggets} (the hidden
+ * ammo store) and {@code ammo} (the ammo slot) are gone from the suit since 2026-10-27: items packed with them still
+ * carry them, and the deployed suit drops them as items (PowerArmorEntity.returnOldAmmo); new items carry none.
  * Stored on the item stack as a "data component" (1.21's replacement for item NBT). A component
  * needs a Codec (how to save it to disk) and a StreamCodec (how to send it over the network).
  */

@@ -27,6 +27,7 @@ import dev.ajaczero.powerarmor.item.HelmetTemplateItem;
 import dev.ajaczero.powerarmor.item.PowerTool;
 import dev.ajaczero.powerarmor.item.RailCannonItem;
 import dev.ajaczero.powerarmor.item.SuitHelmetItem;
+import dev.ajaczero.powerarmor.item.SuitAmmo;
 import dev.ajaczero.powerarmor.item.SuitLoadout;
 import dev.ajaczero.powerarmor.item.TntLauncherItem;
 import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
@@ -1822,9 +1823,10 @@ public final class PowerArmorTests {
         });
     }
 
-    /** The chaingun with the mind at the trigger: it spins up, but without nuggets it can't shoot. */
+    /** The chaingun with the mind at the trigger: it spins up and shoots, needing no nuggets (2026-10-27: the mind's
+     *  tools never run out). */
     @SuitTest(timeoutTicks = 40)
-    public static void mindChaingunNeedsAmmo(GameTestHelper helper) {
+    public static void mindChaingunNeedsNoAmmo(GameTestHelper helper) {
         PowerArmorEntity suit = toolSuit(helper);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
@@ -1833,66 +1835,60 @@ public final class PowerArmorTests {
             suit.socket().setAiTrigger(true);
         });
         helper.runAfterDelay(20, () -> {
-            helper.assertTrue(suit.socket().isActive() && suit.socket().getUses() == 0, "spins, but no nuggets: no shots");
+            helper.assertTrue(suit.socket().isActive() && suit.socket().getUses() > 0, "spins and shoots without nuggets, shots " + suit.socket().getUses());
             helper.succeed();
         });
     }
 
     // =========================================================================================
-    // Phase 8 step 2: the hidden nugget store, the chaingun job (follow + defend the owner, fists without ammo)
+    // Phase 8 step 2: ammo (the hidden nugget store until 2026-10-27), the chaingun job (follow + defend the owner)
     // =========================================================================================
 
-    @SuitTest
-    public static void nuggetsLoadIntoTheHiddenStore(GameTestHelper helper) {
+    /** Since 2026-10-27 the suit holds no ammo (SuitAmmo): an old suit's hidden nugget store and ammo slot, and an item
+     *  packed with them, hand it all back as items at the suit's feet; new packed items carry none. */
+    @SuitTest(timeoutTicks = 60)
+    public static void oldSuitsHandBackTheirAmmo(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_NUGGET, 64));
-        helper.assertTrue(suit.interact(player, InteractionHand.MAIN_HAND, suit.position()).consumesAction(), "right-click with nuggets loads them");
-        helper.assertTrue(suit.getStoredNuggets() == 64 && player.getMainHandItem().isEmpty(), "the whole stack goes in, got " + suit.getStoredNuggets());
-        helper.assertTrue(player.getVehicle() == null, "loading ammo doesn't climb in");
-        int max = PowerArmorConfig.NUGGET_STORE_MAX.get();
-        suit.setStoredNuggets(max - 10);
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_NUGGET, 64));
-        suit.interact(player, InteractionHand.MAIN_HAND, suit.position());
-        helper.assertTrue(suit.getStoredNuggets() == max && player.getMainHandItem().getCount() == 54, "fills up to the store size, keeps the rest");
-        helper.succeed();
-    }
-
-    @SuitTest(timeoutTicks = 120)
-    public static void nuggetStoreSurvivesSavingPackingAndTheWreck(GameTestHelper helper) {
-        PowerArmorEntity suit = spawnSuit(helper);
-        suit.setStoredNuggets(100);
         CompoundTag saved = saveTag(helper, suit);
+        saved.putInt("Nuggets", 100);
+        saved.remove("UUID"); // a second suit, not the same one again (the level refuses a duplicate)
         PowerArmorEntity loaded = ModEntities.POWER_ARMOR.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
         loadTag(helper, loaded, saved);
-        helper.assertTrue(loaded.getStoredNuggets() == 100, "saved with the suit");
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        suit.packUp(player);
-        ItemStack packed = packedSuit(player);
-        helper.assertTrue(packed.get(ModDataComponents.LOADOUT.get()).nuggets() == 100, "kept on the packed item");
-        player.setItemInHand(InteractionHand.MAIN_HAND, packed);
-        useOnFloor(helper, player, packed, new BlockPos(4, 1, 4));
-        PowerArmorEntity deployed = suitsInTest(helper).get(0);
-        helper.assertTrue(deployed.getStoredNuggets() == 100, "back in the deployed suit");
-        deployed.hurtServer(helper.getLevel(), helper.getLevel().damageSources().genericKill(), 1000F);
-        helper.runAfterDelay(70, () -> {
-            helper.assertTrue(dropped(helper, Items.IRON_NUGGET) == 100, "the wreck drops its ammo, got " + dropped(helper, Items.IRON_NUGGET));
+        loaded.getInventory().setItem(PowerArmorEntity.OLD_AMMO_SLOT, new ItemStack(Items.TNT, 7)); // as an old save loads it
+        loaded.snapTo(helper.absoluteVec(new Vec3(2.5, 2, 6.5)));
+        helper.getLevel().addFreshEntity(loaded);
+        var ops = helper.getLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE);
+        CompoundTag oldItem = new CompoundTag();
+        oldItem.putInt("nuggets", 30);
+        SuitLoadout old = SuitLoadout.CODEC.parse(ops, oldItem).getOrThrow();
+        helper.assertTrue(old.nuggets() == 30, "an old packed item still reads its nuggets");
+        PowerArmorEntity deployed = suitAt(helper, new BlockPos(6, 2, 6));
+        deployed.applyLoadout(old);
+        helper.runAfterDelay(20, () -> {
+            helper.assertTrue(dropped(helper, Items.IRON_NUGGET) == 130 && dropped(helper, Items.TNT) == 7,
+                    "all of it dropped: nuggets " + dropped(helper, Items.IRON_NUGGET) + ", TNT " + dropped(helper, Items.TNT));
+            helper.assertTrue(loaded.getInventory().getItem(PowerArmorEntity.OLD_AMMO_SLOT).isEmpty(), "the old slot is empty");
+            SuitLoadout repacked = deployed.getLoadout();
+            helper.assertTrue(repacked.nuggets() == 0 && repacked.ammo().isEmpty(), "packed again it carries none, got " + repacked);
             helper.succeed();
         });
     }
 
-    /** Decided 2026-10-13: a pilot's chaingun takes their own nuggets first, then the suit's store. */
+    /** A pilot's ammo comes from their own inventory, the off hand first (like a bow's arrows); none, no shot. The
+     *  machine mind (an operator that isn't a player) never runs out (user, 2026-10-27). */
     @SuitTest
-    public static void pilotChaingunUsesOwnNuggetsBeforeTheStore(GameTestHelper helper) {
+    public static void pilotAmmoComesFromTheirInventory(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
-        suit.setStoredNuggets(5);
         Player pilot = helper.makeMockPlayer(GameType.SURVIVAL);
-        pilot.getInventory().setItem(3, new ItemStack(Items.IRON_NUGGET, 1));
-        for (int i = 0; i < 3; i++) {
-            helper.assertTrue(ChaingunItem.takeBullet(suit, pilot), "a bullet each time");
-        }
-        helper.assertTrue(pilot.getInventory().countItem(Items.IRON_NUGGET) == 0 && suit.getStoredNuggets() == 3,
-                "1 from the pocket, then 2 from the store; store " + suit.getStoredNuggets());
+        pilot.getInventory().setItem(3, new ItemStack(Items.IRON_NUGGET, 2));
+        pilot.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.IRON_NUGGET, 1));
+        helper.assertTrue(ChaingunItem.countBullets(pilot) == 3, "counts every nugget carried, got " + ChaingunItem.countBullets(pilot));
+        helper.assertTrue(ChaingunItem.takeBullet(suit, pilot) && pilot.getOffhandItem().isEmpty(), "the off hand first");
+        helper.assertTrue(ChaingunItem.takeBullet(suit, pilot) && ChaingunItem.takeBullet(suit, pilot), "then the inventory");
+        helper.assertTrue(!ChaingunItem.takeBullet(suit, pilot) && ChaingunItem.countBullets(pilot) == 0, "then nothing");
+        helper.assertTrue(ChaingunItem.takeBullet(suit, suit), "the mind's gun never runs dry");
+        pilot.getAbilities().instabuild = true;
+        helper.assertTrue(ChaingunItem.takeBullet(suit, pilot) && ChaingunItem.countBullets(pilot) == SuitAmmo.ENDLESS, "creative: free");
         helper.succeed();
     }
 
@@ -1917,25 +1913,23 @@ public final class PowerArmorTests {
         return husk;
     }
 
-    private static PowerArmorEntity chaingunMind(GameTestHelper helper, BlockPos at, int nuggets) {
+    private static PowerArmorEntity chaingunMind(GameTestHelper helper, BlockPos at) {
         PowerArmorEntity suit = suitAt(helper, at);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
-        suit.setStoredNuggets(nuggets);
         return suit;
     }
 
     @SuitTest(timeoutTicks = 100)
     public static void chaingunMindShootsMonstersNearItsOwner(GameTestHelper helper) {
-        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 64);
+        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1));
         var owner = ownerAt(helper, suit, new Vec3(1.5, 2, 1.5));
         var husk = statueHusk(helper, new Vec3(4.5, 2, 7.5));
         helper.runAfterDelay(80, () -> {
             dismiss(helper, owner);
             helper.assertTrue(!husk.isAlive(), "the husk should be shot down, health " + husk.getHealth());
             helper.assertTrue(husk.getLastHurtByMob() == suit, "killed by the suit itself (it owns its bullets)");
-            helper.assertTrue(suit.getStoredNuggets() < 64 && suit.socket().getUses() == 64 - suit.getStoredNuggets(),
-                    "one nugget from the store per bullet, store " + suit.getStoredNuggets() + " shots " + suit.socket().getUses());
+            helper.assertTrue(suit.socket().getUses() > 0, "with bullets that never run out, shots " + suit.socket().getUses());
             helper.succeed();
         });
     }
@@ -1944,7 +1938,7 @@ public final class PowerArmorTests {
      *  walks for a clear shot, e.g. over their head, so the hold is checked over the first ticks, before it has moved.) */
     @SuitTest(timeoutTicks = 60)
     public static void chaingunMindHoldsFireWithTheOwnerInTheWay(GameTestHelper helper) {
-        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 64);
+        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1));
         var owner = ownerAt(helper, suit, new Vec3(4.5, 2, 3.5));
         var husk = statueHusk(helper, new Vec3(4.5, 2, 6.5));
         helper.assertTrue(!SuitTargets.lineOfFireClear(suit, husk, husk.getBoundingBox().getCenter()),
@@ -1966,7 +1960,7 @@ public final class PowerArmorTests {
 
     @SuitTest(timeoutTicks = 90)
     public static void chaingunMindFollowsItsOwner(GameTestHelper helper) {
-        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(1, 2, 1), 64);
+        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(1, 2, 1));
         var owner = ownerAt(helper, suit, new Vec3(7.5, 2, 7.5));
         helper.runAfterDelay(70, () -> {
             double d = suit.distanceTo(owner);
@@ -1976,24 +1970,10 @@ public final class PowerArmorTests {
         });
     }
 
-    @SuitTest(timeoutTicks = 100)
-    public static void chaingunMindPunchesWhenOutOfNuggets(GameTestHelper helper) {
-        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 0);
-        var owner = ownerAt(helper, suit, new Vec3(1.5, 2, 1.5));
-        var husk = statueHusk(helper, new Vec3(4.5, 2, 5.5));
-        helper.runAfterDelay(80, () -> {
-            dismiss(helper, owner);
-            float lost = husk.getMaxHealth() - husk.getHealth();
-            helper.assertTrue(suit.socket().getUses() == 0, "no nuggets: no shots");
-            helper.assertTrue(lost >= 1F + PowerArmorConfig.MELEE_BONUS.get() - 0.01, "walks up and punches (1 + melee bonus), lost " + lost);
-            helper.succeed();
-        });
-    }
-
     /** Who the mind may shoot: monsters, and anything that started it; never the owner, their pets, villagers or friendly suits. */
     @SuitTest
     public static void mindTargetRules(GameTestHelper helper) {
-        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1), 0);
+        PowerArmorEntity suit = chaingunMind(helper, new BlockPos(4, 2, 1));
         Player ownerPlayer = helper.makeMockPlayer(GameType.SURVIVAL);
         suit.brain().setOwnerId(ownerPlayer.getUUID());
         var rules = (BiPredicate<Entity, Boolean>) (e, provoked) ->
@@ -2167,7 +2147,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(3, () -> helper.assertTrue(suit.isPowered() && suit.isAiDriven(), "a rogue needs no fuel"));
         helper.succeedWhen(() -> {
             helper.assertTrue(!cow.isAlive(), "the cow should be shot");
-            helper.assertTrue(suit.power().getTotalEnergy() == 0 && suit.getStoredNuggets() == 0 && suit.socket().getUses() > 0,
+            helper.assertTrue(suit.power().getTotalEnergy() == 0 && suit.socket().getUses() > 0,
                     "fired without fuel or nuggets");
         });
     }
@@ -2252,7 +2232,7 @@ public final class PowerArmorTests {
     /** A friendly chaingun mind defends against rogues like against monsters. */
     @SuitTest(timeoutTicks = 80)
     public static void friendlyChaingunShootsRogues(GameTestHelper helper) {
-        PowerArmorEntity friend = chaingunMind(helper, new BlockPos(4, 2, 1), 64);
+        PowerArmorEntity friend = chaingunMind(helper, new BlockPos(4, 2, 1));
         var owner = ownerAt(helper, friend, new Vec3(1.5, 2, 1.5));
         PowerArmorEntity rogue = rogue(helper, new BlockPos(4, 2, 7), false);
         helper.runAfterDelay(60, () -> {
@@ -3075,11 +3055,12 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 20)
     public static void slotCopiesCatchUpWithInPlaceChanges(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
-        suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.TNT, 8));
-        suit.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).shrink(3);
-        helper.assertTrue(suit.getAmmoStack().getCount() == 8, "the copy is stale right after the in-place change");
+        // glass bottles: they may sit in the fuel slot (what burnt fuel leaves) but never burn, so only the shrink counts
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.GLASS_BOTTLE, 8));
+        suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).shrink(3);
+        helper.assertTrue(suit.getFuelStack().getCount() == 8, "the copy is stale right after the in-place change");
         helper.runAfterDelay(2, () -> {
-            helper.assertTrue(suit.getAmmoStack().getCount() == 5, "the copy caught up, got " + suit.getAmmoStack());
+            helper.assertTrue(suit.getFuelStack().getCount() == 5, "the copy caught up, got " + suit.getFuelStack());
             helper.succeed();
         });
     }
@@ -3110,11 +3091,11 @@ public final class PowerArmorTests {
     }
 
     // =========================================================================================
-    // TNT launcher and the ammo slot (Phase 11, 2026-10-25)
+    // TNT launcher (Phase 11, 2026-10-25; its TNT from the pilot's inventory since 2026-10-27)
     // =========================================================================================
 
-    /** A suit at (4, 2, 1) facing +Z with the TNT launcher ({@code drum} rounds loaded), fuel, {@code tnt} blocks of TNT
-     *  in its ammo slot and a survival pilot looking at {@code target} (relative). */
+    /** A suit at (4, 2, 1) facing +Z with the TNT launcher ({@code drum} rounds loaded), fuel, and a survival pilot
+     *  carrying {@code tnt} blocks of TNT, looking at {@code target} (relative). */
     private static Player tntPilot(GameTestHelper helper, PowerArmorEntity[] out, Vec3 target, int drum, int tnt) {
         PowerArmorEntity suit = suitAt(helper, new BlockPos(4, 2, 1));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 4));
@@ -3123,10 +3104,12 @@ public final class PowerArmorTests {
             launcher.set(ModDataComponents.LOADED_ROUNDS.get(), drum);
         }
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, launcher);
-        suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, tnt > 0 ? new ItemStack(Items.TNT, tnt) : ItemStack.EMPTY);
         suit.setYRot(0);
         suit.setYBodyRot(0);
         Player pilot = boardedPilot(helper, suit);
+        if (tnt > 0) {
+            pilot.getInventory().setItem(9, new ItemStack(Items.TNT, tnt));
+        }
         suit.positionRider(pilot);
         aim(helper, pilot, target);
         out[0] = suit;
@@ -3139,39 +3122,14 @@ public final class PowerArmorTests {
         return helper.getLevel().getEntitiesOfClass(TntShell.class, helper.getBounds().inflate(2));
     }
 
+    /** The TNT and iron ingots the suit's pilot carries (0 without one). */
     private static int ammoLeft(PowerArmorEntity suit) {
-        return suit.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).getCount();
+        return suit.getControllingPassenger() instanceof Player pilot
+                ? pilot.getInventory().countItem(Items.TNT) + pilot.getInventory().countItem(Items.IRON_INGOT) : 0;
     }
 
     private static int drumOf(PowerArmorEntity suit) {
         return TntLauncherItem.loaded(suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT));
-    }
-
-    /** The ammo slot (menu slot 4) takes TNT only, shift-click puts TNT there, and the suit's item keeps it when packed. */
-    @SuitTest
-    public static void ammoSlotTakesTntAndPacksWithTheSuit(GameTestHelper helper) {
-        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 2));
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.snapTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
-        PowerArmorMenu menu = new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit);
-        helper.assertTrue(menu.getSlot(PowerArmorMenu.MENU_AMMO).mayPlace(new ItemStack(Items.TNT)), "the ammo slot takes TNT");
-        helper.assertTrue(!menu.getSlot(PowerArmorMenu.MENU_AMMO).mayPlace(new ItemStack(Items.GUNPOWDER)) && !menu.getSlot(PowerArmorMenu.MENU_AMMO).mayPlace(new ItemStack(Items.COAL)),
-                "and nothing else");
-        player.getInventory().setItem(9, new ItemStack(Items.TNT, 16));
-        menu.quickMoveStack(player, PowerArmorMenu.INV_START + 0); // the player's inventory slot 9
-        helper.assertTrue(ammoLeft(suit) == 16, "shift-click loads the TNT into the ammo slot, got " + suit.getInventory().getItem(PowerArmorEntity.AMMO_SLOT));
-        helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.FUEL_SLOT).is(Items.COAL), "not into the fuel slot");
-        // A loadout from before the ammo slot (no "ammo" field) loads with it empty.
-        var ops = helper.getLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE);
-        var old = SuitLoadout.CODEC.parse(ops, new CompoundTag()).getOrThrow();
-        helper.assertTrue(old.ammo().isEmpty(), "an old suit item has no ammo, got " + old.ammo());
-        suit.packUp(player);
-        SuitLoadout loadout = packedSuit(player).get(ModDataComponents.LOADOUT.get());
-        helper.assertTrue(loadout != null && loadout.ammo().is(Items.TNT) && loadout.ammo().getCount() == 16, "the packed suit keeps its TNT, got " + loadout);
-        PowerArmorEntity deployed = suitAt(helper, new BlockPos(4, 2, 1));
-        deployed.applyLoadout(loadout);
-        helper.assertTrue(ammoLeft(deployed) == 16 && deployed.getAmmoStack().getCount() == 16, "and gives it back when deployed (synced too)");
-        helper.succeed();
     }
 
     /** With an empty drum and no TNT the trigger only clicks: no round, nothing used. */
@@ -3201,7 +3159,7 @@ public final class PowerArmorTests {
             helper.assertTrue(suit[0].socket().getUses() == 1, "a tap fires one round, got " + suit[0].socket().getUses());
             helper.assertTrue(drumOf(suit[0]) == 0, "the drum's round, left " + drumOf(suit[0]));
             helper.assertTrue(TntLauncherItem.loaded(suit[0].getSocketStack()) == 0, "the synced copy (HUD) follows");
-            helper.assertTrue(ammoLeft(suit[0]) == 3, "the ammo slot is only touched by the reload, left " + ammoLeft(suit[0]));
+            helper.assertTrue(ammoLeft(suit[0]) == 3, "the pilot's TNT is only touched by the reload, left " + ammoLeft(suit[0]));
         });
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(shellsInTest(helper).isEmpty(), "the round has gone off");
@@ -3214,7 +3172,7 @@ public final class PowerArmorTests {
     }
 
     /** The drum (2026-10-27): held, it fires its 4 rounds one shot interval apart, then only clicks; let go, it loads
-     *  the chambers back one per reload_ticks from the ammo slot, starting reload_delay_ticks after the last shot. */
+     *  the chambers back one per reload_ticks with the pilot's TNT, starting reload_delay_ticks after the last shot. */
     @SuitTest(timeoutTicks = 200, batch = "tnt")
     public static void tntLauncherEmptiesItsDrumThenReloadsChamberByChamber(GameTestHelper helper) {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
@@ -3228,11 +3186,11 @@ public final class PowerArmorTests {
         helper.runAfterDelay(lastShot + interval + 2, () -> {
             suit[0].socket().setTriggerHeld(pilot, false);
             helper.assertTrue(suit[0].socket().getUses() == 4, "the whole drum, then dry clicks: 4 rounds, got " + suit[0].socket().getUses());
-            helper.assertTrue(drumOf(suit[0]) == 0 && ammoLeft(suit[0]) == 10, "an empty drum, the ammo slot untouched while firing: drum "
+            helper.assertTrue(drumOf(suit[0]) == 0 && ammoLeft(suit[0]) == 10, "an empty drum, the TNT untouched while firing: drum "
                     + drumOf(suit[0]) + ", ammo " + ammoLeft(suit[0]));
         });
         helper.runAfterDelay(lastShot + delay + 2 * reload + reload / 2, () -> {
-            helper.assertTrue(drumOf(suit[0]) == 2 && ammoLeft(suit[0]) == 8, "two chambers loaded from the ammo slot by now: drum "
+            helper.assertTrue(drumOf(suit[0]) == 2 && ammoLeft(suit[0]) == 8, "two chambers loaded from the pilot's TNT by now: drum "
                     + drumOf(suit[0]) + ", ammo " + ammoLeft(suit[0]));
         });
         helper.runAfterDelay(lastShot + delay + 4 * reload + reload / 2, () -> {
@@ -3349,7 +3307,7 @@ public final class PowerArmorTests {
         helper.runAfterDelay(2, () -> suit[0].socket().setTriggerHeld(pilot, true));
         helper.runAfterDelay(reload + PowerArmorConfig.TNT_LAUNCHER_SHOT_INTERVAL.get() + 4, () -> {
             suit[0].socket().setTriggerHeld(pilot, false);
-            helper.assertTrue(suit[0].socket().getUses() >= 1, "creative loads and fires with an empty ammo slot, got " + suit[0].socket().getUses());
+            helper.assertTrue(suit[0].socket().getUses() >= 1, "creative loads and fires without TNT, got " + suit[0].socket().getUses());
             helper.succeed();
         });
     }
@@ -3379,15 +3337,14 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = suitAt(helper, new BlockPos(4, 2, 1));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.TNT_LAUNCHER.get()));
-        suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.TNT, 8));
         var owner = ownerAt(helper, suit, new Vec3(1.5, 2, 1.5));
         statueHusk(helper, new Vec3(4.5, 2, 7.5));
         helper.runAfterDelay(100, () -> {
             dismiss(helper, owner);
             helper.assertTrue(!suit.brain().followsOwner() && !suit.brain().hasGun(), "the launcher is no weapon for the mind");
-            // (a powered suit loads its drum on its own: the TNT moves from the ammo slot into the drum, none is spent)
-            helper.assertTrue(suit.socket().getUses() == 0 && ammoLeft(suit) + drumOf(suit) == 8, "it never fired, uses "
-                    + suit.socket().getUses() + ", ammo " + ammoLeft(suit) + " + drum " + drumOf(suit));
+            // (and with nobody inside its drum doesn't load: there's no pilot's TNT to load it with)
+            helper.assertTrue(suit.socket().getUses() == 0 && drumOf(suit) == 0, "it never fired, uses "
+                    + suit.socket().getUses() + ", drum " + drumOf(suit));
             helper.assertTrue(shellsInTest(helper).isEmpty(), "no rounds");
             helper.succeed();
         });
@@ -3397,16 +3354,18 @@ public final class PowerArmorTests {
     // Rail cannon (Phase 11, 2026-10-26)
     // =========================================================================================
 
-    /** A suit at (4, 2, 1) facing +Z with the rail cannon, fuel, {@code ingots} iron ingots in its ammo slot and a
-     *  survival pilot looking at {@code target} (relative). */
+    /** A suit at (4, 2, 1) facing +Z with the rail cannon, fuel, and a survival pilot carrying {@code ingots} iron
+     *  ingots, looking at {@code target} (relative). */
     private static Player railPilot(GameTestHelper helper, PowerArmorEntity[] out, Vec3 target, int ingots) {
         PowerArmorEntity suit = suitAt(helper, new BlockPos(4, 2, 1));
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 2));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.RAIL_CANNON.get()));
-        suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, ingots > 0 ? new ItemStack(Items.IRON_INGOT, ingots) : ItemStack.EMPTY);
         suit.setYRot(0);
         suit.setYBodyRot(0);
         Player pilot = boardedPilot(helper, suit);
+        if (ingots > 0) {
+            pilot.getInventory().setItem(9, new ItemStack(Items.IRON_INGOT, ingots));
+        }
         suit.positionRider(pilot);
         aim(helper, pilot, target);
         out[0] = suit;
@@ -3445,7 +3404,7 @@ public final class PowerArmorTests {
         });
         helper.runAfterDelay(2 + 2 * full + 17, () -> {
             helper.assertTrue(suit[0].socket().getUses() == 1, "let go at full charge: one shot, got " + suit[0].socket().getUses());
-            helper.assertTrue(ammoLeft(suit[0]) == 2 && suit[0].getAmmoStack().getCount() == 2, "one ingot used, left " + ammoLeft(suit[0]));
+            helper.assertTrue(ammoLeft(suit[0]) == 2, "one ingot used, left " + ammoLeft(suit[0]));
             int used = energy[1] - suit[0].power().getTotalEnergy();
             helper.assertTrue(used <= perTick + 2, "the release itself burns no fuel (at most the last held tick + idle), used " + used);
             helper.assertTrue(suit[0].socket().getSpin() == 0F, "the charge is spent");
@@ -3523,41 +3482,33 @@ public final class PowerArmorTests {
         helper.runAfterDelay(4 + full, () -> {
             helper.assertTrue(suit[0].socket().getSpin() == 0F, "no ingot, no charge: " + suit[0].socket().getSpin());
             suit[0].socket().setTriggerHeld(pilot, false);
-            helper.assertTrue(menuSlotTakes(helper, suit[0], new ItemStack(Items.IRON_INGOT)), "the ammo slot takes iron ingots");
             pilot.getAbilities().instabuild = true;
             suit[0].socket().setTriggerHeld(pilot, true);
         });
         helper.runAfterDelay(8 + 2 * full, () -> suit[0].socket().setTriggerHeld(pilot, false));
         helper.runAfterDelay(10 + 2 * full, () -> {
-            helper.assertTrue(suit[0].socket().getUses() == 1, "creative fires with an empty ammo slot, got " + suit[0].socket().getUses());
+            helper.assertTrue(suit[0].socket().getUses() == 1, "creative fires without ingots, got " + suit[0].socket().getUses());
             helper.succeed();
         });
     }
 
-    private static boolean menuSlotTakes(GameTestHelper helper, PowerArmorEntity suit, ItemStack stack) {
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        return new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit).getSlot(PowerArmorMenu.MENU_AMMO).mayPlace(stack);
-    }
-
-    private static PowerArmorEntity railGuard(GameTestHelper helper, BlockPos at, int ingots) {
+    private static PowerArmorEntity railGuard(GameTestHelper helper, BlockPos at) {
         PowerArmorEntity suit = suitAt(helper, at);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 4));
         suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.RAIL_CANNON.get()));
-        suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.IRON_INGOT, ingots));
         suit.brain().setHome(helper.absolutePos(at));
         return suit;
     }
 
-    /** The machine mind guards home with it: a husk across the pad gets shot (charge, aim, let go), one ingot spent; the
+    /** The machine mind guards home with it: a husk across the pad gets shot (charge, aim, let go), needing no ingots; the
      *  suit stays home. */
     @SuitTest(timeoutTicks = 140)
     public static void railCannonMindShootsMonstersFromHome(GameTestHelper helper) {
-        PowerArmorEntity suit = railGuard(helper, new BlockPos(4, 2, 1), 4);
+        PowerArmorEntity suit = railGuard(helper, new BlockPos(4, 2, 1));
         var husk = statueHusk(helper, new Vec3(5.5, 2, 7.5));
         helper.runAfterDelay(120, () -> {
             helper.assertTrue(suit.socket().getUses() >= 1, "it should have fired, uses " + suit.socket().getUses());
             helper.assertTrue(!husk.isAlive() || husk.getHealth() < husk.getMaxHealth(), "and hit the husk, health " + husk.getHealth());
-            helper.assertTrue(ammoLeft(suit) == 4 - suit.socket().getUses(), "an ingot per shot, left " + ammoLeft(suit));
             helper.assertTrue(!suit.brain().isAwayFromHome(1.0), "from home");
             helper.assertTrue(!suit.brain().followsOwner() && suit.brain().snipesFromHome(), "the rail guard job, not the chaingun's");
             helper.succeed();
@@ -3567,7 +3518,7 @@ public final class PowerArmorTests {
     /** The beam goes on past the target, so a villager behind the husk (on the line) holds the mind's fire. */
     @SuitTest(timeoutTicks = 140)
     public static void railCannonMindHoldsFireWithAFriendOnTheBeam(GameTestHelper helper) {
-        PowerArmorEntity suit = railGuard(helper, new BlockPos(4, 2, 1), 4);
+        PowerArmorEntity suit = railGuard(helper, new BlockPos(4, 2, 1));
         statueHusk(helper, new Vec3(4.5, 2, 5.5));
         // right behind it: the beam aimed down at the husk would reach the floor further back, past a villager there
         var villager = helper.spawn(EntityTypes.VILLAGER, new Vec3(4.5, 2, 6.7));

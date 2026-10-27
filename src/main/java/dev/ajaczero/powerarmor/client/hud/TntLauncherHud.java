@@ -29,7 +29,7 @@ import net.minecraft.world.phys.Vec3;
  *   x there (blinking when it's that close).</li>
  *   <li>The drum, in the top right corner like the chaingun's ammo (user, 2026-10-27): a revolver drum seen from behind,
  *   one chamber per round loaded (filled, from the top clockwise), the next empty one filling up while it's being
- *   loaded; AMMO and the rounds in reserve (the ammo slot) on the big counter beside it, LOAD under them while it
+ *   loaded; AMMO and the rounds in reserve (the TNT you carry) on the big counter beside it, LOAD under them while it
  *   loads. AMMO blinks inverted on the last round.</li>
  * </ul>
  */

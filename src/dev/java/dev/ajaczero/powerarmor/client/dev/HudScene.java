@@ -84,8 +84,7 @@ final class HudScene {
             // the last bullets (the barrels are cold again by the shot)
             case 380 -> { phase = "last_bullets"; server(mc, (p, x) -> {
                               p.getInventory().clearContent();
-                              p.getInventory().setItem(9, new ItemStack(Items.IRON_NUGGET, 10));
-                              x.setStoredNuggets(0); }); }
+                              p.getInventory().setItem(9, new ItemStack(Items.IRON_NUGGET, 10)); }); }
             case 396 -> AutoPilot.shot(mc, "hud_last_bullets");
             case 397 -> server(mc, (p, x) -> p.getInventory().setItem(9, new ItemStack(Items.IRON_NUGGET, 64)));
             // under half the hull: a warning (orange); then its last 15%: critical (red)
@@ -256,11 +255,11 @@ final class HudScene {
                 net.minecraft.server.permissions.LevelBasedPermissionSet.OWNER), cmd);
     }
 
-    /** Swap the socket tool (and the ammo slot) on the server: the menu's job in the game. */
+    /** Swap the socket tool on the server (the menu's job in the game) and give the pilot its ammo (inventory slot 10). */
     private static void tool(Minecraft mc, Item tool, ItemStack ammo) {
         server(mc, (p, x) -> {
             x.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(tool));
-            x.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, ammo);
+            p.getInventory().setItem(10, ammo);
         });
     }
 

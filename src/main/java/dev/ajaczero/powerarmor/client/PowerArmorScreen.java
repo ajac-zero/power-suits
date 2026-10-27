@@ -98,10 +98,6 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
                 : !suit.hasHelmet() ? "gui.powerarmor.no_helmet"
                 : suit.isPowered() ? "gui.powerarmor.online" : "gui.powerarmor.offline");
         graphics.text(this.font, status, DISPLAY_X, DISPLAY_Y + 2 * LINE, warn ? AMBER : suit.isPowered() ? GREEN : RED, false);
-        // The hidden nugget store (no slot: right-click the suit with nuggets to load it). Dim when empty.
-        int nuggets = suit.getStoredNuggets();
-        graphics.text(this.font, Component.translatable("gui.powerarmor.ammo", nuggets), DISPLAY_X, DISPLAY_Y + 3 * LINE,
-                nuggets > 0 ? GREEN : DIM, false);
     }
 
     /** Explain the suit's slots while they're empty. */
@@ -112,7 +108,7 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         int index = this.menu.slots.indexOf(this.hoveredSlot);
         String key = index == 0 ? "gui.powerarmor.socket_slot" : index == 1 ? "gui.powerarmor.fuel_slot"
                 : index == 2 ? "gui.powerarmor.helmet_slot" : index == 3 ? "gui.powerarmor.engine_slot"
-                : index == 4 ? "gui.powerarmor.ammo_slot" : null;
+                : null;
         if (key != null) {
             graphics.setComponentTooltipForNextFrame(this.font, List.of(Component.translatable(key),
                     Component.translatable(key + ".hint").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);

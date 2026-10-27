@@ -85,19 +85,19 @@ final class RailScene {
             case 235, 236, 238, 242 -> AutoPilot.shot(mc, "rail_fire_fp_" + s);
             // no ingots: it doesn't charge, the HUD shows a red 0
             case 250 -> { phase = "empty"; AutoPilot.onServer(mc, p -> { PowerArmorEntity x = suit; if (x != null) {
-                              x.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, ItemStack.EMPTY); } }); }
+                              ingots(p, 0); } }); }
             case 256 -> AutoPilot.hold(o.keyUse, true);
             case 276 -> AutoPilot.shot(mc, "rail_empty_fp");
             case 280 -> AutoPilot.hold(o.keyUse, false);
             // up close while it charges: the core's light running toward the muzzle, the shake, the sparks
             case 288 -> { phase = "close"; AutoPilot.onServer(mc, p -> { PowerArmorEntity x = suit; if (x != null) {
-                              x.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.IRON_INGOT, 4)); } });
+                              ingots(p, 4); } });
                           aim(b, 0.5, 1.6, WALL_Z); closeCamera(mc); }
             case 292 -> AutoPilot.hold(o.keyUse, true);
             case 318 -> frontCamera(mc);   // the rest from in front: down the slot, the energy and the emitter in the band
             case 340 -> AutoPilot.hold(o.keyUse, false);
-            // the machine mind: the pilot climbs out (the suit's home is where it stands), ingots go back in, a husk
-            // comes in off to the left: the mind charges, aims and fires
+            // the machine mind: the pilot climbs out (the suit's home is where it stands; the mind needs no
+            // ingots), a husk comes in off to the left: the mind charges, aims and fires
             case 360 -> { phase = "mind"; AutoPilot.aimTarget = null; AutoPilot.onServer(mc, p -> {
                               PowerArmorEntity x = suit;
                               BlockPos bb = base;
@@ -106,17 +106,15 @@ final class RailScene {
                               }
                               p.stopRiding();
                               p.teleportTo(x.getX() + 1.5, x.getY(), x.getZ() - 3);
-                              x.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.IRON_INGOT, 4));
                               husk(p.level(), bb.getX() - 9 + 0.5, bb.getY(), bb.getZ() + 12.5); // (clear of the glass wall)
                           }); }
             case 364 -> mindCamera(mc);
             case 380, 390, 400, 410, 415, 420, 425, 430, 440, 450 -> AutoPilot.shot(mc, "rail_mind_" + s);
-            // the menu, with the ammo slot
+            // the menu
             case 466 -> { phase = "menu"; mc.setCameraEntity(mc.player); DevUtil.hideGui(mc, false);
                           AutoPilot.onServer(mc, p -> {
                               PowerArmorEntity x = suit;
                               if (x != null) {
-                                  x.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.IRON_INGOT, 12));
                                   p.teleportTo(x.getX() - 2, x.getY(), x.getZ() - 2);
                                   p.setShiftKeyDown(true);
                                   x.interact(p, InteractionHand.MAIN_HAND, x.position());
@@ -139,6 +137,19 @@ final class RailScene {
     private static void aim(BlockPos b, double dx, double dy, double dz) {
         if (b != null) {
             AutoPilot.aimTarget = new Vec3(b.getX() + 0.5 + dx, b.getY() + dy, b.getZ() + 0.5 + dz);
+        }
+    }
+
+    /** The pilot's iron ingots (the rail cannon's ammo, from their inventory): {@code n} of them, in slot 9. */
+    private static void ingots(net.minecraft.world.entity.player.Player p, int n) {
+        var inv = p.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            if (inv.getItem(i).is(Items.IRON_INGOT)) {
+                inv.setItem(i, ItemStack.EMPTY);
+            }
+        }
+        if (n > 0) {
+            inv.setItem(9, new ItemStack(Items.IRON_INGOT, n));
         }
     }
 
@@ -184,7 +195,7 @@ final class RailScene {
             s.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 16));
             s.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
             s.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.RAIL_CANNON.get()));
-            s.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.IRON_INGOT, 6));
+            ingots(player, 6); // the pilot's own: each shot takes one
             s.snapTo(x + 0.5, g, z + 0.5, 0, 0);
             s.setYBodyRot(0);
             s.setYHeadRot(0);
@@ -273,7 +284,7 @@ final class RailScene {
         }
         String p = phase;
         PowerArmorEntity client = clientSuit(mc);
-        int clientAmmo = client == null ? -1 : client.getAmmoStack().getCount();
+        int clientAmmo = mc.player == null ? -1 : mc.player.getInventory().countItem(Items.IRON_INGOT); // the client's copy
         float clientCharge = client == null ? -1F : client.socket().getSpin();
         float recoil = client == null ? 0F : client.socketVisuals().recoil(0F);
         float raise = client == null ? 0F : client.socketVisuals().raise(0F);
@@ -292,7 +303,7 @@ final class RailScene {
             RailCannonItem.Shot shot = RailCannonItem.lastShot(x);
             try {
                 w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%.2f,%.2f,%d,%d,%d,%d,%d,%.1f,%.2f,%.2f,%.2f,%s%n", s, p, x.socket().getUses(),
-                        x.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).getCount(), clientAmmo, x.socket().getSpin(), clientCharge,
+                        player.getInventory().countItem(Items.IRON_INGOT), clientAmmo, x.socket().getSpin(), clientCharge,
                         husks, glass, wall, shot == null ? -1 : shot.hit().size(), shot == null ? -1 : shot.blocksBroken(),
                         shot == null ? -1D : shot.from().distanceTo(shot.to()), recoil, raise, glow, x.brain().runningGoalNames()));
             } catch (IOException ignored) {

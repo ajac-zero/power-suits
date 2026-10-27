@@ -48,7 +48,7 @@ final class TntLauncherEffects implements ToolEffects {
         }
     }
 
-    /** HUD: the rounds in reserve (TNT in the ammo slot; the drum's own rounds are on the launcher: TntLauncherItem.loaded),
+    /** HUD: the rounds in reserve (the TNT the pilot carries; the drum's own rounds are on the launcher: TntLauncherItem.loaded),
      *  low on the last round anywhere; the chamber being loaded (synced as the socket's spin, 0..1). */
     @Override
     public HudReadout hud(PowerArmorEntity suit, Player pilot) {

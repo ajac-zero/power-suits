@@ -134,7 +134,6 @@ final class RogueScene {
             PowerArmorEntity f = ModEntities.POWER_ARMOR.get().create(level, EntitySpawnReason.COMMAND);
             DevUtil.firebox(f); f.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 16)); f.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
             f.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
-            f.setStoredNuggets(256);
             f.brain().setOwnerId(player.getUUID());
             f.snapTo(x + 3.5, y, z - 1.5, 0, 0);
             level.addFreshEntity(f);

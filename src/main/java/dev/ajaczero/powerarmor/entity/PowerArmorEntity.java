@@ -5,7 +5,6 @@ import com.geckolib.animatable.instance.AnimatableInstanceCache;
 import com.geckolib.animatable.manager.AnimatableManager;
 import com.geckolib.util.GeckoLibUtil;
 import dev.ajaczero.powerarmor.PilotHands;
-import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.SuitSeal;
 import dev.ajaczero.powerarmor.entity.ai.SuitGoals;
@@ -17,23 +16,19 @@ import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionHand;
@@ -58,7 +53,6 @@ import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.DismountHelper;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -106,12 +100,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     public static final int FUEL_SLOT = 0, SOCKET_SLOT = 1, HELMET_SLOT = 2;
     /** The engine (the backpack, design sec. 4b, 2026-10-21): what powers the suit and what the fuel slot burns. */
     public static final int ENGINE_SLOT = 3;
-    /** Ammunition for the socket tool (2026-10-25, the TNT launcher's TNT; generic so later tools can draw from it too).
-     *  What fits is the item tag powerarmor:suit_ammo. Suits saved before it simply have it empty. */
-    public static final int AMMO_SLOT = 4;
-    /** What the ammo slot takes: data, so packs (and later tools) can add to it. */
-    public static final TagKey<Item> AMMO = TagKey.create(
-            Registries.ITEM, Identifier.fromNamespaceAndPath(PowerArmor.MODID, "suit_ammo"));
+    /** Where the ammo slot was (2026-10-25 .. 2026-10-27): the tools now take their ammo from the pilot's inventory
+     *  (item/SuitAmmo). An old suit's ammo still loads here and comes back out as items ({@link #returnOldAmmo}). */
+    public static final int OLD_AMMO_SLOT = 4;
     // Drain per tick (idle / walking / sprinting), energy per jump and the low-fuel warning level are balance
     // knobs in PowerArmorConfig. Walking = 1 per tick, so SuitFuel values read as ticks of walking.
     /** Length of the startup animation (1.4 s): the suit can't move until it has stood up. */
@@ -148,9 +139,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Who the machine mind works for (SuitMind ordinal): the visor shows it. */
     private static final EntityDataAccessor<Byte> MIND =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BYTE);
-    /** Iron nuggets in the hidden ammo store (synced: the menu and the pilot's HUD show it). */
-    private static final EntityDataAccessor<Integer> NUGGETS =
-            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     /** Held in another suit's EM field (synced: the pilot's client moves a piloted suit, so it must know). */
     static final EntityDataAccessor<Boolean> FIELD_HELD =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.BOOLEAN);
@@ -165,9 +153,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     static final EntityDataAccessor<Integer> FUEL_ENERGY =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<ItemStack> SOCKET_ITEM =
-            SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
-    /** The ammo slot's contents: the HUD counts the TNT left. */
-    private static final EntityDataAccessor<ItemStack> AMMO_ITEM =
             SynchedEntityData.defineId(PowerArmorEntity.class, EntityDataSerializers.ITEM_STACK);
     /** Is a helmet in its slot: clients draw it (or not) and know whether the suit is sealed. */
     private static final EntityDataAccessor<Boolean> HELMET =
@@ -202,8 +187,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     private final SuitLights lights = new SuitLights(this);
     /** Server: the machine mind's state (owner, home, aim, which job its tool gives it, a rogue's lifetime): see SuitBrain. */
     private final SuitBrain brain = new SuitBrain(this);
-    /** The suit's own slots: fuel, the left-arm socket, the helmet, the engine and the ammo. Real contents only exist on
-     *  the server. Old saves load fine with fewer: each saved item carries its slot number. */
+    /** The suit's own slots: fuel, the left-arm socket, the helmet and the engine (and the old ammo slot, emptied on
+     *  load). Real contents only exist on the server. Old saves load fine with fewer: each saved item carries its slot
+     *  number. */
     private final SimpleContainer inventory = new SimpleContainer(5) {
         @Override
         public void setChanged() {
@@ -212,6 +198,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             PowerArmorEntity.this.syncSlots();
         }
     };
+    /** Server: iron nuggets an old suit had in its hidden ammo store (gone 2026-10-27), to hand back as items. */
+    private int oldNuggets;
     /** Both sides: power transitions seen, for animations, sounds and smoke. */
     private boolean seenPower;
     private boolean lastPowered;
@@ -249,12 +237,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(TOOL_SHOTS, 0);
         builder.define(RAIL_END, new Vector3f());
         builder.define(SOCKET_ITEM, ItemStack.EMPTY);
-        builder.define(AMMO_ITEM, ItemStack.EMPTY);
         builder.define(HELMET, false);
         builder.define(HELMET_STYLE, (byte) -1);
         builder.define(STUNNED, false);
         builder.define(MIND, (byte) SuitMind.FRIENDLY.ordinal());
-        builder.define(NUGGETS, 0);
         builder.define(FIELD_HELD, false);
         builder.define(PAINT, (byte) -1);
         builder.define(ENGINE, (byte) -1);
@@ -310,7 +296,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         this.power.load(tag); // burn, tidal state (loading isn't an engine swap: the half-burnt item stays)
         this.setMind(SuitMind.byName(tag.getStringOr("Mind", ""))); // suits from before the AI: "" -> friendly
         this.brain.load(tag); // owner, home, a rogue's age
-        this.setStoredNuggets(tag.getIntOr("Nuggets", 0));
+        this.oldNuggets = tag.getIntOr("Nuggets", 0); // the old hidden store: handed back on the next tick
         this.setPaint(tag.read("Paint", DyeColor.CODEC).orElse(null)); // suits from before paint: bare
         this.syncSlots();
         this.entityData.set(POWERED, this.power.shouldRun(null)); // a pilot (if any) boards after loading: next tick knows
@@ -324,7 +310,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         tag.putBoolean("HasEngineSlot", true); // an empty engine slot is then really empty (taken out), not an old save
         this.power.save(tag);
         tag.putString("Mind", this.getMind().name());
-        tag.putInt("Nuggets", this.getStoredNuggets());
+        if (this.oldNuggets > 0) {
+            tag.putInt("Nuggets", this.oldNuggets); // saved again before a tick could hand them back
+        }
         this.brain.save(tag);
         tag.storeNullable("Paint", DyeColor.CODEC, this.getPaint()); // the dye's name, e.g. "red"
     }
@@ -481,7 +469,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.entityData.set(FUEL_ENERGY, SuitFuel.energyOf(SuitEngine.of(this.inventory.getItem(ENGINE_SLOT)),
                     this.inventory.getItem(FUEL_SLOT), this.level()));
             this.entityData.set(SOCKET_ITEM, this.inventory.getItem(SOCKET_SLOT).copy());
-            this.entityData.set(AMMO_ITEM, this.inventory.getItem(AMMO_SLOT).copy());
             this.entityData.set(HELMET, !this.inventory.getItem(HELMET_SLOT).isEmpty());
             HelmetStyle style = SuitHelmetItem.style(this.inventory.getItem(HELMET_SLOT));
             this.entityData.set(HELMET_STYLE, (byte) (style == null ? -1 : style.ordinal()));
@@ -498,8 +485,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      */
     private void checkSlotCopies() {
         if (!ItemStack.matches(this.entityData.get(FUEL_ITEM), this.inventory.getItem(FUEL_SLOT))
-                || !ItemStack.matches(this.entityData.get(SOCKET_ITEM), this.inventory.getItem(SOCKET_SLOT))
-                || !ItemStack.matches(this.entityData.get(AMMO_ITEM), this.inventory.getItem(AMMO_SLOT))) {
+                || !ItemStack.matches(this.entityData.get(SOCKET_ITEM), this.inventory.getItem(SOCKET_SLOT))) {
             this.syncSlots();
         }
     }
@@ -538,20 +524,22 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.entityData.get(SOCKET_ITEM);
     }
 
-    /** Both sides: the ammo slot's contents (a synced copy on clients). */
-    public ItemStack getAmmoStack() {
-        return this.entityData.get(AMMO_ITEM);
-    }
-
-    /** Server: use up one item of ammo that {@code fits} (from the ammo slot). False if there is none. */
-    public boolean takeAmmo(Predicate<ItemStack> fits) {
-        ItemStack ammo = this.inventory.getItem(AMMO_SLOT);
-        if (ammo.isEmpty() || !fits.test(ammo)) {
-            return false;
+    /**
+     * Server: an old suit's ammo (the ammo slot and the hidden nugget store, both gone 2026-10-27: the tools take their
+     * ammo from the pilot's inventory now) drops out as items at its feet, so nothing a player loaded is lost.
+     */
+    private void returnOldAmmo() {
+        if (!(this.level() instanceof ServerLevel level)) {
+            return;
         }
-        ammo.shrink(1);
-        this.inventory.setChanged(); // shrinking a stack in place doesn't tell the container: sync the HUD's count
-        return true;
+        ItemStack ammo = this.inventory.getItem(OLD_AMMO_SLOT);
+        if (!ammo.isEmpty()) {
+            this.inventory.setItem(OLD_AMMO_SLOT, ItemStack.EMPTY);
+            this.spawnAtLocation(level, ammo);
+        }
+        for (; this.oldNuggets > 0; this.oldNuggets -= Math.min(64, this.oldNuggets)) {
+            this.spawnAtLocation(level, new ItemStack(Items.IRON_NUGGET, Math.min(64, this.oldNuggets)));
+        }
     }
 
     // ---- Socket tool ---------------------------------------------------------------------------
@@ -573,21 +561,21 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** What a packed suit item keeps: its slots, the half-burnt item and the ammo. */
     public SuitLoadout getLoadout() {
         return new SuitLoadout(this.inventory.getItem(FUEL_SLOT).copy(), this.inventory.getItem(SOCKET_SLOT).copy(),
-                Mth.ceil(this.power.getBurnLeftExact()), this.power.getBurnTotal(), this.getStoredNuggets(), this.inventory.getItem(HELMET_SLOT).copy(),
-                Optional.of(this.inventory.getItem(ENGINE_SLOT).copy()), this.inventory.getItem(AMMO_SLOT).copy());
+                Mth.ceil(this.power.getBurnLeftExact()), this.power.getBurnTotal(), this.oldNuggets, this.inventory.getItem(HELMET_SLOT).copy(),
+                Optional.of(this.inventory.getItem(ENGINE_SLOT).copy()), this.inventory.getItem(OLD_AMMO_SLOT).copy());
     }
 
     public void applyLoadout(SuitLoadout loadout) {
         this.inventory.setItem(FUEL_SLOT, loadout.fuel().copy());
         this.inventory.setItem(SOCKET_SLOT, loadout.socket().copy());
         this.inventory.setItem(HELMET_SLOT, loadout.helmet().copy());
-        this.inventory.setItem(AMMO_SLOT, loadout.ammo().copy());
+        this.inventory.setItem(OLD_AMMO_SLOT, loadout.ammo().copy()); // an item packed with ammo: handed back next tick
         // Items packed (or crafted) before the engines carry none: they had their firebox built in.
         this.inventory.setItem(ENGINE_SLOT, loadout.engine().map(ItemStack::copy)
                 .orElseGet(() -> new ItemStack(ModItems.FIREBOX.get())));
         this.power.slotsRestored(); // not a swap: keep the half-burnt item
         this.power.setBurn(loadout.burnLeft(), loadout.burnTotal());
-        this.setStoredNuggets(loadout.nuggets());
+        this.oldNuggets = loadout.nuggets();
         this.entityData.set(POWERED, this.power.shouldRun(null));
     }
 
@@ -669,9 +657,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (held.is(Items.WET_SPONGE) && !player.isSecondaryUseActive()) {
             return this.washPaint(player);
         }
-        if (held.is(Items.IRON_NUGGET) && !player.isSecondaryUseActive()) {
-            return this.loadNuggets(player, held); // feeding it ammo, like feeding a horse: no climbing in
-        }
         if (held.is(ModItems.SUIT_HELMET.get()) && !player.isSecondaryUseActive() && !this.hasHelmet()) {
             return this.putOnHelmet(player, held); // like saddling a horse: right-click it with the helmet
         }
@@ -732,8 +717,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return InteractionResult.SUCCESS;
     }
 
-    // ---- The hidden ammo store (no slot: one tool uses it) ------------------------------------------------
-
     /** Right-click with a helmet on a suit without one: put it on (the menu's helmet slot does the same). */
     private InteractionResult putOnHelmet(Player player, ItemStack held) {
         if (!this.level().isClientSide()) {
@@ -743,52 +726,6 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.playSound(SoundEvents.IRON_DOOR_CLOSE, 0.6F, 1.3F); // the visor clicks shut
         }
         return InteractionResult.SUCCESS;
-    }
-
-    /** Right-click with iron nuggets: the whole stack goes into the store, up to its size (config). */
-    private InteractionResult loadNuggets(Player player, ItemStack held) {
-        int room = PowerArmorConfig.NUGGET_STORE_MAX.get() - this.getStoredNuggets();
-        if (room <= 0) {
-            if (!this.level().isClientSide()) {
-                player.sendOverlayMessage(Component.translatable("message.powerarmor.nuggets_full",
-                        this.getStoredNuggets()));
-            }
-            return InteractionResult.SUCCESS;
-        }
-        if (!this.level().isClientSide()) {
-            int n = Math.min(room, held.getCount());
-            this.setStoredNuggets(this.getStoredNuggets() + n);
-            if (!player.hasInfiniteMaterials()) {
-                held.shrink(n);
-            }
-            this.playSound(SoundEvents.ARMOR_EQUIP_CHAIN.value(), 1.0F, 0.8F);
-            this.playSound(SoundEvents.CHAIN_PLACE, 0.8F, 0.7F);
-            player.sendOverlayMessage(Component.translatable("message.powerarmor.nuggets_loaded",
-                    n, this.getStoredNuggets()));
-        }
-        return InteractionResult.SUCCESS;
-    }
-
-    /** Both sides: nuggets in the hidden store. */
-    public int getStoredNuggets() {
-        return this.entityData.get(NUGGETS);
-    }
-
-    public void setStoredNuggets(int nuggets) {
-        this.entityData.set(NUGGETS, Math.max(0, nuggets));
-    }
-
-    /** Server: take one nugget from the store, if there is one. */
-    public boolean takeStoredNugget() {
-        if (this.isRogue()) {
-            return true; // unlimited ammo
-        }
-        int n = this.getStoredNuggets();
-        if (n <= 0) {
-            return false;
-        }
-        this.setStoredNuggets(n - 1);
-        return true;
     }
 
     /** The first player passenger drives the suit. */
@@ -1043,12 +980,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
         this.spawnAtLocation(level, new ItemStack(Items.IRON_INGOT, 4 + this.random.nextInt(5)));
         for (ItemStack stack : this.inventory.removeAllItems()) {
-            this.spawnAtLocation(level, stack); // the fuel, socket tool, helmet, engine and ammo survive the wreck
+            this.spawnAtLocation(level, stack); // the fuel, socket tool, helmet and engine survive the wreck
         }
-        for (int left = this.getStoredNuggets(); left > 0; left -= 64) {
-            this.spawnAtLocation(level, new ItemStack(Items.IRON_NUGGET, Math.min(64, left))); // and so does the ammo
-        }
-        this.setStoredNuggets(0);
+        this.returnOldAmmo();
     }
 
     // A placed suit stays forever (mobs normally despawn when far from players).
@@ -1092,6 +1026,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         if (!this.level().isClientSide() && this.isAlive()) {
             this.brain.equipRogue();
             this.checkSlotCopies();
+            this.returnOldAmmo();
             this.power.tick();
             this.socket.tick();
             this.brain.tick();

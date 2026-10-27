@@ -100,12 +100,11 @@ final class TntScene {
             case 258 -> AutoPilot.hold(o.keyUse, false);
             case 262 -> { phase = "after"; AutoPilot.aimTarget = null; sideCamera(mc); }
             case 268 -> AutoPilot.shot(mc, "tnt_after_side");
-            // the menu, with the ammo slot
+            // the menu
             case 272 -> { phase = "menu"; mc.setCameraEntity(mc.player); DevUtil.hideGui(mc, false);
                           AutoPilot.onServer(mc, p -> {
                               PowerArmorEntity x = suit;
                               if (x != null) {
-                                  x.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.TNT, 12));
                                   p.stopRiding();
                                   p.teleportTo(x.getX() - 2, x.getY(), x.getZ() - 2);
                                   p.setShiftKeyDown(true);
@@ -169,7 +168,7 @@ final class TntScene {
             ItemStack launcher = new ItemStack(ModItems.TNT_LAUNCHER.get());
             launcher.set(ModDataComponents.LOADED_ROUNDS.get(), TntLauncherItem.DRUM); // a loaded drum: the scene fires at once
             s.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, launcher);
-            s.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.TNT, 8));
+            player.getInventory().setItem(9, new ItemStack(Items.TNT, 8)); // the pilot's own TNT loads the drum
             s.snapTo(x + 0.5, g, z + 0.5, 0, 0);
             s.setYBodyRot(0);
             s.setYHeadRot(0);
@@ -233,7 +232,7 @@ final class TntScene {
         }
         String p = phase;
         PowerArmorEntity client = clientSuit(mc);
-        int clientAmmo = client == null ? -1 : client.getAmmoStack().getCount();
+        int clientAmmo = mc.player == null ? -1 : mc.player.getInventory().countItem(Items.TNT); // the client's copy
         float drum = client == null ? 0F : client.socketVisuals().rotorAngle(0F);
         float recoil = client == null ? 0F : client.socketVisuals().recoil(0F);
         float raise = client == null ? 0F : client.socketVisuals().raise(0F);
@@ -250,7 +249,7 @@ final class TntScene {
             }
             try {
                 w.write(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%d,%d,%d,%d,%.1f,%.2f,%.2f%n", s, p, x.socket().getUses(),
-                        x.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).getCount(),
+                        player.getInventory().countItem(Items.TNT),
                         TntLauncherItem.loaded(x.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT)), clientAmmo, shells, husks, wall, drum, recoil, raise));
             } catch (IOException ignored) {
                 // closed at the end of the scene

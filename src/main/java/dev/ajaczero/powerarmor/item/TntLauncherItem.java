@@ -28,13 +28,14 @@ import net.minecraft.world.phys.Vec3;
  * Team Fortress 2's grenade launcher in the suit's steel. Each shot lobs a primed TNT block (TntShell) that blows up the
  * moment it hits something, as real TNT.
  *
- * <p>Decided with the user: the TNT comes from the suit's ammo slot (a creative pilot loads for free), the shot costs no
+ * <p>Decided with the user: the TNT comes from the pilot's inventory (2026-10-27; it was the suit's ammo
+ * slot; a creative pilot loads for free), the shot costs no
  * fuel unless the config says so, and the machine mind never fires it (no suit of yours lobs TNT round your base on its
  * own; rogues never carry one).
  *
  * <p>The drum (user, 2026-10-27): it holds {@link #DRUM} rounds. While there are rounds in it, a tap fires one and
  * holding fires one every half second ({@link #cooldownTicks}: shot_interval_ticks), so a full drum empties in under two
- * seconds. Reloading is filling the chambers back up, one at a time (a second each, reload_ticks), from the ammo slot,
+ * seconds. Reloading is filling the chambers back up, one at a time (a second each, reload_ticks), from the pilot's TNT,
  * starting half a second after the last shot (reload_delay_ticks); a shot interrupts the chamber being loaded, so you
  * can fire whatever is loaded at any time. The rounds in the drum stay on the launcher item ({@link
  * ModDataComponents#LOADED_ROUNDS}): take it out loaded and it goes back in loaded. The chamber being loaded is synced
@@ -93,22 +94,24 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
         int progress;
     }
 
-    /** Server, every tick while it's in the socket: load the next chamber once the trigger has rested, from the ammo
-     *  slot (free for a creative pilot), while the suit has power; the chamber's progress goes to the clients as spin. */
+    /** Server, every tick while it's in the socket: load the next chamber once the trigger has rested, with TNT from the
+     *  pilot's inventory (SuitAmmo; free for a creative pilot), while the suit has power; the chamber's progress goes to
+     *  the clients as spin. Nobody inside, nothing loads (the mind never fires it, and a parked suit filling its drum for
+     *  free would be a TNT tap). */
     @Override
     public void serverTick(PowerArmorEntity suit) {
         ItemStack launcher = suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT);
         Drum drum = suit.socket().toolData(Drum.class, Drum::new);
         drum.sinceShot = Math.min(drum.sinceShot + 1, Integer.MAX_VALUE / 2);
         int loaded = loaded(launcher);
-        boolean free = suit.getControllingPassenger() instanceof Player pilot && pilot.hasInfiniteMaterials();
+        Player pilot = suit.getControllingPassenger() instanceof Player p ? p : null;
         int reload = Math.max(1, PowerArmorConfig.TNT_LAUNCHER_RELOAD.get());
         boolean loading = loaded < DRUM && suit.isPowered() && drum.sinceShot >= PowerArmorConfig.TNT_LAUNCHER_RELOAD_DELAY.get()
-                && (free || isRound(suit.getAmmoStack()));
+                && pilot != null && SuitAmmo.has(pilot, TntLauncherItem::isRound);
         if (!loading) {
             drum.progress = 0;
         } else if (++drum.progress >= reload) {
-            if (free || suit.takeAmmo(TntLauncherItem::isRound)) {
+            if (SuitAmmo.take(pilot, TntLauncherItem::isRound)) {
                 setLoaded(suit, launcher, loaded + 1);
                 // a round dropping into its chamber and the drum clicking round
                 suit.playSound(SoundEvents.CROSSBOW_LOADING_END.value(), 0.6F, 0.7F);
@@ -135,7 +138,7 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
         return 1.25F;
     }
 
-    /** Does this go in the launcher? TNT, from the ammo slot. */
+    /** Does this go in the launcher? TNT, from the pilot's inventory. */
     public static boolean isRound(ItemStack stack) {
         return stack.is(Items.TNT);
     }
@@ -150,9 +153,9 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
         int loaded = loaded(tool);
         if (loaded == 0) {
             // An empty drum: the hammer clicks on nothing (once per shot interval while the trigger is held). With TNT in
-            // the ammo slot it's only reloading; with none, say so.
+            // the pilot's inventory it's only reloading; with none, say so.
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.2F);
-            if (!pilot.hasInfiniteMaterials() && !isRound(suit.getAmmoStack())) {
+            if (!SuitAmmo.has(pilot, TntLauncherItem::isRound)) {
                 pilot.sendOverlayMessage(Component.translatable("message.powerarmor.no_tnt"));
             }
             return false;
@@ -207,14 +210,10 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
         out.add(ParticleTypes.SMALL_FLAME, at.x, at.y, at.z, 2, 0.04, 0.04);
     }
 
-    /** Both sides: rounds in reserve for this pilot's launcher (the ammo slot's TNT, not the drum), or -1 for endless
+    /** Both sides: rounds in reserve for this pilot's launcher (the TNT they carry, not the drum), or -1 for endless
      *  (creative). */
     public static int countRounds(PowerArmorEntity suit, Player pilot) {
-        if (pilot.hasInfiniteMaterials()) {
-            return -1;
-        }
-        ItemStack ammo = suit.getAmmoStack();
-        return isRound(ammo) ? ammo.getCount() : 0;
+        return SuitAmmo.count(pilot, TntLauncherItem::isRound);
     }
 
     /** On foot it's just a heavy piece of kit: say where it goes. */
