@@ -4,6 +4,7 @@ import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
 import dev.ajaczero.powerarmor.item.ToolEffects.HudReadout;
+import java.util.Locale;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -33,8 +34,8 @@ import org.jetbrains.annotations.Nullable;
  *   <li>Left, the suit: its silhouette, HULL (health) and FUEL (time left at walking pace, a bar for how full the
  *   fuel slot is) with three embers for the burn rate: 1 idling, 2 walking, 3 sprinting or a hungry tool at work, dark
  *   when nothing burns (a free engine, or off).</li>
- *   <li>Right, the socket tool: its symbol, its ammo count and one labelled bar (heat, charge, reload), each tool's own
- *   ({@link dev.ajaczero.powerarmor.item.ToolEffects#hud}).</li>
+ *   <li>Right, the socket tool: its symbol, one labelled bar (heat, charge, reload) and its ammo on a 3-digit counter,
+ *   each tool's own ({@link dev.ajaczero.powerarmor.item.ToolEffects#hud}).</li>
  * </ul>
  * Amber normally; the whole HUD turns red while anything is critical (hull at a quarter, fuel low, the last rounds, an
  * overheated barrel), and fades while the suit has no power. The helmet carries the projector: no helmet, no HUD
@@ -65,7 +66,7 @@ public final class SuitHud {
     private static final int MAX_BURN_PER_TICK = 20;
 
     /** Panel size and placement (GUI pixels): both panels sit in the bottom corners, the hotbar between them. */
-    private static final int MARGIN = 4, PANEL_H = 31, SUIT_W = 128, TOOL_W = 124, SYMBOL_ONLY_W = 26;
+    private static final int MARGIN = 4, PANEL_H = 31, SUIT_W = 128, TOOL_W = 112, TOOL_BAR_SEGMENTS = 10;
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
@@ -129,29 +130,22 @@ public final class SuitHud {
         bar(g, lx, y0 + 27, segments, 3, fuel, main, dim);
 
         // ---- right: the socket tool -------------------------------------------------------------------------------
+        // Three columns on the panel's middle line (2026-10-27, user's pick B): the symbol, the bar's label over the
+        // bar, and the ammo as a fixed 3-digit counter at twice the font's size, like Fallout's (006; 999 means "999 or
+        // more"; a dim --- for a tool without ammo), so the panel never changes size.
         if (tool != null) {
-            boolean full = tool.hasCount() || tool.barLabel() != null;
-            int tx1 = g.guiWidth() - MARGIN, tx0 = tx1 - (full ? TOOL_W : SYMBOL_ONLY_W);
+            int tx1 = g.guiWidth() - MARGIN, tx0 = tx1 - TOOL_W;
             panel(g, tx0, y0, tx1, y0 + PANEL_H, backing, main);
-            Identifier symbol = symbol(toolStack);
-            g.blit(RenderPipelines.GUI_TEXTURED, symbol, tx0 + 5, y0 + 8, 0F, 0F, 16, 16, 16, 16, main);
-            int trx = tx1 - 4;
-            if (tool.hasCount()) { // the count twice the font's size, like Fallout's ammo counter
-                String count = tool.count() < 0 ? "\u221e" : Integer.toString(tool.count());
-                var pose = g.pose();
-                pose.pushMatrix();
-                pose.translate(trx - 2 * font.width(count) + 1, y0 + 3);
-                pose.scale(2F, 2F);
-                g.text(font, count, 0, 0, main, false);
-                pose.popMatrix();
-            }
-            if (tool.barLabel() != null) {
-                int ty = tool.hasCount() ? y0 + 21 : y0 + 12;
-                int tlx = tx0 + 26;
-                g.text(font, Component.translatable(tool.barLabel()), tlx, ty - 1, main, false);
-                int bx = tlx + 41; // past the longest label (CHARGE, RELOAD): every tool's bar starts in line
-                bar(g, bx, ty, (trx - bx + 1) / 4, 3, tool.bar(), main, dim);
-            }
+            g.blit(RenderPipelines.GUI_TEXTURED, symbol(toolStack), tx0 + 5, y0 + 8, 0F, 0F, 16, 16, 16, 16, main);
+            g.text(font, Component.translatable(tool.barLabel()), tx0 + 26, y0 + 8, main, false);
+            bar(g, tx0 + 26, y0 + 19, TOOL_BAR_SEGMENTS, 5, tool.bar(), main, dim);
+            String count = !tool.hasCount() ? "---" : tool.count() < 0 ? "\u221e" : String.format(Locale.ROOT, "%03d", Math.min(tool.count(), 999));
+            var pose = g.pose();
+            pose.pushMatrix();
+            pose.translate(tx1 - 5 - 2 * font.width(count) + 2, y0 + 9); // +2: the font's trailing gap, doubled
+            pose.scale(2F, 2F);
+            g.text(font, count, 0, 0, tool.hasCount() ? main : dim, false);
+            pose.popMatrix();
         }
         shown = new Shown(hull, fuel, fuelText.getString(), embers, critical, powered,
                 tool == null ? "" : BuiltInRegistries.ITEM.getKey(toolStack.getItem()).getPath(),

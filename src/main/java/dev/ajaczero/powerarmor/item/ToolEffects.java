@@ -47,16 +47,18 @@ public interface ToolEffects {
     }
 
     /**
-     * What the pilot's HUD shows in its tool section (client/SuitHud), next to the tool's symbol: a count (the ammo;
-     * {@link #NO_COUNT} for a tool without ammo, {@link #ENDLESS} in creative), one labelled bar ({@code barLabel} a
-     * translation key, null for none) and whether something is critical (the last rounds, an overheated barrel): that
-     * turns the whole HUD red, like a low hull or low fuel.
+     * What the pilot's HUD shows in its tool section (client/SuitHud), next to the tool's symbol: one labelled bar
+     * ({@code barLabel} a translation key; every tool has one, design sec. 6: its heat, charge or reload, 1 = ready), a
+     * count (the ammo, shown as 3 digits; {@link #NO_COUNT} for a tool without ammo, {@link #ENDLESS} in creative) and
+     * whether something is critical (the last rounds, an overheated barrel): that turns the whole HUD red, like a low hull
+     * or low fuel.
      */
-    record HudReadout(int count, @Nullable String barLabel, float bar, boolean critical) {
+    record HudReadout(int count, String barLabel, float bar, boolean critical) {
         public static final int NO_COUNT = Integer.MIN_VALUE;
         public static final int ENDLESS = -1;
-        /** Just the symbol (the drill, the chainsaw: nothing to count, nothing to wait for). */
-        public static final HudReadout NONE = new HudReadout(NO_COUNT, null, 0F, false);
+        /** A tool whose own cooldown isn't built yet (the drill, the chainsaw, the EM projector, the flamethrower: user,
+         *  2026-10-27, every tool will get one): no ammo, always cool and ready. */
+        public static final HudReadout READY = new HudReadout(NO_COUNT, "hud.powerarmor.cool", 1F, false);
 
         public boolean hasCount() {
             return this.count != NO_COUNT;
@@ -65,7 +67,7 @@ public interface ToolEffects {
 
     /** Client: this tool's readout on its pilot's HUD this frame (the pilot is this client's own player). */
     default HudReadout hud(PowerArmorEntity suit, Player pilot) {
-        return HudReadout.NONE;
+        return HudReadout.READY;
     }
 
     // ---- Helpers the tools share ---------------------------------------------------------------------------------

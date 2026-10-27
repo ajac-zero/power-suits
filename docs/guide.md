@@ -100,9 +100,9 @@ vehicle hearts show the hull):
   tidal engine or a star reactor; NO FUEL, FLOODED, NO ENGINE), a bar for how full the fuel slot is, and three
   **embers** for how fast it burns: one idling, two walking, three sprinting or with a hungry tool at work (the
   flamethrower), none when nothing burns.
-- **Right, the socket tool:** its symbol, its ammo count (∞ in creative) and one bar: the chaingun's **HEAT**, the rail
-  cannon's **CHARGE**, the TNT launcher's **RELOAD**. The drill, chainsaw, EM projector and flamethrower show only their
-  symbol.
+- **Right, the socket tool:** its symbol, one labelled bar and the ammo on a 3-digit counter (006; 999 means 999 or
+  more; ∞ in creative; --- for a tool without ammo). The bar is the chaingun's **HEAT**, the rail cannon's **CHARGE**,
+  the TNT launcher's **RELOAD**; the drill, chainsaw, EM projector and flamethrower show **COOL** (always ready, for now).
 - The whole HUD turns **red** while something is critical: a quarter of the hull left, low fuel, the last rounds (16
   bullets, the last TNT or ingot), an overheated chaingun. It **fades** while the suit has no power.
 

@@ -262,6 +262,7 @@
   "hud.powerarmor.heat": "HEAT",
   "hud.powerarmor.charge": "CHARGE",
   "hud.powerarmor.reload": "RELOAD",
+  "hud.powerarmor.cool": "COOL",
   "gui.powerarmor.flooded": "FLOODED",
   "gui.powerarmor.engine_slot": "Engine",
   "gui.powerarmor.engine_slot.hint": "The backpack: Firebox (burns fuel), Tidal Engine (free while wet) or Star Reactor (a Nether Star, forever).",
