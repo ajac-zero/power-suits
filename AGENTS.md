@@ -11,47 +11,22 @@ knowledge lives in the project skills and their references (read the one that ma
 | `.agents/skills/blockbench-mcp/SKILL.md` + `ANIMATION.md` + `power-armor-model.md` | model, rig, animation, texture work |
 | `.agents/skills/key-art/SKILL.md` | marketing pictures (Blender) |
 | `README.md`, `docs/guide.md` | what the mod does, controls, the file map |
-| Notion (below) | design decisions, roadmap, the user's taste |
+| the design docs (see Conventions) | design decisions, roadmap, art direction |
 
-## The user
-- **First Minecraft mod.** Explain concepts briefly as you go (client vs server, registries, events, synced data,
-  menus, packets...), tied to the change you just made. Comment the "why" in code: the user reads it to learn.
-- **Do exactly what's asked.** Measure the cause, offer options with numbers (and a sketch or A/B prototypes filmed
-  with the same cameras next to the committed model), then build the pick. Read the user's sketches literally and
-  confirm your reading in words before building.
-- **Never open or modify `run/saves/New World`** (the user's creative world, played between sessions). Automated runs
-  use a copy (`runAutopilotTerrain`). A sorted md5 listing is in `.scratch/world_baseline.txt`
-  (`find . -type f ! -name session.lock -exec md5 -r {} \; | sort -k2`): refresh it at the start of a session and check
-  file mtimes before blaming a run.
+## Conventions
 - **The art lives in Blockbench: `model/power_armor.bbmodel`.** Checkpoint before edits. Save it
   (`BarItems.save_project.trigger()` via risky_eval; if it's open from elsewhere set `Project.save_path` to this file
-  first) and commit it **with every mod commit that touches the art or animations**. Before a checkpoint, diff the live
-  project against the saved file plus your planned edits: the user hides and moves things in Blockbench between turns.
-- **Show every model change with the review sheet** (`.agents/skills/blockbench-mcp/scripts/shots.js`): it includes the
-  in-game third-person back view, the one the user cares most about. Keep the model in its in-game rest pose.
-- **Read Notion's Art direction page before Blockbench or animation work**, and add a dated line when the user rules on
-  looks or motion.
-- Commit freely once a step is verified (one approved step per commit). Stop testing when told.
-
-## Notion (design, roadmap, taste)
-The design docs live in the user's Notion (the repo is public): Minecraft Add-on Studio > Projects > *Power Armor*.
-Read them with the Notion MCP (`notion_fetch` with the page id), from codemode.
-
-| Page | Id | What |
-|---|---|---|
-| Power Armor (project page) | `3feeb0d9a8ce8122ad20f48b5dc4d0a2` | status, links to the rest |
-| Design spec | `405eb0d9a8ce810bae56eb48d4837873` | what is decided and why; numbered sections (`design sec. 4b` in code comments points here); **OPEN** items need the user's decision before building |
-| Roadmap (database) | `be28d19e58124d1d8421d605254d7c8f`, data source `collection://336c5748-bfbc-4f04-84cb-06891b2bba4d` | one row per phase / tool / open item: Status (Backlog, Parked, Drafting, Building, Done), Kind, Phase, Release, Done date, Branch, Summary; the page body holds the details (files, tests, scenes) |
-| Art direction | `405eb0d9a8ce81c39a35d0979cf8b096` | the user's taste rulings on look and motion |
-| Design history | `405eb0d9a8ce81d18f0fc3528967e031` | the pre-Phase-1 discussion (frozen) |
-
-Keep them current as part of the work: a decision goes into the Design spec when it's made; a feature gets a Roadmap row
-(Drafting/Building while in progress, Done + date + release when merged; its body: what was built, where, tests,
-autopilot scene). Put paths in backticks (Notion turns bare file names into web links).
-
-**Done** means: build passes, all GameTests pass, an autopilot run looks right (screenshots / CSV), README +
-`docs/guide.md` + the Design spec are updated, it's committed, and the user got a short explanation. New tools: hidden
-`proto_*` drafts in Blockbench -> the user picks -> game part (bone, code, icon, recipe, autopilot scene, tests).
+  first) and commit it **with every commit that touches the art or animations**, so the model and the exported files
+  never drift. Keep it in its in-game rest pose (the animations are built on it).
+- **Review model changes with the sheet from `.agents/skills/blockbench-mcp/scripts/shots.js`** (it includes the in-game
+  third-person back view, the view players see most).
+- **Design docs** (the design spec, the roadmap, the art direction) are kept outside the repo, by the maintainer.
+  `design sec. 4b` in a code comment points to the spec's numbered sections. Decisions marked OPEN there need the
+  maintainer before you build them.
+- **Done** means: build passes, all GameTests pass, an autopilot run looks right (screenshots / CSV), `README.md` and
+  `docs/guide.md` are updated, it's committed. New tools: hidden `proto_*` drafts in Blockbench -> one is picked ->
+  game part (bone, code, icon, recipe, autopilot scene, tests).
+- Comment the "why" for anything non-obvious.
 
 ## Layout
 - `src/main/` the mod (what ships). `src/dev/` GameTests, autopilot scenes, the multiplayer script and `test_pad`: a
@@ -91,7 +66,8 @@ API: grep the sources.
   (`tools/view-tuner.sh stop`).
 - Check output file dates before trusting a CSV or report: an old file was once read as a fresh pass.
 - Compare against a run of the previous commit when a number looks off: runs vary (mob AI, client/server tick
-  timing), and the user's world changes between sessions.
+  timing), and the worlds a run copies change between sessions.
+- Automated runs never open a world in `run/saves` itself: they work on copies (`runAutopilotTerrain`).
 - Each new feature gets an autopilot scenario that logs numbers to CSV: its own `*Scene` class in `client/dev`, chained
   after the last one (ticks from 0; `AutoPilot.script()` case labels count from their section's start, `WATER + 17`).
 

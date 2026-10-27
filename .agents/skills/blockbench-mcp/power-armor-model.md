@@ -2,23 +2,18 @@
 
 What the Power Armor model (`model/power_armor.bbmodel`) taught us, by topic (moved here from `AGENTS.md` on
 2026-10-26). Read it before rig, animation or texture work, together with this skill's `SKILL.md` + `ANIMATION.md` and
-the Art direction page in Notion (the user's taste). Add a new lesson to the right section when something costs a round.
+the Art direction page of the design docs. Add a new lesson to the right section when something costs a round.
 
-## Working with the user on art
-- **The user's taste lives in Notion's Art direction page** (model first, animations after; simple boxes with detail in
-  the texture; no bevels; what "noise" means; how motion words translate into gait numbers; the final feet...): read it
-  before Blockbench or animation work and add a dated line when the user rules on something. Every leg animation is baked
-  on the current legs (walk/run 2026-10-15, the rest re-baked unchanged from their specs 2026-10-18); the known clips
-  waiting for the upper-body rework are a Roadmap row. A tap of the sprint key keeps the sprint going while W is held
-  (vanilla; runAutopilotGait's sprint_tap checks it).
-- **Read the user's sketches literally and confirm a reading in words before building**: "an opposite slope" for the
-  thigh meant a thigh bottom PARALLEL to the shin top (both falling toward the back, a dark knee band between), and
-  "the slot where the foot is" meant the shin coming down to the ground around the foot, not an empty pocket above it.
-  Each misreading cost a full rebuild.
-- **The way of working the user liked (same session)**: measure the cause, offer options with numbers and a sketch, build
-  cheap prototypes (A/B) and film them with the same cameras next to the committed model, then checkpoint each approved
-  step as its own commit. Before every checkpoint diff the live project against the saved file plus the planned edits
-  (the user inspects and hides cubes in Blockbench between turns): "make sure I didn't move anything".
+## Art direction
+- **The taste rulings live in the design docs' Art direction page** (model first, animations after; simple boxes with
+  detail in the texture; no bevels; what "noise" means; how motion words translate into gait numbers; the final
+  feet...). Every leg animation is baked on the current legs (walk/run 2026-10-15, the rest re-baked unchanged from their
+  specs 2026-10-18); the known clips waiting for the upper-body rework are a roadmap item. A tap of the sprint key keeps
+  the sprint going while W is held (vanilla; runAutopilotGait's sprint_tap checks it).
+- **Sketches: confirm your reading in words before building**: "an opposite slope" for the thigh meant a thigh bottom
+  PARALLEL to the shin top (both falling toward the back, a dark knee band between), and "the slot where the foot is"
+  meant the shin coming down to the ground around the foot, not an empty pocket above it. Each misreading cost a full
+  rebuild.
 
 ## Rig, joints and armour
 - **Sides are mirrored, not rebuilt.** The arms were swapped (hand right, tools left) by mirroring the whole
@@ -49,7 +44,7 @@ the Art direction page in Notion (the user's taste). Add a new lesson to the rig
   straightest with the knee bent ~23 (gaits use KMIN 23; the kit's knee guard keeps the solver off the backward-bending
   solution). The tool arm's third-person pose never aims (shots leave from the eye, the cockpit has a viewmodel).
 - **The legs are rebuilt by a script** (`model/art/legs_stomper_art.py` + `legs_stomper_apply.js`, from a fresh snapshot
-  of the live project): when the user tweaks a leg cube by hand, carry the change into the script before the next
+  of the live project): when someone tweaks a leg cube by hand, carry the change into the script before the next
   rebuild, or it is undone (the knee joint's 6.2 depth, 2026-10-15).
 
 ## Gaits and baked animations
@@ -80,8 +75,7 @@ the Art direction page in Notion (the user's taste). Add a new lesson to the rig
   ramp (`model/art/steel_art.py`, `STEEL` in `tools/make-paint-textures.py`); the dye textures swap those shades on the
   plate cubes (`PLATES`) for each dye's ramp. So: repaint armour only in those 8 steel shades (another grey on a plate
   won't take paint), keep them off the steel parts' trim, and re-run `make-paint-textures.py` after every texture export
-  (it refuses a texture with no steel ramp). What reads as metal to the user (and what reads as plastic or stone): Art
-  direction.
+  (it refuses a texture with no steel ramp). What reads as metal (and what reads as plastic or stone): Art direction.
 - **Glowing pixels are painted in reserved colours** (dark coal / smoked glass, listed in `tools/make-glowmasks.py`):
   the masks are generated from them, so never reuse those colours elsewhere (the script counts them and refuses).
   The glow is drawn full-bright on top (`RenderTypes.eyes`; in 26.3 it blends by alpha, it doesn't add): dark base + bright

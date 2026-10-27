@@ -18,7 +18,7 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
   create them on first use.
 - **Balance values live in `PowerArmorConfig`** (COMMON config, hot-reloaded): read `.get()` where used, never
   cache in static fields; GameTests must compare against the config, not literal numbers (the dev `run/config`
-  file is shared by the client, the GameTest server and the user's edits).
+  file is shared by the client, the GameTest server and your own edits).
 - **No deprecated Minecraft calls** (cleared 2026-10-26; check with `-Xlint:deprecation`): damage with
   `hurtServer(level, ...)` (not `hurt`), water with `isEyeInFluidType(NeoForgeMod.WATER_TYPE.value())`, fluid pushing by
   overriding `isPushedByFluid(FluidType)`, `level.isLoaded(pos)`, `EventHooks.finalizeMobSpawn`; item tooltips come from
@@ -141,7 +141,7 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
   middle of the bottom edge). Preview with the view tuner by copying the raised pose into the rest slot.
 - **Viewmodel parts must not show their cut ends**: the tool's socket face stays below the bottom screen edge so it
   reaches in from the corner (floating otherwise). Check/fit poses with `tools/viewmodel-fit.py` before tuning visually.
-- **The cockpit's main hand is vanilla's** (user decision): held items are left to vanilla's first-person renderer
+- **The cockpit's main hand is vanilla's** (design decision): held items are left to vanilla's first-person renderer
   (same place and motions as on foot, no arm, as in vanilla); only an empty hand is ours, the gauntlet laid along
   vanilla's empty-arm pose (`CockpitHands.gauntletTransform`). Don't give items a custom cockpit pose. The view tuner
   shoots `view_vanilla_*` on foot next to `view_*` in the suit to compare.
@@ -152,7 +152,7 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
   the GUI on. Tune the viewmodel live with `tools/view-tuner.sh start|shoot|stop` (edit `run/view/tuning.json`).
 
 ## Tools, projectiles and effects
-- **Tool items are flat, like vanilla tools** (user decision): `models/item/<tool>.json` is `item/handheld` with an
+- **Tool items are flat, like vanilla tools** (design decision): `models/item/<tool>.json` is `item/handheld` with an
   hand-drawn 16 px icon (`model/art/item_icons_art.py`; until 2026-10-23 rendered from the tool's geo); the 3D tools exist only on the suit and in the cockpit
   viewmodel. (A 3D GeckoLib item needs a `GeoItemRenderer` registered in `RegisterClientExtensionsEvent` and a
   `builtin/entity` model; GeckoLib doesn't hook items up on NeoForge. The tools were 3D until 2026-10-13.)
@@ -201,7 +201,7 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
 
 ## Suit setup in tests and scenes
 - **Suits need fuel now.** Anything that spawns or boards a suit (autopilots, tests that move) must put fuel in
-  `FUEL_SLOT`, or the suit sits slumped (`powered_off`). The user's world contains old unfuelled suits and
+  `FUEL_SLOT`, or the suit sits slumped (`powered_off`). Old worlds contain unfuelled suits and
   the saved player may already sit in one: `TerrainPilot.fuelVehicle` fuels whatever suit you're in.
 - **Engines (2026-10-21): a suit comes without an engine (since 2026-10-23; scenes call `DevUtil.firebox`, GameTests'
   `suitAt` installs one), and a firebox floods in deep water** (water over the backpack,
@@ -247,8 +247,8 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
   tuner writes its PID, quits on `run/view/quit` and after 10 idle minutes; always `tools/view-tuner.sh stop`, or use `once` (start, shoot, stop).
 - **Run game tasks with a watchdog** (background + poll the log): if it stalls (e.g. in "Saving worlds"), `jstack` the
   game's PID before killing it instead of waiting on a blocked command.
-- *(26.3)* **Opening a 1.21.1 world upgrades it for good** (Minecraft asks to back it up first). The user's `New World`
-  is theirs to upgrade; `runAutopilotTerrain` clicks "Load without backup" on its copy.
+- *(26.3)* **Opening a 1.21.1 world upgrades it for good** (Minecraft asks to back it up first). A world in `run/saves`
+  is its owner's to upgrade; `runAutopilotTerrain` clicks "Load without backup" on its copy.
 - **26.3 asks "Upgrading World Completed" after upgrading an old world's files**: the terrain pilot sat on it and drove
   nothing (no CSV, no shots) until it learned to press Yes. Check output file dates before trusting a report: an old
   `autopilot_terrain.csv` was read as a fresh "cockpit OK".
