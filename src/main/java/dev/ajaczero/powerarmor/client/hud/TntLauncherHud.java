@@ -37,7 +37,7 @@ public final class TntLauncherHud implements ToolHud {
     private static final int CLEAR = 7;
     /** The arc starts this far (blocks) out of the muzzle, clear of the launcher's own model (user, 2026-10-27: the line
      *  ran over the barrel in the cockpit view). */
-    private static final double CLEAR_OF_GUN = 0.4;
+    private static final double CLEAR_OF_GUN = 0.3;
     /** The landing diamond's half-size. */
     private static final int MARK = 4;
     /** The drum: chamber size, the chambers' distance from the middle, the hub's size, and its gap left of the corner
