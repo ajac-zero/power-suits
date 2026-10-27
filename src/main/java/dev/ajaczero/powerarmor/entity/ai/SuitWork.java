@@ -38,6 +38,27 @@ public final class SuitWork {
         return PowerArmorConfig.WORK_RADIUS.get();
     }
 
+    /**
+     * Server: is the whole work area round home loaded? The scans read every block in it, and on the server reading a
+     * block in an unloaded chunk loads (or even generates) that chunk on the spot, stalling the game: a suit whose home is
+     * at the edge of the loaded world must wait instead. Checks one block per chunk the area touches (a handful).
+     */
+    public static boolean workAreaLoaded(PowerArmorEntity suit) {
+        BlockPos home = suit.brain().getHome();
+        if (home == null) {
+            return false;
+        }
+        int r = (int) Math.ceil(radius()) + 2; // + the neighbours the scans look at (liquids, exposed faces, tree tops)
+        for (int cx = (home.getX() - r) >> 4; cx <= (home.getX() + r) >> 4; cx++) {
+            for (int cz = (home.getZ() - r) >> 4; cz <= (home.getZ() + r) >> 4; cz++) {
+                if (!suit.level().isLoaded(new BlockPos(cx << 4, home.getY(), cz << 4))) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     /** Inside the hall's volume: home level to 2 above, within the radius (horizontally) of home. */
     public static boolean inHall(BlockPos home, BlockPos pos) {
         int dy = pos.getY() - home.getY();

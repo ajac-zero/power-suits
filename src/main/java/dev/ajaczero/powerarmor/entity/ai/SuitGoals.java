@@ -45,6 +45,13 @@ import org.jetbrains.annotations.Nullable;
  * A mob has two goal lists: {@code targetSelector} decides who to fight (setTarget), {@code goalSelector} what to do.
  */
 public final class SuitGoals {
+    /**
+     * Ticks an idle mind waits after a search for a target came up empty (DefendOwner, RogueTarget, EmGuard, RailGuard).
+     * A search looks at every living thing in a wide box and checks line of sight to each; vanilla's own target goals
+     * search about twice a second, not every tick, and so do these. A search that finds something is acted on at once.
+     */
+    static final int SEARCH_INTERVAL = 10;
+
     /** How far from home the idle suit may drift (pushed, knocked back) before it walks back, in blocks. */
     static final double HOME_SLACK = 2.5;
 
@@ -148,6 +155,8 @@ public final class SuitGoals {
     static class DefendOwner extends TargetGoal {
         private final PowerArmorEntity suit;
         private int recheck;
+        /** Tick of the next search for a target (SEARCH_INTERVAL after one came up empty). */
+        private int nextSearch;
 
         DefendOwner(PowerArmorEntity suit) {
             super(suit, false); // we check sight ourselves (a target behind a wall keeps the suit walking toward it)
@@ -156,10 +165,13 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            if (!this.suit.isAiDriven() || !this.suit.brain().followsOwner()) {
+            if (!this.suit.isAiDriven() || !this.suit.brain().followsOwner() || this.suit.tickCount < this.nextSearch) {
                 return false;
             }
             this.targetMob = SuitTargets.pick(this.suit);
+            if (this.targetMob == null) {
+                this.nextSearch = this.suit.tickCount + SEARCH_INTERVAL;
+            }
             return this.targetMob != null;
         }
 
@@ -319,6 +331,8 @@ public final class SuitGoals {
     static class RogueTarget extends TargetGoal {
         private final PowerArmorEntity suit;
         private int recheck;
+        /** Tick of the next search for a target (SEARCH_INTERVAL after one came up empty). */
+        private int nextSearch;
 
         RogueTarget(PowerArmorEntity suit) {
             super(suit, false);
@@ -327,10 +341,13 @@ public final class SuitGoals {
 
         @Override
         public boolean canUse() {
-            if (!this.suit.isAiDriven() || !this.suit.isRogue()) {
+            if (!this.suit.isAiDriven() || !this.suit.isRogue() || this.suit.tickCount < this.nextSearch) {
                 return false;
             }
             this.targetMob = SuitTargets.pickRogue(this.suit);
+            if (this.targetMob == null) {
+                this.nextSearch = this.suit.tickCount + SEARCH_INTERVAL;
+            }
             return this.targetMob != null;
         }
 
@@ -560,6 +577,8 @@ public final class SuitGoals {
     static class EmGuard extends Goal {
         /** Ticks to hold the aim up before letting go: the beam pulls the monster overhead. */
         private static final int LIFT_TICKS = 12;
+        /** Tick of the next search for a target (SEARCH_INTERVAL after one came up empty). */
+        private int nextSearch;
         /** Give up on a monster the beam hasn't caught after this long (out of sight, behind something). */
         private static final int SEEK_TICKS = 60;
         private final PowerArmorEntity suit;
@@ -576,10 +595,13 @@ public final class SuitGoals {
         @Override
         public boolean canUse() {
             if (!this.suit.isAiDriven() || !this.suit.brain().guardsHome() || this.suit.brain().getHome() == null || !this.suit.socket().isReady()
-                    || this.suit.socket().getBeamTarget() != null) {
+                    || this.suit.socket().getBeamTarget() != null || this.suit.tickCount < this.nextSearch) {
                 return false;
             }
             this.target = this.pick();
+            if (this.target == null) {
+                this.nextSearch = this.suit.tickCount + SEARCH_INTERVAL;
+            }
             return this.target != null;
         }
 
@@ -679,6 +701,8 @@ public final class SuitGoals {
     static class RailGuard extends Goal {
         /** Give up on a target after this long (out of sight, friends in the way). */
         private static final int GIVE_UP_TICKS = 120;
+        /** Tick of the next search for a target (SEARCH_INTERVAL after one came up empty). */
+        private int nextSearch;
         /** Fire only with the head within this many degrees of the target (the beam is a hand wide). */
         private static final double MAX_AIM_ERROR = 2.0;
         private final PowerArmorEntity suit;
@@ -701,10 +725,13 @@ public final class SuitGoals {
         public boolean canUse() {
             var cannon = this.cannon();
             if (cannon == null || !this.suit.isAiDriven() || !this.suit.brain().snipesFromHome() || this.suit.brain().getHome() == null
-                    || RailCannonItem.isCoolingDown(this.suit) || !cannon.canPay(this.suit, this.suit)) {
+                    || RailCannonItem.isCoolingDown(this.suit) || !cannon.canPay(this.suit, this.suit) || this.suit.tickCount < this.nextSearch) {
                 return false;
             }
             this.target = this.pick();
+            if (this.target == null) {
+                this.nextSearch = this.suit.tickCount + SEARCH_INTERVAL;
+            }
             return this.target != null;
         }
 
@@ -826,6 +853,10 @@ public final class SuitGoals {
         @Override
         public boolean canUse() {
             if (!this.suit.isAiDriven() || !this.hasJob() || this.suit.brain().getHome() == null || this.suit.tickCount < this.nextScan) {
+                return false;
+            }
+            if (!SuitWork.workAreaLoaded(this.suit)) {
+                this.nextScan = this.suit.tickCount + 40; // home at the edge of the loaded world: wait, don't load it
                 return false;
             }
             if (this.suit.tickCount >= this.forgetSkipsAt) {

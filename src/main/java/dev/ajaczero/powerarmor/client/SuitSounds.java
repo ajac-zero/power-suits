@@ -45,6 +45,8 @@ public final class SuitSounds {
      *  level: entries must go as soon as the loop stops playing, or a world left behind stays in memory. */
     private static final Map<Integer, Loop> TOOLS = new HashMap<>();
     private static final RandomSource RANDOM = RandomSource.create();
+    /** After the sound engine refused a loop: no new loops before this game time (see start). */
+    private static long retryAt;
     /** Dev log: engine sounds played since the game started. */
     private static int enginePlayed;
 
@@ -61,7 +63,7 @@ public final class SuitSounds {
         for (PowerArmorEntity suit : mc.level.getEntitiesOfClass(PowerArmorEntity.class, mc.player.getBoundingBox().inflate(RANGE))) {
             engineTick(mc, suit);
             SoundEvent toolSound = toolSound(suit);
-            if (toolSound != null && !TOOLS.containsKey(suit.getId())) {
+            if (toolSound != null && !TOOLS.containsKey(suit.getId()) && mc.level.getGameTime() >= retryAt) {
                 start(mc, TOOLS, suit, new Loop(toolSound, suit, s -> toolSound(s) == toolSound, SuitSounds::toolVolume, SuitSounds::toolPitch));
             }
         }
@@ -72,6 +74,10 @@ public final class SuitSounds {
         // or the suit would never get its sound (the map says it has one).
         if (mc.getSoundManager().play(loop) != SoundEngine.PlayResult.NOT_STARTED) {
             playing.put(suit.getId(), loop);
+        } else {
+            // Refused: try again in a second, not every tick (each try logs a warning, and when every channel is taken
+            // the engine waits for one on the render thread).
+            retryAt = mc.level.getGameTime() + 20;
         }
     }
 
@@ -80,6 +86,7 @@ public final class SuitSounds {
     public static void loggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         TOOLS.values().forEach(Loop::stopNow);
         TOOLS.clear();
+        retryAt = 0; // a game time from that world: the next one has its own clock
     }
 
     /**
