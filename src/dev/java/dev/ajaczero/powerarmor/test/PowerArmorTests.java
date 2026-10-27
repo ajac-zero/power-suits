@@ -14,6 +14,8 @@ import dev.ajaczero.powerarmor.entity.SuitLights;
 import dev.ajaczero.powerarmor.entity.SuitMind;
 import dev.ajaczero.powerarmor.entity.SuitSmash;
 import dev.ajaczero.powerarmor.entity.TntShell;
+import dev.ajaczero.powerarmor.entity.ai.DrillWorker;
+import dev.ajaczero.powerarmor.entity.ai.GunAttack;
 import dev.ajaczero.powerarmor.entity.ai.SuitTargets;
 import dev.ajaczero.powerarmor.item.ChaingunItem;
 import dev.ajaczero.powerarmor.item.EmProjectorItem;
@@ -2078,7 +2080,10 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.BLAZE_ROD, 16));
         helper.runAfterDelay(5, () -> {
             var bolt = EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), EntitySpawnReason.COMMAND);
-            bolt.snapTo(suit.position().add(2, 0, 0));
+            // 2.6 blocks out: inside the bolt's 3-block damage box, but its fire (its block and random ones up to a block
+            // round it) can't touch the suit's box (0.7 from its middle): at 2 a fire block sometimes did, and the
+            // knocked-out (unpowered) suit burned for a second hit.
+            bolt.snapTo(suit.position().add(2.6, 0, 0));
             helper.getLevel().addFreshEntity(bolt);
         });
         helper.runAfterDelay(15, () -> helper.assertTrue(suit.isStunned(), "the strike knocked it out"));
@@ -2884,6 +2889,46 @@ public final class PowerArmorTests {
             helper.assertTrue(beef.isAlive(), "the food must not burn up");
             helper.assertTrue(beef.getItem().is(Items.COOKED_BEEF) && beef.getItem().getCount() == 3,
                     "3 raw beef should be 3 steaks, got " + beef.getItem());
+            helper.succeed();
+        });
+    }
+
+    /** The mind learns a tool's goals when it goes into the socket and forgets them when it comes out
+     *  (PowerTool.mindGoals, SuitBrain.updateToolGoals). */
+    @SuitTest(timeoutTicks = 40)
+    public static void toolGoalsComeAndGoWithTheTool(GameTestHelper helper) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.DRILL.get()));
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(suit.brain().toolGoals().size() == 1 && suit.brain().toolGoals().get(0) instanceof DrillWorker,
+                    "the drill brings its worker, got " + suit.brain().toolGoals());
+            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
+        });
+        helper.runAfterDelay(4, () -> {
+            helper.assertTrue(suit.brain().toolGoals().size() == 1 && suit.brain().toolGoals().get(0) instanceof GunAttack,
+                    "the chaingun's attack replaced it, got " + suit.brain().toolGoals());
+            helper.assertTrue(suit.goals().getAvailableGoals().stream().noneMatch(g -> g.getGoal() instanceof DrillWorker),
+                    "and the drill's worker is gone from the mind");
+            suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, ItemStack.EMPTY);
+        });
+        helper.runAfterDelay(6, () -> {
+            helper.assertTrue(suit.brain().toolGoals().isEmpty(), "no tool, no tool goals");
+            helper.assertTrue(suit.goals().getAvailableGoals().stream().noneMatch(g -> g.getGoal() instanceof GunAttack),
+                    "the attack is gone too");
+            helper.succeed();
+        });
+    }
+
+    /** A slot stack changed in place without telling the container (shrink, no setChanged) still reaches the clients'
+     *  copy within a tick (PowerArmorEntity.checkSlotCopies). */
+    @SuitTest(timeoutTicks = 20)
+    public static void slotCopiesCatchUpWithInPlaceChanges(GameTestHelper helper) {
+        PowerArmorEntity suit = spawnSuit(helper);
+        suit.getInventory().setItem(PowerArmorEntity.AMMO_SLOT, new ItemStack(Items.TNT, 8));
+        suit.getInventory().getItem(PowerArmorEntity.AMMO_SLOT).shrink(3);
+        helper.assertTrue(suit.getAmmoStack().getCount() == 8, "the copy is stale right after the in-place change");
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(suit.getAmmoStack().getCount() == 5, "the copy caught up, got " + suit.getAmmoStack());
             helper.succeed();
         });
     }

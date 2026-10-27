@@ -1,10 +1,9 @@
 package dev.ajaczero.powerarmor.entity.ai;
 
-
-
 /**
- * How the machine mind uses the tool in its socket (design sec. 8): each tool says which (PowerTool.mindUse), and the
- * mind's goals (SuitGoals) pick their job from it. A friendly mind does its job round its owner or its home; a rogue
+ * How the machine mind uses the tool in its socket (design sec. 8): each tool says which (PowerTool.mindUse). The kind
+ * decides what the shared goals do (SuitGoals: a GUN mind follows its owner, the others keep to home; SuitBrain's job
+ * questions); the tool's own goals do the job itself (PowerTool.mindGoals). A friendly mind does its job round its owner or its home; a rogue
  * only fights, and only with the weapons rogues carry (GUN, EM).
  */
 public enum ToolUse {

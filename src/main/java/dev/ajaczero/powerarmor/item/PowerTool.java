@@ -3,8 +3,10 @@ package dev.ajaczero.powerarmor.item;
 import com.geckolib.animation.RawAnimation;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.ai.ToolUse;
+import java.util.List;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -98,9 +100,20 @@ public interface PowerTool {
         return ToolEffects.NONE;
     }
 
-    /** How the machine mind uses this tool, which picks its job (design sec. 8). */
+    /** How the machine mind uses this tool, which picks its job (design sec. 8): a gunner follows its owner, the others
+     *  stay at home (SuitBrain's job questions). */
     default ToolUse mindUse() {
         return ToolUse.NONE;
+    }
+
+    /**
+     * Server: the machine mind's own goals for this tool (design sec. 8), a fresh set for each suit: the mind learns them
+     * when the tool goes into the socket and forgets them when it comes out (SuitBrain.updateToolGoals; vanilla's
+     * skeletons swap their bow and sword goals the same way). The goals every mind has (walk home, follow a gunner's
+     * owner, pick targets, look around) are in SuitGoals. None (the default): the mind stands guard at home.
+     */
+    default List<Goal> mindGoals(PowerArmorEntity suit) {
+        return List.of();
     }
 
     /** What the pilot's HUD shows above the fuel (client/FuelGauge): the ammo's icon and count (-1: endless, creative;

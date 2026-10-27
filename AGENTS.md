@@ -157,7 +157,9 @@ constants at the top, later sections move along by themselves.
   `FUEL_SLOT`, or the suit sits slumped (`powered_off`). The user's world contains old unfuelled suits and
   the saved player may already sit in one: `TerrainPilot.fuelVehicle` fuels whatever suit you're in.
 - **Synced entity data must be refreshed wherever the server field changes**, not only in `tick()`: loading,
-  `applyLoadout`, test setters (a GameTest caught a stale `BURN_TOTAL` after load). See `SuitPower.sync()` / `syncSlots()`.
+  `applyLoadout`, test setters (a GameTest caught a stale `BURN_TOTAL` after load). Since 2026-10-26 the code does it: a
+  server field with a synced copy has one private setter that writes both (`SuitPower.setBurnState`), and the slot copies
+  are re-checked every tick (`checkSlotCopies`: a stack shrunk in place never tells its container). Keep new pairs that way.
 - **`damageSources().source(key, a, b)` takes (projectile, shooter)** despite its parameter names
   (vanilla: `source(FIREBALL, fireball, thrower)`). Swapped, kills credit the projectile instead of the pilot.
 - **GeckoLib won't restart a triggered animation that is still playing**: per-use animations must be shorter
@@ -427,9 +429,9 @@ constants at the top, later sections move along by themselves.
 saving, the synced data table, the slots) and runs its parts, one class each (since 2026-10-26): `SuitPower` (engine,
 fuel), `SuitSocket` (the tool's trigger/cooldown/synced state), `SuitBrain` (the mind's owner/home/aim/jobs), and on the
 client `SocketVisuals`, `SuitAnimator`, `SuitLights`. A tool lives in its own files: its item (`PowerTool`: what it does,
-`mindUse()` its mind job, `createEffects()` its looks) and its `ToolEffects` (moving parts, `ToolLight`s, shot effects): a
+`mindUse()` its mind job, `mindGoals()` the goals that do it, `createEffects()` its looks) and its `ToolEffects` (moving parts, `ToolLight`s, shot effects): a
 new tool shouldn't need changes to the entity or the renderers beyond its bone name and glowmask;
-`entity/ai/` the machine mind's goals (`SuitMind` friendly/rogue); `menu/` the suit menu logic, `client/PowerArmorScreen` + `FuelGauge` its picture and the HUD;
+`entity/ai/` the machine mind's goals (`SuitGoals`: every mind's; each tool's own job goals, listed by `PowerTool.mindGoals` and swapped with the tool; `SuitMind` friendly/rogue); `menu/` the suit menu logic, `client/PowerArmorScreen` + `FuelGauge` its picture and the HUD;
 `client/` holds rendering + camera; `PilotProtection.java` redirects damage; `registry/` registers things.
 Comment the "why" for anything non-obvious; the user reads the code to learn.
 - **A cube's `down` face is mirrored front to back** (the export gives it a negative `uv_size`): a draft painter that

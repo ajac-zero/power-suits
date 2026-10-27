@@ -253,13 +253,16 @@ src/main/java/dev/ajaczero/powerarmor/
   item/HelmetStyle.java      the helmet styles (design sec. 4c); SuitHelmetItem: name + flavour line, HelmetTemplateItem: the templates
   item/PowerTool.java        what a socket tool is: fuel per use, cooldown, model bone, use(); worked by an operator
                              (the pilot, or the suit itself while its mind drives: aim, ammo, credit); its mind job
-                             (mindUse: entity/ai/ToolUse) and its looks (createEffects)
+                             (mindUse: entity/ai/ToolUse, and its own goals: mindGoals) and its looks (createEffects)
   item/ToolEffects.java      client: one suit's looks for its tool (moving parts, lights = ToolLight, shot effects);
                              one per tool: ChaingunEffects, TntLauncherEffects, EmProjectorEffects (+ the EM beam),
                              FlamethrowerEffects, RailCannonEffects (+ the rail beam, drawn by client/RailBeamRenderer)
   entity/SuitMind.java       friendly / rogue (synced: the visor colour)
-  entity/ai/SuitGoals.java   the machine mind's goals (vanilla goal system): walk home, look around, follow the owner,
-                             pick a target, shoot / punch
+  entity/ai/SuitGoals.java   the goals every machine mind has (vanilla goal system): walk home, look around, follow
+                             the owner, pick a target; a rogue wanders
+  entity/ai/ (tool jobs)     each tool's own goals, learned when it goes into the socket (PowerTool.mindGoals):
+                             GunAttack (chaingun, flamethrower: shoot / punch, base AttackGoal), EmGuard + RogueEmAttack,
+                             RailGuard, DrillWorker + SawWorker (base Worker)
   entity/ai/SuitTargets.java who the mind may shoot, what to shoot first, line-of-fire check
   entity/ai/SuitWork.java    where the drill and chainsaw minds may work (the hall, natural trees)
   entity/RogueSpawner.java   rogue suits turning up once in a while (saved day countdown, like the wandering trader)
@@ -269,7 +272,7 @@ src/main/java/dev/ajaczero/powerarmor/
   item/DrillItem.java        the third tool: 3x3 digging at diamond pickaxe/shovel speed
   item/ChainsawItem.java     the fourth tool: cuts wood, fells natural trees top-down
   item/RailCannonItem.java   charge, fire on release, the piercing beam (blocks it breaks, mobs it hits); the mind's job is
-                             SuitGoals.RailGuard; item/RailCannonEffects + client/RailBeamRenderer draw the beam
+                             entity/ai/RailGuard; item/RailCannonEffects + client/RailBeamRenderer draw the beam
   item/ToolMining.java       shared block breaking for both (BreakEvent, drops, crack overlay, progress)
   entity/Bullet.java         the tracer bullet (flight, hit without immunity, sparks off blocks)
   network/ToolTriggerPayload.java  client -> server "attack pressed/released"

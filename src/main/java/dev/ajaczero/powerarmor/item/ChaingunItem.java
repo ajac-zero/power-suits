@@ -3,8 +3,10 @@ package dev.ajaczero.powerarmor.item;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.Bullet;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.ai.GunAttack;
 import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.registry.ModSounds;
+import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
@@ -18,6 +20,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -101,9 +104,20 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
         return new ChaingunEffects();
     }
 
+    /** How the mind fights with it (GunAttack). */
+    private static final GunAttack.Gun MIND_GUN =
+            new GunAttack.Gun(28, false, suit -> suit.getStoredNuggets() > 0, suit -> !isOverheated(suit));
+
     @Override
     public ToolUse mindUse() {
         return ToolUse.GUN;
+    }
+
+    @Override
+    public List<Goal> mindGoals(PowerArmorEntity suit) {
+        // Fires from up to 28 blocks (bullets fly 80 blocks/s; past ~30 the spread misses small mobs); a friendly mind
+        // needs bullets in the hidden store and waits out an overheat.
+        return List.of(new GunAttack(suit, MIND_GUN));
     }
 
     @Override

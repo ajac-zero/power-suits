@@ -2,11 +2,13 @@ package dev.ajaczero.powerarmor.entity;
 
 import com.mojang.authlib.GameProfile;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
+import dev.ajaczero.powerarmor.entity.ai.SuitGoals;
 import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.item.HelmetStyle;
 import dev.ajaczero.powerarmor.item.PowerTool;
 import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModItems;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
@@ -17,6 +19,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.ValueInput;
@@ -27,8 +30,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * The machine mind's state (design sec. 8): who it works for (the last pilot), where home is (where the pilot got out),
- * where it aims, which job the tool in its socket gives it, and a rogue's lifetime. The mind's behaviour itself is the
- * goals in entity/ai (SuitGoals, SuitTargets, SuitWork); they read and set this.
+ * where it aims, which job the tool in its socket gives it (and that tool's goals), and a rogue's lifetime. The mind's
+ * behaviour itself is the goals in entity/ai (SuitGoals: what every mind does; each tool's own: PowerTool.mindGoals);
+ * they read and set this.
  *
  * One of the suit's parts (see PowerArmorEntity): {@code suit.brain()}. Server only: none of it is synced (the visor
  * colour comes from the suit's synced SuitMind, friendly or rogue).
@@ -48,6 +52,10 @@ public final class SuitBrain {
     private Vec3 aim;
     /** Server: ticks this rogue has been around (saved). */
     private int rogueAge;
+    /** Server: the tool whose goals the mind has right now (null: none), and those goals (updateToolGoals). */
+    @Nullable
+    private PowerTool goalsTool;
+    private List<Goal> toolGoals = List.of();
 
     SuitBrain(PowerArmorEntity suit) {
         this.suit = suit;
@@ -138,6 +146,27 @@ public final class SuitBrain {
     }
 
     // ---- Jobs: what the tool in the socket lets the mind do --------------------------------------------------------
+
+    /**
+     * Server, every tick (at the end of it, outside the goal selector's own loop): when the socket tool changed, forget
+     * the old tool's goals and learn the new one's (PowerTool.mindGoals). Removing a running goal stops it first (its
+     * stop() lets go of the trigger and the aim). A tool in the slot of a suit just loaded counts as a change.
+     */
+    void updateToolGoals() {
+        PowerTool tool = this.suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).getItem() instanceof PowerTool t ? t : null;
+        if (tool == this.goalsTool) {
+            return;
+        }
+        this.toolGoals.forEach(this.suit.goals()::removeGoal);
+        this.goalsTool = tool;
+        this.toolGoals = tool == null ? List.of() : List.copyOf(tool.mindGoals(this.suit));
+        this.toolGoals.forEach(goal -> this.suit.goals().addGoal(SuitGoals.TOOL_JOB, goal));
+    }
+
+    /** Server/tests: the socket tool's own goals the mind has right now (updateToolGoals). */
+    public List<Goal> toolGoals() {
+        return this.toolGoals;
+    }
 
     /** Both sides: how the mind uses the tool in the socket (NONE without a power tool). */
     public ToolUse toolUse() {

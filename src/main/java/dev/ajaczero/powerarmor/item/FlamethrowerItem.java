@@ -3,8 +3,10 @@ package dev.ajaczero.powerarmor.item;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.FlameJet;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.ai.GunAttack;
 import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.registry.ModSounds;
+import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -19,6 +21,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -90,9 +93,19 @@ public class FlamethrowerItem extends Item implements PowerTool, ModTooltip {
         return new FlamethrowerEffects();
     }
 
+    /** How the mind fights with it (GunAttack): the chaingun's job up close. The stream reaches about 7 blocks, so it fires
+     *  from 5.5 (the target well inside), keeps a wide berth round friends (the flame fans out and sets things alight)
+     *  and runs on fuel alone. */
+    private static final GunAttack.Gun MIND_GUN = new GunAttack.Gun(5.5, true, suit -> true, suit -> true);
+
     @Override
     public ToolUse mindUse() {
         return ToolUse.GUN;
+    }
+
+    @Override
+    public List<Goal> mindGoals(PowerArmorEntity suit) {
+        return List.of(new GunAttack(suit, MIND_GUN));
     }
 
     @Override

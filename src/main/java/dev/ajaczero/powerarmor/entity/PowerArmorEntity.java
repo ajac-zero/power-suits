@@ -323,7 +323,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         builder.define(FREE_POWER, false);
     }
 
-    /** The machine mind's goals (see SuitGoals). Vanilla calls this once, from Mob's constructor. */
+    /** The goals every machine mind has (see SuitGoals). Vanilla calls this once, from Mob's constructor; the socket
+     *  tool's own goals come and go with the tool (SuitBrain.updateToolGoals). */
     @Override
     protected void registerGoals() {
         SuitGoals.register(this, this.goalSelector, this.targetSelector);
@@ -514,8 +515,8 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return this.brain;
     }
 
-    /** The mind's goals (for SuitBrain's dev log). */
-    GoalSelector goals() {
+    /** Server: the mind's goals (SuitBrain adds and removes the tool's own; dev logs and tests read them). */
+    public GoalSelector goals() {
         return this.goalSelector;
     }
 
@@ -544,6 +545,10 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return new Vec3(pilot.xxa, 0, pilot.zza);
     }
 
+    /**
+     * Server: copies the slots into the synced data clients read (the HUD's counts, the drawn tool, helmet and engine).
+     * The container calls it on every setItem / setChanged; {@link #checkSlotCopies} catches the rest.
+     */
     private void syncSlots() {
         if (!this.level().isClientSide()) {
             this.entityData.set(FUEL_ITEM, this.inventory.getItem(FUEL_SLOT).copy());
@@ -556,6 +561,20 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.entityData.set(HELMET_STYLE, (byte) (style == null ? -1 : style.ordinal()));
             SuitEngine engine = SuitEngine.of(this.inventory.getItem(ENGINE_SLOT));
             this.entityData.set(ENGINE, (byte) (engine == null ? -1 : engine.ordinal()));
+        }
+    }
+
+    /**
+     * Server, every tick: a stack changed in place (shrink(), grow()) doesn't tell its container, so the synced copy would
+     * stay stale until something else touched the slots (the HUD would count ammo that's gone). Every such change in the mod
+     * also calls setChanged(); this backstop makes a forgotten one cost a tick, not a wrong HUD. Compares only, copies on a
+     * difference.
+     */
+    private void checkSlotCopies() {
+        if (!ItemStack.matches(this.entityData.get(FUEL_ITEM), this.inventory.getItem(FUEL_SLOT))
+                || !ItemStack.matches(this.entityData.get(SOCKET_ITEM), this.inventory.getItem(SOCKET_SLOT))
+                || !ItemStack.matches(this.entityData.get(AMMO_ITEM), this.inventory.getItem(AMMO_SLOT))) {
+            this.syncSlots();
         }
     }
 
@@ -1285,9 +1304,11 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         super.tick();
         if (!this.level().isClientSide() && this.isAlive()) {
             this.brain.equipRogue();
+            this.checkSlotCopies();
             this.power.tick();
             this.socket.tick();
             this.brain.tick();
+            this.brain.updateToolGoals(); // the socket tool's own goals (PowerTool.mindGoals), after the goals ran this tick
             if (this.isFieldHeld() && this.tickCount > this.fieldHeldUntil) {
                 this.entityData.set(FIELD_HELD, false); // the field let go
             }

@@ -35,7 +35,8 @@ public final class SuitPower {
     private static final double ENGINE_UP = 2.2, ENGINE_BACK = 0.53;
 
     private final PowerArmorEntity suit;
-    /** Server: energy left in the burning item (fractional, idle drains 0.25 per tick), and what it started with. */
+    /** Server: energy left in the burning item (fractional, idle drains 0.25 per tick), and what it started with. Only
+     *  {@link #setBurnState} writes them (it also syncs them). */
     private float burnLeft;
     private int burnTotal;
     /** Server: the engine seen last tick, to notice a swap (the half-burnt item goes with the old engine). */
@@ -71,8 +72,7 @@ public final class SuitPower {
         SuitEngine engine = this.suit.getEngine();
         if (this.engineSeen && engine != this.lastEngine) {
             // Engine swapped: the half-burnt item went out with the old one (design sec. 4b).
-            this.burnLeft = 0;
-            this.burnTotal = 0;
+            this.setBurnState(0, 0);
         }
         if (engine != this.lastEngine || !this.engineSeen) {
             // The mind's paths: a firebox would drown in deep water, so its suit keeps out of water altogether (vanilla's
@@ -98,14 +98,13 @@ public final class SuitPower {
                 if (pilot != null && SuitSeal.feedsAir(pilot)) {
                     drain += PowerArmorConfig.AIR_ENERGY_PER_TICK.get().floatValue(); // the pilot breathes the suit's air
                 }
-                this.burnLeft = Math.max(0, this.burnLeft - drain);
+                this.setBurnState(Math.max(0, this.burnLeft - drain), this.burnTotal);
                 if (this.burnLeft <= 0) {
                     this.igniteNextItem(); // hand over to the next item without a gap, like a furnace
                 }
             }
         }
         this.setPowered(this.shouldRun(pilot) && this.stunTicks == 0);
-        this.sync();
     }
 
     /** Load on the engine, from the pilot's keys (pilotInput). */
@@ -151,8 +150,7 @@ public final class SuitPower {
                 this.suit.spawnAtLocation(level, remainder);
             }
         }
-        this.burnLeft += energy;
-        this.burnTotal = energy;
+        this.setBurnState(this.burnLeft + energy, energy);
     }
 
     /** Server: turns the synced "powered" flag on or off, with the sounds and (for the pilot) why it went off. */
@@ -246,8 +244,7 @@ public final class SuitPower {
             level.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP, p.x, p.y, p.z, 30, 0.3, 0.3, 0.3, 0.1);
             level.sendParticles(ParticleTypes.CLOUD, p.x, p.y + 0.4, p.z, 12, 0.3, 0.3, 0.3, 0.05);
         }
-        this.burnLeft = 0;
-        this.burnTotal = 0;
+        this.setBurnState(0, 0);
     }
 
     // ---- Energy -----------------------------------------------------------------------------------------------------
@@ -299,8 +296,7 @@ public final class SuitPower {
         while (this.burnLeft < amount && SuitFuel.isFuel(this.suit.getEngine(), this.fuelSlot()) && !this.isFlooded()) {
             this.igniteNextItem();
         }
-        this.burnLeft = Math.max(0, this.burnLeft - amount);
-        this.sync();
+        this.setBurnState(Math.max(0, this.burnLeft - amount), this.burnTotal);
     }
 
     /** Both sides: energy in the burning item (rounded up, synced). */
@@ -331,15 +327,16 @@ public final class SuitPower {
 
     /** Server/tests: set the burning item's energy directly. */
     public void setBurn(float left, int total) {
-        this.burnLeft = left;
-        this.burnTotal = total;
-        this.sync();
+        this.setBurnState(left, total);
     }
 
-    /** Copies the burn into the synced data. Call wherever it changes (the gauge reads it on the client). */
-    void sync() {
-        this.suit.getEntityData().set(PowerArmorEntity.BURN_LEFT, Mth.ceil(this.burnLeft));
-        this.suit.getEntityData().set(PowerArmorEntity.BURN_TOTAL, this.burnTotal);
+    /** The one place the burn changes: sets it and copies it into the synced data at once (the gauge reads it on
+     *  clients). Before, each change had to call sync() itself, and a test setter that forgot left a stale gauge. */
+    private void setBurnState(float left, int total) {
+        this.burnLeft = left;
+        this.burnTotal = total;
+        this.suit.getEntityData().set(PowerArmorEntity.BURN_LEFT, Mth.ceil(left));
+        this.suit.getEntityData().set(PowerArmorEntity.BURN_TOTAL, total);
     }
 
     // ---- Saving, packing ----------------------------------------------------------------------------------------------
@@ -354,10 +351,8 @@ public final class SuitPower {
     void load(ValueInput tag) {
         this.dryTicks = tag.getIntOr("TidalDry", Integer.MAX_VALUE / 2);
         this.suit.getEntityData().set(PowerArmorEntity.ENGINE_UNDER_WATER, tag.getBooleanOr("EngineUnderWater", false));
-        this.burnLeft = tag.getFloatOr("BurnLeft", 0F);
-        this.burnTotal = tag.getIntOr("BurnTotal", 0);
+        this.setBurnState(tag.getFloatOr("BurnLeft", 0F), tag.getIntOr("BurnTotal", 0));
         this.slotsRestored();
-        this.sync();
     }
 
     void save(ValueOutput tag) {

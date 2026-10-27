@@ -1,32 +1,16 @@
 package dev.ajaczero.powerarmor.entity.ai;
 
-import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
-import dev.ajaczero.powerarmor.item.ChaingunItem;
-import dev.ajaczero.powerarmor.item.EmProjectorItem;
-import dev.ajaczero.powerarmor.item.FlamethrowerItem;
-import dev.ajaczero.powerarmor.item.RailCannonItem;
-import java.util.Comparator;
 import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.target.TargetGoal;
-import net.minecraft.world.entity.monster.Creeper;
-import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * The suit's machine mind, built from vanilla's goal system: a mob holds a list of goals ("walk home", "look at that
@@ -37,10 +21,15 @@ import org.jetbrains.annotations.Nullable;
  * Every goal here also checks {@link PowerArmorEntity#isAiDriven()}: the mind only acts while the suit is powered and
  * nobody is inside (the pilot drives otherwise; unpowered it's a parked machine).
  *
- * The job comes from the socket tool (design sec. 8): none (and tools whose job isn't built yet) = stand guard at home;
- * chaingun = follow the owner and defend them (a target goal picks who, an attack goal aims, fires and moves);
- * EM projector = guard the area round home: grab a monster, lift it overhead and fling it up (creepers: away);
- * drill = clear an open hall round home; chainsaw = fell the natural trees round home (SuitWork says where).
+ * Two kinds of goals:
+ *  - the ones every mind has, here: walk home (ReturnHome), follow the owner (FollowOwner) and pick who to defend them
+ *    from (DefendOwner) while the tool makes it a gunner, a rogue's target picking (RogueTarget) and wandering
+ *    (RogueWander), and looking around;
+ *  - the tool's own job: each power tool lists its goals (PowerTool.mindGoals), which the mind learns when the tool goes
+ *    into the socket and forgets when it comes out (SuitBrain.updateToolGoals). Chaingun and flamethrower: GunAttack (aim,
+ *    fire, punch when dry); EM projector: EmGuard (guard home) and RogueEmAttack; rail cannon: RailGuard (a sentry at
+ *    home); drill: DrillWorker (dig a hall); chainsaw: SawWorker (fell trees). A tool with none (the TNT launcher) leaves
+ *    the mind standing guard at home. Adding a tool's job never touches this class.
  * A rogue mind has no owner and no home: it wanders and attacks anything it sees with its chaingun or EM projector.
  * A mob has two goal lists: {@code targetSelector} decides who to fight (setTarget), {@code goalSelector} what to do.
  */
@@ -52,21 +41,21 @@ public final class SuitGoals {
      */
     static final int SEARCH_INTERVAL = 10;
 
+    /** Priority of a tool's own goals (PowerTool.mindGoals): above following the owner and walking home, so a job in
+     *  progress keeps the feet; target picking is a separate list (targetSelector). */
+    public static final int TOOL_JOB = 2;
+
     /** How far from home the idle suit may drift (pushed, knocked back) before it walks back, in blocks. */
     static final double HOME_SLACK = 2.5;
 
+    /** The goals every mind has. Vanilla builds a mob's goals once, in its constructor (registerGoals). */
     public static void register(PowerArmorEntity suit, GoalSelector goals, GoalSelector targets) {
         targets.addGoal(1, new DefendOwner(suit));
         targets.addGoal(1, new RogueTarget(suit));
-        goals.addGoal(2, new RogueEmAttack(suit));
-        goals.addGoal(7, new RogueWander(suit));
-        goals.addGoal(2, new ChaingunAttack(suit));
-        goals.addGoal(2, new EmGuard(suit));
-        goals.addGoal(2, new RailGuard(suit));
-        goals.addGoal(3, new DrillWorker(suit));
-        goals.addGoal(3, new SawWorker(suit));
+        // (priority TOOL_JOB: the socket tool's goals, added and removed by SuitBrain.updateToolGoals)
         goals.addGoal(4, new FollowOwner(suit));
         goals.addGoal(5, new ReturnHome(suit));
+        goals.addGoal(7, new RogueWander(suit));
         goals.addGoal(8, new LookAtPlayerGoal(suit, Player.class, 8F) {
             @Override
             public boolean canUse() {
@@ -216,116 +205,6 @@ public final class SuitGoals {
         }
     }
 
-    /**
-     * Chaingun job: aim the head at the target and hold the trigger while the line of fire is clear (never through the
-     * owner, a villager, a pet...); walk closer while it can't see the target or something friendly is in the way. Out of
-     * nuggets (the hidden store is empty), it walks up and punches instead.
-     * The flamethrower (Phase 11) does the same job up close: it walks to within {@link #FLAME_RANGE} and keeps a wider
-     * berth round friends (the flame fans out and sets the target alight; see SuitTargets.flameClear).
-     */
-    static class ChaingunAttack extends Goal {
-        /** Fire from up to this far (bullets fly 80 blocks/s; past ~30 the spread misses small mobs). */
-        private static final double FIRE_RANGE = 28;
-        /** The flamethrower's stream reaches about 7 blocks; it fires from a bit closer so the target is well inside. */
-        static final double FLAME_RANGE = 5.5;
-        private static final double PUNCH_REACH = 1.4; // from the suit's box to the target's box, blocks
-        private final PowerArmorEntity suit;
-        private int repath;
-        private int punchCooldown;
-
-        ChaingunAttack(PowerArmorEntity suit) {
-            this.suit = suit;
-            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
-        }
-
-        @Override
-        public boolean canUse() {
-            return this.suit.isAiDriven() && this.suit.brain().hasGun() && this.suit.getTarget() != null && this.suit.getTarget().isAlive();
-        }
-
-        @Override
-        public boolean canContinueToUse() {
-            return this.canUse();
-        }
-
-        @Override
-        public boolean requiresUpdateEveryTick() {
-            return true;
-        }
-
-        @Override
-        public void start() {
-            this.repath = 0;
-        }
-
-        /** Something to shoot: a rogue never runs dry, the flamethrower runs on fuel alone, the chaingun needs bullets
-         *  (its hidden store). */
-        private boolean hasAmmo() {
-            return this.suit.isRogue() || this.suit.socket().tool() instanceof FlamethrowerItem || this.suit.getStoredNuggets() > 0;
-        }
-
-        @Override
-        public void tick() {
-            LivingEntity target = this.suit.getTarget();
-            if (target == null) {
-                return;
-            }
-            Vec3 aim = target.getBoundingBox().getCenter();
-            this.suit.brain().setAim(aim);
-            boolean sees = this.suit.getSensing().hasLineOfSight(target);
-            if (this.punchCooldown > 0) {
-                this.punchCooldown--;
-            }
-            if (this.hasAmmo()) {
-                boolean flame = this.suit.socket().tool() instanceof FlamethrowerItem;
-                boolean inRange = this.suit.distanceTo(target) < (flame ? FLAME_RANGE : FIRE_RANGE);
-                // A rogue fires at will; a friendly mind never through (or, with the flamethrower, near) someone it must not hurt.
-                boolean clear = sees && inRange && (this.suit.isRogue()
-                        || (flame ? SuitTargets.flameClear(this.suit, target, aim) : SuitTargets.lineOfFireClear(this.suit, target, aim)));
-                this.suit.socket().setAiTrigger(clear && !(this.suit.socket().tool() instanceof ChaingunItem && ChaingunItem.isOverheated(this.suit)));
-                if (clear) {
-                    this.suit.getNavigation().stop(); // plant the feet and fire
-                } else {
-                    this.approach(target); // get a clear shot: closer, round the friend in the way
-                }
-                return;
-            }
-            // No bullets: the fists (1 + the melee bonus, like a pilot's bare hand).
-            this.suit.socket().setAiTrigger(false);
-            if (!inPunchReach(this.suit, target) || !sees) {
-                this.approach(target);
-            } else {
-                this.suit.getNavigation().stop();
-                if (this.punchCooldown == 0) {
-                    this.suit.brain().punch(target);
-                    this.punchCooldown = 20;
-                }
-            }
-        }
-
-        private void approach(LivingEntity target) {
-            if (--this.repath <= 0) {
-                this.repath = 10;
-                this.suit.getNavigation().moveTo(target, this.suit.distanceTo(target) > 12 ? 1.6 : 1.0);
-                // (the flamethrower's range is short: moveTo stops at the target, and inRange plants the feet on the way)
-            }
-        }
-
-        @Override
-        public void stop() {
-            this.suit.socket().setAiTrigger(false);
-            this.suit.brain().setAim(null);
-            this.suit.getNavigation().stop();
-        }
-    }
-
-    /** Close enough for the suit's fist: from its box to the target's box (roughly), blocks. */
-    static boolean inPunchReach(PowerArmorEntity suit, LivingEntity target) {
-        double gap = Math.sqrt(suit.getBoundingBox().distanceToSqr(target.getBoundingBox().getCenter()))
-                - Math.max(target.getBbWidth(), target.getBbHeight()) / 2;
-        return gap <= ChaingunAttack.PUNCH_REACH;
-    }
-
     /** Target selector, rogue mind: the nearest player it sees, else the nearest mob (SuitTargets.pickRogue); re-picks
      *  every second, so a player who comes into view takes over from a cow. */
     static class RogueTarget extends TargetGoal {
@@ -381,107 +260,6 @@ public final class SuitGoals {
         public void stop() {
             this.suit.setTarget(null);
             super.stop();
-        }
-    }
-
-    /**
-     * Rogue mind with an EM projector: catch the target in the beam (a player too: the rogue's beam takes players), lift
-     * it and hurl it away with a pilot's strength (32 blocks/s, a little upward): the landing and anything it slams into
-     * hurt. What the beam can't hold (a piloted suit, a big mob) gets walked up to and punched.
-     */
-    static class RogueEmAttack extends Goal {
-        private static final int LIFT_TICKS = 8;
-        private static final double REACH = 13;
-        private final PowerArmorEntity suit;
-        private int lift, repath, punchCooldown;
-
-        RogueEmAttack(PowerArmorEntity suit) {
-            this.suit = suit;
-            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
-        }
-
-        @Override
-        public boolean canUse() {
-            return this.suit.isAiDriven() && this.suit.isRogue() && this.suit.brain().toolUse() == ToolUse.EM && this.suit.getTarget() != null
-                    && this.suit.getTarget().isAlive();
-        }
-
-        @Override
-        public boolean canContinueToUse() {
-            return this.canUse();
-        }
-
-        @Override
-        public boolean requiresUpdateEveryTick() {
-            return true;
-        }
-
-        @Override
-        public void start() {
-            this.lift = 0;
-            this.repath = 0;
-        }
-
-        @Override
-        public void tick() {
-            LivingEntity target = this.suit.getTarget();
-            if (target == null) {
-                return;
-            }
-            if (this.punchCooldown > 0) {
-                this.punchCooldown--;
-            }
-            boolean sees = this.suit.getSensing().hasLineOfSight(target);
-            if (this.suit.socket().getBeamTarget() == target) {
-                // Caught: swing it up and away (from the suit toward where it was), then let go: the projector throws it.
-                this.suit.getNavigation().stop();
-                Vec3 away = target.position().subtract(this.suit.position()).multiply(1, 0, 1);
-                away = away.lengthSqr() < 1.0E-4 ? this.suit.getLookAngle().multiply(1, 0, 1) : away;
-                this.suit.brain().setAim(this.suit.getEyePosition().add(away.normalize().scale(10)).add(0, 4, 0));
-                // Something heavy (a suit, a boss) can't be lifted: pin it down for a couple of seconds before the shove.
-                this.suit.socket().setAiTrigger(++this.lift < (EmProjectorItem.isHeavy(target) ? 40 : LIFT_TICKS));
-                return;
-            }
-            this.lift = 0;
-            if (EmProjectorItem.canHold(this.suit, target)) {
-                // Only from the ground (or water): re-catching a thrown one mid-flight would juggle it and spare it the landing.
-                boolean landed = target.onGround() || target.isInLiquid() || SuitTargets.isFlyer(target);
-                boolean inReach = sees && landed && this.suit.distanceTo(target) < REACH;
-                this.suit.brain().setAim(target.getBoundingBox().getCenter());
-                this.suit.socket().setAiTrigger(inReach && this.suit.socket().isReady());
-                if (inReach) {
-                    this.suit.getNavigation().stop();
-                } else {
-                    this.approach(target);
-                }
-                return;
-            }
-            // Too heavy for the beam: the fists.
-            this.suit.socket().setAiTrigger(false);
-            this.suit.brain().setAim(target.getBoundingBox().getCenter());
-            if (!sees || !inPunchReach(this.suit, target)) {
-                this.approach(target);
-            } else {
-                this.suit.getNavigation().stop();
-                if (this.punchCooldown == 0) {
-                    this.suit.brain().punch(target);
-                    this.punchCooldown = 20;
-                }
-            }
-        }
-
-        private void approach(LivingEntity target) {
-            if (--this.repath <= 0) {
-                this.repath = 10;
-                this.suit.getNavigation().moveTo(target, 1.0);
-            }
-        }
-
-        @Override
-        public void stop() {
-            this.suit.socket().setAiTrigger(false);
-            this.suit.brain().setAim(null);
-            this.suit.getNavigation().stop();
         }
     }
 
@@ -565,439 +343,6 @@ public final class SuitGoals {
         @Override
         public void stop() {
             this.suit.getNavigation().stop();
-        }
-    }
-
-    /**
-     * EM projector job: guard the area round home. Pick the monster nearest home (within the guard radius, in the
-     * projector's range and in sight), aim at it and hold the trigger until the beam has it; then aim straight up (a
-     * creeper: up and away from home) so the beam lifts it overhead, and let go: the projector throws along the aim,
-     * hard enough that the fall kills (EM_GUARD_LAUNCH). Only LOOK: the feet stay with ReturnHome, so it fights from home.
-     */
-    static class EmGuard extends Goal {
-        /** Ticks to hold the aim up before letting go: the beam pulls the monster overhead. */
-        private static final int LIFT_TICKS = 12;
-        /** Tick of the next search for a target (SEARCH_INTERVAL after one came up empty). */
-        private int nextSearch;
-        /** Give up on a monster the beam hasn't caught after this long (out of sight, behind something). */
-        private static final int SEEK_TICKS = 60;
-        private final PowerArmorEntity suit;
-        @Nullable
-        private LivingEntity target;
-        private boolean lifting, thrown;
-        private int ticks;
-
-        EmGuard(PowerArmorEntity suit) {
-            this.suit = suit;
-            this.setFlags(EnumSet.of(Flag.LOOK));
-        }
-
-        @Override
-        public boolean canUse() {
-            if (!this.suit.isAiDriven() || !this.suit.brain().guardsHome() || this.suit.brain().getHome() == null || !this.suit.socket().isReady()
-                    || this.suit.socket().getBeamTarget() != null || this.suit.tickCount < this.nextSearch) {
-                return false;
-            }
-            this.target = this.pick();
-            if (this.target == null) {
-                this.nextSearch = this.suit.tickCount + SEARCH_INTERVAL;
-            }
-            return this.target != null;
-        }
-
-        /** The monster nearest home that the beam could catch from here. */
-        @Nullable
-        private LivingEntity pick() {
-            BlockPos home = this.suit.brain().getHome();
-            if (home == null) {
-                return null;
-            }
-            Vec3 centre = Vec3.atBottomCenterOf(home);
-            double radius = PowerArmorConfig.EM_GUARD_RADIUS.get();
-            double reach = PowerArmorConfig.EM_RANGE.get();
-            return this.suit.level().getEntitiesOfClass(LivingEntity.class, new AABB(centre, centre).inflate(radius, 8, radius),
-                            // standing (or swimming, or a flyer): one it threw is left alone until it lands (catching it
-                            // mid-fall reset its fall and the zombie survived the 30-block drop)
-                            e -> e instanceof Enemy && e.distanceToSqr(centre) < radius * radius
-                                    && (e.onGround() || e.isInLiquid() || SuitTargets.isFlyer(e))
-                                    && e.distanceTo(this.suit) < reach - 1 && EmProjectorItem.canGrab(e)
-                                    && !EmProjectorItem.isHeavy(e) // can't be lifted: no fling
-                                    && SuitTargets.canAttack(this.suit, e, false) && this.suit.getSensing().hasLineOfSight(e))
-                    .stream().min(Comparator.comparingDouble(e -> e.distanceToSqr(centre))).orElse(null);
-        }
-
-        @Override
-        public void start() {
-            this.suit.setTarget(this.target);
-            this.lifting = false;
-            this.thrown = false;
-            this.ticks = 0;
-        }
-
-        @Override
-        public boolean canContinueToUse() {
-            if (this.thrown || this.target == null || !this.target.isAlive() || !this.suit.isAiDriven() || !this.suit.brain().guardsHome()) {
-                return false;
-            }
-            return this.lifting ? this.suit.socket().getBeamTarget() == this.target : this.ticks < SEEK_TICKS;
-        }
-
-        @Override
-        public boolean requiresUpdateEveryTick() {
-            return true;
-        }
-
-        @Override
-        public void tick() {
-            if (this.target == null) {
-                return;
-            }
-            this.ticks++;
-            if (!this.lifting) {
-                this.suit.brain().setAim(this.target.getBoundingBox().getCenter());
-                this.suit.socket().setAiTrigger(true);
-                if (this.suit.socket().getBeamTarget() == this.target) {
-                    this.lifting = true; // caught: now up with it
-                    this.ticks = 0;
-                }
-                return;
-            }
-            this.suit.brain().setAim(this.liftAim());
-            if (this.ticks >= LIFT_TICKS) {
-                this.suit.socket().setAiTrigger(false); // let go: the projector throws it along the aim (this tick, after the goals)
-                this.thrown = true;
-            }
-        }
-
-        /** Where to point while lifting: straight up, leaning a little away from home so the monster comes down outside
-         *  (not on the suit); a creeper is thrown up and away instead: it must not burst at home. */
-        private Vec3 liftAim() {
-            BlockPos home = this.suit.brain().getHome();
-            Vec3 eye = this.suit.getEyePosition();
-            Vec3 out = this.target.position().subtract(home == null ? this.suit.position() : Vec3.atBottomCenterOf(home)).multiply(1, 0, 1);
-            out = out.lengthSqr() < 1.0E-4 ? this.suit.getLookAngle().multiply(1, 0, 1) : out;
-            out = out.lengthSqr() < 1.0E-4 ? new Vec3(0, 0, 1) : out.normalize();
-            return this.target instanceof Creeper ? eye.add(out.scale(10)).add(0, 4.5, 0)
-                    : eye.add(out.scale(0.6)).add(0, 10, 0);
-        }
-
-        @Override
-        public void stop() {
-            this.suit.socket().setAiTrigger(false);
-            this.suit.brain().setAim(null);
-            this.suit.setTarget(null);
-            this.target = null;
-        }
-    }
-
-    /**
-     * Rail cannon job (Phase 11, user: "a long-range guard"): a sentry at home. Pick what to shoot within the rail guard
-     * radius of home (whatever just hurt the owner or the suit first, then the monster nearest home) that the suit can
-     * see and the beam can reach, aim the head at it and hold the trigger until the cannon is charged; then let go (it
-     * fires on release) once the head points at the target and nobody it must not hurt is anywhere on the beam
-     * (SuitTargets.beamClear: the beam goes on past the target). Only LOOK: ReturnHome keeps the feet at home. A shot it
-     * can't take within a few seconds is dropped without firing (RailCannonItem.disarm). Never breaks blocks.
-     */
-    static class RailGuard extends Goal {
-        /** Give up on a target after this long (out of sight, friends in the way). */
-        private static final int GIVE_UP_TICKS = 120;
-        /** Tick of the next search for a target (SEARCH_INTERVAL after one came up empty). */
-        private int nextSearch;
-        /** Fire only with the head within this many degrees of the target (the beam is a hand wide). */
-        private static final double MAX_AIM_ERROR = 2.0;
-        private final PowerArmorEntity suit;
-        @Nullable
-        private LivingEntity target;
-        private int ticks;
-        private boolean fired;
-
-        RailGuard(PowerArmorEntity suit) {
-            this.suit = suit;
-            this.setFlags(EnumSet.of(Flag.LOOK));
-        }
-
-        @Nullable
-        private RailCannonItem cannon() {
-            return this.suit.getSocketStack().getItem() instanceof RailCannonItem c ? c : null;
-        }
-
-        @Override
-        public boolean canUse() {
-            var cannon = this.cannon();
-            if (cannon == null || !this.suit.isAiDriven() || !this.suit.brain().snipesFromHome() || this.suit.brain().getHome() == null
-                    || RailCannonItem.isCoolingDown(this.suit) || !cannon.canPay(this.suit, this.suit) || this.suit.tickCount < this.nextSearch) {
-                return false;
-            }
-            this.target = this.pick();
-            if (this.target == null) {
-                this.nextSearch = this.suit.tickCount + SEARCH_INTERVAL;
-            }
-            return this.target != null;
-        }
-
-        /** Provoked attackers first (the owner's, then the suit's own), else the monster nearest home. */
-        @Nullable
-        private LivingEntity pick() {
-            BlockPos home = this.suit.brain().getHome();
-            if (home == null) {
-                return null;
-            }
-            Vec3 centre = Vec3.atBottomCenterOf(home);
-            double radius = PowerArmorConfig.RAIL_GUARD_RADIUS.get();
-            double reach = PowerArmorConfig.RAIL_RANGE.get() - 1;
-            Predicate<LivingEntity> shootable = e -> e.distanceToSqr(centre) < radius * radius
-                    && e.distanceTo(this.suit) < reach && this.suit.getSensing().hasLineOfSight(e);
-            Player owner = this.suit.brain().getOwner();
-            for (LivingEntity provoked : new LivingEntity[] {owner == null ? null : owner.getLastHurtByMob(), this.suit.getLastHurtByMob()}) {
-                if (provoked != null && SuitTargets.isProvoked(this.suit, provoked) && SuitTargets.canAttack(this.suit, provoked, true)
-                        && shootable.test(provoked)) {
-                    return provoked;
-                }
-            }
-            return this.suit.level().getEntitiesOfClass(LivingEntity.class, new AABB(centre, centre).inflate(radius, 16, radius),
-                            e -> (e instanceof Enemy || e instanceof PowerArmorEntity other && other.isRogue())
-                                    && SuitTargets.canAttack(this.suit, e, false) && shootable.test(e))
-                    .stream().min(Comparator.comparingDouble(e -> e.distanceToSqr(centre))).orElse(null);
-        }
-
-        @Override
-        public void start() {
-            this.suit.setTarget(this.target);
-            this.ticks = 0;
-            this.fired = false;
-        }
-
-        @Override
-        public boolean canContinueToUse() {
-            return !this.fired && this.target != null && this.target.isAlive() && this.ticks < GIVE_UP_TICKS
-                    && this.suit.isAiDriven() && this.suit.brain().snipesFromHome() && this.cannon() != null;
-        }
-
-        @Override
-        public boolean requiresUpdateEveryTick() {
-            return true;
-        }
-
-        @Override
-        public void tick() {
-            if (this.target == null) {
-                return;
-            }
-            this.ticks++;
-            Vec3 aim = this.target.getBoundingBox().getCenter();
-            this.suit.brain().setAim(aim);
-            this.suit.socket().setAiTrigger(true); // charge (it holds a full charge as long as the trigger stays down)
-            if (!RailCannonItem.isCharged(this.suit) || !this.suit.getSensing().hasLineOfSight(this.target)) {
-                return;
-            }
-            Vec3 eye = this.suit.getEyePosition();
-            Vec3 view = this.suit.getViewVector(1F);
-            Vec3 want = aim.subtract(eye).normalize();
-            double error = Math.toDegrees(Math.acos(Mth.clamp(view.dot(want), -1, 1)));
-            if (error <= MAX_AIM_ERROR && SuitTargets.beamClear(this.suit, view, PowerArmorConfig.RAIL_RANGE.get())) {
-                this.suit.socket().setAiTrigger(false); // let go: it fires this tick, after the goals (PowerArmorEntity.tickTool)
-                this.fired = true;
-            }
-        }
-
-        @Override
-        public void stop() {
-            if (!this.fired) {
-                RailCannonItem.disarm(this.suit); // let go without firing
-            }
-            this.suit.socket().setAiTrigger(false);
-            this.suit.brain().setAim(null);
-            this.suit.setTarget(null);
-            this.target = null;
-        }
-    }
-
-    /**
-     * Shared by the drill and chainsaw jobs: pick a block to work on (SuitWork), walk until it's in reach and the tool
-     * would hit it (or something else it may work on), aim and hold the trigger until it's gone, then the next one.
-     * Blocks it can't get at (no path, something in the way it mustn't touch) are skipped for a minute. With nothing left
-     * to do the goal ends and ReturnHome walks it back; it looks for new work every 2 seconds.
-     */
-    abstract static class Worker extends Goal {
-        /** From the eye to the target's centre: the tools reach 6 (4.5 + the suit's 1.5); keep a margin. */
-        private static final double REACH = 4.6;
-        /** Give up on a block after this long (walking + working), and skip it for a minute. */
-        private static final int GIVE_UP_TICKS = 200, SKIP_FOR = 1200;
-        protected final PowerArmorEntity suit;
-        private final Set<BlockPos> skip = new HashSet<>();
-        @Nullable
-        protected BlockPos target;
-        private int ticks, repath, nextScan, forgetSkipsAt;
-
-        Worker(PowerArmorEntity suit) {
-            this.suit = suit;
-            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
-        }
-
-        abstract boolean hasJob();
-
-        @Nullable
-        abstract BlockPos findTarget(Set<BlockPos> skip);
-
-        /** Still something to do at the target? */
-        abstract boolean stillWork(BlockPos target);
-
-        /** May the tool work on this block, if the aim hits it first? */
-        abstract boolean mayWorkOn(BlockPos pos);
-
-        /** Wait (trigger up) without picking the next target, e.g. while a felled tree comes down. */
-        boolean busy() {
-            return false;
-        }
-
-        @Override
-        public boolean canUse() {
-            if (!this.suit.isAiDriven() || !this.hasJob() || this.suit.brain().getHome() == null || this.suit.tickCount < this.nextScan) {
-                return false;
-            }
-            if (!SuitWork.workAreaLoaded(this.suit)) {
-                this.nextScan = this.suit.tickCount + 40; // home at the edge of the loaded world: wait, don't load it
-                return false;
-            }
-            if (this.suit.tickCount >= this.forgetSkipsAt) {
-                this.skip.clear();
-                this.forgetSkipsAt = this.suit.tickCount + SKIP_FOR;
-            }
-            this.target = this.findTarget(this.skip);
-            if (this.target == null) {
-                this.nextScan = this.suit.tickCount + 40;
-            }
-            return this.target != null;
-        }
-
-        @Override
-        public boolean canContinueToUse() {
-            return this.target != null && this.suit.isAiDriven() && this.hasJob();
-        }
-
-        @Override
-        public boolean requiresUpdateEveryTick() {
-            return true;
-        }
-
-        @Override
-        public void start() {
-            this.ticks = 0;
-            this.repath = 0;
-        }
-
-        @Override
-        public void tick() {
-            if (this.target == null) {
-                return;
-            }
-            if (this.busy()) {
-                this.suit.socket().setAiTrigger(false);
-                return;
-            }
-            if (!this.stillWork(this.target)) {
-                this.next();
-                return;
-            }
-            if (++this.ticks > GIVE_UP_TICKS) {
-                this.skip.add(this.target); // can't get at it: try the others first
-                this.next();
-                return;
-            }
-            Vec3 aim = Vec3.atCenterOf(this.target);
-            BlockPos first = SuitWork.firstBlockToward(this.suit, aim);
-            boolean canHit = first != null && (first.equals(this.target) || this.mayWorkOn(first));
-            if (this.suit.getEyePosition().distanceTo(aim) <= REACH && canHit) {
-                this.suit.getNavigation().stop();
-                this.suit.brain().setAim(aim);
-                this.suit.socket().setAiTrigger(true);
-                return;
-            }
-            this.suit.socket().setAiTrigger(false);
-            this.suit.brain().setAim(null);
-            if (--this.repath <= 0) {
-                this.repath = 20;
-                // Toward the block itself: the path ends next to it (the block's own spot is solid).
-                this.suit.getNavigation().moveTo(this.target.getX() + 0.5, this.target.getY(), this.target.getZ() + 0.5, 1.0);
-            }
-        }
-
-        private void next() {
-            this.suit.socket().setAiTrigger(false);
-            this.ticks = 0;
-            this.repath = 0;
-            this.target = this.findTarget(this.skip);
-            if (this.target == null) {
-                this.nextScan = this.suit.tickCount + 40;
-            }
-        }
-
-        @Override
-        public void stop() {
-            this.suit.socket().setAiTrigger(false);
-            this.suit.brain().setAim(null);
-            this.suit.getNavigation().stop();
-            this.target = null;
-        }
-    }
-
-    /** Drill job: clear an open hall at home level, ring by ring outward from home (SuitWork.mayDig decides). */
-    static class DrillWorker extends Worker {
-        DrillWorker(PowerArmorEntity suit) {
-            super(suit);
-        }
-
-        @Override
-        boolean hasJob() {
-            return this.suit.brain().digsHall();
-        }
-
-        @Override
-        BlockPos findTarget(Set<BlockPos> skip) {
-            return SuitWork.nextDigTarget(this.suit, skip);
-        }
-
-        @Override
-        boolean stillWork(BlockPos target) {
-            return SuitWork.mayDig(this.suit, target);
-        }
-
-        @Override
-        boolean mayWorkOn(BlockPos pos) {
-            return SuitWork.mayDig(this.suit, pos);
-        }
-    }
-
-    /** Chainsaw job: fell the natural trees round home, nearest first: cut the trunk's lowest log, wait for the tree to
-     *  come down, next tree. */
-    static class SawWorker extends Worker {
-        SawWorker(PowerArmorEntity suit) {
-            super(suit);
-        }
-
-        @Override
-        boolean hasJob() {
-            return this.suit.brain().fellsTrees();
-        }
-
-        @Override
-        BlockPos findTarget(Set<BlockPos> skip) {
-            return SuitWork.nextTrunk(this.suit, skip);
-        }
-
-        @Override
-        boolean stillWork(BlockPos target) {
-            return this.suit.level().getBlockState(target).is(BlockTags.LOGS);
-        }
-
-        @Override
-        boolean mayWorkOn(BlockPos pos) {
-            return SuitWork.mayCut(this.suit.level(), pos, this.suit.level().getBlockState(pos));
-        }
-
-        @Override
-        boolean busy() {
-            return this.suit.socket().isRunning() && !this.suit.socket().isAiTriggerHeld(); // the tree is still coming down
         }
     }
 

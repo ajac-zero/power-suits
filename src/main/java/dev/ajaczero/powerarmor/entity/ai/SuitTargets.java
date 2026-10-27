@@ -199,6 +199,16 @@ public final class SuitTargets {
         return true;
     }
 
+    /** How far the suit's fist reaches: from its box to the target's box, blocks. */
+    private static final double PUNCH_REACH = 1.4;
+
+    /** Close enough for the suit's fist: from its box to the target's box (roughly). */
+    public static boolean inPunchReach(PowerArmorEntity suit, LivingEntity target) {
+        double gap = Math.sqrt(suit.getBoundingBox().distanceToSqr(target.getBoundingBox().getCenter()))
+                - Math.max(target.getBbWidth(), target.getBbHeight()) / 2;
+        return gap <= PUNCH_REACH;
+    }
+
     private SuitTargets() {}
 
     /** Server: the world's pvp game rule (players may hurt each other). */

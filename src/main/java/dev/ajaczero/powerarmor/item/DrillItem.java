@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor.item;
 import com.geckolib.animation.RawAnimation;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.ai.DrillWorker;
 import dev.ajaczero.powerarmor.entity.ai.SuitWork;
 import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.registry.ModSounds;
@@ -21,6 +22,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -82,6 +84,11 @@ public class DrillItem extends Item implements PowerTool, ModTooltip {
     @Override
     public ToolUse mindUse() {
         return ToolUse.DRILL;
+    }
+
+    @Override
+    public List<Goal> mindGoals(PowerArmorEntity suit) {
+        return List.of(new DrillWorker(suit));
     }
 
     @Override

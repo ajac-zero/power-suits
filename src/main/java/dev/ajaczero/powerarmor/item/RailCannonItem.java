@@ -4,6 +4,7 @@ import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.entity.SuitSmash;
+import dev.ajaczero.powerarmor.entity.ai.RailGuard;
 import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import dev.ajaczero.powerarmor.registry.ModSounds;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -50,7 +52,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>Decided with the user: hold to charge, fires only at full charge (no weaker partial shots), an instant beam that
  * pierces, breaking the blocks a sprinting suit smashes through on its way (glass, panes, leaves, ice: the
  * {@code powerarmor:suit_smashes_sprinting} tag) and stopping at anything solid; each shot costs an iron ingot from the
- * suit's ammo slot plus fuel; the machine mind uses it as a long-range guard (SuitGoals.RailGuard); rogues never carry it.
+ * suit's ammo slot plus fuel; the machine mind uses it as a long-range guard (entity/ai/RailGuard); rogues never carry it.
  *
  * <p>A continuous tool: the suit calls {@link #holdTick} every tick the trigger is held (the charge builds), and
  * {@link #release} when it goes up (a full charge fires). The charge (0..1) is synced to every client through the suit's
@@ -126,6 +128,11 @@ public class RailCannonItem extends Item implements PowerTool, ModTooltip {
     @Override
     public ToolUse mindUse() {
         return ToolUse.RAIL;
+    }
+
+    @Override
+    public List<Goal> mindGoals(PowerArmorEntity suit) {
+        return List.of(new RailGuard(suit));
     }
 
     @Override

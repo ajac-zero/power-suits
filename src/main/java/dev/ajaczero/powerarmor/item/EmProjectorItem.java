@@ -3,6 +3,8 @@ package dev.ajaczero.powerarmor.item;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.ai.EmGuard;
+import dev.ajaczero.powerarmor.entity.ai.RogueEmAttack;
 import dev.ajaczero.powerarmor.entity.ai.SuitTargets;
 import dev.ajaczero.powerarmor.entity.ai.ToolUse;
 import java.util.ArrayList;
@@ -25,6 +27,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -144,6 +147,11 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
     @Override
     public ToolUse mindUse() {
         return ToolUse.EM;
+    }
+
+    @Override
+    public List<Goal> mindGoals(PowerArmorEntity suit) {
+        return List.of(new EmGuard(suit), new RogueEmAttack(suit)); // a friendly mind guards home; a rogue throws you
     }
 
     @Override
