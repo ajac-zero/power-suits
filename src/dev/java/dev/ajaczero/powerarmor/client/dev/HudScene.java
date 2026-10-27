@@ -30,7 +30,7 @@ import net.neoforged.fml.loading.FMLPaths;
  * ember), walking (two), sprinting (three); a long burst until the barrels overheat (heat bar, red); down to the last
  * bullets (red); a low hull (red); low fuel (red, beeping); no fuel (faded, NO FUEL); then each tool in turn: the rail
  * cannon charging and ready, the TNT launcher reloading, the flamethrower (three embers), the drill, the EM projector,
- * the chainsaw (symbol only); a star reactor and a creative pilot (endless fuel, no embers; ammo 999); and without the helmet (no HUD, vanilla's hearts).
+ * the chainsaw (symbol only); a star reactor (endless fuel, no embers); and without the helmet (no HUD, vanilla's hearts).
  * Shots {@code ap_hud_*.png}; log run/autopilot_hud.csv: per tick what the HUD drew (hull, fuel bar and text, embers,
  * critical, powered, tool, count, bar) next to the server's own numbers. Runs alone with ./gradlew runAutopilotHud (~40 s).
  */
@@ -105,7 +105,6 @@ final class HudScene {
             // a star reactor: endless, nothing burns
             case 700 -> { phase = "reactor"; tool(mc, ModItems.CHAINGUN.get(), ItemStack.EMPTY);
                           server(mc, (p, x) -> {
-                              p.setGameMode(GameType.CREATIVE); // endless ammo: the counter reads 999
                               x.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.STAR_REACTOR.get()));
                               x.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.NETHER_STAR)); }); }
             case 730 -> AutoPilot.shot(mc, "hud_reactor");

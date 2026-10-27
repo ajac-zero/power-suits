@@ -49,7 +49,7 @@ public interface ToolEffects {
     /**
      * What the pilot's HUD shows in its tool section (client/SuitHud), next to the tool's symbol: one labelled bar
      * ({@code barLabel} a translation key; every tool has one, design sec. 6: its heat, charge or reload, 1 = ready), a
-     * count (the ammo, shown as 3 digits; {@link #NO_COUNT} for a tool without ammo, {@link #ENDLESS} in creative: shown as 999) and
+     * count (the ammo, shown as 3 digits; {@link #NO_COUNT} for a tool without ammo, {@link #ENDLESS} in creative) and
      * whether something is critical (the last rounds, an overheated barrel): that turns the whole HUD red, like a low hull
      * or low fuel.
      */
