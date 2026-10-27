@@ -144,6 +144,17 @@ public final class ShowcaseScene {
         mc.player.xRotO = pitch;
     }
 
+    /** A file run/showcase-nogui: no GUI layers but the crosshair, while the cockpit hands stay (F1 would hide them too):
+     *  clean backgrounds to draw HUD mockups on. */
+    private static final boolean NO_GUI = Files.exists(Path.of("showcase-nogui"));
+
+    @SubscribeEvent
+    public static void hideGui(net.neoforged.neoforge.client.event.RenderGuiLayerEvent.Pre event) {
+        if (ENABLED && NO_GUI && !event.getName().equals(net.neoforged.neoforge.client.gui.VanillaGuiLayers.CROSSHAIR)) {
+            event.setCanceled(true);
+        }
+    }
+
     /** A file run/showcase-only with set numbers ("3 4"): shoot only those (quicker iterations on new sets). */
     private static final Set<Integer> ONLY = readOnly();
 
