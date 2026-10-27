@@ -2036,6 +2036,27 @@ public final class PowerArmorTests {
         });
     }
 
+    /**
+     * A real bolt, not a hand-called thunderHit: vanilla strikes everything within 3 blocks on every tick the bolt lives
+     * (two or three ticks, plus up to three flashes), and lights fire blocks round it. A running suit next to it is
+     * knocked out once and takes about one hit (vanilla's half-second hit immunity swallows the repeats), then restarts.
+     */
+    @SuitTest(timeoutTicks = 200)
+    public static void aRealBoltNextToASuitCostsOneHit(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.BLAZE_ROD, 16));
+        helper.runAfterDelay(5, () -> {
+            var bolt = EntityTypes.LIGHTNING_BOLT.create(helper.getLevel(), EntitySpawnReason.COMMAND);
+            bolt.snapTo(suit.position().add(2, 0, 0));
+            helper.getLevel().addFreshEntity(bolt);
+        });
+        helper.runAfterDelay(15, () -> helper.assertTrue(suit.isStunned(), "the strike knocked it out"));
+        helper.runAfterDelay(PowerArmorConfig.LIGHTNING_STUN_TICKS.get() + 50, () -> {
+            helper.assertTrue(suit.isAlive() && suit.getHealth() > suit.getMaxHealth() - 10, "about one hit, health " + suit.getHealth());
+            helper.assertTrue(suit.isPowered(), "and it restarted");
+            helper.succeed();
+        });
+    }
+
     /** Lightning reboots the mind friendly: nobody's, no home, one coal's worth of fuel; the first pilot claims it. */
     @SuitTest(timeoutTicks = 200)
     public static void lightningRebootsARogueFriendly(GameTestHelper helper) {
