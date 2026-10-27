@@ -7,7 +7,8 @@ Writes src/main/resources/assets/powerarmor/textures/gui/hud/:
                         tints each piece)
   seal.png              the seal shield by HULL
   ember.png             one burn-rate ember, unlit (white mask, tinted dim)
-  ember_lit.png         the same ember burning (its own fire colours)
+  ember_lit.png         the same ember burning: a bright tip over a shaded body, white (tinted the visor colour,
+                        orange or red by the burn rate since 2026-10-27; it had its own fire colours before)
 (The socket tools had 16x16 symbols here until 2026-10-27; now each tool draws its own HUD: client/hud/ToolHuds.)
 '#' = drawn, anything else = clear.
 """
@@ -65,6 +66,7 @@ SEAL = """
 ..#+..
 """
 SHADE = 153  # 60% of white
+EMBER_BODY = 200  # the burning ember's body, ~80% of white: a step darker than its tip
 
 EMBER = """
 ..#..
@@ -102,8 +104,8 @@ def main():
                 seal.putpixel((x, y), (SHADE, SHADE, SHADE, 255))
     seal.save(OUT / "seal.png")
     mask(EMBER).save(OUT / "ember.png")
-    # burning: a yellow tip over an orange body, like the firebox's own glow
-    mask(EMBER, lambda x, y: (255, 220, 90, 255) if y < 3 else (255, 130, 30, 255)).save(OUT / "ember_lit.png")
+    # burning: a full-white tip over a shaded body (the flame's hot tip), so the HUD's tint keeps the two tones
+    mask(EMBER, lambda x, y: (255, 255, 255, 255) if y < 3 else (EMBER_BODY, EMBER_BODY, EMBER_BODY, 255)).save(OUT / "ember_lit.png")
     print("wrote", OUT)
 
 

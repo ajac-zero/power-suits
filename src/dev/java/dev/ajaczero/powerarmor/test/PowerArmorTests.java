@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.test;
 
+import dev.ajaczero.powerarmor.HudAlert;
 import dev.ajaczero.powerarmor.PilotHands;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
@@ -599,8 +600,9 @@ public final class PowerArmorTests {
         });
     }
 
-    /** Barrels overheat after the configured number of bullets in a row, and fire again once cooled. (Skipped when
-     *  overheat is off in the config.) */
+    /** Barrels overheat after the configured number of bullets in a row, stay locked while they cool until the heat is
+     *  back to 0 (the HUD keeps OVERHEAT up that long: ChaingunEffects follows the same rule), and fire again once cold.
+     *  (Skipped when overheat is off in the config.) */
     @SuitTest(timeoutTicks = 600)
     public static void chaingunOverheatsAndCools(GameTestHelper helper) {
         if (!PowerArmorConfig.CHAINGUN_OVERHEAT.get()) {
@@ -613,7 +615,14 @@ public final class PowerArmorTests {
         suit.socket().setTriggerHeld(pilot, true);
         int limit = PowerArmorConfig.CHAINGUN_OVERHEAT_SHOTS.get();
         int[] stopped = {-1};
+        boolean[] cold = {false};
         helper.onEachTick(() -> {
+            if (stopped[0] >= 0 && !cold[0]) {
+                // from the overheat until the barrels are cold: locked exactly while there's heat left
+                float heat = suit.socket().getHeat();
+                helper.assertTrue(ChaingunItem.isOverheated(suit) == heat > 0F, "locked while hot, heat " + heat);
+                cold[0] = heat <= 0F;
+            }
             if (stopped[0] < 0 && suit.socket().getHeat() >= 1F) {
                 stopped[0] = suit.socket().getUses();
                 helper.assertTrue(stopped[0] == limit, "overheats after " + limit + " bullets, got " + stopped[0]);
@@ -623,11 +632,24 @@ public final class PowerArmorTests {
                 });
                 helper.runAfterDelay(30 + PowerArmorConfig.CHAINGUN_COOL_TICKS.get(), () -> suit.socket().setTriggerHeld(pilot, true));
                 helper.runAfterDelay(40 + PowerArmorConfig.CHAINGUN_COOL_TICKS.get(), () -> {
+                    helper.assertTrue(cold[0], "the barrels cooled all the way down");
                     helper.assertTrue(suit.socket().getUses() > stopped[0], "cooled barrels fire again");
                     helper.succeed();
                 });
             }
         });
+    }
+
+    /** The visor's alert levels (user, 2026-10-27): orange from half gone, red in the last 15%, both ways round. */
+    @SuitTest(timeoutTicks = 5)
+    public static void hudAlertLevels(GameTestHelper helper) {
+        helper.assertTrue(HudAlert.ofLeft(1F) == HudAlert.NONE && HudAlert.ofLeft(0.51F) == HudAlert.NONE, "most of the hull: fine");
+        helper.assertTrue(HudAlert.ofLeft(HudAlert.WARNING_AT) == HudAlert.WARNING && HudAlert.ofLeft(0.16F) == HudAlert.WARNING, "half: warning");
+        helper.assertTrue(HudAlert.ofLeft(HudAlert.CRITICAL_AT) == HudAlert.CRITICAL && HudAlert.ofLeft(0F) == HudAlert.CRITICAL, "last 15%: critical");
+        helper.assertTrue(HudAlert.ofFill(0.49F) == HudAlert.NONE && HudAlert.ofFill(0.5F) == HudAlert.WARNING, "heat from half: warning");
+        helper.assertTrue(HudAlert.ofFill(0.85F) == HudAlert.CRITICAL && HudAlert.ofFill(1F) == HudAlert.CRITICAL, "heat's last 15%: critical");
+        helper.assertTrue(HudAlert.WARNING.max(HudAlert.CRITICAL) == HudAlert.CRITICAL && HudAlert.WARNING.max(HudAlert.NONE) == HudAlert.WARNING, "max");
+        helper.succeed();
     }
 
     /** Using a tool raises the tool arm on every client (synced TOOL_ACTIVE); an empty socket doesn't. */

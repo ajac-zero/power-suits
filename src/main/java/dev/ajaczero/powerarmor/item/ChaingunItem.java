@@ -63,7 +63,7 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
     static final class State {
         float spin;          // 0 = barrels at rest .. 1 = full speed
         float heat;          // 0 = cold .. 1 = overheated
-        boolean overheated;  // locked until the barrels have cooled (heat back to 0.2)
+        boolean overheated;  // locked until the barrels are cold (heat back to 0: the HUD's bar empty, ChaingunEffects)
         boolean held;        // the trigger was held last tick
         int timer;           // ticks until the next shot may fire
         int sinceShot = 100; // ticks since the last shot
@@ -151,7 +151,9 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
         if (s.sinceShot > PowerArmorConfig.CHAINGUN_SLOW_INTERVAL.get() + 3) {
             s.heat = Math.max(0F, s.heat - 1F / PowerArmorConfig.CHAINGUN_COOL_TICKS.get());
         }
-        if (s.overheated && s.heat <= 0.2F) {
+        // Unlocks only when fully cold (was 0.2 until 2026-10-27; user: the HUD keeps OVERHEAT up until the bar is empty,
+        // and the gun must not fire before that).
+        if (s.overheated && s.heat <= 0F) {
             s.overheated = false;
         }
         if (!PowerArmorConfig.CHAINGUN_OVERHEAT.get()) {

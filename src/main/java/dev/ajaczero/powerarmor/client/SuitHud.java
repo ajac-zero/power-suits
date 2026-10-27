@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.client;
 
+import dev.ajaczero.powerarmor.HudAlert;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
@@ -38,7 +39,8 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  *   <li>Top left, the suit: its figure (one block per armour piece, like Fallout's), HULL (health) with the seal shield,
  *   and FUEL (time left at walking pace, a bar for how full the fuel slot is) with three embers for the burn rate:
- *   1 idling, 2 walking, 3 sprinting or a hungry tool at work, dark when nothing burns (a free engine).</li>
+ *   1 idling, 2 walking, 3 sprinting or a hungry tool at work, dark when nothing burns (a free engine). The embers
+ *   burn in the visor colour, orange with two lit and red with all three (user, 2026-10-27).</li>
  *   <li>The socket tool's own readout, wherever it wants it (2026-10-27: each tool brings its own, client/hud/ToolHuds):
  *   the chaingun's ammo and heat in the top right corner, the rail cannon's charge brackets round the crosshair, the
  *   TNT launcher's drum and the arc its round will fly, the EM projector's box round what it holds. Tools with nothing
@@ -47,8 +49,9 @@ import org.jetbrains.annotations.Nullable;
  *   {@code ^} under the heading, the heading in degrees, the day and the time. Like the vanilla items they only work in
  *   the overworld: elsewhere the tape spins and the numbers read {@code ---}.</li>
  * </ul>
- * The suit's readouts and the compass turn red while the suit is critical (hull at a quarter, fuel low); a tool's
- * warnings (the last rounds, an overheated barrel) turn only that tool's readout red. Without power the projector is
+ * Three colours tell how urgent a readout is ({@link HudAlert}, user 2026-10-27): the visor colour, orange as a warning
+ * (hull at half), red when critical (hull in its last 15%, fuel low). The suit's readouts and the compass take the
+ * suit's worst; a tool's (the last rounds, a hot or overheated barrel) colour only that tool's readout. Without power the projector is
  * dark: only a red blinking NO FUEL (or FLOODED) is left. The helmet carries the projector: no helmet, no HUD (vanilla's vehicle hearts then stand in for the hull, as on any mount). With the HUD up
  * those hearts are hidden, and vanilla's boss bars and effect icons move down out of its way.
  * <p>
@@ -65,14 +68,13 @@ public final class SuitHud {
     private static final int FIGURE_W = 15, FIGURE_H = 26;
     private static final Identifier SEAL = hud("seal");
     private static final Identifier EMBER = hud("ember");
+    /** A burning ember: the same shape in two shades of white (a bright tip over a shaded body), tinted like the rest. */
     private static final Identifier EMBER_LIT = hud("ember_lit");
 
-    /** Warnings, whatever the visor colour. */
+    /** Critical, whatever the visor colour. */
     private static final int RED = HudView.RED;
     /** Unlit segments (and the compass's dots) at this fraction of the colour: an empty bar must read as empty. */
     private static final float DIM = HudView.DIM, FAINT = HudView.FAINT;
-    /** The hull is critical from a quarter left. */
-    private static final float HULL_CRITICAL = 0.25F;
     /** Burn-rate embers: energy per tick at or above which 2 and 3 are lit (idle 0.25, walking 1, sprinting 2 by default;
      *  a flamethrower burns 6). Measured from the fuel actually going, so tools, jumps and air all count. */
     private static final float TWO_EMBERS = 0.6F, THREE_EMBERS = 1.5F;
@@ -122,19 +124,22 @@ public final class SuitHud {
             if (blink) {
                 g.text(font, fuelText, x0 + 26, y0 + 4, colour(RED), false);
             }
-            shown = new Shown(hull, power.fuelGauge(), blink ? fuelText.getString() : "", 0, true, false, "", "", "", 0F);
+            shown = new Shown(hull, power.fuelGauge(), blink ? fuelText.getString() : "", 0, HudAlert.CRITICAL, false, "", "", "", 0F);
             return;
         }
 
-        boolean hullCritical = hull <= HULL_CRITICAL;
+        HudAlert hullAlert = HudAlert.ofLeft(hull);
+        boolean hullCritical = hullAlert == HudAlert.CRITICAL;
+        // The fuel has no warning step yet: its bar is the slot against a full stack, so "half gone" means nothing; it's
+        // critical on the suit's own low-fuel alarm (LOW_FUEL, the beeps).
         boolean fuelCritical = !free && (suit.getEngine() == null || power.isFlooded() || energy == 0 || power.isLowOnFuel());
         float fuel = power.fuelGauge();
         int embers = embers(suit);
 
         // the tool's warnings are its own readout's (ToolHud), not the whole HUD's
-        boolean critical = hullCritical || fuelCritical;
+        HudAlert alert = fuelCritical ? HudAlert.CRITICAL : hullAlert;
         String toolId = suit.socket().tool() == null ? "" : BuiltInRegistries.ITEM.getKey(suit.getSocketStack().getItem()).getPath();
-        int rgb = critical ? RED : VisorConfig.colour();
+        int rgb = HudView.rgb(alert, VisorConfig.colour());
         int main = colour(rgb);
         int dim = colour(VisorConfig.dim(rgb, DIM));
         int faint = colour(VisorConfig.dim(rgb, FAINT));
@@ -144,7 +149,7 @@ public final class SuitHud {
         int h = g.guiHeight(), bandTop = scan.top(h), bandBottom = scan.bottom(h);
         if (bandBottom <= bandTop) {
             scan.drawLines(g, rgb);
-            shown = new Shown(hull, power.fuelGauge(), fuelText.getString(), 0, critical, powered, toolId, "", "", 0F);
+            shown = new Shown(hull, power.fuelGauge(), fuelText.getString(), 0, alert, powered, toolId, "", "", 0F);
             return;
         }
         boolean clipped = scan.sweep() < 1F;
@@ -170,10 +175,13 @@ public final class SuitHud {
         }
         HudView.bar(g, lx, y0 + 13, segments, 3, hull, main, dim);
         g.text(font, fuelLabel, lx, y0 + 18, main, false);
+        // burning embers in the visor colour, orange with two lit, red with all three (or the suit's own colour if
+        // that's more urgent); unlit ones dim
+        int burning = colour(HudView.rgb(alert.max(emberAlert(embers)), VisorConfig.colour()));
         for (int i = 0; i < 3; i++) {
             boolean lit = i < embers;
             g.blit(RenderPipelines.GUI_TEXTURED, lit ? EMBER_LIT : EMBER, ix + i * 7, y0 + 19, 0F, 0F, 5, 6, 5, 6,
-                    lit ? 0xFFFFFFFF : dim);
+                    lit ? burning : dim);
         }
         if (!(fuelCritical && blink)) {
             g.text(font, fuelText, rx - font.width(fuelText), y0 + 18, main, false);
@@ -194,7 +202,7 @@ public final class SuitHud {
             g.disableScissor();
         }
         scan.drawLines(g, rgb);
-        shown = new Shown(hull, fuel, fuelText.getString(), embers, critical, powered, toolId, toolShown, clock, scan.sweep());
+        shown = new Shown(hull, fuel, fuelText.getString(), embers, alert, powered, toolId, toolShown, clock, scan.sweep());
     }
 
     /**
@@ -358,6 +366,11 @@ public final class SuitHud {
         return rate >= THREE_EMBERS ? 3 : rate >= TWO_EMBERS ? 2 : 1;
     }
 
+    /** How urgent the burn rate looks: two embers a warning, three critical (burning fast). */
+    public static HudAlert emberAlert(int embers) {
+        return embers >= 3 ? HudAlert.CRITICAL : embers == 2 ? HudAlert.WARNING : HudAlert.NONE;
+    }
+
     @SubscribeEvent
     public static void loggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         rateSuit = -1;
@@ -367,10 +380,10 @@ public final class SuitHud {
 
     // ---- For the autopilot's logs ---------------------------------------------------------------------------------
 
-    /** What the HUD drew last frame (dev/autopilot logs), or null when it wasn't shown: critical is the suit's (the
+    /** What the HUD drew last frame (dev/autopilot logs), or null when it wasn't shown: alert is the suit's (the
      *  tool's warnings are in toolHud, what its own readout said it drew: ToolHud.render); open: how much of the
      *  screen's height the visor's scan had turned on (VisorPower, 0 = none, 1 = all). */
-    public record Shown(float hull, float fuel, String fuelText, int embers, boolean critical, boolean powered,
+    public record Shown(float hull, float fuel, String fuelText, int embers, HudAlert alert, boolean powered,
                         String tool, String toolHud, String compass, float open) {}
 
     @Nullable

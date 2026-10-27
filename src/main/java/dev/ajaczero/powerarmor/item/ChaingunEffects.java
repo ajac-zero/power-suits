@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.HudAlert;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
@@ -14,9 +15,20 @@ final class ChaingunEffects implements ToolEffects {
     static final int LOW_BULLETS = 16;
 
     private float barrelAngle, barrelAngleO;
+    /** The barrels are locked by an overheat (the HUD keeps OVERHEAT up, red, while they cool). The server's lock
+     *  (ChaingunItem.State.overheated) isn't synced, but it follows the synced heat exactly: it locks when the heat hits
+     *  1 (and the heat stays there for the cooling delay, so every client sees it) and opens when it's back to 0; the
+     *  heat can't rise in between, as a locked gun doesn't fire. (Only a client that joins mid-cooldown misses one.) */
+    private boolean locked;
 
     @Override
     public void tick(PowerArmorEntity suit) {
+        float heat = suit.socket().getHeat();
+        if (heat >= 1F - 1e-4F) {
+            this.locked = true;
+        } else if (heat <= 0F) {
+            this.locked = false;
+        }
         this.barrelAngleO = this.barrelAngle;
         this.barrelAngle += 60F * suit.socket().getSpin();
         if (this.barrelAngle > 3600F) { // keep it small; a multiple of 90 so the square cluster doesn't jump
@@ -47,12 +59,14 @@ final class ChaingunEffects implements ToolEffects {
     }
 
     /** HUD: bullets left (iron nuggets carried + the suit's store), low at the last {@link #LOW_BULLETS}; the barrel
-     *  heat, critical when overheated (the barrels lock until they cool). */
+     *  heat, a warning from half, critical in the last 15% and all the way down while an overheat locks the barrels
+     *  (until they're cold: the pilot sees they can't fire until the bar is empty). */
     @Override
     public HudReadout hud(PowerArmorEntity suit, Player pilot) {
         int bullets = pilot.hasInfiniteMaterials() ? HudReadout.ENDLESS : ChaingunItem.countBullets(pilot);
         float heat = suit.socket().getHeat();
-        return new HudReadout(bullets, bullets >= 0 && bullets <= LOW_BULLETS, heat, heat >= 0.99F);
+        return new HudReadout(bullets, bullets >= 0 && bullets <= LOW_BULLETS, heat,
+                this.locked ? HudAlert.CRITICAL : HudAlert.ofFill(heat), this.locked);
     }
 
     /** Barrel tips: nothing while cool, a dull red glow from a third of the way, white-hot when overheated. */

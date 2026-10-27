@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.HudAlert;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.world.entity.player.Player;
@@ -49,12 +50,13 @@ public interface ToolEffects {
     /**
      * The numbers the pilot's HUD shows for this tool, worked out by the tool (client, every frame): a count (its ammo;
      * {@link #NO_COUNT} for none, {@link #ENDLESS} in creative) and whether it's down to the last ({@code lowAmmo}),
-     * and one gauge 0..1 (heat, charge or reload) and whether that's critical (an overheated barrel). How they're drawn
-     * is each tool's own visor HUD (client/hud/ToolHuds, 2026-10-27: no shared tool panel any more); a warning turns only
-     * that readout red, not the whole HUD. Here, in shared code, stays what the numbers are (the client's drawing classes
+     * and one gauge 0..1 (heat, charge or reload), how urgent it is ({@link HudAlert}: orange from half, red in the
+     * last 15%) and whether the tool is locked out by it ({@code barLocked}: an overheated chaingun, red until cooled).
+     * How they're drawn is each tool's own visor HUD (client/hud/ToolHuds, 2026-10-27: no shared tool panel any more); a
+     * warning colours only that readout, not the whole HUD. Here, in shared code, stays what the numbers are (the client's drawing classes
      * can't be named in shared code: a dedicated server would crash loading them).
      */
-    record HudReadout(int count, boolean lowAmmo, float bar, boolean barCritical) {
+    record HudReadout(int count, boolean lowAmmo, float bar, HudAlert barAlert, boolean barLocked) {
         public static final int NO_COUNT = Integer.MIN_VALUE;
         public static final int ENDLESS = -1;
 

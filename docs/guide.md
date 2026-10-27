@@ -108,11 +108,13 @@ blinking. It's terminal green by default: pick your own colour under
   with a **shield** that's lit while the suit is sealed (running with the helmet on) and faded when not, and **FUEL**: how long it lasts at walking pace (∞ on a wet
   tidal engine or a star reactor; NO FUEL, also with no engine; FLOODED), a bar for how full the fuel slot is, and three
   **embers** for how fast it burns: one idling, two walking, three sprinting or with a hungry tool at work (the
-  flamethrower), none when nothing burns.
+  flamethrower), none when nothing burns. They burn in the visor colour with one lit, orange with two, red with three.
 - **The socket tool's own readout**, where that tool needs it (tools with nothing to say show nothing: the drill, the
   chainsaw, the flamethrower):
   - **Chaingun**, top right: a big 3-digit counter (006; 999 means 999 or more; ∞ in creative) with **AMMO** beside
-    it, and under it the barrels' heat bar with **HEAT** beside it (OVERHEAT, in red, reaches further left).
+    it, and under it the barrels' heat bar with **HEAT** beside it: orange from half, red in its last 15%. Overheated,
+    it reads **OVERHEAT** (in red, reaching further left) and stays red all the way down while the barrels cool: the
+    gun won't fire again until the bar is empty.
   - **Rail cannon**, round the crosshair: four corner brackets that wait wide and faint, close in as it charges (the
     charge in % under them) and lock with a second, inner set over **READY** at full charge; one pip per ingot left.
   - **TNT launcher**: the **arc** the round will fly, dotted from the launcher's muzzle (where you see the round come
@@ -133,9 +135,10 @@ blinking. It's terminal green by default: pick your own colour under
   character (5°) at a time with a `^` under where you face, your heading in degrees (0 north, 90 east), the day and the
   time (`DAY 12  18:40`). Like the vanilla items they only work in the overworld: elsewhere the tape spins and they read
   `---` / `--:--`.
-- The suit's readouts and the compass turn **red** while the suit is critical: a quarter of the hull left, low fuel. A
-  tool's warnings turn only its own readout red: the last rounds (16 bullets, the last TNT or ingot), an overheated
-  chaingun (its HEAT reads OVERHEAT). With **no power** the glass goes dark: only the helmet's edge and a blinking red
+- Three colours tell how urgent a readout is: the visor colour when all's well, **orange** as a warning (half gone),
+  **red** when critical (the last 15%, or something you can't use yet). The suit's readouts and the compass turn orange
+  with the hull under half, red in its last 15% or on low fuel. A tool's warnings colour only its own readout: the last
+  rounds (red: 16 bullets, the last TNT or ingot), a hot or overheated chaingun. With **no power** the glass goes dark: only the helmet's edge and a blinking red
   **NO FUEL** (or FLOODED) are left.
 - While the HUD is up, vanilla's boss bars move down under the compass and the effect icons under the top right corner.
 
@@ -154,7 +157,7 @@ you carry and the barrels' heat. Bullets are hot tracers at 80 blocks/s that fly
 they're drawn coming out of the gun and meet that line at the target). They ignore the half-second of immunity mobs
 get after a hit (so every bullet of a barrage counts), push lightly instead of vanilla's knockback, and spark off
 blocks without breaking them. **Overheat** (on by default, `overheat` in the config): 80 bullets without letting go and
-the barrels glow white-hot and lock until they've cooled (3 s); the tips glow from a third of the way there. Kills
+the barrels glow white-hot and lock until they're cold again (about 4 s: the heat bar empty); the tips glow from a third of the way there. Kills
 credit you ("shredded by"). It does nothing on foot. Old Plasma Cannons and Rivet Guns in your world become Chainguns.
 With an empty socket or no fuel the trigger just clicks.
 

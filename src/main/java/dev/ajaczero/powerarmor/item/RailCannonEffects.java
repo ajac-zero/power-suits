@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.HudAlert;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +51,7 @@ public final class RailCannonEffects implements ToolEffects {
     @Override
     public HudReadout hud(PowerArmorEntity suit, Player pilot) {
         int rounds = RailCannonItem.countRounds(suit, pilot);
-        return new HudReadout(rounds, rounds >= 0 && rounds <= 1, suit.socket().getSpin(), false);
+        return new HudReadout(rounds, rounds >= 0 && rounds <= 1, suit.socket().getSpin(), HudAlert.NONE, false);
     }
 
     @Override

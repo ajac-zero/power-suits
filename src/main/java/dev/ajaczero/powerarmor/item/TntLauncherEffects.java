@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.item;
 
+import dev.ajaczero.powerarmor.HudAlert;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -53,7 +54,7 @@ final class TntLauncherEffects implements ToolEffects {
     public HudReadout hud(PowerArmorEntity suit, Player pilot) {
         int reserve = TntLauncherItem.countRounds(suit, pilot);
         int all = TntLauncherItem.loaded(suit.getSocketStack()) + Math.max(0, reserve);
-        return new HudReadout(reserve, reserve != HudReadout.ENDLESS && all <= 1, suit.socket().getSpin(), false);
+        return new HudReadout(reserve, reserve != HudReadout.ENDLESS && all <= 1, suit.socket().getSpin(), HudAlert.NONE, false);
     }
 
     @Override

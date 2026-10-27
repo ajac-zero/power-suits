@@ -38,9 +38,10 @@ import net.neoforged.fml.loading.FMLPaths;
 /**
  * Autopilot scene for the pilot's HUD (client/SuitHud, 2026-10-26): every state it can show, from the cockpit, on flat
  * grass by day. A survival pilot (so ammo counts) in a suit with a firebox, coal, a helmet and a chaingun: idle (one
- * ember), walking (two), sprinting (three); a long burst until the barrels overheat (the chaingun's corner readout:
- * HEAT turns red and reads OVERHEAT, the rest of the HUD stays in the visor colour); down to the last bullets (the AMMO
- * counter red); a low hull (red); low fuel (red, beeping); no fuel (faded, NO FUEL); then each tool in turn with its
+ * ember, visor colour), walking (two, orange), sprinting (three, red); a long burst until the barrels overheat (the
+ * chaingun's corner readout: HEAT orange from half, red in its last 15%, then OVERHEAT, staying red while it cools all
+ * the way down: {@code ap_hud_chaingun_cooling}; the rest of the HUD stays in the visor colour); down to the last
+ * bullets (the AMMO counter red); the hull under half (orange), then in its last 15% (red); low fuel (red, beeping); no fuel (faded, NO FUEL); then each tool in turn with its
  * own visor HUD (client/hud, 2026-10-27): the rail cannon's brackets closing in as it charges and locking at READY; the
  * TNT launcher's drum full, firing, empty and loading back chamber by chamber, its arc near and far, ending on a cow,
  * and a real round flying along it; the
@@ -49,7 +50,7 @@ import net.neoforged.fml.loading.FMLPaths;
  * lit up in the way) and bowling it into the other pig ({@code ap_hud_em_bowl_5..9}); the chainsaw (nothing); a star reactor (endless fuel, no embers); boss bars
  * and effects moved out of the way; and without the helmet (no HUD, vanilla's hearts).
  * Shots {@code ap_hud_*.png}; log run/autopilot_hud.csv: per tick what the HUD drew (hull, fuel bar and text, embers,
- * critical (the suit's), powered, tool, tool_hud: what the tool's own readout said it drew, e.g. the TNT arc's
+ * alert (the suit's: none, warning, critical), powered, tool, tool_hud: what the tool's own readout said it drew, e.g. the TNT arc's
  * impact distance and flight ticks; hud_open / visor_sweep: how much of the screen the visor's scan had turned on as
  * the HUD and SuitVisor drew it, 0 .. 1: sweeping in after the fuel runs out ({@code ap_hud_close_*}), sweeping out
  * after the refuel ({@code ap_hud_warm_*})) next to the server's own numbers. Runs alone with ./gradlew
@@ -78,15 +79,19 @@ final class HudScene {
             case 140, 200 -> AutoPilot.shot(mc, "hud_chaingun_" + s);
             case 318 -> AutoPilot.shot(mc, "hud_chaingun_hot");  // 80 bullets in a row: overheated
             case 322 -> AutoPilot.hold(o.keyUse, false);
-            // the last bullets (cooled down first)
+            // cooling: the bar empties but stays red and reads OVERHEAT until it's empty (the gun is locked till then)
+            case 370 -> AutoPilot.shot(mc, "hud_chaingun_cooling");
+            // the last bullets (the barrels are cold again by the shot)
             case 380 -> { phase = "last_bullets"; server(mc, (p, x) -> {
                               p.getInventory().clearContent();
                               p.getInventory().setItem(9, new ItemStack(Items.IRON_NUGGET, 10));
                               x.setStoredNuggets(0); }); }
-            case 390 -> AutoPilot.shot(mc, "hud_last_bullets");
-            case 392 -> server(mc, (p, x) -> p.getInventory().setItem(9, new ItemStack(Items.IRON_NUGGET, 64)));
-            // a quarter of the hull left
-            case 400 -> { phase = "hull_low"; server(mc, (p, x) -> x.setHealth(x.getMaxHealth() * 0.2F)); }
+            case 396 -> AutoPilot.shot(mc, "hud_last_bullets");
+            case 397 -> server(mc, (p, x) -> p.getInventory().setItem(9, new ItemStack(Items.IRON_NUGGET, 64)));
+            // under half the hull: a warning (orange); then its last 15%: critical (red)
+            case 398 -> { phase = "hull_warn"; server(mc, (p, x) -> x.setHealth(x.getMaxHealth() * 0.4F)); }
+            case 404 -> AutoPilot.shot(mc, "hud_hull_warn");
+            case 405 -> { phase = "hull_low"; server(mc, (p, x) -> x.setHealth(x.getMaxHealth() * 0.1F)); }
             case 410 -> AutoPilot.shot(mc, "hud_hull_low");
             case 412 -> server(mc, (p, x) -> x.setHealth(x.getMaxHealth()));
             // low fuel: the last few hundred energy in the burning item, nothing in the slot
@@ -301,7 +306,7 @@ final class HudScene {
     private static void open() {
         try {
             csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_hud.csv"));
-            csv.write("tick,phase,shown,hull,fuel_bar,fuel_text,embers,critical,powered,tool,tool_hud,compass,hud_open,visor_sweep,server_health,server_energy,server_powered\n");
+            csv.write("tick,phase,shown,hull,fuel_bar,fuel_text,embers,alert,powered,tool,tool_hud,compass,hud_open,visor_sweep,server_health,server_energy,server_powered\n");
         } catch (IOException e) {
             PowerArmor.LOGGER.error("hud csv", e);
         }
@@ -315,8 +320,8 @@ final class HudScene {
         }
         String p = phase;
         SuitHud.Shown h = SuitHud.shown();
-        String client = (h == null ? "0,,,,,,,,,," : String.format(Locale.ROOT, "1,%.2f,%.2f,%s,%d,%b,%b,%s,%s,%s,%.2f", h.hull(), h.fuel(),
-                h.fuelText().replace(',', ' '), h.embers(), h.critical(), h.powered(), h.tool(), h.toolHud().replace(',', ';'),
+        String client = (h == null ? "0,,,,,,,,,," : String.format(Locale.ROOT, "1,%.2f,%.2f,%s,%d,%s,%b,%s,%s,%s,%.2f", h.hull(), h.fuel(),
+                h.fuelText().replace(',', ' '), h.embers(), h.alert().name().toLowerCase(Locale.ROOT), h.powered(), h.tool(), h.toolHud().replace(',', ';'),
                 h.compass().replace(',', ' '), h.open())) + String.format(Locale.ROOT, ",%.2f", SuitVisor.lastSweep());
         Consumer<net.minecraft.server.level.ServerPlayer> write = player -> {
             try {

@@ -1,5 +1,6 @@
 package dev.ajaczero.powerarmor.client.hud;
 
+import dev.ajaczero.powerarmor.HudAlert;
 import dev.ajaczero.powerarmor.client.VisorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.ToolEffects.HudReadout;
@@ -18,8 +19,10 @@ import org.jetbrains.annotations.Nullable;
  * bars, corner brackets, the big counter), so every tool's readout looks like the rest of the visor.
  */
 public final class HudView {
-    /** Warnings, whatever the visor colour (SuitHud uses the same). */
+    /** Critical, whatever the visor colour (SuitHud uses the same): Minecraft's own red text colour. */
     public static final int RED = 0xFF5555;
+    /** A warning, between the visor colour and red (user, 2026-10-27): Minecraft's gold text colour. */
+    public static final int ORANGE = 0xFFAA00;
     /** Unlit segments at this fraction of the colour (an empty bar must read as empty); faint for secondary text. */
     public static final float DIM = 0.35F, FAINT = 0.65F;
 
@@ -53,19 +56,36 @@ public final class HudView {
 
     // ---- colours (ARGB, ready to draw) ----------------------------------------------------------------------------
 
-    /** The visor colour, or red for a warning. */
-    public int main(boolean warn) {
-        return 0xFF000000 | (warn ? RED : this.rgb);
+    /** The colour (0xRRGGBB) of a readout at this alert: the visor's own, orange or red. */
+    public static int rgb(HudAlert alert, int visor) {
+        return switch (alert) {
+            case NONE -> visor;
+            case WARNING -> ORANGE;
+            case CRITICAL -> RED;
+        };
+    }
+
+    /** The visor colour, or red when critical. */
+    public int main(boolean critical) {
+        return this.main(critical ? HudAlert.CRITICAL : HudAlert.NONE);
+    }
+
+    public int main(HudAlert alert) {
+        return 0xFF000000 | rgb(alert, this.rgb);
     }
 
     /** Unlit (bar segments, empty chambers). */
-    public int dim(boolean warn) {
-        return 0xFF000000 | VisorConfig.dim(warn ? RED : this.rgb, DIM);
+    public int dim(boolean critical) {
+        return this.dim(critical ? HudAlert.CRITICAL : HudAlert.NONE);
+    }
+
+    public int dim(HudAlert alert) {
+        return 0xFF000000 | VisorConfig.dim(rgb(alert, this.rgb), DIM);
     }
 
     /** Secondary: labels, a gauge at rest. */
-    public int faint(boolean warn) {
-        return 0xFF000000 | VisorConfig.dim(warn ? RED : this.rgb, FAINT);
+    public int faint(boolean critical) {
+        return 0xFF000000 | VisorConfig.dim(rgb(critical ? HudAlert.CRITICAL : HudAlert.NONE, this.rgb), FAINT);
     }
 
     // ---- where things are --------------------------------------------------------------------------------------
@@ -142,9 +162,9 @@ public final class HudView {
     }
 
     /** The second row (the left's FUEL row): a bar under the counter, its label beside it. */
-    public void gaugeRow(GuiGraphicsExtractor g, Component label, float frac, boolean warn) {
-        this.cornerLabel(g, label, CORNER_Y0 + 18, this.main(warn));
-        bar(g, this.valueLeft(), CORNER_Y0 + 19, CORNER_SEGMENTS, 5, frac, this.main(warn), this.dim(warn));
+    public void gaugeRow(GuiGraphicsExtractor g, Component label, float frac, HudAlert alert) {
+        this.cornerLabel(g, label, CORNER_Y0 + 18, this.main(alert));
+        bar(g, this.valueLeft(), CORNER_Y0 + 19, CORNER_SEGMENTS, 5, frac, this.main(alert), this.dim(alert));
     }
 
     // ---- a flight on the world (the TNT round, a thrown mob) ----------------------------------------------------
