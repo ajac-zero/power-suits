@@ -85,9 +85,8 @@ public final class SuitHud {
     /** Vanilla's boss bars start at y 12 and its effect icons at y 1 (the top right): moved down this far under the
      *  compass and the tool readout while the HUD is up (user's pick A, 2026-10-27: vanilla's own bars, moved). */
     private static final int BOSS_SHIFT = 30, EFFECTS_SHIFT = 62;
-    /** The readouts' height, top to bottom (the compass tape's first row to the fuel bar's last), around whose middle
-     *  line they open and close (VisorPower); BAND_HALF covers half of it. */
-    private static final int BAND_TOP = TAPE_Y - 1, BAND_BOTTOM = TOP - 4 + 30, BAND_HALF = (BAND_BOTTOM - BAND_TOP) / 2 + 1;
+    /** Below this much of their height the squeezed readouts aren't drawn at all (only the line is). */
+    private static final float MIN_SQUEEZE = 0.02F;
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
@@ -139,18 +138,21 @@ public final class SuitHud {
         int dim = colour(VisorConfig.dim(rgb, DIM));
         int faint = colour(VisorConfig.dim(rgb, FAINT));
 
-        // Warming up or shutting down (VisorPower): the readouts show only in a band around their middle line, opening
-        // out of it or squeezing into it, in whole GUI pixels; the line itself is drawn after them.
-        int bandHalf = Math.round(open.band() * BAND_HALF);
-        int cy = (BAND_TOP + BAND_BOTTOM) / 2;
-        if (bandHalf <= 0) {
+        // Warming up or shutting down (VisorPower), like an old TV: the whole picture is squeezed towards a line across
+        // the middle of the screen (user, 2026-10-27: from the middle, not the top), so the readouts stretch out of it
+        // up to their places or are pulled down into it; the line itself is drawn after them.
+        if (open.band() < MIN_SQUEEZE) {
             line(g, open, rgb);
             shown = new Shown(hull, power.fuelGauge(), fuelText.getString(), 0, critical, powered, "", HudReadout.NO_COUNT, 0F, "", 0F);
             return;
         }
-        boolean clipped = bandHalf < BAND_HALF;
-        if (clipped) {
-            g.enableScissor(0, cy - bandHalf, g.guiWidth(), cy + 1 + bandHalf);
+        boolean squeezed = open.band() < 1F;
+        if (squeezed) {
+            float cy = g.guiHeight() / 2F;
+            g.pose().pushMatrix();
+            g.pose().translate(0F, cy);
+            g.pose().scale(1F, open.band());
+            g.pose().translate(0F, -cy);
         }
 
         // ---- top left: the suit ---------------------------------------------------------------------------------
@@ -204,8 +206,8 @@ public final class SuitHud {
         // ---- top centre: compass and clock ------------------------------------------------------------------------
         String clock = compassAndClock(g, mc, font, main, faint, delta);
 
-        if (clipped) {
-            g.disableScissor();
+        if (squeezed) {
+            g.pose().popMatrix();
         }
         line(g, open, rgb);
         shown = new Shown(hull, fuel, fuelText.getString(), embers, critical, powered,
@@ -213,7 +215,7 @@ public final class SuitHud {
                 tool == null ? HudReadout.NO_COUNT : tool.count(), tool == null ? 0F : tool.bar(), clock, open.band());
     }
 
-    /** The warm-up's line across the middle of the readouts (from the left readout's edge to the right one's), drawn
+    /** The warm-up's line across the middle of the screen (from the left readout's edge to the right one's), drawn
      *  from the centre out as far as {@code open.line()} says, in the readouts' colour. */
     private static void line(GuiGraphicsExtractor g, VisorPower.Readouts open, int rgb) {
         int alpha = Math.round(open.lineAlpha() * 255);
@@ -221,7 +223,7 @@ public final class SuitHud {
         if (alpha <= 0 || half <= 0) {
             return;
         }
-        int cx = g.guiWidth() / 2, cy = (BAND_TOP + BAND_BOTTOM) / 2;
+        int cx = g.guiWidth() / 2, cy = g.guiHeight() / 2;
         g.fill(cx - half, cy, cx + half, cy + 1, (alpha << 24) | rgb);
     }
 

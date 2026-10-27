@@ -14,10 +14,10 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
  * on one clock so they stay in step (2026-10-27, after the user's "do the readouts, both the opening and the closing").
  * <ul>
  *   <li>Power on (fuel is back, or you climb into a running suit): the helmet's metal fades out over 0.6 s; the readouts
- *   start as a 1 px line across the middle of the HUD that widens from the centre (0.12 s), then open up and down from
- *   it to full height (0.3 s), like an old TV warming up.</li>
+ *   start as a 1 px line across the middle of the screen that widens from the centre (0.12 s), then stretch up out of
+ *   it to their places at the top (0.3 s), like an old TV's picture warming up.</li>
  *   <li>Power off (out of fuel, flooded): the metal is solid at once (the picture through it dies with the power); the
- *   readouts squeeze back into the line (0.25 s), the line shrinks to the centre (0.15 s), and only then does the red
+ *   readouts are pulled down into the line (0.25 s), the line shrinks to the centre (0.15 s), and only then does the red
  *   NO FUEL start blinking.</li>
  * </ul>
  * Timed on the wall clock (ms), not game ticks: a tick is 50 ms, a frame far less, and a fade stepped per tick shows its
@@ -35,8 +35,8 @@ public final class VisorPower {
     private static boolean powered;
     private static long since;
 
-    /** How far the readouts are open: band = the fraction of their height shown (from the middle line out), line = how
-     *  much of the middle line is drawn (from the centre out), lineAlpha = how bright it is. */
+    /** How far the readouts are open: band = how far the picture is stretched out of the screen's middle line (0 = all
+     *  in the line, 1 = in place), line = how much of the line is drawn (from the centre out), lineAlpha = its brightness. */
     public record Readouts(float band, float line, float lineAlpha) {
         static final Readouts OPEN = new Readouts(1F, 0F, 0F);
         static final Readouts CLOSED = new Readouts(0F, 0F, 0F);
