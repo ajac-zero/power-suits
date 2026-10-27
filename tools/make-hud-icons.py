@@ -52,18 +52,18 @@ lll.CCCCCCC.rrr
 """
 PIECES = {"H": "helmet", "C": "chest", "l": "arm_left", "r": "arm_right", "L": "leg_left", "R": "leg_right"}
 
-# The seal, by HULL: a shield as tall as the font's capitals (7 px; amber while sealed, faded like an unlit ember
-# when not). Two shades like the embers: '#' full, '+' 60% grey (the HUD's tint multiplies, so it stays the darker
+# The seal, by HULL: a shield as tall as the font's capitals (6x7 px: an even width, so the lit and shaded halves
+# match; amber while sealed, faded like an unlit ember when not). Two shades like the embers: '#' full, '+' 60% grey (the HUD's tint multiplies, so it stays the darker
 # half of whatever colour the HUD is): lit from the left, the right side in shade, so it reads as a bevelled plate
 # (user's pick 2026-10-27 over a top band, a rim and a centre ridge).
 SEAL = """
-###++
-###++
-###++
-###++
-.##+.
-.##+.
-..#..
+###+++
+###+++
+###+++
+###+++
+.##++.
+.##++.
+..#+..
 """
 SHADE = 153  # 60% of white
 

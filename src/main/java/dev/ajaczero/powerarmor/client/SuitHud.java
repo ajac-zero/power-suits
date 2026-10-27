@@ -126,7 +126,7 @@ public final class SuitHud {
         int ix = lx + Math.max(font.width(hullLabel), font.width(fuelLabel)) + 4;
         g.text(font, hullLabel, lx, y0 + 4, main, false);
         // sealed (running with the helmet on: fire, frost, gas and water kept out) or faded like an unlit ember
-        g.blit(RenderPipelines.GUI_TEXTURED, SEAL, ix, y0 + 4, 0F, 0F, 5, 7, 5, 7, suit.isSealed() ? main : dim);
+        g.blit(RenderPipelines.GUI_TEXTURED, SEAL, ix, y0 + 4, 0F, 0F, 6, 7, 6, 7, suit.isSealed() ? main : dim);
         Component hullText = Component.translatable("hud.powerarmor.percent", Math.round(hull * 100));
         if (!(hullCritical && blink)) {
             g.text(font, hullText, rx - font.width(hullText), y0 + 4, main, false);
