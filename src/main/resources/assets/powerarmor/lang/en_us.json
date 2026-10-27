@@ -271,7 +271,6 @@
   "hud.powerarmor.load": "LOAD",
   "hud.powerarmor.metres": "%sm",
   "hud.powerarmor.scan": "SCAN",
-  "hud.powerarmor.field": "FIELD",
   "hud.powerarmor.heavy": "HEAVY",
   "hud.powerarmor.percent": "%s%%",
   "hud.powerarmor.endless": "∞",

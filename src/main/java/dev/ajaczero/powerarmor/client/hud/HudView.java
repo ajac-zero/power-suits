@@ -102,6 +102,80 @@ public final class HudView {
 
     // ---- shapes ----------------------------------------------------------------------------------------------
 
+    // ---- the top right corner: the ammo readout (chaingun, TNT launcher) ------------------------------------------
+
+    /** The corner block mirrors the suit's readout on the left (SuitHud: its rows from y 26, 4 px margin): 63 px wide (a
+     *  16-segment bar), 5 px in from the margin. Its first row (AMMO and the big counter) ends where the left's HULL bar
+     *  does, its second (a label, then a bar) sits on the left's FUEL row and bar, so the two corners line up. */
+    public static final int CORNER_Y0 = 26, CORNER_SEGMENTS = 16;
+    private static final int CORNER_W = CORNER_SEGMENTS * 4 - 1, CORNER_MARGIN = 4, CORNER_INSET = 5;
+
+    public int cornerRight() {
+        return this.width - CORNER_MARGIN - CORNER_INSET;
+    }
+
+    public int cornerLeft() {
+        return this.cornerRight() - CORNER_W;
+    }
+
+    /** The first row: AMMO at the block's left edge, the count on the big counter at its right edge, on one baseline. */
+    public void ammoRow(GuiGraphicsExtractor g, int count, boolean warn) {
+        int colour = this.main(warn);
+        this.counter(g, count, this.cornerRight(), CORNER_Y0 + 2, colour);
+        g.text(this.font, Component.translatable("hud.powerarmor.ammo"), this.cornerLeft(), CORNER_Y0 + 9, colour, false);
+    }
+
+    /** The second row: a label at the left edge on the FUEL row, a bar the block's width under it. */
+    public void gaugeRow(GuiGraphicsExtractor g, Component label, float frac, boolean warn) {
+        g.text(this.font, label, this.cornerLeft(), CORNER_Y0 + 18, this.main(warn), false);
+        bar(g, this.cornerLeft(), CORNER_Y0 + 27, CORNER_SEGMENTS, 3, frac, this.main(warn), this.dim(warn));
+    }
+
+    // ---- a flight on the world (the TNT round, a thrown mob) ----------------------------------------------------
+
+    /** Screen pixels between the dots of a flight's line. */
+    private static final int DOT_SPACING = 3;
+
+    /**
+     * A dotted line through points of the world (a flight's position tick by tick), a dot every few screen pixels so it
+     * reads as one line however far away it runs, none within {@code clear} px of the crosshair's middle (0: none
+     * skipped). Segments with an end behind the camera are left out. Returns the dots drawn.
+     */
+    public int dottedLine(GuiGraphicsExtractor g, java.util.List<Vec3> points, int colour, int clear) {
+        int cx = this.crosshairX(), cy = this.crosshairY(), dots = 0;
+        float carry = 0F;
+        float[] a = points.isEmpty() ? null : this.project(points.get(0));
+        for (int i = 1; i < points.size(); i++) {
+            float[] b = this.project(points.get(i));
+            float dx = b == null || a == null ? 0F : b[0] - a[0], dy = b == null || a == null ? 0F : b[1] - a[1];
+            float length = Mth.sqrt(dx * dx + dy * dy);
+            if (a != null && b != null && length > 0.01F) {
+                float t = carry;
+                for (; t <= length; t += DOT_SPACING) {
+                    int x = Math.round(a[0] + dx * t / length), y = Math.round(a[1] + dy * t / length);
+                    boolean nearCrosshair = Math.abs(x - cx) <= clear && Math.abs(y - cy) <= clear;
+                    if (!nearCrosshair && x >= 0 && y >= 0 && x < this.width && y < this.height) {
+                        g.fill(x, y, x + 1, y + 1, colour);
+                        dots++;
+                    }
+                }
+                carry = t - length;
+            }
+            a = b;
+        }
+        return dots;
+    }
+
+    /** A diamond outline of half-size {@code r} round (x, y): where a flight ends. */
+    public static void diamond(GuiGraphicsExtractor g, int x, int y, int r, int colour) {
+        for (int k = 0; k <= r; k++) {
+            g.fill(x - r + k, y - k, x - r + k + 1, y - k + 1, colour);
+            g.fill(x - r + k, y + k, x - r + k + 1, y + k + 1, colour);
+            g.fill(x + r - k, y - k, x + r - k + 1, y - k + 1, colour);
+            g.fill(x + r - k, y + k, x + r - k + 1, y + k + 1, colour);
+        }
+    }
+
     /** A segmented bar: {@code n} 3-pixel segments with 1-pixel gaps, the first {@code frac} of them lit. */
     public static void bar(GuiGraphicsExtractor g, int x, int y, int n, int height, float frac, int lit, int unlit) {
         int on = Math.round(n * Mth.clamp(frac, 0F, 1F));

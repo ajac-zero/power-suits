@@ -111,19 +111,21 @@ blinking. It's terminal green by default: pick your own colour under
   flamethrower), none when nothing burns.
 - **The socket tool's own readout**, where that tool needs it (tools with nothing to say show nothing: the drill, the
   chainsaw, the flamethrower):
-  - **Chaingun**, top right: **AMMO** on a big 3-digit counter (006; 999 means 999 or more; ∞ in creative) and the
-    barrels' **HEAT** bar under it.
+  - **Chaingun**, top right, lined up with the suit's readout on the left: **AMMO** and a big 3-digit counter (006;
+    999 means 999 or more; ∞ in creative), then the barrels' **HEAT** and its bar.
   - **Rail cannon**, round the crosshair: four corner brackets that wait wide and faint, close in as it charges (the
     charge in % under them) and lock with a second, inner set over **READY** at full charge; one pip per ingot left.
-  - **TNT launcher**, round the crosshair: the **arc** the round will fly, dotted from the crosshair down to a diamond
-    where it will go off, with the distance (`22m`); it moves with your aim and is worked out with the round's own
-    physics, so it's where the round really goes (a round that hits nothing goes off in the air at the end of its fuse:
-    a small x). Aim the diamond, not the crosshair: the round drops. Right of the crosshair, a revolver **drum** whose
-    top chamber fills while it reloads and is lit when a round is ready, the rounds left beside it (`x07`) and LOAD
-    while it reloads.
+  - **TNT launcher**: the **arc** the round will fly, dotted from the launcher's muzzle (where you see the round come
+    out) to a diamond where it will go off, with the distance (`22m`); it moves with your aim and is worked out with the
+    round's own physics, so it's where the round really goes (a round that hits nothing goes off in the air at the end of
+    its fuse: a small x). Aim the diamond, not the crosshair: the round drops. When it would go off close enough for its
+    blast to reach you (twice its strength: 8 blocks by default) the arc and the diamond turn **red**. Top right, where
+    the chaingun's ammo is: a revolver **drum**, one chamber per round (filled while loaded; the top one, under the
+    barrel, fills while it reloads), AMMO and the rounds left, LOAD while it reloads.
   - **EM projector**: nothing while idle; **SCAN...** under the crosshair while you hold the button and it's still
-    looking; and while it holds something, corner brackets round it with **FIELD** (or **HEAVY** for something too
-    heavy to lift, which it only drags) and its name over them, and its health.
+    looking; and while it holds something, corner brackets round it with its name over them (**HEAVY** first for
+    something too heavy to lift, which it only drags and shoves) and its health, and the **arc** it would be thrown
+    along if you let go now, to a diamond where it would land (moves with your aim).
 - **Top centre, compass and clock** (the helmet is crafted with both), as terminal text: a compass tape that slides a
   character (5°) at a time with a `^` under where you face, your heading in degrees (0 north, 90 east), the day and the
   time (`DAY 12  18:40`). Like the vanilla items they only work in the overworld: elsewhere the tape spins and they read
@@ -338,8 +340,8 @@ src/main/java/dev/ajaczero/powerarmor/
     PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
     SuitHud.java             the pilot's HUD (suit readout, compass + clock, the tool's own HUD) + low-fuel beep; moves boss bars
     hud/                     each socket tool's own visor HUD: ToolHud, ToolHuds (item -> HUD, filled in by ClientSetup),
-                             HudView (colours, crosshair, world-to-screen, shared shapes), ChaingunHud, RailCannonHud,
-                             TntLauncherHud (drum + the round's arc), EmProjectorHud
+                             HudView (colours, crosshair, world-to-screen, the top right ammo block, dotted flight lines),
+                             ChaingunHud, RailCannonHud, TntLauncherHud (drum + the round's arc), EmProjectorHud (box + throw arc)
                              and effect icons out of its way
     SuitVisor.java           the helmet's edge around the first-person view (solid pieces unpowered, only their outline powered)
     VisorConfig.java         the player's own visor colour (CLIENT config, powerarmor-client.toml)

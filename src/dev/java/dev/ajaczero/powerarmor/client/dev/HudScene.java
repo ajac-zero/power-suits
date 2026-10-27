@@ -42,7 +42,7 @@ import net.neoforged.fml.loading.FMLPaths;
  * own visor HUD (client/hud, 2026-10-27): the rail cannon's brackets closing in as it charges and locking at READY; the
  * TNT launcher's drum reloading, its arc near and far, ending on a cow, and a real round flying along it; the
  * flamethrower and the drill (nothing); the EM projector idle (nothing), searching (SCAN...) and holding a pig (a box
- * round it, FIELD, its name and health); the chainsaw (nothing); a star reactor (endless fuel, no embers); boss bars
+ * round it, its name and health, the arc it would be thrown along); the chainsaw (nothing); a star reactor (endless fuel, no embers); boss bars
  * and effects moved out of the way; and without the helmet (no HUD, vanilla's hearts).
  * Shots {@code ap_hud_*.png}; log run/autopilot_hud.csv: per tick what the HUD drew (hull, fuel bar and text, embers,
  * critical (the suit's), powered, tool, tool_hud: what the tool's own readout said it drew, e.g. the TNT arc's
@@ -114,11 +114,14 @@ final class HudScene {
             case 564 -> AutoPilot.hold(o.keyUse, false);
             case 570 -> AutoPilot.shot(mc, "hud_tnt_reload");
             case 600 -> AutoPilot.shot(mc, "hud_tnt_ready");
-            // its arc: where a round would land, looking down a little (near) and lobbing it (far); then on a cow 14
+            // its arc from the muzzle: where a round would land, looking down a little (near), at our feet (red: inside
+            // the blast) and lobbing it (far); then on a cow 14
             // blocks out (the arc ends on it); then a real round in flight along the arc it showed
             case 602 -> { phase = "tnt_arc"; AutoPilot.setView(0, 8); }
             case 610 -> AutoPilot.shot(mc, "hud_tnt_arc_near");
-            case 612 -> AutoPilot.setView(0, -8);
+            case 611 -> AutoPilot.setView(0, 35); // close enough for its own blast: the arc turns red
+            case 615 -> AutoPilot.shot(mc, "hud_tnt_danger");
+            case 616 -> AutoPilot.setView(0, -8);
             case 620 -> AutoPilot.shot(mc, "hud_tnt_arc_far");
             case 622 -> { phase = "tnt_mob"; server(mc, (p, x) -> target = statue(p, EntityTypes.COW, x.position().add(0, 0, 14))); }
             case 624 -> AutoPilot.aimTarget = mc.player.getVehicle().position().add(0, 0.7, 14);
@@ -136,7 +139,7 @@ final class HudScene {
             case 720 -> { phase = "drill"; tool(mc, ModItems.DRILL.get(), ItemStack.EMPTY); AutoPilot.setView(0, 5); }
             case 730 -> AutoPilot.shot(mc, "hud_drill");
             // the EM projector (EmProjectorHud): idle (nothing), searching the sky (SCAN...), then holding a pig (a box
-            // round it, FIELD, PIG, its health); a slowed pig 6 blocks out (4 to the side) so it waits to be picked up
+            // round it, PIG, its health, the arc it would be thrown along); a slowed pig 6 blocks out (4 to the side) so it waits to be picked up
             case 732 -> { phase = "em"; tool(mc, ModItems.EM_PROJECTOR.get(), ItemStack.EMPTY);
                           server(mc, (p, x) -> {
                               Pig pig = EntityTypes.PIG.create(p.level(), EntitySpawnReason.COMMAND);
@@ -150,6 +153,8 @@ final class HudScene {
             case 756 -> AutoPilot.hold(o.keyUse, false);
             case 760 -> { phase = "em_held"; Entity pig = target; if (pig != null) { AutoPilot.aimTarget = pig.position().add(0, 0.45, 0); } }
             case 766 -> { AutoPilot.aimTarget = null; AutoPilot.hold(o.keyUse, true); }
+            // caught: look up a little, the way you'd aim a throw (the arc then runs out to where it would land)
+            case 776 -> AutoPilot.setView(mc.player.getYRot(), -12);
             case 786 -> AutoPilot.shot(mc, "hud_em_held");
             case 788 -> { AutoPilot.hold(o.keyUse, false); AutoPilot.setView(0, 5); }
             case 800 -> server(mc, (p, x) -> discardTarget());

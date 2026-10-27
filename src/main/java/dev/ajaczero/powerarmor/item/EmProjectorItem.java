@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor.item;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.entity.Trajectory;
 import dev.ajaczero.powerarmor.entity.ai.EmGuard;
 import dev.ajaczero.powerarmor.entity.ai.RogueEmAttack;
 import dev.ajaczero.powerarmor.entity.ai.SuitTargets;
@@ -27,6 +28,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -34,6 +36,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -263,16 +266,8 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
             drop(suit, beam);
             return;
         }
-        // Launch along the view, a touch upward so things fly in a shallow arc.
-        Vec3 view = operator.getViewVector(1F);
-        // The guarding mind flings harder than a pilot throws: straight up, the fall has to kill (EM_GUARD_LAUNCH).
-        double speed = target instanceof ItemEntity ? ITEM_PUSH
-                : operator instanceof Player || suit.isRogue() ? MOB_PUSH : PowerArmorConfig.EM_GUARD_LAUNCH.get() / 20.0;
-        if (isHeavy(target)) {
-            speed *= HEAVY_SHOVE; // too heavy to throw: a shove
-        }
         target.setNoGravity(beam.targetHadNoGravity);
-        target.setDeltaMovement(view.scale(speed).add(0, 0.1, 0));
+        target.setDeltaMovement(throwVelocity(suit, target, operator, 1F));
         target.syncVelocity = true;
         if (target instanceof LivingEntity living) {
             beam.thrown.add(new Thrown(living, operator));
@@ -288,6 +283,56 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
             // A puff of redstone dust where the field lets go (vanilla's redstone particle).
             level.sendParticles(DustParticleOptions.REDSTONE, at.x, at.y, at.z, 24, 0.35, 0.35, 0.35, 0.0);
         }
+    }
+
+    /**
+     * Both sides: how fast {@code target} leaves the field when let go: along the view, a touch upward so things fly in a
+     * shallow arc. The server throws with it ({@code partial} 1); the pilot's visor draws where it will land from the same
+     * numbers every frame (client/hud/EmProjectorHud).
+     */
+    public static Vec3 throwVelocity(PowerArmorEntity suit, Entity target, LivingEntity operator, float partial) {
+        Vec3 view = operator.getViewVector(partial);
+        // The guarding mind flings harder than a pilot throws: straight up, the fall has to kill (EM_GUARD_LAUNCH).
+        double speed = target instanceof ItemEntity ? ITEM_PUSH
+                : operator instanceof Player || suit.isRogue() ? MOB_PUSH : PowerArmorConfig.EM_GUARD_LAUNCH.get() / 20.0;
+        if (isHeavy(target)) {
+            speed *= HEAVY_SHOVE; // too heavy to throw: a shove
+        }
+        return view.scale(speed).add(0, 0.1, 0);
+    }
+
+    /** Ticks a throw is followed ahead (3 s: far beyond where anything lands). */
+    private static final int PREDICT_TICKS = 60;
+
+    /**
+     * Both sides: where {@code target}, let go at {@code velocity}, will fly and land: vanilla's own steps for it in the
+     * air (a dropped item: gravity 0.04, then the move, then 0.98 drag; a mob: the move, then its gravity attribute and
+     * 0.91 / 0.98 air drag, LivingEntity.travelInAir), and its whole hit box against the blocks (Entity.collideBoundingBox,
+     * what Entity.move uses), until it touches something. A mob steering itself in the air drifts a little from this; a
+     * wall it reaches fast enough is where it slams (serverTick).
+     */
+    public static Trajectory predictThrow(Level level, Entity target, Vec3 velocity) {
+        boolean item = target instanceof ItemEntity;
+        double gravity = target instanceof LivingEntity living ? living.getAttributeValue(Attributes.GRAVITY) : item ? 0.04 : 0.08;
+        List<Vec3> path = new ArrayList<>();
+        Vec3 pos = target.position();
+        path.add(pos);
+        AABB box = target.getBoundingBox();
+        Vec3 v = velocity;
+        for (int tick = 1; tick <= PREDICT_TICKS; tick++) {
+            if (item) {
+                v = v.add(0, -gravity, 0);
+            }
+            Vec3 move = Entity.collideBoundingBox(target, v, box, level, List.of());
+            pos = pos.add(move);
+            box = box.move(move);
+            if (move.distanceToSqr(v) > 1.0E-7) {
+                return new Trajectory(path, pos, tick, true, null); // blocked: it lands (or hits a wall) here
+            }
+            path.add(pos);
+            v = item ? v.scale(0.98) : new Vec3(v.x * 0.91, (v.y - gravity) * 0.98, v.z * 0.91);
+        }
+        return new Trajectory(path, pos, PREDICT_TICKS, false, null);
     }
 
     @Override

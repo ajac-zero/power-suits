@@ -196,6 +196,12 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
   its move and inflated 1 for the entity search) and the entity margin vanilla grows from the projectile's tickCount
   (`(t - 2) / 20`, max 0.3; tickCount is already 1 in the first tick). Then a test can demand it to 1e-6
   (`tntArcPredictsTheRound`). Fire and predict from one function (`TntLauncherItem.launch`, partial 1 on the server).
+  A thrown mob (`EmProjectorItem.predictThrow`): the move first, then gravity (its GRAVITY attribute, 0.08) and drag
+  (0.91 sideways, 0.98 down), against its whole hit box with `Entity.collideBoundingBox` (what `move` uses); an item:
+  gravity 0.04 first, then the move, then 0.98. A held target has no gravity (the field sets it): read the attribute,
+  not `getGravity()`. A mob steering in the air drifts off it: tests slow it (`emThrowArcPredictsWhereItLands`).
+  Draw a flight as dots a fixed number of screen pixels apart (`HudView.dottedLine`), not one per tick: a tick's step
+  covers anything from 1 to 50 px on screen.
 
 ## Items, recipes and data (26.3)
 - *(26.3)* **Items need `assets/<mod>/items/<item>.json`** (which model to show) next to `models/item/`; recipe

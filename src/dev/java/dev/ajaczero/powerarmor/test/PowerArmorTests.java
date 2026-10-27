@@ -15,6 +15,7 @@ import dev.ajaczero.powerarmor.entity.SuitLights;
 import dev.ajaczero.powerarmor.entity.SuitMind;
 import dev.ajaczero.powerarmor.entity.SuitSmash;
 import dev.ajaczero.powerarmor.entity.TntShell;
+import dev.ajaczero.powerarmor.entity.Trajectory;
 import dev.ajaczero.powerarmor.entity.ai.DrillWorker;
 import dev.ajaczero.powerarmor.entity.ai.GunAttack;
 import dev.ajaczero.powerarmor.entity.ai.SuitTargets;
@@ -961,6 +962,35 @@ public final class PowerArmorTests {
             helper.assertTrue(!pig.isAlive() || pig.getHealth() < pig.getMaxHealth(), "the slam should hurt, health " + pig.getHealth());
             helper.assertTrue(pig.getLastDamageSource() != null && pig.getLastDamageSource().is(EmProjectorItem.EM_SLAM),
                     "damage should be em_slam, got " + pig.getLastDamageSource());
+            helper.succeed();
+        });
+    }
+
+    /** The visor's throw arc (EmProjectorItem.predictThrow, drawn by client/hud/EmProjectorHud) is where a thrown mob
+     *  lands: a pig sent off at a throw's speed from 2 blocks up lands where and when the arc says. (Slowed so it
+     *  doesn't walk in the air: a mob's own steering is the one thing the arc can't know.) */
+    @SuitTest(timeoutTicks = 60)
+    public static void emThrowArcPredictsWhereItLands(GameTestHelper helper) {
+        Pig pig = helper.spawn(EntityTypes.PIG, new Vec3(4.5, 4, 3.5));
+        pig.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 200, 10));
+        Vec3 velocity = new Vec3(0, 0.1, 0.6);
+        pig.setDeltaMovement(velocity);
+        Trajectory arc = EmProjectorItem.predictThrow(helper.getLevel(), pig, velocity);
+        int[] ticks = {0, -1};
+        Vec3[] landed = {null};
+        helper.onEachTick(() -> {
+            ticks[0]++;
+            if (landed[0] == null && pig.onGround()) {
+                landed[0] = pig.position();
+                ticks[1] = ticks[0];
+            }
+        });
+        helper.runAfterDelay(40, () -> {
+            helper.assertTrue(arc.hit(), "the arc ends on the floor, ends at " + arc.end());
+            helper.assertTrue(landed[0] != null, "the pig landed");
+            helper.assertTrue(landed[0].distanceTo(arc.end()) < 0.3, "it lands where the arc says: " + landed[0] + " vs " + arc.end());
+            helper.assertTrue(arc.end().z - arc.path().get(0).z > 2, "a real throw (lands 2+ blocks out): " + arc.end());
+            helper.assertTrue(Math.abs(ticks[1] - arc.ticks()) <= 1, "and when (tick " + ticks[1] + " vs " + arc.ticks() + ")");
             helper.succeed();
         });
     }
@@ -3130,7 +3160,7 @@ public final class PowerArmorTests {
         PowerArmorEntity[] suit = new PowerArmorEntity[1];
         Player pilot = tntPilot(helper, suit, new Vec3(4.5, 2.6, 8.5), 1);
         TntShell[] shell = new TntShell[1];
-        TntShell.Flight[] flight = new TntShell.Flight[1];
+        Trajectory[] flight = new Trajectory[1];
         int[] lastSeen = {-1};
         String[] off = {null};
         helper.runAfterDelay(2, () -> {

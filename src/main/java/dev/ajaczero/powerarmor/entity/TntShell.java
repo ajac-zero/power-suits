@@ -101,8 +101,15 @@ public class TntShell extends Projectile {
      *  {@link #CONVERGE} blocks of flight. */
     public Vec3 visualShift(Vec3 position) {
         this.learnPath();
-        double s = position.distanceTo(this.pathStart);
-        return s >= CONVERGE ? Vec3.ZERO : this.gap.scale(1 - s / CONVERGE);
+        return shift(position, this.pathStart, this.gap);
+    }
+
+    /** Both sides: how far a round at {@code position} on a path from {@code start} is drawn off it, for a muzzle
+     *  {@code gap} away from the start: the whole gap at the start, none after {@link #CONVERGE} blocks. The visor's arc
+     *  uses it too, so it starts at the gun and follows the round as it's drawn (client/hud/TntLauncherHud). */
+    public static Vec3 shift(Vec3 position, Vec3 start, Vec3 gap) {
+        double s = position.distanceTo(start);
+        return s >= CONVERGE ? Vec3.ZERO : gap.scale(1 - s / CONVERGE);
     }
 
     // ---- flight -----------------------------------------------------------------------------------------
@@ -145,20 +152,13 @@ public class TntShell extends Projectile {
     // ---- where it will go (the pilot's HUD) ---------------------------------------------------------------
 
     /**
-     * A round's flight, worked out ahead: {@code path} its position after each tick (0 = where it starts), {@code end}
-     * where it goes off, {@code ticks} when, {@code hit} whether it hit something there (false: its fuse ran out in the
-     * air) and {@code entity} what it hit, if that was an entity.
-     */
-    public record Flight(List<Vec3> path, Vec3 end, int ticks, boolean hit, @Nullable Entity entity) {}
-
-    /**
      * Both sides: where a round fired by {@code owner} from {@code from} at {@code velocity} will fly and go off. The
      * same steps as {@link #tick} (what it would hit on this tick's move, then the move, then drag and gravity; the
      * entity margin vanilla grows over a projectile's first ticks), in the world as it is now: so it's exact for a
      * still target (PowerArmorTests.tntArcPredictsTheRound) and as good as anyone's guess for a moving one. The pilot's
      * HUD draws it every frame (client/hud/TntLauncherHud): at most {@link #FUSE} ray casts, a fraction of a frame.
      */
-    public static Flight predict(Level level, Entity owner, Vec3 from, Vec3 velocity) {
+    public static Trajectory predict(Level level, Entity owner, Vec3 from, Vec3 velocity) {
         List<Vec3> path = new ArrayList<>();
         path.add(from);
         Vec3 pos = from, v = velocity;
@@ -175,10 +175,10 @@ public class TntShell extends Projectile {
             EntityHitResult entity = ProjectileUtil.getEntityHitResult(level, owner, pos, to,
                     size.makeBoundingBox(pos).expandTowards(v).inflate(1), hittable, margin);
             if (entity != null) {
-                return new Flight(path, entity.getLocation(), tick, true, entity.getEntity());
+                return new Trajectory(path, entity.getLocation(), tick, true, entity.getEntity());
             }
             if (block.getType() != HitResult.Type.MISS) {
-                return new Flight(path, to.subtract(v.normalize().scale(0.1)), tick, true, null); // onHitBlock's step back
+                return new Trajectory(path, to.subtract(v.normalize().scale(0.1)), tick, true, null); // onHitBlock's step back
             }
             // drag by where it was at the start of the tick (isInWater is updated before the move)
             boolean water = level.getFluidState(BlockPos.containing(pos)).is(FluidTags.WATER);
@@ -186,7 +186,7 @@ public class TntShell extends Projectile {
             v = v.scale(water ? WATER_DRAG : DRAG).add(0, -GRAVITY, 0);
             path.add(pos);
         }
-        return new Flight(path, pos, FUSE, false, null);
+        return new Trajectory(path, pos, FUSE, false, null);
     }
 
     @Override
