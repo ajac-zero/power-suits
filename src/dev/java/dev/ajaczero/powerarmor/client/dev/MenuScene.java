@@ -4,14 +4,15 @@ import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.client.PowerArmorScreen;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
-import dev.ajaczero.powerarmor.network.PowerSwitchPayload;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Locale;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.CameraType;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -27,7 +28,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.fml.loading.FMLPaths;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 /**
  * Autopilot scene for the suit's inventory screen (user, 2026-10-27): the player's inventory with the suit in it.
@@ -39,7 +39,7 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
  *   <li>F over the drill on the hotbar: the drill goes into the socket, the chaingun comes out ({@code ap_menu_swapped}).</li>
  *   <li>The Power button: switched off, the status reads POWER OFF ({@code ap_menu_off}); closed, the visor is dark and
  *   reads POWER OFF ({@code ap_menu_hud_off}).</li>
- *   <li>The power switch key (its message): on again, the visor warms up ({@code ap_menu_hud_on}).</li>
+ *   <li>The power switch key (H): on again, the visor warms up ({@code ap_menu_hud_on}).</li>
  *   <li>F outside the screen with the chainsaw selected: the chainsaw goes into the socket ({@code ap_menu_f_back},
  *   the in-game back view).</li>
  *   <li>Out of the suit, sneak + right-click: the same screen from outside, with Pack up ({@code ap_menu_outside}).</li>
@@ -72,8 +72,8 @@ final class MenuScene {
             case 74 -> AutoPilot.shot(mc, "menu_off");
             case 78 -> mc.player.closeContainer();
             case 110 -> AutoPilot.shot(mc, "menu_hud_off");
-            // the power switch key: what SuitKeys sends for a press
-            case 114 -> { phase = "on"; ClientPacketDistributor.sendToServer(new PowerSwitchPayload()); }
+            // the power switch key: a press of H, through the key binding itself (SuitKeys sends the message)
+            case 114 -> { phase = "on"; KeyMapping.click(InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_H)); }
             case 160 -> AutoPilot.shot(mc, "menu_hud_on");
             // F outside the screen, the chainsaw selected: vanilla's swap packet, which the suit takes over (PilotHands)
             case 164 -> { phase = "f_key"; mc.player.getInventory().setSelectedSlot(2); // (the client tells the server next tick)

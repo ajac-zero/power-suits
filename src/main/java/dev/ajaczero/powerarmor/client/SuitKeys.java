@@ -20,14 +20,15 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
  * business, so we send it a message (PowerSwitchPayload).
  * <ul>
  *   <li><b>Power switch</b> (user, 2026-10-27): flips the suit's power on and off while you pilot it, like the switch
- *   in its menu. Unbound by default: every key is taken by something already, the player picks one.</li>
+ *   in its menu. H by default (user, 2026-10-27): one of the letters vanilla 26.3 leaves free (P is social
+ *   interactions, O the friends screen; H, I, J, K, M, R, U, Y, Z are unbound).</li>
  * </ul>
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class SuitKeys {
     public static final KeyMapping.Category CATEGORY = new KeyMapping.Category(Identifier.fromNamespaceAndPath(PowerArmor.MODID, "power_armor"));
     public static final KeyMapping POWER_SWITCH = new KeyMapping("key.powerarmor.power_switch", InputConstants.Type.KEYBOARD,
-            InputConstants.UNKNOWN.getValue(), CATEGORY);
+            InputConstants.KEY_H, CATEGORY);
 
     private SuitKeys() {
     }

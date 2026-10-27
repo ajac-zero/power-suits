@@ -10,8 +10,7 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Client -> server: "the pilot pressed the power switch key" (client/SuitKeys; unbound until the player picks a key in
- * Controls). A key press only exists on the pilot's client and the switch is the suit's (server) state, so the client
+ * Client -> server: "the pilot pressed the power switch key" (client/SuitKeys; H by default). A key press only exists on the pilot's client and the switch is the suit's (server) state, so the client
  * sends this message with nothing in it: its arrival is the whole news. The menu's switch needs no message of its own:
  * menu buttons travel in vanilla's button packet (PowerArmorMenu.clickMenuButton).
  */
