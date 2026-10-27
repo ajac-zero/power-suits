@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor;
 import com.mojang.logging.LogUtils;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.HelmetStyle;
+import dev.ajaczero.powerarmor.item.ModTooltip;
 import dev.ajaczero.powerarmor.network.ToolTriggerPayload;
 import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
@@ -15,7 +16,9 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.common.tooltip.TooltipLocation;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import org.slf4j.Logger;
 
@@ -45,7 +48,17 @@ public class PowerArmor {
         modBus.addListener(PowerArmor::addToCreativeTab);
         // Network messages (client -> server: socket tool button (right click) pressed/released).
         modBus.addListener(ToolTriggerPayload::register);
+        // Our items' own tooltip lines (item/ModTooltip), where vanilla's deprecated appendHoverText used to put them.
+        modBus.addListener(PowerArmor::registerTooltips);
         // GameTests and the autopilot live in src/dev/ (not shipped): they register from dev/PowerArmorDev.
+    }
+
+    private static void registerTooltips(RegisterTooltipAppendersEvent event) {
+        event.registerAppender(TooltipLocation.POST_CUSTOM, (stack, context, display, player, flag, tooltip) -> {
+            if (stack.getItem() instanceof ModTooltip item) {
+                item.addTooltip(stack, context, tooltip, flag);
+            }
+        });
     }
 
     private static void registerAttributes(EntityAttributeCreationEvent event) {

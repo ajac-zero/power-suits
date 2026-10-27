@@ -27,12 +27,12 @@ import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
 import dev.ajaczero.powerarmor.registry.ModDataComponents;
 import dev.ajaczero.powerarmor.registry.ModEntities;
 import dev.ajaczero.powerarmor.registry.ModItems;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
@@ -75,6 +75,7 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.context.UseOnContext;
@@ -158,7 +159,7 @@ public final class PowerArmorTests {
     public static void suitAbsorbsDamageForPilot(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
         Player pilot = boardedPilot(helper, suit);
-        pilot.hurt(helper.getLevel().damageSources().generic(), 8.0F);
+        pilot.hurtServer(helper.getLevel(), helper.getLevel().damageSources().generic(), 8.0F);
         helper.assertTrue(pilot.getHealth() == pilot.getMaxHealth(), "pilot should take no damage, health " + pilot.getHealth());
         helper.assertTrue(suit.getHealth() < suit.getMaxHealth(), "suit should take the hit");
         helper.succeed();
@@ -167,7 +168,7 @@ public final class PowerArmorTests {
     @SuitTest
     public static void packingKeepsDamage(GameTestHelper helper) {
         PowerArmorEntity suit = spawnSuit(helper);
-        suit.hurt(helper.getLevel().damageSources().generic(), 30.0F);
+        suit.hurtServer(helper.getLevel(), helper.getLevel().damageSources().generic(), 30.0F);
         int expectedDamage = Math.round(suit.getMaxHealth() - suit.getHealth());
 
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
@@ -215,7 +216,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = spawnSuit(helper);
         suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BLAZE_ROD, 3));
         Player pilot = boardedPilot(helper, suit);
-        suit.hurt(helper.getLevel().damageSources().genericKill(), 1000.0F);
+        suit.hurtServer(helper.getLevel(), helper.getLevel().damageSources().genericKill(), 1000.0F);
         helper.assertTrue(pilot.getVehicle() == null, "pilot should be thrown out when the suit dies");
         helper.runAfterDelay(30, () -> helper.assertTrue(!suit.isRemoved(), "suit should linger for the death animation"));
         helper.runAfterDelay(70, () -> {
@@ -425,6 +426,27 @@ public final class PowerArmorTests {
         helper.assertTrue(player.getVehicle() == null, "sneak + right-click must not climb in");
         helper.assertTrue(!suit.isRemoved(), "sneak + right-click no longer packs the suit (the menu button does)");
         helper.succeed();
+    }
+
+    /** Our tooltip lines arrive through NeoForge's tooltip appender (item/ModTooltip), right after the item's name, and a
+     *  styled helmet adds its flavour line after the helmet's own. */
+    @SuitTest
+    public static void itemTooltipsShowTheirLines(GameTestHelper helper) {
+        var context = Item.TooltipContext.of(helper.getLevel());
+        List<String> chaingun = tooltipKeys(new ItemStack(ModItems.CHAINGUN.get()), context);
+        helper.assertTrue(chaingun.size() >= 4 && chaingun.get(1).equals("item.powerarmor.chaingun.tooltip")
+                && chaingun.contains("item.powerarmor.power_tool.install"), "the chaingun's lines, got " + chaingun);
+        ItemStack spartan = new ItemStack(ModItems.SUIT_HELMET.get());
+        spartan.set(ModDataComponents.HELMET_STYLE.get(), HelmetStyle.SPARTAN);
+        List<String> helmet = tooltipKeys(spartan, context);
+        helper.assertTrue(helmet.contains("item.powerarmor.suit_helmet.spartan.flavour"), "the style's flavour line, got " + helmet);
+        helper.succeed();
+    }
+
+    /** The translation keys of a stack's tooltip lines, in order ("" for lines that aren't one translated text). */
+    private static List<String> tooltipKeys(ItemStack stack, Item.TooltipContext context) {
+        return stack.getTooltipLines(context, null, TooltipFlag.NORMAL).stream()
+                .map(line -> line.getContents() instanceof TranslatableContents t ? t.getKey() : "").toList();
     }
 
     @SuitTest
@@ -1291,15 +1313,15 @@ public final class PowerArmorTests {
         helper.runAfterDelay(5, () -> {
             var sources = helper.getLevel().damageSources();
             float before = suit.power().getBurnLeftExact();
-            pilot.hurt(sources.onFire(), 1F); // redirected to the suit (PilotProtection), where the seal pays for it
+            pilot.hurtServer(helper.getLevel(), sources.onFire(), 1F); // redirected to the suit (PilotProtection), where the seal pays for it
             float paid = before - suit.power().getBurnLeftExact();
             helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "fire must not hurt a powered suit, health " + suit.getHealth());
             helper.assertTrue(pilot.getHealth() == pilot.getMaxHealth(), "nor its pilot");
             helper.assertTrue(Math.abs(paid - PowerArmorConfig.SEAL_ENERGY_PER_DAMAGE.get()) < 0.01, "one point of fire should cost its energy, paid " + paid);
             float before2 = suit.power().getBurnLeftExact();
-            suit.hurt(sources.inFire(), 1F); // the next tick of fire within the half second is already paid for
+            suit.hurtServer(helper.getLevel(), sources.inFire(), 1F); // the next tick of fire within the half second is already paid for
             helper.assertTrue(suit.power().getBurnLeftExact() == before2, "fire within the half-second immunity is free");
-            suit.hurt(sources.lava(), 4F);
+            suit.hurtServer(helper.getLevel(), sources.lava(), 4F);
             helper.assertTrue(suit.getHealth() < suit.getMaxHealth(), "lava still eats the hull");
             suit.igniteForSeconds(5);   // a flaming arrow, say
             pilot.igniteForSeconds(5);
@@ -1326,7 +1348,7 @@ public final class PowerArmorTests {
         PowerArmorEntity suit = fueledSuit(helper, ItemStack.EMPTY);
         Player pilot = boardedPilot(helper, suit);
         helper.runAfterDelay(2, () -> {
-            pilot.hurt(helper.getLevel().damageSources().onFire(), 2F);
+            pilot.hurtServer(helper.getLevel(), helper.getLevel().damageSources().onFire(), 2F);
             helper.assertTrue(suit.getHealth() < suit.getMaxHealth(), "without power, fire hurts the hull");
             pilot.addEffect(new MobEffectInstance(MobEffects.POISON, 100));
             helper.assertTrue(pilot.hasEffect(MobEffects.POISON), "without power, poison reaches the pilot");
@@ -1503,10 +1525,10 @@ public final class PowerArmorTests {
             float fuel = suit.power().getBurnLeftExact();
             var types = helper.getLevel().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE);
             player.damageCooldownTime = 0;
-            player.hurt(new DamageSource(types.getOrThrow(NeoForgeMod.POISON_DAMAGE)), 1F);
+            player.hurtServer(helper.getLevel(), new DamageSource(types.getOrThrow(NeoForgeMod.POISON_DAMAGE)), 1F);
             helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "poison must not reach the suit");
             player.damageCooldownTime = 0;
-            player.hurt(helper.getLevel().damageSources().wither(), 1F);
+            player.hurtServer(helper.getLevel(), helper.getLevel().damageSources().wither(), 1F);
             helper.assertTrue(player.getHealth() < player.getMaxHealth(), "poison hurts the pilot, health " + player.getHealth());
             helper.assertTrue(suit.getHealth() == suit.getMaxHealth(), "not the suit, health " + suit.getHealth() + " from "
                     + (suit.getLastDamageSource() == null ? "-" : suit.getLastDamageSource().getMsgId()));
@@ -1735,7 +1757,7 @@ public final class PowerArmorTests {
         useOnFloor(helper, player, packed, new BlockPos(4, 1, 4));
         PowerArmorEntity deployed = suitsInTest(helper).get(0);
         helper.assertTrue(deployed.getStoredNuggets() == 100, "back in the deployed suit");
-        deployed.hurt(helper.getLevel().damageSources().genericKill(), 1000F);
+        deployed.hurtServer(helper.getLevel(), helper.getLevel().damageSources().genericKill(), 1000F);
         helper.runAfterDelay(70, () -> {
             helper.assertTrue(dropped(helper, Items.IRON_NUGGET) == 100, "the wreck drops its ammo, got " + dropped(helper, Items.IRON_NUGGET));
             helper.succeed();
@@ -2036,7 +2058,7 @@ public final class PowerArmorTests {
     @SuitTest(timeoutTicks = 120)
     public static void defeatedRogueDropsOnlyItsTool(GameTestHelper helper) {
         PowerArmorEntity suit = rogue(helper, SUIT_POS, false);
-        suit.hurt(helper.getLevel().damageSources().genericKill(), 1000F);
+        suit.hurtServer(helper.getLevel(), helper.getLevel().damageSources().genericKill(), 1000F);
         helper.runAfterDelay(70, () -> {
             helper.assertItemEntityPresent(ModItems.EM_PROJECTOR.get());
             helper.assertItemEntityNotPresent(Items.IRON_INGOT);
@@ -2146,6 +2168,7 @@ public final class PowerArmorTests {
      * them: GeckoLib's animation triggers (the EM projector's recoil, a flinch) crashed the test server. Tell the
      * connection it speaks GeckoLib's entity packets, as a real client with GeckoLib would.
      */
+    @SuppressWarnings("removal") // vanilla marked it for removal with no replacement yet (26.3): adapt when it goes
     private static ServerPlayer mockServerPlayer(GameTestHelper helper) {
         var player = helper.makeMockServerPlayerInLevel();
         var channels = ChannelAttributes.getOrCreateCommonChannels(

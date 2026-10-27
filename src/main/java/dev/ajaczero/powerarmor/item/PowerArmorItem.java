@@ -22,14 +22,13 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 
 /**
  * The suit in item form. Right-click a block to deploy it. The item's durability *is* the suit's
  * health: damage carries over both ways, and you can repair it in an anvil with iron ingots.
  */
-public class PowerArmorItem extends Item {
+public class PowerArmorItem extends Item implements ModTooltip {
     public PowerArmorItem(Properties properties) {
         super(properties);
     }
@@ -93,8 +92,7 @@ public class PowerArmorItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
-            Consumer<Component> tooltip, TooltipFlag flag) {
+    public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.power_armor.tooltip").withStyle(ChatFormatting.GRAY));
         DyeColor paint = stack.get(ModDataComponents.PAINT.get());
         if (paint != null) { // vanilla names every dye colour ("color.minecraft.red" = "Red")

@@ -1072,9 +1072,9 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         return false;
     }
 
-    /** Too heavy for currents and bubble columns to push around. */
+    /** Too heavy for currents and bubble columns to push around (NeoForge's per-fluid version of isPushedByFluid). */
     @Override
-    public boolean isPushedByFluid() {
+    public boolean isPushedByFluid(FluidType type) {
         return false;
     }
 
@@ -1190,7 +1190,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         } else {
             // Running: the strike doesn't set the steel alight (vanilla would), it fries the electrics. Once knocked
             // out, the fire the bolt usually leaves at the suit's feet will catch it.
-            this.hurt(this.damageSources().lightningBolt(), lightning.getDamage());
+            this.hurtServer(level, this.damageSources().lightningBolt(), lightning.getDamage());
         }
     }
 

@@ -61,6 +61,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.EventHooks;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -935,7 +936,7 @@ public final class ShowcaseScene {
                 int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(p.x), Mth.floor(p.z));
                 if (types[i].create(level, EntitySpawnReason.COMMAND) instanceof Mob mob) {
                     mob.snapTo(p.x, y, p.z, yaw + 180, 0);
-                    mob.finalizeSpawn(level, level.getCurrentDifficultyAt(mob.blockPosition()), EntitySpawnReason.COMMAND, null);
+                    EventHooks.finalizeMobSpawn(mob, level, level.getCurrentDifficultyAt(mob.blockPosition()), EntitySpawnReason.COMMAND, null);
                     if (mob instanceof Zombie zombie) {
                         zombie.setBaby(false); // finalizeSpawn may roll a baby: too small to read at this distance
                     }

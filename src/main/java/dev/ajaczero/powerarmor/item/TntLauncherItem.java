@@ -19,7 +19,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
@@ -37,7 +36,7 @@ import net.minecraft.world.phys.Vec3;
  * #cooldownTicks}) has run out. After each shot the drum turns a quarter turn to bring the next round under the barrel
  * (client side, from the synced shot counter: TntLauncherEffects, drawn by ToolRotors).
  */
-public class TntLauncherItem extends Item implements PowerTool {
+public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
     /** How far ahead the operator's aim is worked out (blocks): the round flies at what the crosshair is on. */
     private static final double AIM_RANGE = 64;
 
@@ -156,8 +155,7 @@ public class TntLauncherItem extends Item implements PowerTool {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
-            Consumer<Component> tooltip, TooltipFlag flag) {
+    public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.tnt_launcher.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.tnt_launcher.stats",
                 String.format("%.1f", this.cooldownTicks() / 20F)).withStyle(ChatFormatting.DARK_AQUA));

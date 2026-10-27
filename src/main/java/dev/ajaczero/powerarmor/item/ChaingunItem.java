@@ -24,7 +24,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -45,7 +44,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>Registered as powerarmor:chaingun; the old ids powerarmor:plasma_cannon and powerarmor:rivet_gun are aliases, so
  * those items in old worlds load as chainguns. A flat item like a vanilla tool; only the suit wears it in 3D.
  */
-public class ChaingunItem extends Item implements PowerTool {
+public class ChaingunItem extends Item implements PowerTool, ModTooltip {
     /** How far the crosshair is traced to find the aim point. */
     private static final double AIM_RANGE = 96;
     /** Bullet spread at full spin, degrees (none for the first, slow shot). Small: the barrage should still hit what
@@ -300,8 +299,7 @@ public class ChaingunItem extends Item implements PowerTool {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
-            Consumer<Component> tooltip, TooltipFlag flag) {
+    public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.chaingun.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.chaingun.stats",
                 String.format("%.1f", damage(0F) / 2), String.format("%.1f", damage(1F) / 2),

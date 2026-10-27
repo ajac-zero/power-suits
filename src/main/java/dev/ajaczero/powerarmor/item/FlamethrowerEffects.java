@@ -1,8 +1,8 @@
 package dev.ajaczero.powerarmor.item;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
+import net.neoforged.neoforge.common.NeoForgeMod;
 
 /**
  * Client: the flamethrower's pilot light on one suit. It burns whenever the suit is powered, brighter while the gun
@@ -12,9 +12,8 @@ final class FlamethrowerEffects implements ToolEffects {
     private float pilotGlow;
 
     @Override
-    @SuppressWarnings("deprecation") // isEyeInFluid: still the simplest "is the head under water" on 26.3
     public void tick(PowerArmorEntity suit) {
-        boolean lit = suit.isPowered() && !suit.isEyeInFluid(FluidTags.WATER);
+        boolean lit = suit.isPowered() && !suit.isEyeInFluidType(NeoForgeMod.WATER_TYPE.value());
         float target = !lit ? 0F : suit.socket().isActive() ? 1F : 0.7F;
         this.pilotGlow = ToolEffects.ease(this.pilotGlow, target, 0.4F, 0.1F);
     }

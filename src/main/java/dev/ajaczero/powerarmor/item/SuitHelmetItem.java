@@ -6,7 +6,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -35,9 +34,8 @@ public class SuitHelmetItem extends SuitPartItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip,
-            TooltipFlag flag) {
-        super.appendHoverText(stack, context, display, tooltip, flag);
+    public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
+        super.addTooltip(stack, context, tooltip, flag);
         HelmetStyle style = style(stack);
         if (style != null) {
             // a line that hints at the helmet's inspiration, in the grey italics vanilla uses for flavour text

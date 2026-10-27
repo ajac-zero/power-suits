@@ -6,7 +6,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 
 /**
  * A piece of the suit (torso, arm, leg, helmet): crafted on its own from iron blocks, lapis blocks and vanilla parts.
@@ -14,7 +13,7 @@ import net.minecraft.world.item.component.TooltipDisplay;
  * data/powerarmor/recipe/suit_*.json and power_armor.json); the helmet goes on the finished suit (its helmet slot):
  * it seals the suit and lets its machine mind run.
  */
-public class SuitPartItem extends Item {
+public class SuitPartItem extends Item implements ModTooltip {
     private final String tooltipKey;
 
     public SuitPartItem(Properties properties, String tooltipKey) {
@@ -23,8 +22,7 @@ public class SuitPartItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip,
-            TooltipFlag flag) {
+    public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
         // What the part is for: the body parts share one line, the helmet has its own.
         tooltip.accept(Component.translatable(this.tooltipKey).withStyle(ChatFormatting.GRAY));
     }

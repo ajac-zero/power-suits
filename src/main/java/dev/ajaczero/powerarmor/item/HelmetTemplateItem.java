@@ -8,7 +8,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SmithingTemplateItem;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 
 /**
  * A helmet style's smithing template (design sec. 4c): found in chests of the structure its inspiration would come from
@@ -18,7 +17,7 @@ import net.minecraft.world.item.component.TooltipDisplay;
  * Vanilla's SmithingTemplateItem already draws the tooltip ("Applies to: ... Ingredients: ...") and the smithing
  * screen's hints for the empty slots; this only adds the style's flavour line under it.
  */
-public class HelmetTemplateItem extends SmithingTemplateItem {
+public class HelmetTemplateItem extends SmithingTemplateItem implements ModTooltip {
     private static final Identifier EMPTY_SLOT_HELMET = Identifier.withDefaultNamespace("container/slot/helmet");
     private final HelmetStyle style;
 
@@ -36,9 +35,7 @@ public class HelmetTemplateItem extends SmithingTemplateItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip,
-            TooltipFlag flag) {
-        super.appendHoverText(stack, context, display, tooltip, flag);
+    public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.suit_helmet." + this.style.getSerializedName() + ".flavour")
                 .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
     }

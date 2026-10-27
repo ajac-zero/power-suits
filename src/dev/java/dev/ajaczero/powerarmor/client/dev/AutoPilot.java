@@ -35,7 +35,6 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.features.TreeFeatures;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
@@ -76,6 +75,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ExtractBlockScreenEffectEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+import net.neoforged.neoforge.common.NeoForgeMod;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -382,7 +382,7 @@ public final class AutoPilot {
             case 1500, 1560, 1596 -> shot(mc, "lights_barrage_" + t);
             case 1600 -> hold(o.keyUse, false);
             case 1608 -> shot(mc, "lights_hot");                   // barrels still glowing as they coast down
-            case 1620 -> onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) s.hurt(p.level().damageSources().generic(), 1F); });
+            case 1620 -> onServer(mc, p -> { if (p.getVehicle() instanceof PowerArmorEntity s) s.hurtServer(p.level(), p.level().damageSources().generic(), 1F); });
             case 1624 -> shot(mc, "lights_hit");
             case 1630 -> hold(o.keyShift, true);                  // climb out: the machine mind takes over -> green
             case 1632 -> hold(o.keyShift, false);
@@ -443,7 +443,7 @@ public final class AutoPilot {
         try {
             waterCsv.write(String.format(Locale.ROOT, "%d,%.2f,%.3f,%.2f,%.2f,%b,%b,%b,%d,%.1f,%s,%.1f,%b,%s%n", t, suit.getZ() - waterStartZ,
                     suit.getY(), Math.hypot(suit.getX() - suit.xo, suit.getZ() - suit.zo) * 20, (suit.getY() - suit.yo) * 20,
-                    suit.onGround(), suit.isInWater(), mc.player.isEyeInFluid(FluidTags.WATER),
+                    suit.onGround(), suit.isInWater(), mc.player.isEyeInFluidType(NeoForgeMod.WATER_TYPE.value()),
                     mc.player.getAirSupply(), mc.player.getHealth(), suit.animator().getMovementAnimationName(), suit.getHealth(), suit.isPowered(), suit.getEngine()));
         } catch (IOException e) {
             PowerArmor.LOGGER.error("[autopilot] water csv", e);

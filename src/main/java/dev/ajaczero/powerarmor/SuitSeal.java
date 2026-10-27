@@ -3,7 +3,6 @@ package dev.ajaczero.powerarmor;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
@@ -12,6 +11,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForgeMod;
 import net.neoforged.neoforge.event.entity.living.LivingBreatheEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -99,7 +99,7 @@ public final class SuitSeal {
 
     /** True if the suit feeds this pilot air (their head is under water in a sealed suit). */
     public static boolean feedsAir(Player pilot) {
-        return pilot.getVehicle() instanceof PowerArmorEntity suit && suit.isSealed() && pilot.isEyeInFluid(FluidTags.WATER);
+        return pilot.getVehicle() instanceof PowerArmorEntity suit && suit.isSealed() && pilot.isEyeInFluidType(NeoForgeMod.WATER_TYPE.value());
     }
 
     /** Every living thing asks every tick whether it can breathe. A sealed suit's pilot always can (the fuel for it is

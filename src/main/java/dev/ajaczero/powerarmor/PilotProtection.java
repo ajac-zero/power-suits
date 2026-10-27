@@ -1,6 +1,7 @@
 package dev.ajaczero.powerarmor;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
@@ -39,7 +40,9 @@ public final class PilotProtection {
         }
         // Explosions already hit the suit by themselves, don't count them twice.
         if (!source.is(DamageTypeTags.IS_EXPLOSION)) {
-            suit.hurt(source, event.getAmount());
+            if (suit.level() instanceof ServerLevel level) { // (this event only fires on the server)
+                suit.hurtServer(level, source, event.getAmount());
+            }
         }
     }
 

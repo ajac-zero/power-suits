@@ -30,7 +30,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -49,7 +48,7 @@ import org.jetbrains.annotations.Nullable;
  * spectators, creative players or no-AI mobs (map statues); a rider is caught by their mount.
  * Like all tools it only works in a powered suit's socket.
  */
-public class EmProjectorItem extends Item implements PowerTool {
+public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
     // Fuel per tick while holding, per throw, grab range and slam damage: PowerArmorConfig.
     /** Held things get away beyond this many times the grab range. */
     private static final double KEEP_RANGE_FACTOR = 1.5;
@@ -294,7 +293,9 @@ public class EmProjectorItem extends Item implements PowerTool {
             double speed = t.entity.getDeltaMovement().length();
             if (t.ticks > 1 && t.entity.horizontalCollision && t.lastSpeed > SLAM_SPEED) {
                 float damage = (float) ((t.lastSpeed - SLAM_SPEED) * PowerArmorConfig.EM_SLAM_DAMAGE.get());
-                t.entity.hurt(suit.damageSources().source(EM_SLAM, suit, t.thrower), damage); // (direct, causing)
+                if (t.entity.level() instanceof ServerLevel level) {
+                    t.entity.hurtServer(level, suit.damageSources().source(EM_SLAM, suit, t.thrower), damage); // (direct, causing)
+                }
                 return true;
             }
             t.lastSpeed = speed;
@@ -334,8 +335,7 @@ public class EmProjectorItem extends Item implements PowerTool {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
-            Consumer<Component> tooltip, TooltipFlag flag) {
+    public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.em_projector.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.em_projector.stats", PowerArmorConfig.EM_HOLD_ENERGY.get() * 20, PowerArmorConfig.EM_THROW_ENERGY.get())
                 .withStyle(ChatFormatting.DARK_AQUA));

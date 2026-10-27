@@ -23,9 +23,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.NeoForgeMod;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -37,7 +37,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>A continuous tool: the suit calls {@link #holdTick} every tick the trigger is held (pilot's right click, or the
  * machine mind's trigger). Its slate pilot light glows blue whenever the suit is powered (SuitGlowLayer).
  */
-public class FlamethrowerItem extends Item implements PowerTool {
+public class FlamethrowerItem extends Item implements PowerTool, ModTooltip {
     /** Spread of the stream, degrees (each gob gets its own small deviation: the flame flickers and fans out a little). */
     private static final float SPREAD = 2.5F;
 
@@ -179,7 +179,7 @@ public class FlamethrowerItem extends Item implements PowerTool {
     /** Client: silent while its nozzle is under water (it only bubbles there). */
     @Override
     public float runSoundVolume(PowerArmorEntity suit) {
-        return suit.isEyeInFluid(FluidTags.WATER) ? 0F : 1F;
+        return suit.isEyeInFluidType(NeoForgeMod.WATER_TYPE.value()) ? 0F : 1F;
     }
 
     /** On foot it's just a heavy piece of kit: say where it goes. */
@@ -192,8 +192,7 @@ public class FlamethrowerItem extends Item implements PowerTool {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
-            Consumer<Component> tooltip, TooltipFlag flag) {
+    public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.flamethrower.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.flamethrower.stats",
                 String.format("%.1f", PowerArmorConfig.FLAMETHROWER_DAMAGE.get() / 2),

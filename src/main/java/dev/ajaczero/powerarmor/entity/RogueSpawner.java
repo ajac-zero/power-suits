@@ -108,7 +108,7 @@ public final class RogueSpawner {
             float angle = random.nextFloat() * Mth.TWO_PI;
             double d = min + random.nextDouble() * (max - min);
             int x = centre.getX() + Mth.floor(Mth.cos(angle) * d), z = centre.getZ() + Mth.floor(Mth.sin(angle) * d);
-            if (!level.hasChunkAt(new BlockPos(x, 0, z))) {
+            if (!level.isLoaded(new BlockPos(x, 0, z))) {
                 continue;
             }
             BlockPos pos = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);

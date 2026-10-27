@@ -265,6 +265,10 @@ new feature and log numbers to CSV: measuring beat guessing every time in this p
   (game rules, weather) go in the batch's test environment (`SuitTests.environmentFor`: the framework sets them before the
   batch and restores them after), never set-and-restore inside a test; test-only event listeners keep per-position data
   (`ProtectedBlock.POSITIONS`, `BreakWatch.BREAKERS`), not one static field. Check with `runGameTestOnly -Prepeat=5`.
+- **No deprecated Minecraft calls** (cleared 2026-10-26; check with `-Xlint:deprecation`): damage with
+  `hurtServer(level, ...)` (not `hurt`), water with `isEyeInFluidType(NeoForgeMod.WATER_TYPE.value())`, fluid pushing by
+  overriding `isPushedByFluid(FluidType)`, `level.isLoaded(pos)`, `EventHooks.finalizeMobSpawn`; item tooltips come from
+  `item/ModTooltip` (one NeoForge tooltip appender registered in `PowerArmor`), not `Item.appendHoverText`.
 - **Shared code never touches client classes** (`Minecraft`, cameras, screens): they don't exist on a dedicated server, which
   crashes the moment such a line runs (the compiler doesn't notice). Ask through a hook the client fills in at startup
   (`entity/ClientView`, `SocketAim.visualMuzzle`, set in `client/ClientSetup`).

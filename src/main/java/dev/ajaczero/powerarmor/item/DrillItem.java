@@ -26,7 +26,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -40,7 +39,7 @@ import org.jetbrains.annotations.Nullable;
  * (stone, ores, obsidian, dirt, sand, gravel...), never bedrock or other unbreakable blocks; wood and other
  * axe blocks are the chainsaw's job. The 9 blocks break together, as slowly as the hardest of them.
  */
-public class DrillItem extends Item implements PowerTool {
+public class DrillItem extends Item implements PowerTool, ModTooltip {
     // Fuel per block and the pause after each 3x3: PowerArmorConfig.
     /** Mining speed of a diamond pickaxe / shovel (no enchantments). */
     public static final float SPEED = 8F;
@@ -197,8 +196,7 @@ public class DrillItem extends Item implements PowerTool {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
-            Consumer<Component> tooltip, TooltipFlag flag) {
+    public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.drill.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.drill.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));

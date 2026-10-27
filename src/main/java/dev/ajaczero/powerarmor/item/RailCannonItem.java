@@ -31,7 +31,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -58,7 +57,7 @@ import org.jetbrains.annotations.Nullable;
  * tool spin: it drives the core's glow, the hum's pitch and the HUD. A shot sets the synced beam end and bumps the shot
  * counter; each client then draws the beam from the muzzle it sees (RailCannonEffects).
  */
-public class RailCannonItem extends Item implements PowerTool {
+public class RailCannonItem extends Item implements PowerTool, ModTooltip {
     /** "powerarmor:rail" (data/powerarmor/damage_type/rail.json): "skewered by a rail beam". It's in
      *  minecraft:bypasses_cooldown, so a mob that was just hurt by something else still takes the whole hit. */
     public static final ResourceKey<DamageType> RAIL = ResourceKey.create(Registries.DAMAGE_TYPE,
@@ -336,8 +335,7 @@ public class RailCannonItem extends Item implements PowerTool {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
-            Consumer<Component> tooltip, TooltipFlag flag) {
+    public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.rail_cannon.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.rail_cannon.stats",
                 String.format("%.0f", PowerArmorConfig.RAIL_DAMAGE.get() / 2), String.format("%.1f", PowerArmorConfig.RAIL_CHARGE.get() / 20F),

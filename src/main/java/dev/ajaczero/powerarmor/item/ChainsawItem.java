@@ -30,7 +30,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.LeavesBlock;
@@ -44,7 +43,7 @@ import org.jetbrains.annotations.Nullable;
  * the cut comes down too, top first, a few logs per tick. "Natural tree" = connected logs with natural
  * leaves (not placed by a player) attached, so log cabins and wooden builds only lose the block you cut.
  */
-public class ChainsawItem extends Item implements PowerTool {
+public class ChainsawItem extends Item implements PowerTool, ModTooltip {
     // Fuel per log, the biggest tree it fells (default 256 logs; the biggest vanilla trees have ~200) and the
     // felling speed: PowerArmorConfig.
     public static final float SPEED = 8F;          // diamond axe
@@ -261,8 +260,7 @@ public class ChainsawItem extends Item implements PowerTool {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
-            Consumer<Component> tooltip, TooltipFlag flag) {
+    public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
         tooltip.accept(Component.translatable("item.powerarmor.chainsaw.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.accept(Component.translatable("item.powerarmor.chainsaw.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
         tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
