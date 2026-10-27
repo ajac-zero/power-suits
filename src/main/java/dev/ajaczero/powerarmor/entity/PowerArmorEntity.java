@@ -39,6 +39,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.HasCustomInventoryScreen;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -86,7 +87,7 @@ import org.joml.Vector3fc;
  * </ul>
  * What a tool does lives in its item (item/PowerTool); what the mind decides, in entity/ai.
  */
-public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJumping {
+public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJumping, HasCustomInventoryScreen {
     public static final int MAX_HEALTH = 100;
 
     /** Synced to every client: bumped by the server each time the pilot releases jump, so other
@@ -650,7 +651,20 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
         }
     }
 
-    /** Sneak + right-click on a parked suit: open its inventory. Server only. */
+    /**
+     * Server: the inventory key (E) pressed inside the suit (user, 2026-10-27). Vanilla asks the vehicle of a player whose
+     * vehicle has its own inventory screen (horses, llamas, chest boats: HasCustomInventoryScreen) instead of opening the
+     * player's own: the client sends "open inventory" and the server lands here. The pilot gets the suit's menu, which is
+     * their inventory with the suit in it.
+     */
+    @Override
+    public void openCustomInventoryScreen(Player player) {
+        if (this.getControllingPassenger() == player && !this.isRogue()) {
+            this.openMenu(player);
+        }
+    }
+
+    /** Sneak + right-click on a parked suit, or E inside it: open its inventory. Server only. */
     private void openMenu(Player player) {
         player.openMenu(new SimpleMenuProvider((id, playerInventory, p) -> new PowerArmorMenu(id, playerInventory, this.inventory, this),
                 this.getDisplayName()), buf -> buf.writeVarInt(this.getId()));

@@ -1,22 +1,27 @@
-"""Builds the suit menu background (textures/gui/power_armor.png) from vanilla's furnace screen.
+"""Builds the suit menu background (textures/gui/power_armor.png) from vanilla's inventory screen.
 
     uv run --with pillow python3 tools/make-gui.py
 
-Keeps the furnace's frame and player-inventory slots, clears the top half, and draws our parts.
-Coordinates must match PowerArmorMenu (slots) and PowerArmorScreen (preview, flame, display).
+Since 2026-10-27 the suit's menu is the player's inventory with the suit in it (user): E inside the suit opens it, like
+a horse's. So it starts from vanilla's inventory.png and keeps its frame, inventory, hotbar, the preview window and the
+off-hand slot (the socket tool goes there: it's the suit's off hand). The armour column holds the suit's helmet and
+engine, then the burn flame, then the fuel slot (a furnace's order: what burns, the flame, the fuel); the 2x2 crafting
+grid makes way for a status display (the Power and Pack up buttons go under it; they're widgets, drawn by the game).
+Coordinates must match PowerArmorMenu (slots) and PowerArmorScreen (preview, flame, display, buttons).
 """
 import io
 import zipfile
 from glob import glob
 from PIL import Image
 
-jar = glob('build/moddev/artifacts/neoforge-*-client-extra-aka-minecraft-resources.jar')[0]
+jar = glob('build/moddev/artifacts/minecraft-patched-*-merged.jar')[0]
 with zipfile.ZipFile(jar) as z:
+    inventory = Image.open(io.BytesIO(z.read('assets/minecraft/textures/gui/container/inventory.png'))).convert('RGBA')
     furnace = Image.open(io.BytesIO(z.read('assets/minecraft/textures/gui/container/furnace.png'))).convert('RGBA')
 
 DARK, LIGHT, PANEL, SLOT = (55, 55, 55, 255), (255, 255, 255, 255), (198, 198, 198, 255), (139, 139, 139, 255)
-img = furnace.copy()
-flame_bg = furnace.crop((56, 36, 70, 50))  # the grey unlit flame
+img = inventory.copy()
+flame_bg = furnace.crop((56, 36, 70, 50))  # the furnace's grey unlit flame
 
 
 def fill(x0, y0, x1, y1, c):
@@ -36,15 +41,9 @@ def inset(x, y, w, h, inside):
     img.putpixel((x, y + h - 1), SLOT)
 
 
-fill(7, 14, 169, 80, PANEL)                 # clear the furnace parts (keep the inventory label row)
-inset(7, 17, 46, 54, (0, 0, 0, 255))        # suit preview window (46 wide since the ammo slot, 2026-10-25)
-inset(53, 35, 18, 18, SLOT)                 # ammo slot (item at 54,36), beside the socket it feeds
-inset(71, 17, 18, 18, SLOT)                 # helmet slot (item at 72,18)
-inset(71, 35, 18, 18, SLOT)                 # socket slot (item at 72,36)
-inset(71, 53, 18, 18, SLOT)                 # engine slot (item at 72,54), the backpack (2026-10-21)
-inset(89, 53, 18, 18, SLOT)                 # fuel slot (item at 90,54), next to its engine
-img.paste(flame_bg, (109, 55))              # flame beside the fuel slot (the Pack up button starts at x 126);
-                                            # the HUD gauge (FuelGauge) copies its grey flame from here too
-inset(94, 17, 76, 35, (24, 26, 24, 255))    # status display (4 lines: hull, fuel, power, ammo)
+fill(95, 7, 172, 81, PANEL)                 # clear the crafting grid, its arrow and result slot (not the off-hand slot)
+fill(7, 43, 25, 61, PANEL)                  # the third armour slot becomes the flame's place
+img.paste(flame_bg, (9, 45))                # flame between the engine (above) and the fuel slot (below)
+inset(97, 17, 72, 29, (24, 26, 24, 255))    # status display: three lines (hull, fuel, power)
 img.save('src/main/resources/assets/powerarmor/textures/gui/power_armor.png')
 print('wrote textures/gui/power_armor.png')

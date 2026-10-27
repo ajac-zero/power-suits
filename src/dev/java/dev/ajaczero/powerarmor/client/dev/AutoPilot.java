@@ -110,6 +110,8 @@ public final class AutoPilot {
     private static final boolean RAIL_ONLY = "rail".equals(System.getProperty("powerarmor.autopilot"));
     /** "hud" mode: only the pilot HUD scene (HudScene: every state the HUD shows, each tool, no helmet), ~35 s. */
     private static final boolean HUD_ONLY = "hud".equals(System.getProperty("powerarmor.autopilot"));
+    /** "menu" mode: only the suit's inventory screen scene (MenuScene: E inside, F swaps, the power switch), ~25 s. */
+    private static final boolean MENU_ONLY = "menu".equals(System.getProperty("powerarmor.autopilot"));
     // The main script's sections, each starting where the one before ends (its length is the difference). Case labels
     // in script() count from their section's start, so a step added to one section only changes that section's length
     // here; every later section (and the mech scenes, MECH_START) moves along by itself. Screenshot names keep the
@@ -203,6 +205,10 @@ public final class AutoPilot {
             }
         } else if (HUD_ONLY) {
             if (!HudScene.step(mc, tick++)) {
+                mc.stop();
+            }
+        } else if (MENU_ONLY) {
+            if (!MenuScene.step(mc, tick++)) {
                 mc.stop();
             }
         } else {
@@ -1358,7 +1364,11 @@ public final class AutoPilot {
             paintRunning = false;
             engineStart = m + 1;
         }
-        if (!paintRunning && m >= engineStart && !EngineScene.step(mc, m - engineStart)) {
+        if (!paintRunning && engineRunning && m >= engineStart && !EngineScene.step(mc, m - engineStart)) {
+            engineRunning = false;
+            menuStart = m + 1;
+        }
+        if (!engineRunning && m >= menuStart && !MenuScene.step(mc, m - menuStart)) {
             mc.stop();
         }
         if (m >= 10 && m < 420) {
@@ -1379,6 +1389,8 @@ public final class AutoPilot {
     private static int paintStart = Integer.MAX_VALUE;
     private static boolean paintRunning = true;
     private static int engineStart = Integer.MAX_VALUE;
+    private static boolean engineRunning = true;
+    private static int menuStart = Integer.MAX_VALUE;
     private static PowerArmorEntity mindSuit;
     // Filled on the server thread, read by the client thread (logMind): a copy-on-write list (an ArrayList threw mid-iteration).
     private static final List<Mob> mindMobs = new CopyOnWriteArrayList<>();

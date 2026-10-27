@@ -21,7 +21,7 @@
   "gui.powerarmor.offline": "NO POWER",
   "gui.powerarmor.no_fuel": "NO FUEL",
   "gui.powerarmor.socket_slot": "Power tool socket",
-  "gui.powerarmor.socket_slot.hint": "Power tools go here: Chaingun, EM Projector, Mining Drill, Chainsaw",
+  "gui.powerarmor.socket_slot.hint": "The suit's off hand: its power tool goes here. Press the swap-hands key (F) over a tool to swap it in; while piloting, F swaps the tool in your hand with this one.",
   "gui.powerarmor.fuel_slot": "Fuel",
   "gui.powerarmor.fuel_slot.hint": "Firebox: anything a furnace burns, as long as a furnace burns it (coal 1:20, blaze rod 2:00, lava bucket 16:40 of walking). Tidal Engine on land: water buckets or bottles. Star Reactor: a Nether Star.",
   "item.powerarmor.power_tool.stats": "%s hearts per shot, %s fuel, every %s s",
@@ -297,5 +297,11 @@
   "key.category.powerarmor.power_armor": "Power Armor",
   "key.powerarmor.power_switch": "Power switch (while piloting)",
   "message.powerarmor.switched_off": "Power switched off",
-  "hud.powerarmor.switched_off": "POWER OFF"
+  "hud.powerarmor.switched_off": "POWER OFF",
+  "gui.powerarmor.power": "Power: %s",
+  "gui.powerarmor.power.on": "ON",
+  "gui.powerarmor.power.off": "OFF",
+  "gui.powerarmor.power.tooltip": "The suit's power switch. Off, it stands down and burns nothing but keeps its fuel: the way to park it.",
+  "gui.powerarmor.switched_off": "POWER OFF",
+  "message.powerarmor.not_a_tool": "Only a power tool fits the suit's socket"
 }

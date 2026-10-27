@@ -11,7 +11,9 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -22,6 +24,12 @@ import org.jetbrains.annotations.Nullable;
  * what may go in them and what shift-click does. It exists on both sides; the server's copy is the
  * real one and Minecraft keeps the client's copy in sync slot by slot. The picture is drawn by
  * {@code client/PowerArmorScreen}.
+ * <p>
+ * Since 2026-10-27 (user) it's the player's inventory with the suit in it, laid out like vanilla's inventory screen:
+ * the pilot opens it with the inventory key (E) from inside, like a horse's (PowerArmorEntity.openCustomInventoryScreen),
+ * and sneak + right-click still opens it on a parked suit (under review). The suit's helmet, engine and fuel take the
+ * armour column, its socket tool the off-hand slot (the tool is the suit's off hand: the swap-hands key moves it, see
+ * {@link #clicked}), the power switch and Pack up the crafting grid's place.
  */
 public class PowerArmorMenu extends AbstractContainerMenu {
     // Two numberings, don't mix them up: the suit's own slots (PowerArmorEntity.FUEL_SLOT etc.: where an item lives in
@@ -34,14 +42,15 @@ public class PowerArmorMenu extends AbstractContainerMenu {
     /** Where a shift-click from the player's side tries to put an item, first that takes it (the fuel slot last: it takes
      *  the most). */
     private static final int[] SHIFT_CLICK_ORDER = {MENU_SOCKET, MENU_HELMET, MENU_ENGINE, MENU_FUEL};
-    /** Button id sent by the "Pack up" button (vanilla's built-in menu button packet carries it). */
-    public static final int BUTTON_PACK = 0;
+    /** Button ids sent by the "Pack up" and power switch buttons (vanilla's built-in menu button packet carries them). */
+    public static final int BUTTON_PACK = 0, BUTTON_POWER = 1;
 
-    /** Slot positions in the 176x166 background (top-left of the 16x16 item area): a column ordered like the suit,
-     *  helmet on top, the tool socket (arm), the engine (backpack) at the bottom with its fuel beside it
-     *  (tools/make-gui.py draws the frames). The ammo sits beside the socket it feeds, on the left (the status display
-     *  takes the right; the suit preview got 8 px narrower for it). */
-    public static final int SLOT_X = 72, HELMET_Y = 18, SOCKET_Y = 36, ENGINE_Y = 54, FUEL_X = 90, FUEL_Y = 54, AMMO_X = 54;
+    /** Slot positions in the 176x166 background (top-left of the 16x16 item area), vanilla's inventory screen's: the
+     *  armour column (x 8) holds the helmet (head), the engine (the backpack, on the chest's row), then the burn flame
+     *  and the fuel; the socket sits in the off-hand slot (tools/make-gui.py draws the frames). */
+    public static final int COLUMN_X = 8, HELMET_Y = 8, ENGINE_Y = 26, FUEL_Y = 62, SOCKET_X = 77, SOCKET_Y = 62;
+    /** Vanilla's empty-helmet-slot outline. */
+    private static final Identifier EMPTY_HELMET = Identifier.withDefaultNamespace("container/slot/helmet");
 
     @Nullable
     private final PowerArmorEntity suit;
@@ -53,7 +62,7 @@ public class PowerArmorMenu extends AbstractContainerMenu {
         suitInventory.startOpen(playerInventory.player);
 
         // Added in MENU_* order: the n-th addSlot is menu slot n.
-        this.addSlot(new Slot(suitInventory, PowerArmorEntity.SOCKET_SLOT, SLOT_X, SOCKET_Y) {
+        this.addSlot(new Slot(suitInventory, PowerArmorEntity.SOCKET_SLOT, SOCKET_X, SOCKET_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.getItem() instanceof PowerTool;
@@ -64,7 +73,7 @@ public class PowerArmorMenu extends AbstractContainerMenu {
                 return 1;
             }
         });
-        this.addSlot(new Slot(suitInventory, PowerArmorEntity.FUEL_SLOT, FUEL_X, FUEL_Y) {
+        this.addSlot(new Slot(suitInventory, PowerArmorEntity.FUEL_SLOT, COLUMN_X, FUEL_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 // Any engine's fuel, like a furnace's slot (what the installed engine can't use just sits there), and
@@ -72,10 +81,15 @@ public class PowerArmorMenu extends AbstractContainerMenu {
                 return SuitFuel.fitsFuelSlot(stack);
             }
         });
-        this.addSlot(new Slot(suitInventory, PowerArmorEntity.HELMET_SLOT, SLOT_X, HELMET_Y) {
+        this.addSlot(new Slot(suitInventory, PowerArmorEntity.HELMET_SLOT, COLUMN_X, HELMET_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.is(ModItems.SUIT_HELMET.get());
+            }
+
+            @Override
+            public Identifier getNoItemIcon() {
+                return EMPTY_HELMET;
             }
 
             @Override
@@ -83,7 +97,7 @@ public class PowerArmorMenu extends AbstractContainerMenu {
                 return 1;
             }
         });
-        this.addSlot(new Slot(suitInventory, PowerArmorEntity.ENGINE_SLOT, SLOT_X, ENGINE_Y) {
+        this.addSlot(new Slot(suitInventory, PowerArmorEntity.ENGINE_SLOT, COLUMN_X, ENGINE_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.getItem() instanceof EngineItem;
@@ -94,7 +108,7 @@ public class PowerArmorMenu extends AbstractContainerMenu {
                 return 1;
             }
         });
-        // Player inventory and hotbar, same place as in a furnace.
+        // Player inventory and hotbar, where vanilla's inventory screen has them.
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 this.addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
@@ -116,19 +130,65 @@ public class PowerArmorMenu extends AbstractContainerMenu {
         return this.suit;
     }
 
-    /** Only usable on a parked suit you're standing next to. */
+    /** Both sides: is this player inside the suit (its pilot)? Then there's no Pack up: climb out first. */
+    public boolean isPiloting(Player player) {
+        return this.suit != null && player.getVehicle() == this.suit;
+    }
+
+    /** Usable by the pilot from inside, or on a parked suit you're standing next to (not one somebody else is in). */
     @Override
     public boolean stillValid(Player player) {
-        return this.suit != null && this.suit.isAlive() && !this.suit.isVehicle() && player.distanceToSqr(this.suit) < 8 * 8;
+        return this.suit != null && this.suit.isAlive()
+                && (this.isPiloting(player) || !this.suit.isVehicle() && player.distanceToSqr(this.suit) < 8 * 8);
     }
 
     /** Runs on the server when a screen button is clicked. */
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (id == BUTTON_PACK && this.suit != null && this.stillValid(player)) {
+        if (this.suit == null || !this.stillValid(player)) {
+            return false;
+        }
+        if (id == BUTTON_PACK && !this.isPiloting(player)) {
             return this.suit.packUp(player); // refused while the firebox is flooded
         }
+        if (id == BUTTON_POWER) {
+            this.suit.flipPowerSwitch();
+            return true;
+        }
         return false;
+    }
+
+    /**
+     * The swap-hands key (F) over a slot swaps that slot with the socket, not with the player's real off hand: in this
+     * screen the socket is the off hand (vanilla's swap would move the player's hidden off-hand item instead). A tool
+     * goes in, whatever was in the socket comes out; anything that isn't a power tool stays put. Runs on both sides (the
+     * client predicts the click, the server's result is the real one).
+     */
+    @Override
+    public void clicked(int slotIndex, int buttonNum, ContainerInput input, Player player) {
+        if (input == ContainerInput.SWAP && buttonNum == Inventory.SLOT_OFFHAND && slotIndex >= 0 && slotIndex < this.slots.size()) {
+            Slot target = this.slots.get(slotIndex);
+            Slot socket = this.slots.get(MENU_SOCKET);
+            if (target != socket) {
+                swap(target, socket, player);
+            }
+            return;
+        }
+        super.clicked(slotIndex, buttonNum, input, player);
+    }
+
+    /** Swap two slots' items if each may go in the other (an empty side is fine; nothing happens with both empty). */
+    private static void swap(Slot a, Slot b, Player player) {
+        ItemStack x = a.getItem(), y = b.getItem();
+        if (x.isEmpty() && y.isEmpty() || !a.mayPickup(player) || !b.mayPickup(player)) {
+            return;
+        }
+        boolean xFits = x.isEmpty() || b.mayPlace(x) && x.getCount() <= b.getMaxStackSize(x);
+        boolean yFits = y.isEmpty() || a.mayPlace(y) && y.getCount() <= a.getMaxStackSize(y);
+        if (xFits && yFits) {
+            a.setByPlayer(y.copy());
+            b.setByPlayer(x.copy());
+        }
     }
 
     /** The suit's menu slot a shift-click from the player's side sends this item to, or -1 (then it hops between

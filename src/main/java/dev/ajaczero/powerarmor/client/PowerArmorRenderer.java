@@ -53,8 +53,14 @@ public class PowerArmorRenderer extends GeoEntityRenderer<PowerArmorEntity, Livi
         state.addGeckolibData(SuitRenderData.HIP_SINK, suit.animator()::setHipHeight);
     }
 
+    /** Set while the suit's menu draws its preview (PowerArmorScreen): the whole suit, even the one you sit in. */
+    static boolean inventoryPreview;
+
     /** True when we're drawing the suit the local player sits in, from inside (first person). */
     static boolean isCockpitView(PowerArmorEntity suit) {
+        if (inventoryPreview) {
+            return false;
+        }
         Minecraft mc = Minecraft.getInstance();
         // The camera must also be the pilot: a scripted camera (another entity, e.g. the autopilot's close-ups) sees
         // the whole suit even while the view is set to first person.

@@ -18,19 +18,30 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * The picture half of the suit menu (client only). Slots and shift-click live in PowerArmorMenu;
- * this draws the background, a live preview of the suit, the burn flame, a status display and the
+ * The picture half of the suit menu (client only). Slots and shift-click live in PowerArmorMenu; this draws the
+ * background, a live preview of the suit, the burn flame, a status display, the power switch and (from outside) the
  * Pack up button. Numbers come from the suit's synced entity data, so they update while you watch.
+ * <p>
+ * Since 2026-10-27 (user) it looks like vanilla's inventory screen with the suit in it (tools/make-gui.py): the
+ * suit's slots down the armour column and in the off-hand slot, the suit in the preview window, the status display and
+ * buttons where the crafting grid was. Inside the suit this is your inventory (E).
  */
 public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
     private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/gui/power_armor.png");
     private static final Identifier LIT_PROGRESS = Identifier.withDefaultNamespace("container/furnace/lit_progress");
-    private static final int FLAME_X = 109, FLAME_Y = 55; // beside the fuel slot
-    private static final int DISPLAY_X = 98, DISPLAY_Y = 18, LINE = 8; // four lines in the status display
-    private static final int GREEN = 0xFF7CFF6B, AMBER = 0xFFFFB13B, RED = 0xFFFF5555, DIM = 0xFF5E7A5A;
+    /** The flame between the engine and fuel slots; the preview window (vanilla's player box); the status display
+     *  (three lines) and the two buttons under it. */
+    private static final int FLAME_X = 9, FLAME_Y = 45;
+    private static final int PREVIEW_X0 = 26, PREVIEW_Y0 = 8, PREVIEW_X1 = 75, PREVIEW_Y1 = 78, PREVIEW_SCALE = 18;
+    private static final int DISPLAY_X = 100, DISPLAY_Y = 20, LINE = 8;
+    private static final int BUTTON_X = 97, POWER_Y = 48, PACK_Y = 64, BUTTON_W = 72, BUTTON_H = 15;
+    private static final int GREEN = 0xFF7CFF6B, AMBER = 0xFFFFB13B, RED = 0xFFFF5555;
+
+    private Button power;
 
     public PowerArmorScreen(PowerArmorMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
+        this.titleLabelX = 97; // where vanilla's inventory screen says "Crafting"
     }
 
     @Override
@@ -38,17 +49,32 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         super.init();
         // Buttons in container screens don't need a custom packet: vanilla sends the button id to the
         // server, which calls PowerArmorMenu.clickMenuButton.
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.powerarmor.pack_up"),
-                        b -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_PACK))
-                .bounds(this.leftPos + 126, this.topPos + 54, 44, 16)
-                .tooltip(Tooltip.create(Component.translatable("gui.powerarmor.pack_up.tooltip")))
+        this.power = this.addRenderableWidget(Button.builder(powerLabel(this.menu.getSuit()),
+                        b -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_POWER))
+                .bounds(this.leftPos + BUTTON_X, this.topPos + POWER_Y, BUTTON_W, BUTTON_H)
+                .tooltip(Tooltip.create(Component.translatable("gui.powerarmor.power.tooltip")))
                 .build());
+        if (!this.menu.isPiloting(this.minecraft.player)) {
+            // Packing up needs you outside: from inside there's no button (climb out first).
+            this.addRenderableWidget(Button.builder(Component.translatable("gui.powerarmor.pack_up"),
+                            b -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_PACK))
+                    .bounds(this.leftPos + BUTTON_X, this.topPos + PACK_Y, BUTTON_W, BUTTON_H)
+                    .tooltip(Tooltip.create(Component.translatable("gui.powerarmor.pack_up.tooltip")))
+                    .build());
+        }
+    }
+
+    /** The switch's caption shows its state, like vanilla's option buttons ("Power: ON"). */
+    private static Component powerLabel(PowerArmorEntity suit) {
+        boolean on = suit == null || suit.power().isSwitchedOn();
+        return Component.translatable("gui.powerarmor.power", Component.translatable(on ? "gui.powerarmor.power.on" : "gui.powerarmor.power.off"));
     }
 
     // Since 1.21.6 screens don't draw directly: each frame they "extract" what to draw (a list of quads, text, items)
     // into GuiGraphicsExtractor, and Minecraft draws that list afterwards. Hence the extract* names.
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        this.power.setMessage(powerLabel(this.menu.getSuit())); // the switch flips on the server: follow the synced state
         super.extractRenderState(graphics, mouseX, mouseY, partialTick); // background, slots, labels, item tooltips
         this.renderEmptySlotHints(graphics, mouseX, mouseY);
     }
@@ -66,17 +92,26 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         if (suit.power().hasFreePower() && suit.isPowered()) {
             // a wet tidal engine or a star reactor: burning nothing, never running down
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, LIT_PROGRESS, 14, 14, 0, 0, x + FLAME_X, y + FLAME_Y, 14, 14);
-        } else if (suit.power().getBurnLeft() > 0 && suit.power().getBurnTotal() > 0) {
+        } else if (suit.isPowered() && suit.power().getBurnLeft() > 0 && suit.power().getBurnTotal() > 0) {
             int h = Mth.ceil(Mth.clamp(suit.power().getBurnLeft() / (float) suit.power().getBurnTotal(), 0F, 1F) * 13F) + 1;
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, LIT_PROGRESS, 14, 14, 0, 14 - h, x + FLAME_X, y + FLAME_Y + 14 - h, 14, h);
         }
-        // The suit itself, turning to follow the mouse (like the player in the inventory screen).
-        InventoryScreen.extractEntityInInventoryFollowsMouse(graphics, x + 8, y + 18, x + 52, y + 70, 15, 0.0F, mouseX, mouseY, suit);
+        // The suit itself, turning to follow the mouse (like the player in the inventory screen). The whole of it, also
+        // from inside: in first person the renderer would leave out all but the legs (the cockpit view).
+        PowerArmorRenderer.inventoryPreview = true;
+        try {
+            InventoryScreen.extractEntityInInventoryFollowsMouse(graphics, x + PREVIEW_X0, y + PREVIEW_Y0, x + PREVIEW_X1, y + PREVIEW_Y1,
+                    PREVIEW_SCALE, 0.0625F, mouseX, mouseY, suit);
+        } finally {
+            PowerArmorRenderer.inventoryPreview = false;
+        }
     }
 
+    /** The suit's name over the status display (vanilla's "Crafting" spot); no "Inventory" label (vanilla's inventory
+     *  screen has none either: the grid starts right under the preview). */
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);
+        graphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFF404040, false);
         PowerArmorEntity suit = this.menu.getSuit();
         if (suit == null) {
             return;
@@ -91,11 +126,14 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         Component range = suit.power().hasFreePower() ? Component.translatable("gui.powerarmor.range_free")
                 : Component.translatable("gui.powerarmor.range", PowerArmorItem.formatWalkTime(energy));
         graphics.text(this.font, range, DISPLAY_X, DISPLAY_Y + LINE, suit.power().hasFreePower() ? GREEN : fuelColour, false);
-        // Say why a suit stands down: no engine, a flooded firebox, or (parked) no helmet: its mind needs the helmet.
-        boolean warn = suit.getEngine() == null || suit.power().isFlooded() || !suit.hasHelmet();
-        Component status = Component.translatable(suit.getEngine() == null ? "gui.powerarmor.no_engine"
+        // Say why a suit stands down: switched off, no engine, a flooded firebox, or (parked) no helmet: its mind needs
+        // the helmet.
+        boolean off = !suit.power().isSwitchedOn();
+        boolean warn = off || suit.getEngine() == null || suit.power().isFlooded() || !suit.hasHelmet();
+        Component status = Component.translatable(off ? "gui.powerarmor.switched_off"
+                : suit.getEngine() == null ? "gui.powerarmor.no_engine"
                 : suit.power().isFlooded() ? "gui.powerarmor.flooded"
-                : !suit.hasHelmet() ? "gui.powerarmor.no_helmet"
+                : !suit.hasHelmet() && !suit.isVehicle() ? "gui.powerarmor.no_helmet"
                 : suit.isPowered() ? "gui.powerarmor.online" : "gui.powerarmor.offline");
         graphics.text(this.font, status, DISPLAY_X, DISPLAY_Y + 2 * LINE, warn ? AMBER : suit.isPowered() ? GREEN : RED, false);
     }
@@ -106,9 +144,10 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
             return;
         }
         int index = this.menu.slots.indexOf(this.hoveredSlot);
-        String key = index == 0 ? "gui.powerarmor.socket_slot" : index == 1 ? "gui.powerarmor.fuel_slot"
-                : index == 2 ? "gui.powerarmor.helmet_slot" : index == 3 ? "gui.powerarmor.engine_slot"
-                : null;
+        String key = index == PowerArmorMenu.MENU_SOCKET ? "gui.powerarmor.socket_slot"
+                : index == PowerArmorMenu.MENU_FUEL ? "gui.powerarmor.fuel_slot"
+                : index == PowerArmorMenu.MENU_HELMET ? "gui.powerarmor.helmet_slot"
+                : index == PowerArmorMenu.MENU_ENGINE ? "gui.powerarmor.engine_slot" : null;
         if (key != null) {
             graphics.setComponentTooltipForNextFrame(this.font, List.of(Component.translatable(key),
                     Component.translatable(key + ".hint").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);

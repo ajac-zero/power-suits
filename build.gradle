@@ -151,6 +151,13 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'hud'
         }
 
+        // Dev tool: only the suit's inventory screen scene (E inside, F swaps the socket tool, the power switch, the
+        // screen from outside; ap_menu_*.png, run/autopilot_menu.csv), ~25 s.
+        autopilotMenu {
+            client()
+            systemProperty 'powerarmor.autopilot', 'menu'
+        }
+
         // Dev tool: live-tunes the cockpit viewmodel (see AutoPilot.viewTuner); stays open until closed.
         autopilotView {
             client()

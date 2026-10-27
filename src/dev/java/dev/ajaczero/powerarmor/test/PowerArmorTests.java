@@ -80,6 +80,8 @@ import net.minecraft.world.entity.monster.zombie.Husk;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
@@ -503,6 +505,66 @@ public final class PowerArmorTests {
         menu.clickMenuButton(player, PowerArmorMenu.BUTTON_PACK);
         helper.assertTrue(suit.isRemoved(), "Pack up should remove the suit");
         helper.assertTrue(!packedSuit(player).isEmpty(), "Pack up should give the item");
+        helper.succeed();
+    }
+
+    /** Inside the suit the inventory key (E) opens the suit's menu (vanilla asks the vehicle: HasCustomInventoryScreen):
+     *  usable while piloting, no Pack up from inside, and its power button flips the switch (user, 2026-10-27). */
+    @SuitTest(timeoutTicks = 20)
+    public static void inventoryKeyInsideOpensTheSuitMenu(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        ServerPlayer pilot = mockServerPlayer(helper);
+        pilot.snapTo(helper.absoluteVec(new Vec3(1.5, 2, 4.5)));
+        suit.interact(pilot, InteractionHand.MAIN_HAND, suit.position());
+        helper.assertTrue(pilot.getVehicle() == suit, "boarded");
+        suit.openCustomInventoryScreen(pilot);
+        helper.assertTrue(pilot.containerMenu instanceof PowerArmorMenu m && m.getSuit() == suit && m.stillValid(pilot) && m.isPiloting(pilot),
+                "the suit's menu, usable from inside, got " + pilot.containerMenu);
+        PowerArmorMenu menu = (PowerArmorMenu) pilot.containerMenu;
+        helper.assertTrue(!menu.clickMenuButton(pilot, PowerArmorMenu.BUTTON_PACK) && !suit.isRemoved(), "no packing up from inside");
+        menu.clickMenuButton(pilot, PowerArmorMenu.BUTTON_POWER);
+        helper.assertTrue(!suit.power().isSwitchedOn(), "the power button switches it off");
+        pilot.closeContainer();
+        pilot.stopRiding();
+        dismiss(helper, pilot);
+        helper.succeed();
+    }
+
+    /** The swap-hands key (F) and the socket, the suit's off hand (user, 2026-10-27): in the menu, F over a slot swaps it
+     *  with the socket (power tools only; the player's real off hand isn't touched); while piloting, F swaps the item in
+     *  hand with the socket tool (an empty hand takes it out). */
+    @SuitTest
+    public static void swapHandsKeyMovesTheSocketTool(GameTestHelper helper) {
+        PowerArmorEntity suit = fueledSuit(helper, new ItemStack(Items.COAL, 4));
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, new ItemStack(ModItems.CHAINGUN.get()));
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.snapTo(helper.absoluteVec(new Vec3(2.5, 2, 4.5)));
+        PowerArmorMenu menu = new PowerArmorMenu(1, player.getInventory(), suit.getInventory(), suit);
+        player.getInventory().setItem(0, new ItemStack(ModItems.DRILL.get())); // hotbar slot 0
+        player.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.TORCH));
+        menu.clicked(PowerArmorMenu.HOTBAR_START, Inventory.SLOT_OFFHAND, ContainerInput.SWAP, player);
+        helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(ModItems.DRILL.get())
+                && player.getInventory().getItem(0).is(ModItems.CHAINGUN.get()), "F in the menu swaps the drill in, the chaingun out");
+        helper.assertTrue(player.getOffhandItem().is(Items.TORCH), "the real off hand is left alone");
+        player.getInventory().setItem(1, new ItemStack(Items.DIRT));
+        menu.clicked(PowerArmorMenu.HOTBAR_START + 1, Inventory.SLOT_OFFHAND, ContainerInput.SWAP, player);
+        helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(ModItems.DRILL.get())
+                && player.getInventory().getItem(1).is(Items.DIRT), "dirt doesn't go in");
+
+        Player pilot = boardedPilot(helper, suit);
+        pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.CHAINSAW.get()));
+        var event = CommonHooks.onLivingSwapHandItems(pilot);
+        helper.assertTrue(event.isCanceled(), "the suit takes over the swap");
+        helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(ModItems.CHAINSAW.get())
+                && pilot.getMainHandItem().is(ModItems.DRILL.get()), "F while piloting swaps the chainsaw in, the drill into the hand");
+        pilot.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        CommonHooks.onLivingSwapHandItems(pilot);
+        helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).isEmpty()
+                && pilot.getMainHandItem().is(ModItems.CHAINSAW.get()), "an empty hand takes the tool out");
+        pilot.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.STONE, 5));
+        CommonHooks.onLivingSwapHandItems(pilot);
+        helper.assertTrue(suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).isEmpty()
+                && pilot.getMainHandItem().is(Items.STONE), "stone stays in the hand");
         helper.succeed();
     }
 
@@ -2276,6 +2338,7 @@ public final class PowerArmorTests {
         for (String id : new String[] {"entity_anim_trigger", "stop_triggered_entity_anim", "stateless_entity_play_anim", "stateless_entity_stop_anim"}) {
             channels.add(Identifier.fromNamespaceAndPath("geckolib", id));
         }
+        channels.add(Identifier.fromNamespaceAndPath("neoforge", "advanced_open_screen")); // a menu with extra data (the suit's)
         return player;
     }
 

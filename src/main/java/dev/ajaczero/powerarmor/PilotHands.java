@@ -1,10 +1,12 @@
 package dev.ajaczero.powerarmor;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
+import dev.ajaczero.powerarmor.item.PowerTool;
 import dev.ajaczero.powerarmor.item.ToolMining;
 import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.TriState;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -21,6 +23,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityMountEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
+import net.neoforged.neoforge.event.entity.living.LivingSwapItemsEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -31,7 +34,8 @@ import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
  * normal: punch, mine, fight, place blocks, open doors (decided 2026-10-13; it used to be blocked so left click
  * could run the tool). The socket tool is the suit's off hand, used with right click when the hand has nothing to do
  * (ToolInput), so:
- *  - the player's real off-hand item isn't used while piloting (the suit has no second hand for it);
+ *  - the player's real off-hand item isn't used while piloting (the suit has no second hand for it), and the swap-hands
+ *    key (F) swaps the item in hand with the socket tool instead (user, 2026-10-27: tools on the hotbar, F to change);
  *  - no eating or drinking while the helmet is on: the pilot is sealed in (food, potions, milk, honey, stew, cake). Food
  *    in the hand then counts as "nothing to do", so right click goes on to the socket tool. Without a helmet you eat;
  *  - a powered-down suit's hand doesn't move: no attacking, mining or using items;
@@ -48,6 +52,39 @@ public final class PilotHands {
 
     private static PowerArmorEntity suitOf(Player player) {
         return player.getVehicle() instanceof PowerArmorEntity suit ? suit : null;
+    }
+
+    // ---- the swap-hands key: the socket is the suit's off hand -------------------------------------
+
+    /**
+     * Server: F while piloting swaps the item in the pilot's hand with the socket tool, instead of with the player's own
+     * off hand (user, 2026-10-27: keep tools on the hotbar and change them with F). A power tool in hand goes into the
+     * socket and the old tool comes out into the hand; an empty hand takes the tool out; anything else stays where it is.
+     * Works powered or not (it's only a swap). NeoForge posts this event for the swap packet; cancelling it stops
+     * vanilla's own swap.
+     */
+    @SubscribeEvent
+    public static void swapHands(LivingSwapItemsEvent.Hands event) {
+        if (!(event.getEntity() instanceof Player player) || !(player.getVehicle() instanceof PowerArmorEntity suit)
+                || suit.getControllingPassenger() != player) {
+            return;
+        }
+        event.setCanceled(true);
+        if (player.level().isClientSide()) {
+            return;
+        }
+        ItemStack hand = player.getMainHandItem();
+        ItemStack tool = suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT);
+        if (!hand.isEmpty() && !(hand.getItem() instanceof PowerTool && hand.getCount() == 1)) {
+            player.sendOverlayMessage(Component.translatable("message.powerarmor.not_a_tool"));
+            return;
+        }
+        if (hand.isEmpty() && tool.isEmpty()) {
+            return;
+        }
+        suit.getInventory().setItem(PowerArmorEntity.SOCKET_SLOT, hand.copy());
+        player.setItemInHand(InteractionHand.MAIN_HAND, tool.copy());
+        suit.playSound(SoundEvents.ARMOR_EQUIP_IRON.value(), 0.8F, 1.1F);
     }
 
     // ---- attacking and mining: normal, but a powered-down hand doesn't move --------------------------
