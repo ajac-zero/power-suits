@@ -49,6 +49,19 @@ Built for the Power Armor suit menu (fuel + tool socket, Pack up button) and fue
 - *(26.3)* Hide a vanilla layer with `RenderGuiLayerEvent.Pre` + `setCanceled` on its id (`VanillaGuiLayers.VEHICLE_HEALTH`:
   the suit's 30 hearts). Tinted white masks: `blit(GUI_TEXTURED, tex, x, y, 0, 0, w, h, w, h, argb)`; colours carry alpha
   (fading). Bigger text: `g.pose()` is a `Matrix3x2fStack` (`pushMatrix`, `translate`, `scale`, `popMatrix`).
+- *(26.3)* **Camera overlays (pumpkin-style):** `registerAbove(VanillaGuiLayers.CAMERA_OVERLAYS, ...)` draws under the
+  crosshair, hotbar and other HUD; check `options.getCameraType().isFirstPerson()` like vanilla. Anchor pieces to the
+  corners in GUI pixels instead of stretching one picture (the pumpkin's 256x256 warps on wide windows). Mirror a texture
+  with a negative source width: `blit(pipeline, tex, x, y, u = w, 0, w, h, srcWidth = -w, h, w, h, argb)`.
+- *(26.3)* **Move a vanilla layer** (boss bars, effect icons) out of your HUD's way: in `RenderGuiLayerEvent.Pre`
+  (priority LOWEST, skip if cancelled) `pose().pushMatrix()` + `translate(0, dy)` for that layer's id, `popMatrix()` in
+  `Post`. Boss bars start at y 12 (name 9 above, 19 apart); effect icons at the top right, y 1 (good) and 27 (bad).
+- *(26.3)* **World time:** `level.getOverworldClockTime()` (ticks; day = t / 24000 + 1, 06:00 at tick 0) replaced
+  `getDayTime()`. The vanilla clock item only reads in the overworld (`context_dimension` select), the compass spins
+  where the spawn isn't.
+- *(26.3)* **Two config files** (CLIENT next to COMMON): `registerConfig(ModConfig.Type.CLIENT, SPEC)` in the client
+  @Mod -> `<modid>-client.toml`; the config screen then lists both, labelled by
+  `<modid>.configuration.section.<modid>.client.toml` (+ `.title`).
 - A rate the server doesn't sync (the burn embers) can be measured on the client from a synced total tick by tick;
   clamp one-off jumps (refuels, a flooded firebox) or they swamp the smoothing for seconds.
 

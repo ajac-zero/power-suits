@@ -48,6 +48,8 @@ public final class ClientSetup {
 
     @SubscribeEvent
     public static void registerHud(RegisterGuiLayersEvent event) {
+        // the helmet's edge right after vanilla's camera overlays (the pumpkin's): under the crosshair, hotbar and HUD
+        event.registerAbove(VanillaGuiLayers.CAMERA_OVERLAYS, SuitVisor.ID, SuitVisor::render);
         event.registerAbove(VanillaGuiLayers.HOTBAR, SuitHud.ID, SuitHud::render);
     }
 

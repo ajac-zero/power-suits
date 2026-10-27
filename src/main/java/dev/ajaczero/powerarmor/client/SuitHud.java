@@ -18,7 +18,9 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
@@ -28,22 +30,27 @@ import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The pilot's HUD, projected on the helmet's visor (design sec. 6, 2026-10-26, after players called the old fuel gauge
- * bland; laid out after Fallout's power armour HUD): flat amber readouts in two corner panels.
+ * The pilot's HUD, projected on the helmet's visor (design sec. 6). Since 2026-10-27 it belongs to the visor
+ * ({@link SuitVisor} draws the helmet's edge around the view): no boxes, the readouts float on the glass in the visor
+ * colour (Mods > Power Armor > Config, {@link VisorConfig}; terminal green by default) in the top corners, with a
+ * compass and a clock between them (the helmet is crafted with both).
  * <ul>
- *   <li>Left, the suit: its figure (one block per armour piece, like Fallout's), HULL (health) with the seal shield,
- *   and FUEL (time left at walking pace, a bar for how full the
- *   fuel slot is) with three embers for the burn rate: 1 idling, 2 walking, 3 sprinting or a hungry tool at work, dark
- *   when nothing burns (a free engine, or off).</li>
- *   <li>Right, the socket tool: its symbol, one labelled bar (heat, charge, reload) and its ammo on a 3-digit counter,
- *   each tool's own ({@link dev.ajaczero.powerarmor.item.ToolEffects#hud}).</li>
+ *   <li>Top left, the suit: its figure (one block per armour piece, like Fallout's), HULL (health) with the seal shield,
+ *   and FUEL (time left at walking pace, a bar for how full the fuel slot is) with three embers for the burn rate:
+ *   1 idling, 2 walking, 3 sprinting or a hungry tool at work, dark when nothing burns (a free engine).</li>
+ *   <li>Top right, the socket tool: its symbol, one labelled bar (heat, charge, reload) and its ammo on a 3-digit
+ *   counter, each tool's own ({@link dev.ajaczero.powerarmor.item.ToolEffects#hud}).</li>
+ *   <li>Top centre, under the helmet's brow, as terminal text: a compass tape (one character per 5 degrees) with a
+ *   {@code ^} under the heading, the heading in degrees, the day and the time. Like the vanilla items they only work in
+ *   the overworld: elsewhere the tape spins and the numbers read {@code ---}.</li>
  * </ul>
- * Amber normally; the whole HUD turns red while anything is critical (hull at a quarter, fuel low, the last rounds, an
- * overheated barrel), and fades while the suit has no power. The helmet carries the projector: no helmet, no HUD
- * (vanilla's vehicle hearts then stand in for the hull, as on any mount). With the HUD up those hearts are hidden.
+ * The whole HUD turns red while anything is critical (hull at a quarter, fuel low, the last rounds, an overheated
+ * barrel). Without power the projector is dark: only a red blinking NO FUEL (or FLOODED) is left. The helmet carries the
+ * projector: no helmet, no HUD (vanilla's vehicle hearts then stand in for the hull, as on any mount). With the HUD up
+ * those hearts are hidden, and vanilla's boss bars and effect icons move down out of its way.
  * <p>
  * It's a "GUI layer" (registered in ClientSetup), drawn every frame after the vanilla hotbar. Everything it shows comes
- * from the suit's synced data: the client never asks the server.
+ * from the suit's synced data and the client's own world: the client never asks the server.
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class SuitHud {
@@ -57,13 +64,10 @@ public final class SuitHud {
     private static final Identifier EMBER = hud("ember");
     private static final Identifier EMBER_LIT = hud("ember_lit");
 
-    /** The readouts' colour, and their unlit segments about a third as bright (an empty bar must read as empty). */
-    private static final int AMBER = 0xFFB13B, AMBER_DIM = 0x5A3C14;
-    private static final int RED = 0xFF5555, RED_DIM = 0x5A1E1E;
-    /** The panels' dark backing (alpha 110 of 255): the readouts stay legible over a bright sky. */
-    private static final int BACKING_ALPHA = 110;
-    /** Without power the HUD fades to this much of its brightness (the projector runs on the suit's power). */
-    private static final float UNPOWERED = 0.4F;
+    /** Warnings, whatever the visor colour. */
+    private static final int RED = 0xFF5555;
+    /** Unlit segments (and the compass's dots) at this fraction of the colour: an empty bar must read as empty. */
+    private static final float DIM = 0.35F, FAINT = 0.65F;
     /** The hull is critical from a quarter left. */
     private static final float HULL_CRITICAL = 0.25F;
     /** Burn-rate embers: energy per tick at or above which 2 and 3 are lit (idle 0.25, walking 1, sprinting 2 by default;
@@ -71,10 +75,16 @@ public final class SuitHud {
     private static final float TWO_EMBERS = 0.6F, THREE_EMBERS = 1.5F;
     private static final int MAX_BURN_PER_TICK = 20;
 
-    /** Panel size and placement (GUI pixels): both panels sit in the bottom corners, the hotbar between them. 34 high:
-     *  3 px clear above the first row and below the last bar. Both 120 wide: the narrowest where the fuel row's longest
-     *  text (FLOODED, 41 px) still clears the embers (by 3 px). */
-    private static final int MARGIN = 4, PANEL_H = 34, PANEL_W = 120, TOOL_BAR_SEGMENTS = 12;
+    /** Placement (GUI pixels). Both readouts sit under the helmet's top corners ({@link SuitVisor}: 19 px deep at the
+     *  side), 120 wide: the narrowest where the fuel row's longest text (FLOODED, 41 px) still clears the embers. TOP is
+     *  the readouts' first row, below the compass's second (12 + 9 + 8). */
+    private static final int MARGIN = 4, WIDTH = 120, TOP = 30, TOOL_BAR_SEGMENTS = 12;
+    /** The compass: a tape of 31 characters in 6 px cells (fixed width, like a terminal), 5 degrees each; its row and
+     *  the readout row under it. */
+    private static final int CELL = 6, TAPE = 31, DEGREES_PER_CELL = 5, TAPE_Y = 12, READOUT_Y = 21;
+    /** Vanilla's boss bars start at y 12 and its effect icons at y 1 (the top right): moved down this far under the
+     *  compass and the tool readout while the HUD is up (user's pick A, 2026-10-27: vanilla's own bars, moved). */
+    private static final int BOSS_SHIFT = 30, EFFECTS_SHIFT = 62;
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
@@ -87,20 +97,28 @@ public final class SuitHud {
         Font font = mc.font;
         boolean powered = suit.isPowered();
         boolean blink = (suit.tickCount / 5) % 2 == 0;
-
-        float hull = Mth.clamp(suit.getHealth() / suit.getMaxHealth(), 0F, 1F);
-        boolean hullCritical = hull <= HULL_CRITICAL;
+        int x0 = MARGIN, y0 = TOP - 4, x1 = x0 + WIDTH;
 
         var power = suit.power();
         boolean free = power.hasFreePower() && powered;
         int energy = power.getTotalEnergy();
         // Every word and sign on the HUD comes from the language file (hud.powerarmor.*), so a translation covers it all.
-        // No engine reads NO FUEL too (user, 2026-10-27: players get it; the menu still says NO ENGINE), so the longest
-        // text here is FLOODED and the panel can be 120 wide.
+        // No engine reads NO FUEL too (user, 2026-10-27: players get it; the menu still says NO ENGINE).
         Component fuelText = free ? Component.translatable("hud.powerarmor.endless")
                 : power.isFlooded() ? Component.translatable("gui.powerarmor.flooded")
                 : energy > 0 ? Component.literal(PowerArmorItem.formatWalkTime(energy))
                 : Component.translatable("gui.powerarmor.no_fuel");
+        float hull = Mth.clamp(suit.getHealth() / suit.getMaxHealth(), 0F, 1F);
+        if (!powered) {
+            // The projector runs on the suit's power: with none, the glass is dark but for the reason, blinking red.
+            if (blink) {
+                g.text(font, fuelText, x0 + 26, y0 + 4, colour(RED), false);
+            }
+            shown = new Shown(hull, power.fuelGauge(), blink ? fuelText.getString() : "", 0, true, false, "", HudReadout.NO_COUNT, 0F, "");
+            return;
+        }
+
+        boolean hullCritical = hull <= HULL_CRITICAL;
         boolean fuelCritical = !free && (suit.getEngine() == null || power.isFlooded() || energy == 0 || power.isLowOnFuel());
         float fuel = power.fuelGauge();
         int embers = embers(suit);
@@ -109,15 +127,12 @@ public final class SuitHud {
         HudReadout tool = suit.socket().tool() == null ? null : suit.socketVisuals().effects().hud(suit, pilot);
 
         boolean critical = hullCritical || fuelCritical || (tool != null && tool.critical());
-        float fade = powered ? 1F : UNPOWERED;
-        int main = colour(critical ? RED : AMBER, fade);
-        int dim = colour(critical ? RED_DIM : AMBER_DIM, fade);
-        int backing = ((int) (BACKING_ALPHA * fade)) << 24;
+        int rgb = critical ? RED : VisorConfig.colour();
+        int main = colour(rgb);
+        int dim = colour(VisorConfig.dim(rgb, DIM));
+        int faint = colour(VisorConfig.dim(rgb, FAINT));
 
-        // ---- left: the suit -------------------------------------------------------------------------------------
-        int h = g.guiHeight();
-        int x0 = MARGIN, y0 = h - MARGIN - 1 - PANEL_H, x1 = x0 + PANEL_W;
-        panel(g, x0, y0, x1, y0 + PANEL_H, backing, main);
+        // ---- top left: the suit ---------------------------------------------------------------------------------
         for (Identifier piece : FIGURE) {
             g.blit(RenderPipelines.GUI_TEXTURED, piece, x0 + 5, y0 + 4, 0F, 0F, FIGURE_W, FIGURE_H, FIGURE_W, FIGURE_H, main);
         }
@@ -138,20 +153,19 @@ public final class SuitHud {
         for (int i = 0; i < 3; i++) {
             boolean lit = i < embers;
             g.blit(RenderPipelines.GUI_TEXTURED, lit ? EMBER_LIT : EMBER, ix + i * 7, y0 + 19, 0F, 0F, 5, 6, 5, 6,
-                    lit ? colour(0xFFFFFF, fade) : dim);
+                    lit ? 0xFFFFFFFF : dim);
         }
-        if (!(fuelCritical && blink && powered)) {
+        if (!(fuelCritical && blink)) {
             g.text(font, fuelText, rx - font.width(fuelText), y0 + 18, main, false);
         }
         bar(g, lx, y0 + 27, segments, 3, fuel, main, dim);
 
-        // ---- right: the socket tool -------------------------------------------------------------------------------
-        // Three columns on the panel's middle line (2026-10-27, user's pick B): the symbol, the bar's label over the
+        // ---- top right: the socket tool ---------------------------------------------------------------------------
+        // Three columns on the readout's middle line (2026-10-27, user's pick B): the symbol, the bar's label over the
         // bar, and the ammo as a fixed 3-digit counter at twice the font's size, like Fallout's (006; 999 means "999 or
-        // more"; a dim --- for a tool without ammo), so the panel never changes size.
+        // more"; a dim --- for a tool without ammo), so it never changes size.
         if (tool != null) {
-            int tx1 = g.guiWidth() - MARGIN, tx0 = tx1 - PANEL_W;
-            panel(g, tx0, y0, tx1, y0 + PANEL_H, backing, main);
+            int tx1 = g.guiWidth() - MARGIN, tx0 = tx1 - WIDTH;
             g.blit(RenderPipelines.GUI_TEXTURED, symbol(toolStack), tx0 + 5, y0 + 9, 0F, 0F, 16, 16, 16, 16, main);
             g.text(font, Component.translatable(tool.barLabel()), tx0 + 26, y0 + 9, main, false);
             bar(g, tx0 + 26, y0 + 20, TOOL_BAR_SEGMENTS, 5, tool.bar(), main, dim);
@@ -165,14 +179,87 @@ public final class SuitHud {
             g.text(font, count, 0, 0, tool.hasCount() ? main : dim, false);
             pose.popMatrix();
         }
-        shown = new Shown(hull, fuel, fuelText.getString(), embers, critical, powered,
+
+        // ---- top centre: compass and clock ------------------------------------------------------------------------
+        String clock = compassAndClock(g, mc, font, main, faint, delta);
+
+        shown = new Shown(hull, fuel, fuelText.getString(), embers, critical, true,
                 tool == null ? "" : BuiltInRegistries.ITEM.getKey(toolStack.getItem()).getPath(),
-                tool == null ? HudReadout.NO_COUNT : tool.count(), tool == null ? 0F : tool.bar());
+                tool == null ? HudReadout.NO_COUNT : tool.count(), tool == null ? 0F : tool.bar(), clock);
+    }
+
+    /**
+     * The compass tape and, under it, the heading, a {@code ^} and the clock, in fixed-width cells like a terminal. The
+     * tape moves a whole cell (5 degrees) at a time. Compass headings count from north clockwise; Minecraft's yaw counts
+     * from south (0 south, 90 west), hence the 180. Returns what the readout row says (for the autopilot's log).
+     */
+    private static String compassAndClock(GuiGraphicsExtractor g, Minecraft mc, Font font, int main, int faint,
+                                          DeltaTracker delta) {
+        // The suit's compass and clock work like the vanilla items they're made from: only in the overworld. Elsewhere
+        // the tape spins (a little faster than the item's needle, steadily, so it reads as broken, not as turning).
+        boolean overworld = mc.level.dimension() == Level.OVERWORLD;
+        float heading = overworld ? Mth.positiveModulo(mc.player.getViewYRot(delta.getGameTimeDeltaPartialTick(false)) + 180F, 360F)
+                : Mth.positiveModulo((mc.level.getGameTime() + delta.getGameTimeDeltaPartialTick(false)) * 11F, 360F);
+        int centre = Math.round(heading / DEGREES_PER_CELL) * DEGREES_PER_CELL;
+        int x0 = g.guiWidth() / 2 - TAPE * CELL / 2;
+        int mid = TAPE / 2;
+        String[] marks = new String[TAPE];
+        boolean[] letter = new boolean[TAPE];
+        for (int i = 0; i < TAPE; i++) {
+            int deg = Mth.positiveModulo(centre + (i - mid) * DEGREES_PER_CELL, 360);
+            marks[i] = deg % 15 == 0 ? "|" : ".";
+        }
+        // the eight directions as letters ("NE" takes two cells), drawn over the marks
+        for (int i = 0; i < TAPE; i++) {
+            int deg = Mth.positiveModulo(centre + (i - mid) * DEGREES_PER_CELL, 360);
+            if (deg % 45 == 0) {
+                String name = Component.translatable("hud.powerarmor.compass." + deg / 45).getString();
+                for (int k = 0; k < name.length() && i + k < TAPE; k++) {
+                    marks[i + k] = String.valueOf(name.charAt(k));
+                    letter[i + k] = true;
+                }
+            }
+        }
+        for (int i = 0; i < TAPE; i++) {
+            cell(g, font, marks[i], x0 + i * CELL, TAPE_Y, letter[i] ? main : faint);
+        }
+        int xc = x0 + mid * CELL;
+        cell(g, font, "^", xc, READOUT_Y, main);
+        String direction = Component.translatable("hud.powerarmor.compass." + Math.round(heading / 45F) % 8).getString();
+        String bearing = overworld ? String.format(Locale.ROOT, "%03d %s", Math.round(heading) % 360, direction)
+                : Component.translatable("hud.powerarmor.compass.lost").getString();
+        cells(g, font, bearing, xc - (bearing.length() + 2) * CELL, READOUT_Y, main);
+        String clock;
+        if (overworld) {
+            // Day 1 starts at sunrise, 06:00 (tick 0), like the game's own clock.
+            long t = mc.level.getOverworldClockTime();
+            long ofDay = Math.floorMod(t + 6000L, 24000L);
+            clock = Component.translatable("hud.powerarmor.clock", t / 24000L + 1,
+                    String.format(Locale.ROOT, "%02d:%02d", ofDay / 1000, ofDay % 1000 * 60 / 1000)).getString();
+        } else {
+            clock = Component.translatable("hud.powerarmor.clock", "--", "--:--").getString();
+        }
+        cells(g, font, clock, xc + 3 * CELL, READOUT_Y, faint);
+        return bearing + " " + clock;
+    }
+
+    /** A string in fixed 6 px cells, each character centred in its cell (Minecraft's font is proportional). */
+    private static void cells(GuiGraphicsExtractor g, Font font, String s, int x, int y, int colour) {
+        for (int i = 0; i < s.length(); i++) {
+            cell(g, font, String.valueOf(s.charAt(i)), x + i * CELL, y, colour);
+        }
+    }
+
+    private static void cell(GuiGraphicsExtractor g, Font font, String ch, int x, int y, int colour) {
+        if (!ch.isBlank()) {
+            // a glyph is drawn width-1 px wide plus a 1 px gap; centre the drawn part in the cell
+            g.text(font, ch, x + (CELL - (font.width(ch) - 1)) / 2, y, colour, false);
+        }
     }
 
     /** The suit this client's player pilots, if the HUD shows: in the suit, helmet on, the GUI not hidden (F1). */
     @Nullable
-    private static PowerArmorEntity shownFor(Minecraft mc) {
+    static PowerArmorEntity shownFor(Minecraft mc) {
         if (mc.player == null || mc.gui.hud.isHidden() || mc.player.isSpectator()
                 || !(mc.player.getVehicle() instanceof PowerArmorEntity suit) || suit.getControllingPassenger() != mc.player) {
             return null;
@@ -180,27 +267,35 @@ public final class SuitHud {
         return suit.hasHelmet() ? suit : null;
     }
 
-    /** With our HUD up, the hull is on it: vanilla's three rows of vehicle hearts go. */
-    @SubscribeEvent
-    public static void hideVehicleHearts(RenderGuiLayerEvent.Pre event) {
-        if (event.getName().equals(VanillaGuiLayers.VEHICLE_HEALTH) && shownFor(Minecraft.getInstance()) != null) {
+    /** With our HUD up, the hull is on it: vanilla's three rows of vehicle hearts go. Vanilla's boss bars (top centre)
+     *  and effect icons (top right) would sit on the compass and the tool readout: they move down instead (the pose is
+     *  shifted for their layer only and put back after it). */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void layerPre(RenderGuiLayerEvent.Pre event) {
+        if (event.isCanceled() || shownFor(Minecraft.getInstance()) == null) {
+            return;
+        }
+        Identifier name = event.getName();
+        if (name.equals(VanillaGuiLayers.VEHICLE_HEALTH)) {
             event.setCanceled(true);
+        } else if (name.equals(VanillaGuiLayers.BOSS_OVERLAY) || name.equals(VanillaGuiLayers.EFFECTS)) {
+            event.getGuiGraphics().pose().pushMatrix();
+            event.getGuiGraphics().pose().translate(0F, name.equals(VanillaGuiLayers.BOSS_OVERLAY) ? BOSS_SHIFT : EFFECTS_SHIFT);
+            shifted = name;
         }
     }
 
-    /** A panel: the dark backing and an L at each corner. */
-    private static void panel(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1, int backing, int colour) {
-        g.fill(x0, y0, x1, y1, backing);
-        int l = 5;
-        g.fill(x0, y0, x0 + l, y0 + 1, colour);
-        g.fill(x0, y0, x0 + 1, y0 + l, colour);
-        g.fill(x1 - l, y0, x1, y0 + 1, colour);
-        g.fill(x1 - 1, y0, x1, y0 + l, colour);
-        g.fill(x0, y1 - 1, x0 + l, y1, colour);
-        g.fill(x0, y1 - l, x0 + 1, y1, colour);
-        g.fill(x1 - l, y1 - 1, x1, y1, colour);
-        g.fill(x1 - 1, y1 - l, x1, y1, colour);
+    @SubscribeEvent
+    public static void layerPost(RenderGuiLayerEvent.Post event) {
+        if (event.getName().equals(shifted)) {
+            event.getGuiGraphics().pose().popMatrix();
+            shifted = null;
+        }
     }
+
+    /** The layer whose pose layerPre shifted (popped in layerPost), or null. */
+    @Nullable
+    private static Identifier shifted;
 
     /** A segmented bar: {@code n} 3-pixel segments with 1-pixel gaps, the first {@code frac} of them lit. */
     private static void bar(GuiGraphicsExtractor g, int x, int y, int n, int height, float frac, int lit, int unlit) {
@@ -210,8 +305,8 @@ public final class SuitHud {
         }
     }
 
-    private static int colour(int rgb, float alpha) {
-        return ((int) (255 * alpha) << 24) | rgb;
+    private static int colour(int rgb) {
+        return 0xFF000000 | rgb;
     }
 
     private static Identifier hud(String name) {
@@ -279,7 +374,7 @@ public final class SuitHud {
 
     /** What the HUD drew last frame (dev/autopilot logs), or null when it wasn't shown. */
     public record Shown(float hull, float fuel, String fuelText, int embers, boolean critical, boolean powered,
-                        String tool, int count, float bar) {}
+                        String tool, int count, float bar, String compass) {}
 
     @Nullable
     private static volatile Shown shown;

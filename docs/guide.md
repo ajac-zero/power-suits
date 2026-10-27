@@ -48,7 +48,7 @@ Each part is crafted on its own, then torso, arms and legs are assembled like a 
 
 | Item | Recipe |
 |---|---|
-| Power Armor Helmet | top row: iron block, redstone block, iron block; middle row: iron block, glass, iron block |
+| Power Armor Helmet | top row: iron block, redstone block, iron block; middle row: compass, glass, clock (they become the visor's compass and clock) |
 | Power Armor Torso | iron blocks in the corners, copper blocks on the edges, a redstone block in the middle |
 | Power Armor Arm (x2) | a row: copper block, piston, iron block (either way round) |
 | Power Armor Leg (x2) | a column: copper block, piston, iron block (top to bottom) |
@@ -69,7 +69,7 @@ The engines (swapped in the menu's engine slot; a new suit has none, so craft on
 ### Balance and config
 Everything that costs fuel, plus damage, ranges and speeds, is in `config/powerarmor-common.toml` (in the
 game folder, `run/config/` when developing) and in game under **Mods > Power Armor > Config**. Changes apply
-at once. Fuel is counted in energy: walking burns 1 per tick, so 20 energy = 1 s of walking. Defaults (Phase 6
+at once. Your own visor colour is a separate file, `config/powerarmor-client.toml` (see *The visor and its HUD*). Fuel is counted in energy: walking burns 1 per tick, so 20 energy = 1 s of walking. Defaults (Phase 6
 balance pass), with what one piece of coal (1600) buys:
 
 | Use | Cost | Per coal |
@@ -93,19 +93,28 @@ pump bubbles under water, the star reactor hums), a little more often and louder
 a tool running). The drill whirs, the chainsaw buzzes, the chaingun's motor whines, the flamethrower roars and the rail cannon hums while charging (subtitles included).
 They are vanilla sounds re-pitched in `assets/powerarmor/sounds.json`: swap in your own `.ogg` files there.
 
-### The HUD
-With the helmet on, the visor shows a HUD in amber, in two panels by the hotbar (no helmet, no HUD: then vanilla's
-vehicle hearts show the hull):
-- **Left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
+### The visor and its HUD
+With the helmet on you see the inside of the helmet from the cockpit (first person): dark steel pieces in the four
+corners and the visor band in the middle of the top edge, like the pumpkin's view but only at the edges. While the suit
+has power the glass along them catches a line of light, and the visor shows a HUD floating on the glass (no helmet, no
+HUD: then vanilla's vehicle hearts show the hull). It's terminal green by default: pick your own colour under
+**Mods > Power Armor > Config > Visor** (`visor_colour` in `config/powerarmor-client.toml`, `#RRGGBB`; only you see it).
+- **Top left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
   with a **shield** that's lit while the suit is sealed (running with the helmet on) and faded when not, and **FUEL**: how long it lasts at walking pace (∞ on a wet
   tidal engine or a star reactor; NO FUEL, also with no engine; FLOODED), a bar for how full the fuel slot is, and three
   **embers** for how fast it burns: one idling, two walking, three sprinting or with a hungry tool at work (the
   flamethrower), none when nothing burns.
-- **Right, the socket tool:** its symbol, one labelled bar and the ammo on a 3-digit counter (006; 999 means 999 or
+- **Top right, the socket tool:** its symbol, one labelled bar and the ammo on a 3-digit counter (006; 999 means 999 or
   more; ∞ in creative; --- for a tool without ammo). The bar is the chaingun's **HEAT**, the rail cannon's **CHARGE**,
   the TNT launcher's **RELOAD**; the drill, chainsaw, EM projector and flamethrower show **COOL** (always ready, for now).
+- **Top centre, compass and clock** (the helmet is crafted with both), as terminal text: a compass tape that slides a
+  character (5°) at a time with a `^` under where you face, your heading in degrees (0 north, 90 east), the day and the
+  time (`DAY 12  18:40`). Like the vanilla items they only work in the overworld: elsewhere the tape spins and they read
+  `---` / `--:--`.
 - The whole HUD turns **red** while something is critical: a quarter of the hull left, low fuel, the last rounds (16
-  bullets, the last TNT or ingot), an overheated chaingun. It **fades** while the suit has no power.
+  bullets, the last TNT or ingot), an overheated chaingun. With **no power** the glass goes dark: only the helmet's
+  edge and a blinking red **NO FUEL** (or FLOODED) are left.
+- While the HUD is up, vanilla's boss bars move down under the compass and the effect icons under the tool readout.
 
 Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It burns whenever
 the suit is powered, piloted or not (the machine mind runs it): standing still uses a quarter of the walking rate, sprinting double, and each
@@ -233,6 +242,7 @@ upgrades a world the first time it's opened and there's no way back: let it make
 | `uv run --with pillow python3 tools/make-gui.py` | Rebuilds the suit menu background from vanilla's furnace screen |
 | `uv run --with pillow python3 model/art/item_icons_art.py [--sheet out.png]` | Draws every item icon: hand-made 16 px pixel art (vanilla style), not rendered from the model; `--sheet` writes a review sheet |
 | `python3 tools/extract-view-geo.py` | Rebuilds the cockpit viewmodel (`geckolib/models/view`) from the suit model (run after `export-model.mjs`) |
+| `uv run --with pillow python3 tools/make-visor-textures.py` | Rebuilds the helmet edge pieces the pilot sees (`textures/gui/visor/`: corners, brow, their rim masks) |
 | `uv run --with pillow python3 tools/make-glowmasks.py` | Rebuilds the glowmasks (`power_armor_glow_{fire,visor,heat,heat_barrel,em_core,em_arc}.png`) from the texture's reserved colours (run after `export-model.mjs`) |
 | `uv run --with pillow python3 tools/make-paint-textures.py` | Rebuilds the painted textures (`textures/entity/paint/power_armor_<dye>.png`, one per dye) from the steel texture (run after `export-model.mjs`) |
 | `./gradlew runAutopilotPaint` | Dev tool (~30 s): a suit right-clicked with dyes and a wet sponge; `run/screenshots/ap_paint_*.png` (in-game back view + front), `run/autopilot_paint.csv` (server/client paint, dyes left) |
@@ -307,14 +317,17 @@ src/main/java/dev/ajaczero/powerarmor/
     CockpitHands.java        first-person viewmodel: socket tool on the left, gauntlet + held item on the right
     CockpitView*.java        its GeckoLib animatable/renderer (geckolib/models/view, cut from the suit by tools/extract-view-geo.py)
     PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
-    SuitHud.java             the pilot's HUD (suit + tool panels) + low-fuel beep
+    SuitHud.java             the pilot's HUD (suit + tool readouts, compass + clock) + low-fuel beep; moves boss bars
+                             and effect icons out of its way
+    SuitVisor.java           the helmet's edge around the first-person view (pieces + the glass rim's light)
+    VisorConfig.java         the player's own visor colour (CLIENT config, powerarmor-client.toml)
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
     SuitGlowLayer.java       the suit's lights + the tool's ToolLights (glowmasks, tinted per frame)
     BulletRenderer.java      the glowing tracer streak
     ToolRotors.java          turns the chaingun's barrels / the TNT drum, shakes the rail cannon (suit + cockpit viewmodel)
     ClientSetup.java         registers the renderer
-    PowerArmorClient.java    client-only @Mod entry: the in-game config screen
+    PowerArmorClient.java    client-only @Mod entry: the visor config + the in-game config screen
     SuitSounds.java          engine sounds now and then + tool loops (tickable sounds that follow the suit)
     FuelTooltip.java         "Power Armor fuel: 1:20 of walking" on every fuel
 src/dev/java/dev/ajaczero/powerarmor/   development tools: compiled against the mod, NOT in the jar players get

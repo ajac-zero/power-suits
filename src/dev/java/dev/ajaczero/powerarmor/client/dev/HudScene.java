@@ -15,6 +15,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -76,7 +78,8 @@ final class HudScene {
             // out of fuel: the suit powers down, the HUD fades
             case 436 -> { phase = "off"; server(mc, (p, x) -> x.power().setBurn(0, 0)); }
             case 460 -> AutoPilot.shot(mc, "hud_off");
-            case 462 -> { phase = "refuel"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 40))); }
+            case 465 -> AutoPilot.shot(mc, "hud_off_blink"); // NO FUEL blinks every 5 ticks: one of the two shows it
+            case 468 -> { phase = "refuel"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 40))); }
             // the rail cannon: charging, then full (it fires on release)
             case 480 -> { phase = "rail"; tool(mc, ModItems.RAIL_CANNON.get(), new ItemStack(Items.IRON_INGOT, 6)); }
             case 492 -> AutoPilot.shot(mc, "hud_rail_idle");
@@ -108,10 +111,28 @@ final class HudScene {
                               x.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.STAR_REACTOR.get()));
                               x.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.NETHER_STAR)); }); }
             case 730 -> AutoPilot.shot(mc, "hud_reactor");
+            // two boss bars and two effects: vanilla draws them where the compass and the tool readout are; with the
+            // HUD up they move down (boss bars under the compass, effect icons under the tool readout)
+            case 734 -> { phase = "bosses"; server(mc, (p, x) -> {
+                              command(p, "bossbar add powerarmor:hud_a \"Wither\"");
+                              command(p, "bossbar set powerarmor:hud_a color purple");
+                              command(p, "bossbar set powerarmor:hud_a value 70");
+                              command(p, "bossbar add powerarmor:hud_b \"Ender Dragon\"");
+                              command(p, "bossbar set powerarmor:hud_b color pink");
+                              command(p, "bossbar set powerarmor:hud_b value 35");
+                              command(p, "bossbar set powerarmor:hud_a players @a");
+                              command(p, "bossbar set powerarmor:hud_b players @a");
+                              p.addEffect(new MobEffectInstance(MobEffects.SPEED, 600));
+                              p.addEffect(new MobEffectInstance(MobEffects.POISON, 600)); }); }
+            case 744 -> AutoPilot.shot(mc, "hud_bosses");
+            case 746 -> server(mc, (p, x) -> {
+                              command(p, "bossbar remove powerarmor:hud_a");
+                              command(p, "bossbar remove powerarmor:hud_b");
+                              p.removeAllEffects(); });
             // no helmet: no HUD (vanilla's vehicle hearts are back)
-            case 734 -> { phase = "no_helmet"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, ItemStack.EMPTY)); }
-            case 744 -> AutoPilot.shot(mc, "hud_no_helmet");
-            case 746 -> { close(); return false; }
+            case 750 -> { phase = "no_helmet"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, ItemStack.EMPTY)); }
+            case 760 -> AutoPilot.shot(mc, "hud_no_helmet");
+            case 762 -> { close(); return false; }
             default -> {}
         }
         if (s >= 6) {
@@ -128,6 +149,12 @@ final class HudScene {
                 action.accept(p, x);
             }
         });
+    }
+
+    /** A command as the pilot would type it (op level from the dev world). */
+    private static void command(net.minecraft.server.level.ServerPlayer p, String cmd) {
+        p.level().getServer().getCommands().performPrefixedCommand(p.createCommandSourceStack().withSuppressedOutput().withPermission(
+                net.minecraft.server.permissions.LevelBasedPermissionSet.OWNER), cmd);
     }
 
     /** Swap the socket tool (and the ammo slot) on the server: the menu's job in the game. */
@@ -180,7 +207,7 @@ final class HudScene {
     private static void open() {
         try {
             csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_hud.csv"));
-            csv.write("tick,phase,shown,hull,fuel_bar,fuel_text,embers,critical,powered,tool,count,bar,server_health,server_energy,server_powered\n");
+            csv.write("tick,phase,shown,hull,fuel_bar,fuel_text,embers,critical,powered,tool,count,bar,compass,server_health,server_energy,server_powered\n");
         } catch (IOException e) {
             PowerArmor.LOGGER.error("hud csv", e);
         }
@@ -194,8 +221,9 @@ final class HudScene {
         }
         String p = phase;
         SuitHud.Shown h = SuitHud.shown();
-        String client = h == null ? "0,,,,,,,,," : String.format(Locale.ROOT, "1,%.2f,%.2f,%s,%d,%b,%b,%s,%d,%.2f", h.hull(), h.fuel(),
-                h.fuelText().replace(',', ' '), h.embers(), h.critical(), h.powered(), h.tool(), h.count(), h.bar());
+        String client = h == null ? "0,,,,,,,,,," : String.format(Locale.ROOT, "1,%.2f,%.2f,%s,%d,%b,%b,%s,%d,%.2f,%s", h.hull(), h.fuel(),
+                h.fuelText().replace(',', ' '), h.embers(), h.critical(), h.powered(), h.tool(), h.count(), h.bar(),
+                h.compass().replace(',', ' '));
         Consumer<net.minecraft.server.level.ServerPlayer> write = player -> {
             try {
                 w.write(String.format(Locale.ROOT, "%d,%s,%s,%.1f,%d,%b%n", s, p, client, x.getHealth(),

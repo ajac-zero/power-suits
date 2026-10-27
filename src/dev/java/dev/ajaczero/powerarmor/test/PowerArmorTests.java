@@ -2223,7 +2223,9 @@ public final class PowerArmorTests {
         ItemStack i = new ItemStack(Items.IRON_BLOCK), c = new ItemStack(Items.COPPER_BLOCK.weathering().unaffected()), p = new ItemStack(Items.PISTON);
         ItemStack r = new ItemStack(Items.REDSTONE_BLOCK), e = ItemStack.EMPTY;
         checkCraft(helper, 3, 3, List.of(i, c, i, c, r, c, i, c, i), ModItems.SUIT_TORSO.get());
-        checkCraft(helper, 3, 2, List.of(i, r, i, i, new ItemStack(Items.GLASS), i), ModItems.SUIT_HELMET.get());
+        // the visor's compass and clock come from a vanilla compass and clock (2026-10-27)
+        checkCraft(helper, 3, 2, List.of(i, r, i, new ItemStack(Items.COMPASS), new ItemStack(Items.GLASS), new ItemStack(Items.CLOCK)),
+                ModItems.SUIT_HELMET.get());
         checkCraft(helper, 3, 1, List.of(c, p, i), ModItems.SUIT_ARM.get());
         checkCraft(helper, 3, 1, List.of(i, p, c), ModItems.SUIT_ARM.get()); // mirrored: the other arm
         checkCraft(helper, 1, 3, List.of(c, p, i), ModItems.SUIT_LEG.get());
