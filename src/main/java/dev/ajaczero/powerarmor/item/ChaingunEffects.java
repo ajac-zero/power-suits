@@ -2,6 +2,7 @@ package dev.ajaczero.powerarmor.item;
 
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * Client: the chaingun's looks on one suit. The barrel cluster turns by the synced spin (up to 60 degrees a tick, ten
@@ -9,6 +10,9 @@ import net.minecraft.util.Mth;
  * (the server sends the burst to everyone else, ChaingunItem.use).
  */
 final class ChaingunEffects implements ToolEffects {
+    /** The HUD warns (turns red) from this many bullets down: about a second and a half of a full barrage. */
+    static final int LOW_BULLETS = 16;
+
     private float barrelAngle, barrelAngleO;
 
     @Override
@@ -40,6 +44,15 @@ final class ChaingunEffects implements ToolEffects {
         float heat = suit.socket().getHeat();
         out[ToolLight.HEAT.ordinal()] = heatGlow(heat);
         out[ToolLight.HEAT_BARREL.ordinal()] = barrelGlow(heat);
+    }
+
+    /** HUD: bullets left (iron nuggets carried + the suit's store) and the barrel heat; critical when overheated (the
+     *  barrels lock until they cool) or down to the last bullets. */
+    @Override
+    public HudReadout hud(PowerArmorEntity suit, Player pilot) {
+        int bullets = pilot.hasInfiniteMaterials() ? HudReadout.ENDLESS : ChaingunItem.countBullets(pilot);
+        float heat = suit.socket().getHeat();
+        return new HudReadout(bullets, "hud.powerarmor.heat", heat, heat >= 0.99F || (bullets >= 0 && bullets <= LOW_BULLETS));
     }
 
     /** Barrel tips: nothing while cool, a dull red glow from a third of the way, white-hot when overheated. */

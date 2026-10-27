@@ -108,6 +108,8 @@ public final class AutoPilot {
     private static final boolean TNT_ONLY = "tnt".equals(System.getProperty("powerarmor.autopilot"));
     /** "rail" mode: only the rail cannon scene (RailScene: glass, husks in a line, a wall, the mind's guard, the ammo slot), ~35 s. */
     private static final boolean RAIL_ONLY = "rail".equals(System.getProperty("powerarmor.autopilot"));
+    /** "hud" mode: only the pilot HUD scene (HudScene: every state the HUD shows, each tool, no helmet), ~35 s. */
+    private static final boolean HUD_ONLY = "hud".equals(System.getProperty("powerarmor.autopilot"));
     // The main script's sections, each starting where the one before ends (its length is the difference). Case labels
     // in script() count from their section's start, so a step added to one section only changes that section's length
     // here; every later section (and the mech scenes, MECH_START) moves along by itself. Screenshot names keep the
@@ -197,6 +199,10 @@ public final class AutoPilot {
             }
         } else if (RAIL_ONLY) {
             if (!RailScene.step(mc, tick++)) {
+                mc.stop();
+            }
+        } else if (HUD_ONLY) {
+            if (!HudScene.step(mc, tick++)) {
                 mc.stop();
             }
         } else {

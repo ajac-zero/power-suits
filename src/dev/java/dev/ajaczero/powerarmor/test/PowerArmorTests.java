@@ -2565,6 +2565,40 @@ public final class PowerArmorTests {
         });
     }
 
+    /** The HUD's fuel bar (SuitPower.fuelGauge): what's on board against a full fuel slot of it; the last item alone
+     *  against a stack of its kind (or one bucket); a free engine reads full. Read without a pilot: no power needed. */
+    @SuitTest(timeoutTicks = 40)
+    public static void fuelGaugeReadsAgainstAFullSlot(GameTestHelper helper) {
+        PowerArmorEntity suit = suitAt(helper, SUIT_POS);
+        suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, ItemStack.EMPTY); // no mind: the suit stays parked
+        suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 32));
+        int coal = fireboxEnergy(helper, Items.COAL);
+        helper.runAfterDelay(2, () -> {
+            float half = suit.power().fuelGauge();
+            helper.assertTrue(Math.abs(half - 0.5F) < 0.02F, "32 coal of a stack of 64 read half, got " + half);
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, ItemStack.EMPTY);
+            suit.power().setBurn(coal / 2F, coal);
+        });
+        helper.runAfterDelay(4, () -> {
+            float last = suit.power().fuelGauge();
+            helper.assertTrue(Math.abs(last - 0.5F / 64) < 0.002F, "half the last coal is half a 64th, got " + last);
+            int lava = fireboxEnergy(helper, Items.LAVA_BUCKET);
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.BUCKET)); // what a burnt lava bucket leaves
+            suit.power().setBurn(lava / 4F, lava);
+        });
+        helper.runAfterDelay(6, () -> {
+            float bucket = suit.power().fuelGauge();
+            helper.assertTrue(Math.abs(bucket - 0.25F) < 0.01F, "a quarter of a lava bucket (one per slot) reads a quarter, got " + bucket);
+            suit.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, new ItemStack(ModItems.STAR_REACTOR.get()));
+            suit.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.NETHER_STAR));
+            suit.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()));
+        });
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(suit.power().fuelGauge() == 1F, "a star reactor reads full, got " + suit.power().fuelGauge());
+            helper.succeed();
+        });
+    }
+
     /** Engines survive saving and packing; suits and packed items from before the engines get their firebox. */
     @SuitTest
     public static void enginesSurviveSavesAndPacking(GameTestHelper helper) {

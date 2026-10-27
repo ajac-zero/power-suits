@@ -48,7 +48,7 @@ public final class ClientSetup {
 
     @SubscribeEvent
     public static void registerHud(RegisterGuiLayersEvent event) {
-        event.registerAbove(VanillaGuiLayers.HOTBAR, FuelGauge.ID, FuelGauge::render);
+        event.registerAbove(VanillaGuiLayers.HOTBAR, SuitHud.ID, SuitHud::render);
     }
 
     private ClientSetup() {}

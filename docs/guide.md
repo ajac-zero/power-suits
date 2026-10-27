@@ -93,11 +93,22 @@ pump bubbles under water, the star reactor hums), a little more often and louder
 a tool running). The drill whirs, the chainsaw buzzes, the chaingun's motor whines, the flamethrower roars and the rail cannon hums while charging (subtitles included).
 They are vanilla sounds re-pitched in `assets/powerarmor/sounds.json`: swap in your own `.ogg` files there.
 
+### The HUD
+With the helmet on, the visor shows a HUD in amber, in two panels by the hotbar (no helmet, no HUD: then vanilla's
+vehicle hearts show the hull):
+- **Left, the suit:** **HULL** (its health, % and a bar) and **FUEL**: how long it lasts at walking pace (∞ on a wet
+  tidal engine or a star reactor; NO FUEL, FLOODED, NO ENGINE), a bar for how full the fuel slot is, and three
+  **embers** for how fast it burns: one idling, two walking, three sprinting or with a hungry tool at work (the
+  flamethrower), none when nothing burns.
+- **Right, the socket tool:** its symbol, its ammo count (∞ in creative) and one bar: the chaingun's **HEAT**, the rail
+  cannon's **CHARGE**, the TNT launcher's **RELOAD**. The drill, chainsaw, EM projector and flamethrower show only their
+  symbol.
+- The whole HUD turns **red** while something is critical: a quarter of the hull left, low fuel, the last rounds (16
+  bullets, the last TNT or ingot), an overheated chaingun. It **fades** while the suit has no power.
+
 Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It burns whenever
 the suit is powered, piloted or not (the machine mind runs it): standing still uses a quarter of the walking rate, sprinting double, and each
-jump a little extra. The gauge right of the hotbar shows the flame of the burning item, what's left in
-the slot and how long that lasts at walking pace. Under 30 seconds left it flashes and beeps and the
-exhaust coughs dark smoke. At zero the suit powers down and slumps; climb out, refuel it in the menu
+jump a little extra. Under 30 seconds left the suit beeps and the exhaust coughs dark smoke. At zero the suit powers down and slumps; climb out, refuel it in the menu
 and it stands back up (1.4 s). Fuel is needed in creative mode too. Suits from before this version
 start empty: give them some coal.
 
@@ -295,7 +306,7 @@ src/main/java/dev/ajaczero/powerarmor/
     CockpitHands.java        first-person viewmodel: socket tool on the left, gauntlet + held item on the right
     CockpitView*.java        its GeckoLib animatable/renderer (geckolib/models/view, cut from the suit by tools/extract-view-geo.py)
     PowerArmorScreen.java    draws the suit menu (preview, flame, status display, Pack up)
-    FuelGauge.java           HUD fuel gauge + low-fuel beep
+    SuitHud.java             the pilot's HUD (suit + tool panels) + low-fuel beep
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
     SuitGlowLayer.java       the suit's lights + the tool's ToolLights (glowmasks, tinted per frame)

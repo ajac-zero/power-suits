@@ -58,8 +58,8 @@ API: grep the sources.
 |---|---|
 | `./gradlew build` | compiles (also compiles `src/dev`) |
 | `./gradlew runGameTestServer` | "All N required tests passed" |
-| `./gradlew runGameTestOnly -Prepeat=5` | the whole suite 5 times side by side: all 675 pass (hunts flaky tests; `-Ptests='powerarmor:name*'` narrows it) |
-| the autopilot scene for the area you touched | screenshots + CSV look right: pick it from `power-armor-runs.md` (`runAutopilot`, `...Mech`, `...Gait`, `...Pose`, `...Terrain`, a tool's own scene...) |
+| `./gradlew runGameTestOnly -Prepeat=5` | the whole suite 5 times side by side: all 680 pass (hunts flaky tests; `-Ptests='powerarmor:name*'` narrows it) |
+| the autopilot scene for the area you touched | screenshots + CSV look right: pick it from `power-armor-runs.md` (`runAutopilot`, `...Mech`, `...Gait`, `...Pose`, `...Terrain`, `...Hud`, a tool's own scene...) |
 
 - Run game tasks in the background under `caffeinate -d -u -i` and poll the log (no `timeout` on macOS; the game can't
   start while the display sleeps). If one stalls, `jstack` its PID before killing it. Dev games must not linger
@@ -77,7 +77,7 @@ Why each rule exists is in `power-armor-lessons.md`.
   slots, the tick); its rules live in its parts, one class each: `SuitDriving`, `SuitPower`, `SuitSocket`, `SuitBrain`,
   client `SocketVisuals`, `SuitAnimator`, `SuitLights`. A tool lives in its own files: its item (`PowerTool`: what it
   does, `mindUse()` / `mindGoals()` its mind job, `createEffects()` its looks) and its `ToolEffects`; a new tool must not
-  need changes to the entity, the renderers or `SuitGoals` beyond its bone name and glowmask.
+  need changes to the entity, the renderers or `SuitGoals` beyond its bone name, glowmask and HUD symbol (`tools/make-hud-icons.py`).
 - **Client classes never appear in shared code** (`Minecraft`, cameras, screens: a dedicated server crashes). Ask through
   a hook the client fills in at startup (`entity/ClientView`, `SocketAim.visualMuzzle`).
 - **Server state with a synced copy has one setter that writes both** (`SuitPower.setBurnState`); slot copies are

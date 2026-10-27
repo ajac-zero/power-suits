@@ -89,16 +89,6 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
         return "chaingun";
     }
 
-    /** HUD: bullets left (iron nuggets carried + the suit's store), and the barrel heat as an orange-to-red bar that
-     *  blinks when overheated. */
-    @Override
-    public HudAmmo hudAmmo(PowerArmorEntity suit, Player pilot) {
-        int bullets = pilot.hasInfiniteMaterials() ? -1 : countBullets(pilot);
-        float heat = suit.socket().getHeat();
-        boolean blinkOff = heat >= 0.99F && (suit.tickCount / 4) % 2 == 0;
-        return new HudAmmo(Items.IRON_NUGGET, bullets, blinkOff ? 0F : heat, heat > 0.75F ? 0xFFFF3B1E : 0xFFFF9A2E);
-    }
-
     @Override
     public ToolEffects createEffects() {
         return new ChaingunEffects();

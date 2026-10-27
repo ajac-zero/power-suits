@@ -1,7 +1,7 @@
 # Entity inventory, menu, screen, item data, HUD (NeoForge 21.1)
 
 Built for the Power Armor suit menu (fuel + tool socket, Pack up button) and fuel gauge. Files:
-`menu/PowerArmorMenu.java`, `client/PowerArmorScreen.java`, `client/FuelGauge.java`,
+`menu/PowerArmorMenu.java`, `client/PowerArmorScreen.java`, `client/SuitHud.java` (was `FuelGauge`),
 `item/SuitLoadout.java`, `registry/ModMenus.java`, `registry/ModDataComponents.java`.
 
 ## Entity inventory
@@ -46,6 +46,11 @@ Built for the Power Armor suit menu (fuel + tool socket, Pack up button) and fue
 - `RegisterGuiLayersEvent.registerAbove(VanillaGuiLayers.HOTBAR, id, (graphics, delta) -> ...)`; skip when
   `options.hideGui` or not relevant. Hotbar right edge: `guiWidth()/2 + 91`. `renderItem` + `renderItemDecorations`
   draw an item with its count. Local-only sounds: `SimpleSoundInstance.forUI(sound, pitch, volume)`.
+- *(26.3)* Hide a vanilla layer with `RenderGuiLayerEvent.Pre` + `setCanceled` on its id (`VanillaGuiLayers.VEHICLE_HEALTH`:
+  the suit's 30 hearts). Tinted white masks: `blit(GUI_TEXTURED, tex, x, y, 0, 0, w, h, w, h, argb)`; colours carry alpha
+  (fading). Bigger text: `g.pose()` is a `Matrix3x2fStack` (`pushMatrix`, `translate`, `scale`, `popMatrix`).
+- A rate the server doesn't sync (the burn embers) can be measured on the client from a synced total tick by tick;
+  clamp one-off jumps (refuels, a flooded firebox) or they swamp the smoothing for seconds.
 
 ## Particles
 - Visual only: spawn on the client in the entity's tick (`level.addParticle`), from synced state. Put a

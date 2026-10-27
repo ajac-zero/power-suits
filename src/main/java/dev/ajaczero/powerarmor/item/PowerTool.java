@@ -7,8 +7,6 @@ import java.util.List;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,6 +25,9 @@ import org.jetbrains.annotations.Nullable;
  *    chaingun and the rail cannon, are continuous too): {@link #holdTick} every tick while held and
  *    {@link #release} when the button goes up or something interrupts (power, pilot gone, tool removed).
  *    These pay their own fuel through {@link PowerArmorEntity#tryUseEnergy}.
+ *
+ * What the pilot sees of it on the HUD: its symbol, {@code textures/gui/hud/tool/<item id>.png} (drawn by
+ * tools/make-hud-icons.py), and its effects' {@link ToolEffects#hud} readout (ammo, one bar).
  */
 public interface PowerTool {
     /** Fuel energy per use (walking burns 1 per tick, so 300 = 15 s of walking). */
@@ -114,16 +115,6 @@ public interface PowerTool {
      */
     default List<Goal> mindGoals(PowerArmorEntity suit) {
         return List.of();
-    }
-
-    /** What the pilot's HUD shows above the fuel (client/FuelGauge): the ammo's icon and count (-1: endless, creative;
-     *  0 is shown red), and a thin bar under the count (0 = no bar) in a colour. */
-    record HudAmmo(Item icon, int count, float bar, int barColour) {}
-
-    /** Client: this tool's ammo line on the pilot's HUD, or null for a tool that needs no ammo. */
-    @Nullable
-    default HudAmmo hudAmmo(PowerArmorEntity suit, Player pilot) {
-        return null;
     }
 
     /** Server: keep the run animation going after the trigger is released (a tree still coming down). */

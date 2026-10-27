@@ -315,6 +315,23 @@ public final class SuitPower {
         return this.getBurnLeft() + fuel.getCount() * this.suit.getEntityData().get(PowerArmorEntity.FUEL_ENERGY);
     }
 
+    /**
+     * Both sides: how full the HUD's fuel bar reads, 0..1: everything on board against a full fuel slot of what's in it (a
+     * stack of 64 coal, one lava bucket). Once the slot is empty only the burning item is left, and nobody remembers what
+     * it was: it counts as one of a stack of 64 (coal and the like), unless the slot holds a bucket it left behind (a
+     * bucket fuel: one per slot). A wet tidal engine or a reactor reads full.
+     */
+    public float fuelGauge() {
+        if (this.hasFreePower()) {
+            return 1F;
+        }
+        ItemStack fuel = this.suit.getFuelStack();
+        int perItem = this.suit.getEntityData().get(PowerArmorEntity.FUEL_ENERGY);
+        float full = perItem > 0 && !fuel.isEmpty() ? (float) perItem * fuel.getMaxStackSize()
+                : (float) this.getBurnTotal() * (fuel.isEmpty() ? 64 : 1);
+        return full <= 0F ? 0F : Mth.clamp(this.getTotalEnergy() / full, 0F, 1F);
+    }
+
     public boolean isLowOnFuel() {
         // A wet tidal engine or a reactor isn't burning anything, so it can't run low (a tidal engine on land can).
         return !this.hasFreePower() && this.getTotalEnergy() < PowerArmorConfig.LOW_FUEL.get();

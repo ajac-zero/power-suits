@@ -4,7 +4,7 @@
 
 For situations where plain old armor isn't enough. This power suit provides maximum protection while also enabling access to special power tools.
 
-When also fitted with a helmet, you become immune to fire, frost, poison and drowning. Soaking up that punishment burns fuel, so keep an eye on the gauge.
+When also fitted with a helmet, you become immune to fire, frost, poison and drowning. Soaking up that punishment burns fuel, so keep an eye on the visor's HUD.
 
 Get out of a suit and it can operate independently. It can drill, cut trees, guard your home or defend you personally. Be careful though... rogue suits exist, and they aren't friendly.
 

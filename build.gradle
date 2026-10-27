@@ -144,6 +144,13 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'rail'
         }
 
+        // Dev tool: only the pilot HUD scene (every state the HUD shows, each tool, no helmet; ap_hud_*.png,
+        // run/autopilot_hud.csv), ~35 s.
+        autopilotHud {
+            client()
+            systemProperty 'powerarmor.autopilot', 'hud'
+        }
+
         // Dev tool: live-tunes the cockpit viewmodel (see AutoPilot.viewTuner); stays open until closed.
         autopilotView {
             client()
