@@ -111,13 +111,14 @@ blinking. It's terminal green by default: pick your own colour under
   flamethrower), none when nothing burns.
 - **The socket tool's own readout**, where that tool needs it (tools with nothing to say show nothing: the drill, the
   chainsaw, the flamethrower):
-  - **Chaingun**, top right, lined up with the suit's readout on the left: **AMMO** and a big 3-digit counter (006;
-    999 means 999 or more; ∞ in creative), then the barrels' **HEAT** and its bar.
+  - **Chaingun**, top right: a big 3-digit counter (006; 999 means 999 or more; ∞ in creative) with **AMMO** beside
+    it, and under it the barrels' heat bar with **HEAT** beside it (OVERHEAT, in red, reaches further left).
   - **Rail cannon**, round the crosshair: four corner brackets that wait wide and faint, close in as it charges (the
     charge in % under them) and lock with a second, inner set over **READY** at full charge; one pip per ingot left.
   - **TNT launcher**: the **arc** the round will fly, dotted from the launcher's muzzle (where you see the round come
     out) to a diamond where it will go off, with the distance (`22m`); it moves with your aim and is worked out with the
-    round's own physics, so it's where the round really goes (a round that hits nothing goes off in the air at the end of
+    round's own physics, so it's where the round really goes; it starts just clear of the launcher so it doesn't run
+    over the gun (a round that hits nothing goes off in the air at the end of
     its fuse: a small x). Aim the diamond, not the crosshair: the round drops. When it would go off close enough for its
     blast to reach you (twice its strength: 8 blocks by default) the arc and the diamond turn **red**. Top right, where
     the chaingun's ammo is: a revolver **drum**, one chamber per round (filled while loaded; the top one, under the

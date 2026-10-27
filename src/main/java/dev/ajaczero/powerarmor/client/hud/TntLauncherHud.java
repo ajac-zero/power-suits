@@ -22,7 +22,8 @@ import net.minecraft.world.phys.Vec3;
  *   with the distance to it. It's the round as it's drawn: the real flight leaves from the eye along the crosshair
  *   ({@link TntShell#predict}, from {@link TntLauncherItem#launch}: the same numbers the server fires with) and every
  *   client draws the round coming out of the muzzle and joining that path within a few blocks ({@link TntShell#shift});
- *   the arc does the same (user, 2026-10-27: from the gun, not the crosshair). Worked out every frame, so it moves with
+ *   the arc does the same (user, 2026-10-27: from the gun, not the crosshair), starting just clear of the launcher's
+ *   model. Worked out every frame, so it moves with
  *   the aim. Where the blast would reach the suit (an explosion's reach is twice its strength) the arc and the diamond
  *   turn red. A round that would hit nothing goes off in the air when its fuse runs out: a small x there.</li>
  *   <li>The drum, in the top right corner like the chaingun's ammo (user, 2026-10-27): a revolver drum seen from behind,
@@ -34,6 +35,9 @@ import net.minecraft.world.phys.Vec3;
 public final class TntLauncherHud implements ToolHud {
     /** Arc dots this close to the crosshair's middle aren't drawn (they'd crowd it). */
     private static final int CLEAR = 7;
+    /** The arc starts this far (blocks) out of the muzzle, clear of the launcher's own model (user, 2026-10-27: the line
+     *  ran over the barrel in the cockpit view). */
+    private static final double CLEAR_OF_GUN = 0.4;
     /** The landing diamond's half-size. */
     private static final int MARK = 4;
     /** The drum: chamber size, the chambers' distance from the middle, the hub's size, and its gap left of the corner
@@ -50,7 +54,7 @@ public final class TntLauncherHud implements ToolHud {
         boolean last = r.lowAmmo() || r.count() == 0;
         v.ammoRow(g, r.count(), last);
         if (r.bar() < 1F) {
-            g.text(v.font, Component.translatable("hud.powerarmor.load"), v.cornerLeft(), HudView.CORNER_Y0 + 18, v.faint(last), false);
+            v.cornerLabel(g, Component.translatable("hud.powerarmor.load"), HudView.CORNER_Y0 + 18, v.faint(last));
         }
         drum(g, v, v.cornerLeft() - DRUM_GAP - (2 * SPREAD + CHAMBER) / 2, HudView.CORNER_Y0 + 16, r, last);
         return String.format(Locale.ROOT, "rounds=%d reload=%.2f %s", r.count(), r.bar(), arc);
@@ -68,6 +72,7 @@ public final class TntLauncherHud implements ToolHud {
         }
         Vec3 end = flight.end();
         drawn.add(end.add(TntShell.shift(end, launch.from(), gap)));
+        drawn = from(drawn, CLEAR_OF_GUN);
         // inside the blast: vanilla's explosion reaches twice its strength, measured to the suit's feet
         double blast = 2 * PowerArmorConfig.TNT_LAUNCHER_POWER.get();
         boolean danger = end.distanceTo(v.suit.position()) < blast;
@@ -91,6 +96,23 @@ public final class TntLauncherHud implements ToolHud {
         return String.format(Locale.ROOT, "arc=%d %s=%.1f ticks=%d%s%s", dots, flight.hit() ? "impact" : "airburst", distance,
                 flight.ticks(), danger ? " danger" : "",
                 flight.entity() != null ? " on=" + BuiltInRegistries.ENTITY_TYPE.getKey(flight.entity().getType()).getPath() : "");
+    }
+
+    /** The line from {@code distance} blocks along it on (a point cut into the segment it falls in). */
+    private static List<Vec3> from(List<Vec3> line, double distance) {
+        double run = 0;
+        for (int i = 1; i < line.size(); i++) {
+            Vec3 a = line.get(i - 1), b = line.get(i);
+            double step = a.distanceTo(b);
+            if (run + step > distance) {
+                List<Vec3> out = new ArrayList<>(line.size() - i + 1);
+                out.add(a.lerp(b, (distance - run) / step));
+                out.addAll(line.subList(i, line.size()));
+                return out;
+            }
+            run += step;
+        }
+        return List.of(); // the whole flight is shorter than that: nothing to draw
     }
 
     /**

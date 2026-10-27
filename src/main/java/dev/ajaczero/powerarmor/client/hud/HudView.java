@@ -104,11 +104,17 @@ public final class HudView {
 
     // ---- the top right corner: the ammo readout (chaingun, TNT launcher) ------------------------------------------
 
-    /** The corner block mirrors the suit's readout on the left (SuitHud: its rows from y 26, 4 px margin): 63 px wide (a
-     *  16-segment bar), 5 px in from the margin. Its first row (AMMO and the big counter) ends where the left's HULL bar
-     *  does, its second (a label, then a bar) sits on the left's FUEL row and bar, so the two corners line up. */
-    public static final int CORNER_Y0 = 26, CORNER_SEGMENTS = 16;
-    private static final int CORNER_W = CORNER_SEGMENTS * 4 - 1, CORNER_MARGIN = 4, CORNER_INSET = 5;
+    /**
+     * The corner block, two rows in two columns (user, 2026-10-27): values on the right (the big counter, a bar under
+     * it as wide as the counter's three digits), their labels right-aligned to the left of them, so a longer label
+     * (OVERHEAT) grows to the left instead of into the bar. Its rows from y 26 like the suit's readout on the left
+     * (SuitHud: 4 px margin), 5 px in from the margin; the second row on the left's FUEL row.
+     */
+    public static final int CORNER_Y0 = 26;
+    /** The bar's segments: 9 x 4 - 1 = 35 px, the counter's "000" at twice the font's size (34) and its trailing pixel. */
+    private static final int CORNER_SEGMENTS = 9, VALUE_W = CORNER_SEGMENTS * 4 - 1, LABEL_GAP = 5;
+    /** The block's width from the labels' left (the widest usual label, AMMO or HEAT, 23 px) to the values' right. */
+    private static final int CORNER_W = VALUE_W + LABEL_GAP + 23, CORNER_MARGIN = 4, CORNER_INSET = 5;
 
     public int cornerRight() {
         return this.width - CORNER_MARGIN - CORNER_INSET;
@@ -118,17 +124,27 @@ public final class HudView {
         return this.cornerRight() - CORNER_W;
     }
 
-    /** The first row: AMMO at the block's left edge, the count on the big counter at its right edge, on one baseline. */
+    /** Where the values column starts (the counter's and the bar's left edge). */
+    public int valueLeft() {
+        return this.cornerRight() - VALUE_W;
+    }
+
+    /** A label in the corner's label column: right-aligned to the values, so it grows to the left. */
+    public void cornerLabel(GuiGraphicsExtractor g, Component label, int y, int colour) {
+        g.text(this.font, label, this.valueLeft() - LABEL_GAP - (this.font.width(label) - 1), y, colour, false);
+    }
+
+    /** The first row: the count on the big counter, AMMO beside it on its baseline. */
     public void ammoRow(GuiGraphicsExtractor g, int count, boolean warn) {
         int colour = this.main(warn);
         this.counter(g, count, this.cornerRight(), CORNER_Y0 + 2, colour);
-        g.text(this.font, Component.translatable("hud.powerarmor.ammo"), this.cornerLeft(), CORNER_Y0 + 9, colour, false);
+        this.cornerLabel(g, Component.translatable("hud.powerarmor.ammo"), CORNER_Y0 + 9, colour);
     }
 
-    /** The second row: a label at the left edge on the FUEL row, a bar the block's width under it. */
+    /** The second row (the left's FUEL row): a bar under the counter, its label beside it. */
     public void gaugeRow(GuiGraphicsExtractor g, Component label, float frac, boolean warn) {
-        g.text(this.font, label, this.cornerLeft(), CORNER_Y0 + 18, this.main(warn), false);
-        bar(g, this.cornerLeft(), CORNER_Y0 + 27, CORNER_SEGMENTS, 3, frac, this.main(warn), this.dim(warn));
+        this.cornerLabel(g, label, CORNER_Y0 + 18, this.main(warn));
+        bar(g, this.valueLeft(), CORNER_Y0 + 19, CORNER_SEGMENTS, 5, frac, this.main(warn), this.dim(warn));
     }
 
     // ---- a flight on the world (the TNT round, a thrown mob) ----------------------------------------------------

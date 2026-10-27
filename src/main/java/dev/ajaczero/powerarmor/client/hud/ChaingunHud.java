@@ -8,8 +8,9 @@ import net.minecraft.network.chat.Component;
 /**
  * The chaingun on the visor (user's pick A, 2026-10-27): you hold the trigger and walk the stream onto the target, so
  * the view stays clear and the readout sits in the top right corner, mirroring the suit's on the left
- * ({@link HudView#ammoRow}, {@link HudView#gaugeRow}: one block, its rows on the left's rows): AMMO and the bullets
- * left on Fallout's big 3-digit counter, then the barrels' HEAT and its bar. The counter turns red on the last bullets;
+ * ({@link HudView#ammoRow}, {@link HudView#gaugeRow}: values in a right column, labels right-aligned beside them):
+ * the bullets left on Fallout's big 3-digit counter with AMMO beside it, then the barrels' heat as a bar under the
+ * counter with HEAT beside it. The counter turns red on the last bullets;
  * the heat turns red and reads OVERHEAT while the barrels are locked.
  */
 public final class ChaingunHud implements ToolHud {
