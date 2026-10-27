@@ -19,12 +19,10 @@ import org.jetbrains.annotations.Nullable;
  * bars, corner brackets, the big counter), so every tool's readout looks like the rest of the visor.
  */
 public final class HudView {
-    /** Critical, whatever the visor colour (SuitHud uses the same): Minecraft's own red text colour. */
-    public static final int RED = 0xFF5555;
-    /** A warning, between the visor colour and red (user, 2026-10-27): Minecraft's gold text colour. */
-    public static final int ORANGE = 0xFFAA00;
     /** Unlit segments at this fraction of the colour (an empty bar must read as empty); faint for secondary text. */
     public static final float DIM = 0.35F, FAINT = 0.65F;
+    /** An alert's text, cut into its block: the visor colour this dark (near black, but of its hue). */
+    public static final float CUT = 0.12F;
 
     public final PowerArmorEntity suit;
     public final Player pilot;
@@ -56,36 +54,54 @@ public final class HudView {
 
     // ---- colours (ARGB, ready to draw) ----------------------------------------------------------------------------
 
-    /** The colour (0xRRGGBB) of a readout at this alert: the visor's own, orange or red. */
-    public static int rgb(HudAlert alert, int visor) {
-        return switch (alert) {
-            case NONE -> visor;
-            case WARNING -> ORANGE;
-            case CRITICAL -> RED;
-        };
-    }
-
-    /** The visor colour, or red when critical. */
-    public int main(boolean critical) {
-        return this.main(critical ? HudAlert.CRITICAL : HudAlert.NONE);
-    }
-
-    public int main(HudAlert alert) {
-        return 0xFF000000 | rgb(alert, this.rgb);
+    /** The visor colour: values, lit segments. */
+    public int main() {
+        return 0xFF000000 | this.rgb;
     }
 
     /** Unlit (bar segments, empty chambers). */
-    public int dim(boolean critical) {
-        return this.dim(critical ? HudAlert.CRITICAL : HudAlert.NONE);
-    }
-
-    public int dim(HudAlert alert) {
-        return 0xFF000000 | VisorConfig.dim(rgb(alert, this.rgb), DIM);
+    public int dim() {
+        return 0xFF000000 | VisorConfig.dim(this.rgb, DIM);
     }
 
     /** Secondary: labels, a gauge at rest. */
-    public int faint(boolean critical) {
-        return 0xFF000000 | VisorConfig.dim(rgb(critical ? HudAlert.CRITICAL : HudAlert.NONE, this.rgb), FAINT);
+    public int faint() {
+        return 0xFF000000 | VisorConfig.dim(this.rgb, FAINT);
+    }
+
+    // ---- alerts ------------------------------------------------------------------------------------------------
+
+    /**
+     * One colour for the whole visor (user's pick, 2026-10-27): an alert doesn't change the colour, it inverts the
+     * readout's label like an old terminal: a solid block of the visor colour with the text cut into it. A warning holds
+     * the block steady, a critical one blinks it (every 5 ticks, with the plain label between). Orange and red were
+     * tried first: an amber visor hid the orange warning, red and green are the pair colour-blind players mix up, and a
+     * player's own colour may be either. Inverse video reads in any colour.
+     */
+    public static boolean inverse(HudAlert alert, boolean blink) {
+        return alert == HudAlert.WARNING || alert == HudAlert.CRITICAL && blink;
+    }
+
+    /** A label in the visor colour ({@code rgb}, 0xRRGGBB) at this alert: plain, or inverted ({@link #inverse}). */
+    public static void label(GuiGraphicsExtractor g, Font font, Component text, int x, int y, int rgb, HudAlert alert,
+                             boolean blink) {
+        if (inverse(alert, blink)) {
+            // a pixel clear of the glyphs all round: font.width counts the 1 px gap after the last glyph, capitals are
+            // 7 px tall and the font's descenders reach the 8th row
+            g.fill(x - 1, y - 1, x + font.width(text), y + 8, 0xFF000000 | rgb);
+            g.text(font, text, x, y, 0xFF000000 | VisorConfig.dim(rgb, CUT), false);
+        } else {
+            g.text(font, text, x, y, 0xFF000000 | rgb, false);
+        }
+    }
+
+    public void label(GuiGraphicsExtractor g, Component text, int x, int y, HudAlert alert) {
+        label(g, this.font, text, x, y, this.rgb, alert, this.blink);
+    }
+
+    /** Critical when {@code critical}, else nothing to say. */
+    public static HudAlert critical(boolean critical) {
+        return critical ? HudAlert.CRITICAL : HudAlert.NONE;
     }
 
     // ---- where things are --------------------------------------------------------------------------------------
@@ -149,22 +165,31 @@ public final class HudView {
         return this.cornerRight() - VALUE_W;
     }
 
-    /** A label in the corner's label column: right-aligned to the values, so it grows to the left. */
+    /** Where a label in the corner's label column starts: right-aligned to the values, so it grows to the left. */
+    private int cornerLabelX(Component label) {
+        return this.valueLeft() - LABEL_GAP - (this.font.width(label) - 1);
+    }
+
+    /** A label in the corner's label column, in this colour. */
     public void cornerLabel(GuiGraphicsExtractor g, Component label, int y, int colour) {
-        g.text(this.font, label, this.valueLeft() - LABEL_GAP - (this.font.width(label) - 1), y, colour, false);
+        g.text(this.font, label, this.cornerLabelX(label), y, colour, false);
     }
 
-    /** The first row: the count on the big counter, AMMO beside it on its baseline. */
-    public void ammoRow(GuiGraphicsExtractor g, int count, boolean warn) {
-        int colour = this.main(warn);
-        this.counter(g, count, this.cornerRight(), CORNER_Y0 + 2, colour);
-        this.cornerLabel(g, Component.translatable("hud.powerarmor.ammo"), CORNER_Y0 + 9, colour);
+    /** A label in the corner's label column at this alert ({@link #label}). */
+    public void cornerLabel(GuiGraphicsExtractor g, Component label, int y, HudAlert alert) {
+        this.label(g, label, this.cornerLabelX(label), y, alert);
     }
 
-    /** The second row (the left's FUEL row): a bar under the counter, its label beside it. */
+    /** The first row: the count on the big counter, AMMO beside it on its baseline, inverted on the last rounds. */
+    public void ammoRow(GuiGraphicsExtractor g, int count, boolean last) {
+        this.counter(g, count, this.cornerRight(), CORNER_Y0 + 2, this.main());
+        this.cornerLabel(g, Component.translatable("hud.powerarmor.ammo"), CORNER_Y0 + 9, critical(last));
+    }
+
+    /** The second row (the left's FUEL row): a bar under the counter, its label beside it (the alert's). */
     public void gaugeRow(GuiGraphicsExtractor g, Component label, float frac, HudAlert alert) {
-        this.cornerLabel(g, label, CORNER_Y0 + 18, this.main(alert));
-        bar(g, this.valueLeft(), CORNER_Y0 + 19, CORNER_SEGMENTS, 5, frac, this.main(alert), this.dim(alert));
+        this.cornerLabel(g, label, CORNER_Y0 + 18, alert);
+        bar(g, this.valueLeft(), CORNER_Y0 + 19, CORNER_SEGMENTS, 5, frac, this.main(), this.dim());
     }
 
     // ---- a flight on the world (the TNT round, a thrown mob) ----------------------------------------------------
@@ -237,6 +262,11 @@ public final class HudView {
         g.text(this.font, text, x - (this.font.width(text) - 1) / 2, y, colour, false);
     }
 
+    /** A label centred on {@code x}, at this alert ({@link #label}). */
+    public void centred(GuiGraphicsExtractor g, Component text, int x, int y, HudAlert alert) {
+        this.label(g, text, x - (this.font.width(text) - 1) / 2, y, alert);
+    }
+
     /** Fallout's ammo counter: three digits at twice the font's size (006; 999 = "999 or more"; endless = the sign),
      *  ending at {@code right}. Returns its left edge. */
     public int counter(GuiGraphicsExtractor g, int count, int right, int y, int colour) {
@@ -254,25 +284,30 @@ public final class HudView {
 
     /**
      * Rounds as pips centred on {@code x}: one 3x3 square each, up to {@code max}, then "+n"; "∞" when endless, EMPTY
-     * when none left. Red when it's the last of them.
+     * when none left. Critical on the last of them: inverted like a label ({@link #label}), the pips cut into a block.
      */
     public void pips(GuiGraphicsExtractor g, HudReadout r, int x, int y, int max) {
-        int colour = this.main(r.lowAmmo() || r.count() == 0);
+        HudAlert alert = critical(r.lowAmmo() || r.count() == 0);
         if (r.count() == HudReadout.ENDLESS) {
-            this.centred(g, Component.translatable("hud.powerarmor.endless"), x, y - 2, colour);
+            this.centred(g, Component.translatable("hud.powerarmor.endless"), x, y - 2, alert);
             return;
         }
         if (r.count() <= 0) {
-            this.centred(g, Component.translatable("hud.powerarmor.empty"), x, y - 2, colour);
+            this.centred(g, Component.translatable("hud.powerarmor.empty"), x, y - 2, alert);
             return;
         }
         int n = Math.min(r.count(), max);
         int x0 = x - (n * 4 - 1) / 2;
+        int colour = this.main();
+        if (inverse(alert, this.blink)) {
+            g.fill(x0 - 1, y - 1, x0 + n * 4, y + 4, colour);
+            colour = 0xFF000000 | VisorConfig.dim(this.rgb, CUT);
+        }
         for (int i = 0; i < n; i++) {
             g.fill(x0 + i * 4, y, x0 + i * 4 + 3, y + 3, colour);
         }
         if (r.count() > max) {
-            g.text(this.font, Component.literal("+" + (r.count() - max)), x0 + n * 4 + 2, y - 2, colour, false);
+            this.label(g, Component.literal("+" + (r.count() - max)), x0 + n * 4 + 2, y - 2, alert);
         }
     }
 }

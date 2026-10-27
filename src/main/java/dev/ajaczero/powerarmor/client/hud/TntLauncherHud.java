@@ -24,12 +24,13 @@ import net.minecraft.world.phys.Vec3;
  *   client draws the round coming out of the muzzle and joining that path within a few blocks ({@link TntShell#shift});
  *   the arc does the same (user, 2026-10-27: from the gun, not the crosshair), starting just clear of the launcher's
  *   model. Worked out every frame, so it moves with
- *   the aim. Where the blast would reach the suit (an explosion's reach is twice its strength) the arc and the diamond
- *   turn red. A round that would hit nothing goes off in the air when its fuse runs out: a small x there.</li>
+ *   the aim. Where the blast would reach the suit (an explosion's reach is twice its strength) the distance blinks
+ *   inverted ({@link HudView#label}). A round that would hit nothing goes off in the air when its fuse runs out: a small
+ *   x there (blinking when it's that close).</li>
  *   <li>The drum, in the top right corner like the chaingun's ammo (user, 2026-10-27): a revolver drum seen from behind,
  *   one chamber per round loaded (filled, from the top clockwise), the next empty one filling up while it's being
  *   loaded; AMMO and the rounds in reserve (the ammo slot) on the big counter beside it, LOAD under them while it
- *   loads. Red on the last round.</li>
+ *   loads. AMMO blinks inverted on the last round.</li>
  * </ul>
  */
 public final class TntLauncherHud implements ToolHud {
@@ -55,9 +56,9 @@ public final class TntLauncherHud implements ToolHud {
         v.ammoRow(g, r.count(), last);
         int loaded = TntLauncherItem.loaded(v.suit.getSocketStack());
         if (r.bar() > 0F) {
-            v.cornerLabel(g, Component.translatable("hud.powerarmor.load"), HudView.CORNER_Y0 + 18, v.faint(last));
+            v.cornerLabel(g, Component.translatable("hud.powerarmor.load"), HudView.CORNER_Y0 + 18, v.faint());
         }
-        drum(g, v, v.cornerLeft() - DRUM_GAP - (2 * SPREAD + CHAMBER) / 2, HudView.CORNER_Y0 + 16, loaded, r.bar(), last);
+        drum(g, v, v.cornerLeft() - DRUM_GAP - (2 * SPREAD + CHAMBER) / 2, HudView.CORNER_Y0 + 16, loaded, r.bar());
         return String.format(Locale.ROOT, "drum=%d reserve=%d loading=%.2f %s", loaded, r.count(), r.bar(), arc);
     }
 
@@ -77,17 +78,18 @@ public final class TntLauncherHud implements ToolHud {
         // inside the blast: vanilla's explosion reaches twice its strength, measured to the suit's feet
         double blast = 2 * PowerArmorConfig.TNT_LAUNCHER_POWER.get();
         boolean danger = end.distanceTo(v.suit.position()) < blast;
-        int dots = v.dottedLine(g, drawn, v.faint(danger), CLEAR);
+        int dots = v.dottedLine(g, drawn, v.faint(), CLEAR);
         double distance = end.distanceTo(launch.from());
         float[] p = v.project(end);
         if (p != null) {
             int x = Math.round(p[0]), y = Math.round(p[1]);
             if (flight.hit()) {
-                HudView.diamond(g, x, y, MARK, v.main(danger));
-                g.text(v.font, Component.translatable("hud.powerarmor.metres", Math.round(distance)), x + MARK + 3, y - 3, v.main(danger), false);
-            } else {
-                // goes off in the air (the fuse): a small x
-                int c = v.faint(danger);
+                HudView.diamond(g, x, y, MARK, v.main());
+                v.label(g, Component.translatable("hud.powerarmor.metres", Math.round(distance)), x + MARK + 3, y - 3,
+                        HudView.critical(danger));
+            } else if (!(danger && v.blink)) {
+                // goes off in the air (the fuse): a small x, blinking if that's in the blast's reach
+                int c = danger ? v.main() : v.faint();
                 for (int k = -2; k <= 2; k++) {
                     g.fill(x + k, y + k, x + k + 1, y + k + 1, c);
                     g.fill(x + k, y - k, x + k + 1, y - k + 1, c);
@@ -121,15 +123,15 @@ public final class TntLauncherHud implements ToolHud {
      * filled, from the top (under the barrel: the next to fire) clockwise; the first empty one fills from the bottom while
      * it's being loaded ({@code loading} 0..1); the rest are rings.
      */
-    private static void drum(GuiGraphicsExtractor g, HudView v, int x, int y, int rounds, float loading, boolean warn) {
-        int lit = v.main(warn), faint = v.faint(warn);
+    private static void drum(GuiGraphicsExtractor g, HudView v, int x, int y, int rounds, float loading) {
+        int lit = v.main(), faint = v.faint();
         g.fill(x - HUB / 2, y - HUB / 2, x - HUB / 2 + HUB, y - HUB / 2 + HUB, faint);
         int[][] chambers = {{0, -SPREAD}, {SPREAD, 0}, {0, SPREAD}, {-SPREAD, 0}};
         for (int i = 0; i < chambers.length; i++) {
             int x0 = x + chambers[i][0] - CHAMBER / 2, y0 = y + chambers[i][1] - CHAMBER / 2;
             boolean loaded = i < rounds;
             if (i == rounds && loading > 0F) {
-                g.fill(x0, y0, x0 + CHAMBER, y0 + CHAMBER, v.dim(warn));
+                g.fill(x0, y0, x0 + CHAMBER, y0 + CHAMBER, v.dim());
                 int h = Math.round(CHAMBER * Math.min(1F, loading));
                 if (h > 0) {
                     g.fill(x0, y0 + CHAMBER - h, x0 + CHAMBER, y0 + CHAMBER, lit);

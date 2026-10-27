@@ -11,11 +11,11 @@ import net.minecraft.world.entity.player.Player;
  * (the server sends the burst to everyone else, ChaingunItem.use).
  */
 final class ChaingunEffects implements ToolEffects {
-    /** The HUD warns (the counter turns red) from this many bullets down: about a second and a half of a full barrage. */
+    /** The HUD warns (AMMO blinks inverted) from this many bullets down: about a second and a half of a full barrage. */
     static final int LOW_BULLETS = 16;
 
     private float barrelAngle, barrelAngleO;
-    /** The barrels are locked by an overheat (the HUD keeps OVERHEAT up, red, while they cool). The server's lock
+    /** The barrels are locked by an overheat (the HUD keeps OVERHEAT up, blinking, while they cool). The server's lock
      *  (ChaingunItem.State.overheated) isn't synced, but it follows the synced heat exactly: it locks when the heat hits
      *  1 (and the heat stays there for the cooling delay, so every client sees it) and opens when it's back to 0; the
      *  heat can't rise in between, as a locked gun doesn't fire. (Only a client that joins mid-cooldown misses one.) */

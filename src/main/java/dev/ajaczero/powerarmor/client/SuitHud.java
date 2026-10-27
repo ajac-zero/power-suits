@@ -43,7 +43,7 @@ import org.jetbrains.annotations.Nullable;
  *   and FUEL (time left at walking pace, a bar for how full the fuel slot is) with three embers for the burn rate:
  *   1 idling or walking, 2 sprinting, 3 a hungry tool at work (a charging rail cannon, the chaingun at full spin, the flamethrower), dark when
  *   nothing burns (a free engine). The embers
- *   burn in the visor colour, orange with two lit and red with all three (user, 2026-10-27).</li>
+ *   burn in the visor colour: how many are lit is the reading.</li>
  *   <li>The socket tool's own readout, wherever it wants it (2026-10-27: each tool brings its own, client/hud/ToolHuds):
  *   the chaingun's ammo and heat in the top right corner, the rail cannon's charge brackets round the crosshair, the
  *   TNT launcher's drum and the arc its round will fly, the EM projector's box round what it holds. Tools with nothing
@@ -53,10 +53,11 @@ import org.jetbrains.annotations.Nullable;
  *   the compass and clock only work in the overworld: elsewhere the tape spins and the time reads {@code --:--} (the
  *   coordinates work everywhere).</li>
  * </ul>
- * Three colours tell how urgent a readout is ({@link HudAlert}, user 2026-10-27): the visor colour, orange as a warning
- * (hull at half), red when critical (hull in its last 15%, fuel low). The suit's readouts and the compass take the
- * suit's worst; a tool's (the last rounds, a hot or overheated barrel) colour only that tool's readout. Without power the projector is
- * dark: only a red blinking NO FUEL (or FLOODED) is left. The helmet carries the projector: no helmet, no HUD (vanilla's vehicle hearts then stand in for the hull, as on any mount). With the HUD up
+ * Everything is in the one visor colour (user's pick, 2026-10-27, after orange warnings and red criticals: see
+ * {@link HudView#label}). How urgent a readout is ({@link HudAlert}) inverts its label like an old terminal: a solid
+ * block with the text cut in, steady as a warning (HULL at half), blinking when critical (HULL in its last 15%, FUEL
+ * low); only the label in trouble, so a tool's (the last rounds, a hot or overheated barrel) marks only its own. Without
+ * power the projector is dark: only NO FUEL (or FLOODED) is left, blinking inverted. The helmet carries the projector: no helmet, no HUD (vanilla's vehicle hearts then stand in for the hull, as on any mount). With the HUD up
  * those hearts are hidden, and vanilla's boss bars and effect icons move down out of its way.
  * <p>
  * It's a "GUI layer" (registered in ClientSetup), drawn every frame after the vanilla hotbar. Everything it shows comes
@@ -66,7 +67,7 @@ import org.jetbrains.annotations.Nullable;
 public final class SuitHud {
     public static final Identifier ID = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "suit_hud");
     /** The suit figure, one mask per armour piece on one 15x26 canvas (tools/make-hud-icons.py), so each piece can take
-     *  its own colour: today all follow the hull; with modular armour a critical piece will flash red on its own. */
+     *  its own colour: today all are the visor's; with modular armour a critical piece could blink on its own. */
     private static final Identifier[] FIGURE = {hud("suit_helmet"), hud("suit_chest"), hud("suit_arm_left"),
             hud("suit_arm_right"), hud("suit_leg_left"), hud("suit_leg_right")};
     private static final int FIGURE_W = 15, FIGURE_H = 26;
@@ -75,8 +76,6 @@ public final class SuitHud {
     /** A burning ember: the same shape in two shades of white (a bright tip over a shaded body), tinted like the rest. */
     private static final Identifier EMBER_LIT = hud("ember_lit");
 
-    /** Critical, whatever the visor colour. */
-    private static final int RED = HudView.RED;
     /** Unlit segments (and the compass's dots) at this fraction of the colour: an empty bar must read as empty. */
     private static final float DIM = HudView.DIM, FAINT = HudView.FAINT;
     /** Burn-rate embers: one per walking's worth of fuel a tick, rounded (user, 2026-10-27): 1 idling or walking, 2
@@ -124,17 +123,14 @@ public final class SuitHud {
                 : Component.translatable("gui.powerarmor.no_fuel");
         float hull = Mth.clamp(suit.getHealth() / suit.getMaxHealth(), 0F, 1F);
         if (!powered && scan.off()) {
-            // The projector runs on the suit's power: with none, the glass is dark but for the reason, blinking red
+            // The projector runs on the suit's power: with none, the glass is dark but for the reason, blinking inverted
             // (once the shutdown's scan is over: VisorPower).
-            if (blink) {
-                g.text(font, fuelText, x0 + 26, y0 + 4, colour(RED), false);
-            }
-            shown = new Shown(hull, power.fuelGauge(), blink ? fuelText.getString() : "", 0, HudAlert.CRITICAL, false, "", "", "", 0F);
+            HudView.label(g, font, fuelText, x0 + 26, y0 + 4, VisorConfig.colour(), HudAlert.CRITICAL, blink);
+            shown = new Shown(hull, power.fuelGauge(), fuelText.getString(), 0, HudAlert.CRITICAL, false, "", "", "", 0F);
             return;
         }
 
         HudAlert hullAlert = HudAlert.ofLeft(hull);
-        boolean hullCritical = hullAlert == HudAlert.CRITICAL;
         // The fuel has no warning step yet: its bar is the slot against a full stack, so "half gone" means nothing; it's
         // critical on the suit's own low-fuel alarm (LOW_FUEL, the beeps).
         boolean fuelCritical = !free && (suit.getEngine() == null || power.isFlooded() || energy == 0 || power.isLowOnFuel());
@@ -144,7 +140,7 @@ public final class SuitHud {
         // the tool's warnings are its own readout's (ToolHud), not the whole HUD's
         HudAlert alert = fuelCritical ? HudAlert.CRITICAL : hullAlert;
         String toolId = suit.socket().tool() == null ? "" : BuiltInRegistries.ITEM.getKey(suit.getSocketStack().getItem()).getPath();
-        int rgb = HudView.rgb(alert, VisorConfig.colour());
+        int rgb = VisorConfig.colour();
         int main = colour(rgb);
         int dim = colour(VisorConfig.dim(rgb, DIM));
         int faint = colour(VisorConfig.dim(rgb, FAINT));
@@ -171,26 +167,21 @@ public final class SuitHud {
         Component fuelLabel = Component.translatable("hud.powerarmor.fuel");
         // the seal shield and the embers start in one column, past the longer label
         int ix = lx + Math.max(font.width(hullLabel), font.width(fuelLabel)) + 4;
-        g.text(font, hullLabel, lx, y0 + 4, main, false);
+        HudView.label(g, font, hullLabel, lx, y0 + 4, rgb, hullAlert, blink);
         // sealed (running with the helmet on: fire, frost, gas and water kept out) or faded like an unlit ember
         g.blit(RenderPipelines.GUI_TEXTURED, SEAL, ix, y0 + 4, 0F, 0F, 6, 7, 6, 7, suit.isSealed() ? main : dim);
         Component hullText = Component.translatable("hud.powerarmor.percent", Math.round(hull * 100));
-        if (!(hullCritical && blink)) {
-            g.text(font, hullText, rx - font.width(hullText), y0 + 4, main, false);
-        }
+        // the numbers stay put: the label carries the alert (one blinking thing per row, not two)
+        g.text(font, hullText, rx - font.width(hullText), y0 + 4, main, false);
         HudView.bar(g, lx, y0 + 13, segments, 3, hull, main, dim);
-        g.text(font, fuelLabel, lx, y0 + 18, main, false);
-        // burning embers in the visor colour, orange with two lit, red with all three (or the suit's own colour if
-        // that's more urgent); unlit ones dim
-        int burning = colour(HudView.rgb(alert.max(emberAlert(embers)), VisorConfig.colour()));
+        HudView.label(g, font, fuelLabel, lx, y0 + 18, rgb, HudView.critical(fuelCritical), blink);
+        // burning embers lit, unlit ones dim
         for (int i = 0; i < 3; i++) {
             boolean lit = i < embers;
             g.blit(RenderPipelines.GUI_TEXTURED, lit ? EMBER_LIT : EMBER, ix + i * 7, y0 + 19, 0F, 0F, 5, 6, 5, 6,
-                    lit ? burning : dim);
+                    lit ? main : dim);
         }
-        if (!(fuelCritical && blink)) {
-            g.text(font, fuelText, rx - font.width(fuelText), y0 + 18, main, false);
-        }
+        g.text(font, fuelText, rx - font.width(fuelText), y0 + 18, main, false);
         HudView.bar(g, lx, y0 + 27, segments, 3, fuel, main, dim);
 
         // ---- top centre: compass and clock ------------------------------------------------------------------------
@@ -373,11 +364,6 @@ public final class SuitHud {
         }
         float walks = rate / (float) Math.max(0.01, PowerArmorConfig.DRAIN_WALK.get());
         return walks >= THREE_EMBERS ? 3 : walks >= TWO_EMBERS ? 2 : 1;
-    }
-
-    /** How urgent the burn rate looks: two embers a warning, three critical (burning fast). */
-    public static HudAlert emberAlert(int embers) {
-        return embers >= 3 ? HudAlert.CRITICAL : embers == 2 ? HudAlert.WARNING : HudAlert.NONE;
     }
 
     @SubscribeEvent

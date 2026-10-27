@@ -4,8 +4,8 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * One socket tool's own readout on the visor (2026-10-27, user: "each power tool could bring its own UI"): drawn
- * anywhere on the glass (the crosshair, a corner, over the world), in the visor's colour, red only for its own
- * warnings. A tool with nothing to say has none (the drill, the chainsaw, the flamethrower): the glass stays clear.
+ * anywhere on the glass (the crosshair, a corner, over the world), all in the visor's colour; its own warnings invert
+ * its own labels ({@link HudView#label}). A tool with nothing to say has none (the drill, the chainsaw, the flamethrower): the glass stays clear.
  * <p>
  * Client only. The tool's item is shared code, which a dedicated server loads too and which may never name the
  * client's drawing classes, so the drawing lives here and {@link ToolHuds} pairs it with the item at startup, the way

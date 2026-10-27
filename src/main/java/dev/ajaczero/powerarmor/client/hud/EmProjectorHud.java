@@ -75,7 +75,7 @@ public final class EmProjectorHud implements ToolHud {
             int[] box = screenBox(v, e);
             if (box != null) {
                 HudView.brackets(g, box[0] - PAD, box[1] - PAD, box[2] + PAD, box[3] + PAD, MARK_ARM,
-                        inLine.contains(e) ? v.main(false) : v.faint(false));
+                        inLine.contains(e) ? v.main() : v.faint());
             }
         }
         String state = "scan=" + marks.size() + (inLine.isEmpty() ? "" : " in_line=" + inLine.size());
@@ -141,7 +141,7 @@ public final class EmProjectorHud implements ToolHud {
      *  returns the box on the screen, or null when it's off the screen. */
     @Nullable
     private static int[] labelled(GuiGraphicsExtractor g, HudView v, Entity e, boolean held) {
-        int main = v.main(false);
+        int main = v.main();
         int[] box = screenBox(v, e);
         // The label above the box, over its top-left bracket: "PIG", the health bar under it. (Beside the box it
         // sat on the thing itself: a mob's model reaches past its hit box, a pig's head by a third of a block.)
@@ -164,7 +164,7 @@ public final class EmProjectorHud implements ToolHud {
         }
         g.text(v.font, label, lx, ly, main, false);
         if (e instanceof LivingEntity living) {
-            HudView.bar(g, lx, ly + 9, HEALTH_SEGMENTS, 2, living.getHealth() / living.getMaxHealth(), main, v.dim(false));
+            HudView.bar(g, lx, ly + 9, HEALTH_SEGMENTS, 2, living.getHealth() / living.getMaxHealth(), main, v.dim());
         }
         return box;
     }
@@ -184,10 +184,10 @@ public final class EmProjectorHud implements ToolHud {
         }
         line.add(flight.end().add(shift));
         path.add(flight.end().add(shift));
-        int dots = v.dottedLine(g, line, v.faint(false), 0);
+        int dots = v.dottedLine(g, line, v.faint(), 0);
         float[] p = v.project(flight.end().add(shift));
         if (p != null && flight.hit()) {
-            HudView.diamond(g, Math.round(p[0]), Math.round(p[1]), MARK, v.main(false));
+            HudView.diamond(g, Math.round(p[0]), Math.round(p[1]), MARK, v.main());
         }
         return String.format(Locale.ROOT, "arc=%d %s=%.1f ticks=%d", dots, flight.hit() ? "lands" : "flying",
                 flight.end().distanceTo(target.position()), flight.ticks());

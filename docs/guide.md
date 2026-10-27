@@ -101,7 +101,7 @@ glass (no helmet, no HUD: then vanilla's vehicle hearts show the hull); without 
 view in. When the power comes on (fuel is back, or you climb into a running suit) the visor scans itself on: a line
 appears across the middle of the screen, widens, and splits into two lines that sweep up and down to the edges; what
 they pass is on (the metal turns see-through, the readouts appear). When the power goes, two lines sweep in from the
-top and bottom, switching everything off behind them, meet in the middle and shrink away; then the red NO FUEL starts
+top and bottom, switching everything off behind them, meet in the middle and shrink away; then NO FUEL starts
 blinking. It's terminal green by default: pick your own colour under
 **Mods > Power Armor > Config > Visor** (`visor_colour` in `config/powerarmor-client.toml`, `#RRGGBB`; only you see it).
 - **Top left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
@@ -109,12 +109,12 @@ blinking. It's terminal green by default: pick your own colour under
   tidal engine or a star reactor; NO FUEL, also with no engine; FLOODED), a bar for how full the fuel slot is, and three
   **embers** for how fast it burns, about one per walking's worth: one idling or walking, two sprinting, three with a
   hungry tool at work (a charging rail cannon, the chaingun at full spin, the flamethrower; the chaingun's climb from one
-  to three as its barrels spin up), none when nothing burns. They burn in the visor colour with one lit, orange with two, red with three.
+  to three as its barrels spin up), none when nothing burns.
 - **The socket tool's own readout**, where that tool needs it (tools with nothing to say show nothing: the drill, the
   chainsaw, the flamethrower):
   - **Chaingun**, top right: a big 3-digit counter (006; 999 means 999 or more; ∞ in creative) with **AMMO** beside
-    it, and under it the barrels' heat bar with **HEAT** beside it: orange from half, red in its last 15%. Overheated,
-    it reads **OVERHEAT** (in red, reaching further left) and stays red all the way down while the barrels cool: the
+    it, and under it the barrels' heat bar with **HEAT** beside it: inverted from half, blinking in its last 15%. Overheated,
+    it reads **OVERHEAT** (reaching further left) and keeps blinking all the way down while the barrels cool: the
     gun won't fire again until the bar is empty.
   - **Rail cannon**, round the crosshair: four corner brackets that wait wide and faint, close in as it charges (the
     charge in % under them) and lock with a second, inner set over **READY** at full charge; one pip per ingot left.
@@ -123,7 +123,7 @@ blinking. It's terminal green by default: pick your own colour under
     round's own physics, so it's where the round really goes; it starts just clear of the launcher so it doesn't run
     over the gun (a round that hits nothing goes off in the air at the end of
     its fuse: a small x). Aim the diamond, not the crosshair: the round drops. When it would go off close enough for its
-    blast to reach you (twice its strength: 8 blocks by default) the arc and the diamond turn **red**. Top right, where
+    blast to reach you (twice its strength: 8 blocks by default) the distance blinks inverted (an airburst's x blinks). Top right, where
     the chaingun's ammo is: the revolver **drum**, a filled chamber per round loaded (the next empty one fills while
     it's being loaded), AMMO and the TNT left in the ammo slot, LOAD while it loads.
   - **EM projector**: it scans on its own: everything within its range (16 blocks) you can see that it could pull
@@ -137,11 +137,12 @@ blinking. It's terminal green by default: pick your own colour under
   on, like F3's `Block:`; `--- --- ---` in a world with reduced debug info) and the time to its right (`18:40`). Like
   the vanilla items the compass and clock only work in the overworld: elsewhere the tape spins and the time reads
   `--:--`; the coordinates work everywhere.
-- Three colours tell how urgent a readout is: the visor colour when all's well, **orange** as a warning (half gone),
-  **red** when critical (the last 15%, or something you can't use yet). The suit's readouts and the compass turn orange
-  with the hull under half, red in its last 15% or on low fuel. A tool's warnings colour only its own readout: the last
-  rounds (red: 16 bullets, the last TNT or ingot), a hot or overheated chaingun. With **no power** the glass goes dark: only the helmet's edge and a blinking red
-  **NO FUEL** (or FLOODED) are left.
+- The whole visor is one colour, warnings too: a readout in trouble shows its label in **inverse video**, like an old
+  terminal (a solid block of the visor colour with the word cut into it). A **warning** (half gone) holds the block
+  steady, **critical** (the last 15%, or something you can't use yet) blinks it. Only the label in trouble changes:
+  HULL under half (steady) and in its last 15% (blinking), FUEL when low, a tool's own: the last rounds (AMMO: 16
+  bullets, the last TNT; the rail cannon's last ingot pip), a hot or overheated chaingun (HEAT, OVERHEAT). With **no
+  power** the glass goes dark: only the helmet's edge and **NO FUEL** (or FLOODED), blinking inverted, are left.
 - While the HUD is up, vanilla's boss bars move down under the compass and the effect icons under the top right corner.
 
 Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It burns whenever

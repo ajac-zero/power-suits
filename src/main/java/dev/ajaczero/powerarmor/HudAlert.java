@@ -1,10 +1,10 @@
 package dev.ajaczero.powerarmor;
 
 /**
- * How urgent a readout on the pilot's visor is (user, 2026-10-27): the visor colour while all's well, orange as a
- * warning (half gone), red when critical (the last 15%, or the thing can't be used: an overheated chaingun). The
- * readouts' colours come from {@code client/hud/HudView}; the levels live here, on the shared side, so the tools'
- * numbers ({@code ToolEffects.hud}) and the tests can name them.
+ * How urgent a readout on the pilot's visor is (user, 2026-10-27): fine, a warning (half gone), critical (the last 15%,
+ * or the thing can't be used: an overheated chaingun). The visor stays one colour: a warning inverts the readout's label,
+ * a critical one blinks it inverted ({@code client/hud/HudView.label}). The levels live here, on the shared side, so
+ * the tools' numbers ({@code ToolEffects.hud}) and the tests can name them.
  */
 public enum HudAlert {
     NONE, WARNING, CRITICAL;

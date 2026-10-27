@@ -17,7 +17,7 @@ public final class VisorConfig {
     private static final ModConfigSpec.Builder B = new ModConfigSpec.Builder();
 
     public static final ModConfigSpec.ConfigValue<String> COLOUR = B
-            .comment("The visor's colour as #RRGGBB: its readouts and the light along the helmet's edge. Warnings stay red.",
+            .comment("The visor's colour as #RRGGBB: its readouts and the light along the helmet's edge. Warnings use it too (inverted).",
                     "Try #5AFF6E (terminal green, the default), #E4ECE8 (white), #8EC2FF (blue), #FFBA3C (amber).")
             .translation("powerarmor.configuration.visor_colour")
             .define("visor_colour", DEFAULT_COLOUR, v -> v instanceof String s && parse(s) >= 0);

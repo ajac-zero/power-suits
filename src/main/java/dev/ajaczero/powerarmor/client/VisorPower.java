@@ -20,7 +20,7 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
  *   lies between them is on: the readouts are there, the helmet's metal is see-through (only its lip); what they haven't
  *   reached yet is still off (no readouts, solid black metal).</li>
  *   <li>Power off (out of fuel, flooded): two lines come in from the top and bottom edges (0.35 s), switching off what
- *   they pass, meet in the middle, and the line left there shrinks to the centre (0.15 s); only then does the red NO FUEL
+ *   they pass, meet in the middle, and the line left there shrinks to the centre (0.15 s); only then does NO FUEL
  *   start blinking.</li>
  * </ul>
  * Timed on the wall clock (ms), not game ticks: a tick is 50 ms, a frame far less, and a sweep stepped per tick shows

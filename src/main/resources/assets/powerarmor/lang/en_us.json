@@ -75,7 +75,7 @@
   "powerarmor.configuration.section.powerarmor.client.toml": "Visor (your own)",
   "powerarmor.configuration.section.powerarmor.client.toml.title": "Power Armor visor",
   "powerarmor.configuration.visor_colour": "Visor colour",
-  "powerarmor.configuration.visor_colour.tooltip": "The visor's colour as #RRGGBB: its readouts and the light along the helmet's edge (warnings stay red). Try #5AFF6E (terminal green, the default), #E4ECE8 (white), #8EC2FF (blue), #FFBA3C (amber).",
+  "powerarmor.configuration.visor_colour.tooltip": "The visor's colour as #RRGGBB: its readouts and the light along the helmet's edge (warnings too: they invert it). Try #5AFF6E (terminal green, the default), #E4ECE8 (white), #8EC2FF (blue), #FFBA3C (amber).",
   "powerarmor.configuration.section.powerarmor.common.toml": "Balance (fuel and tools)",
   "powerarmor.configuration.section.powerarmor.common.toml.title": "Power Armor balance",
   "powerarmor.configuration.fuel": "Fuel",

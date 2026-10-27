@@ -105,7 +105,7 @@ final class HudScene {
             // and wiping the readouts as they pass, meet in the middle and shrink away (0.5 s), then NO FUEL (hud_open)
             case 439, 440, 441, 442, 443, 445 -> AutoPilot.shot(mc, "hud_close_" + (s - 436));
             case 460 -> AutoPilot.shot(mc, "hud_off");
-            case 465 -> AutoPilot.shot(mc, "hud_off_blink"); // NO FUEL blinks every 5 ticks: one of the two shows it
+            case 465 -> AutoPilot.shot(mc, "hud_off_blink"); // NO FUEL blinks inverted every 5 ticks: one of the two shows the block
             case 468 -> { phase = "refuel"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 40))); }
             // the visor's warm-up: a line across the middle widens, splits and sweeps up and down, turning the metal
             // see-through and uncovering the readouts as it passes (0.57 s; hud_open / visor_sweep columns)
