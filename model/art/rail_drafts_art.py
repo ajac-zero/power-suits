@@ -38,7 +38,7 @@ backpack_kit.GLOW_LIT.update(E='1a5cc8', F='2f9cff', H='a8f0ff')
 
 def wf(fn):
     """Face overrides painted in model coordinates: fn(face, x, y, z) -> key or '.' (keeps the material). A down face's
-    rows run front to back mirrored (AGENTS.md), hence the flip."""
+    rows run front to back mirrored (blockbench-mcp/power-armor-model.md), hence the flip."""
     def at(face, f, t, c, r):
         x, y, z = face_point(face, f, t, c, r)
         return (x, y, f[2] + t[2] - z) if face == "down" else (x, y, z)
@@ -493,7 +493,7 @@ def emitter_plan():
     for r in range(h):
         for c in range(w):
             x, y, z = face_point("down", f, t, c, r)
-            z = f[2] + t[2] - z                       # (a down face runs front to back mirrored: AGENTS.md)
+            z = f[2] + t[2] - z                       # (a down face runs front to back mirrored: blockbench-mcp/power-armor-model.md)
             if not (-13.5 < x < -9.5 and -3 < z < 0):
                 continue                              # outside the slot: the copper stays
             k = 'Z' if abs(z - CZ) < .6 and abs(x - CX) < 1.1 else 'K' if abs(x - CX) < 1.8 and abs(z - CZ) < .6 else 'D'

@@ -8,6 +8,7 @@ description: Use when inspecting or editing a model in the user's open Blockbenc
 Learned from real sessions: rigging/posing a Bedrock entity, fixing its walk cycle and flicker, adding textured parts, a full premium animation set (idle, walk, run, sneak, attack, throw, death, electrified, helmet off/on, stim, hit, fidget) built with the toolkit in `scripts/`, and a chest-armour redesign driven by a clearance check. Follow these before touching the user's project.
 
 - **Building or reworking animations?** Read [ANIMATION.md](ANIMATION.md) (pipeline, toolkit API, recipes, pitfalls) and use `scripts/`.
+- **Working on the Power Armor model?** Read [power-armor-model.md](power-armor-model.md): what its rig, gaits, texture, glow and drafts already taught us.
 - **Taking a model into Minecraft (NeoForge + GeckoLib)?** See `~/Developer/PowerArmor/.agents/skills/minecraft-modding/SKILL.md` (export pipeline, rendering, flicker, testing in game).
 - Example production specs for a real rig: `model/anim/a_*.js` (model: `model/power_armor.bbmodel`).
 

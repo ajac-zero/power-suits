@@ -16,6 +16,8 @@ model) with a user who had never modded before. Read the reference that matches 
 | [references/rideable-entity.md](references/rideable-entity.md) | vehicles/mechs: riding, movement, camera, damage, terrain, water, saved data |
 | [references/testing.md](references/testing.md) | GameTests (incl. menus), the autopilot client harness, measuring in-game, protecting user worlds |
 | [references/tools-projectiles.md](references/tools-projectiles.md) | vehicle-mounted tools, hold-to-use input packets, aiming from a muzzle, projectiles, damage types, tool bones, GeckoLib items cut from an entity model |
+| [references/power-armor-lessons.md](references/power-armor-lessons.md) | changing Power Armor's code: the lessons each area cost, by topic (the rules are in the repo's `AGENTS.md`) |
+| [references/power-armor-runs.md](references/power-armor-runs.md) | verifying Power Armor: every command and autopilot scene, what it drives and logs; the web page and releases |
 | [references/menus-hud.md](references/menus-hud.md) | entity inventories, menus + screens, menu buttons, item data components, synced entity data, HUD layers, particles |
 
 Scripts (run from anywhere, paths relative to this skill): `scripts/make_test_structure.py`
@@ -42,7 +44,8 @@ For model and animation work use the Blockbench skill:
 6. **Teach as you go** (first-time modders): after each change explain one concept in plain words:
    client vs server, registries, events, synced data, why a bug happened. Comment the "why" in code.
 7. **Before handing off**, write the spec (with OPEN questions), the plan (phases, files, APIs, tests) and
-   `AGENTS.md` (setup, verification loop, lessons). Ask where the user keeps design docs: on Power Armor they live in
+   `AGENTS.md` (setup, verification loop, the rules agents must follow; keep it short and put the lessons behind
+   them in skill references, as Power Armor does since 2026-10-26). Ask where the user keeps design docs: on Power Armor they live in
    Notion (spec + Roadmap database, see its `AGENTS.md`); a new project may want `docs/design.md` +
    `docs/implementation-plan.md` in the repo. Check that every API
    the plan names exists in the pinned versions.
