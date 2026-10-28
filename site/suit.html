@@ -3,63 +3,64 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>The suit and its mind | Power Suits</title>
-  <meta name="description" content="Climb into the Power Suits power suit: cockpit, visor HUD, firebox, dyes and helmet styles.">
+  <title>The suit | Power Suits</title>
+  <meta name="description" content="Climb into the Power Suits power suit: cockpit, visor HUD, firebox, dyes, helmet styles and the machine mind.">
   <link rel="icon" href="img/favicon.png">
-  <meta property="og:title" content="The suit and its mind | Power Suits">
-  <meta property="og:description" content="Climb into the Power Suits power suit: cockpit, visor HUD, firebox, dyes and helmet styles.">
-  <meta property="og:image" content="https://ajac-zero.github.io/power-suits/img/suppressing_fire.jpg">
+  <meta property="og:title" content="The suit | Power Suits">
+  <meta property="og:description" content="Climb into the Power Suits power suit: cockpit, visor HUD, firebox, dyes, helmet styles and the machine mind.">
+  <meta property="og:image" content="https://ajac-zero.github.io/power-suits/img/dusk_cockpit.jpg">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
+  <link href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="index.html"><img src="img/icon.png" alt="" width="36" height="36"> Power Suits</a>
-  <nav>
-    <a href="suit.html" class="here">Suit</a>
-    <a href="tools.html">Tools &amp; engines</a>
-    <a href="gallery.html">Gallery</a>
-    <a href="install.html">Install</a>
-    <a href="https://github.com/ajac-zero/power-suits">GitHub</a>
-  </nav>
-</header>
 
-<main>
-<div class="pagehead"><h1>The suit</h1></div>
-<section class="feature">
-  <img class="shot" src="img/dusk_cockpit.jpg" alt="The view from inside a red suit's cockpit at dusk, with a village ahead" loading="lazy">
-  <div>
+{{nav}}
+
+<section class="board">
+  <div class="t title c8">
+    <h1>The suit</h1>
+    <p>Climb in, step out and let it work, or paint it and find all six helmets.</p>
+  </div>
+  <div class="t ph c4"><img src="img/containment.jpg" alt="An orange suit with a Hunter helmet lifting a slime in a spaceship's cargo bay"></div>
+</section>
+
+<section class="board">
+  <div class="t text c5">
     <h2>Climb in</h2>
-    <p>Pilot from the cockpit or from behind. It walks with weight, sprints, and lands jumps with a stomp. The suit's hand holds your item and punches for four extra damage.</p>
+    <p>Pilot from the cockpit or from behind. The suit walks with weight, sprints and lands jumps with a stomp that throws things around. Its hand holds your item and punches for four extra damage.</p>
     <ul>
       <li>A visor HUD: hull, fuel, compass, clock and a readout per tool, in any colour</li>
       <li>Pack it up into an item and carry it with you</li>
-      <li>Press E inside for your inventory and the suit's; F swaps tools; a power switch parks it</li>
+      <li>Press E inside for your inventory and the suit's. F swaps tools. A power switch parks it.</li>
     </ul>
   </div>
+  <div class="t ph c7"><img src="img/dusk_cockpit.jpg" alt="The view from inside a red suit's cockpit at dusk, with a village ahead"></div>
 </section>
 
-<section class="feature flip">
-  <img class="shot" src="img/em_front.jpg" alt="A purple suit with a Hunter helmet and a Nether Star reactor lifting a creeper with the EM projector" loading="lazy">
-  <div>
+<section class="board">
+  <div class="t ph c7"><img src="img/em_front.jpg" alt="A purple suit with a Hunter helmet and a Nether Star reactor lifting a creeper with the EM projector"></div>
+  <div class="t text t3 c5">
     <h2>A mind of its own</h2>
-    <p>A powered suit with a helmet and nobody inside works for you, by its tool:</p>
+    <p>A powered suit with a helmet and nobody inside works for you, by the tool in its socket:</p>
     <ul>
-      <li><b>Chaingun</b>: follows you like a tamed wolf and shoots whatever attacks you</li>
-      <li><b>EM Projector</b>: guards your home and flings monsters into the sky</li>
-      <li><b>Mining Drill</b>: clears out a hall around its home</li>
-      <li><b>Chainsaw</b>: fells the trees nearby</li>
+      <li><b>Chaingun</b> follows you like a tamed wolf and shoots what attacks you</li>
+      <li><b>EM Projector</b> guards your home and flings monsters into the sky</li>
+      <li><b>Mining Drill</b> clears out a hall around its home</li>
+      <li><b>Chainsaw</b> fells the trees nearby</li>
     </ul>
     <p>Rogue suits with red visors attack anything. Beat one for its tool, or reboot its mind with a lightning strike.</p>
   </div>
 </section>
 
-<section class="feature">
-  <img class="shot" src="img/walk_front.jpg" alt="A blue power suit walking toward the camera across a meadow" loading="lazy">
-  <div>
+<section class="board">
+  <div class="t text c5">
     <h2>Make it yours</h2>
-    <p>Bare polished steel until you right click it with a dye; a wet sponge washes it off. Five more helmet styles hide in structure chests as smithing templates.</p>
+    <p>The suit is bare polished steel until you right click it with a dye. A wet sponge washes it off. Five more helmet styles hide in structure chests as smithing templates, each a nod to a famous helmet.</p>
     <p class="helmets">
       <img src="img/items/suit_helmet.png" alt="Standard helmet" title="Standard">
       <img src="img/items/suit_helmet_protector.png" alt="Protector helmet" title="Protector">
@@ -69,17 +70,9 @@
       <img src="img/items/suit_helmet_hunter.png" alt="Hunter helmet" title="Hunter">
     </p>
   </div>
+  <div class="t ph c7"><img src="img/walk_front.jpg" alt="A blue power suit walking toward the camera across a meadow"></div>
 </section>
-</main>
 
-<footer>
-  <p>
-    Power Suits is open source under the MIT license:
-    <a href="https://github.com/ajac-zero/power-suits">github.com/ajac-zero/power-suits</a>.
-    Bugs and ideas go to the <a href="https://github.com/ajac-zero/power-suits/issues">issues</a>.
-  </p>
-  <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
-</footer>
-
+{{footer}}
 </body>
 </html>

@@ -8,64 +8,48 @@
   <link rel="icon" href="img/favicon.png">
   <meta property="og:title" content="Tools and engines | Power Suits">
   <meta property="og:description" content="Seven power tools and three swappable engines for the Power Suits mod.">
-  <meta property="og:image" content="https://ajac-zero.github.io/power-suits/img/suppressing_fire.jpg">
+  <meta property="og:image" content="https://ajac-zero.github.io/power-suits/img/tree_side.jpg">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
+  <link href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="index.html"><img src="img/icon.png" alt="" width="36" height="36"> Power Suits</a>
-  <nav>
-    <a href="suit.html">Suit</a>
-    <a href="tools.html" class="here">Tools &amp; engines</a>
-    <a href="gallery.html">Gallery</a>
-    <a href="install.html">Install</a>
-    <a href="https://github.com/ajac-zero/power-suits">GitHub</a>
-  </nav>
-</header>
 
-<main>
-<div class="pagehead"><h1>Tools and engines</h1></div>
-<section class="feature flip">
-  <img class="shot" src="img/tree_side.jpg" alt="A green suit with a Spartan helmet felling an oak tree with its chainsaw" loading="lazy">
-  <div>
-    <h2>Power tools</h2>
-    
-    <ul class="items">
-      <li><img src="img/items/chaingun.png" alt=""><b>Chaingun</b> Tap for heavy shots, hold to spin up a ten-a-second barrage. Eats iron nuggets.</li>
-      <li><img src="img/items/em_projector.png" alt=""><b>EM Projector</b> Grabs items and mobs, holds them floating and throws them.</li>
-      <li><img src="img/items/drill.png" alt=""><b>Mining Drill</b> Diamond-tipped, digs a 3x3 face at a time.</li>
-      <li><img src="img/items/chainsaw.png" alt=""><b>Chainsaw</b> Cut a trunk and the whole tree comes down.</li>
-      <li><img src="img/items/flamethrower.png" alt=""><b>Flamethrower</b> A stream of fire that lights blocks and mobs and cooks food.</li>
-      <li><img src="img/items/tnt_launcher.png" alt=""><b>TNT Launcher</b> A revolver drum of TNT. Each round blows up the moment it hits.</li>
-      <li><img src="img/items/rail_cannon.png" alt=""><b>Rail Cannon</b> Charge it up and let go: one beam through everything in line.</li>
-    </ul>
+{{nav}}
+
+<section class="board">
+  <div class="t title c8">
+    <h1>Tools and engines</h1>
+    <p>Tools fit the socket on the suit's left arm; hold right click to use them. The backpack is the engine, and you can swap it.</p>
   </div>
+  <div class="t ph c4"><img src="img/mine_cockpit.jpg" alt="Drilling into a stone ravine from the cockpit"></div>
 </section>
 
-<section class="feature">
-  <img class="shot" src="img/reef_back.jpg" alt="A yellow suit with a tidal engine walking across a coral reef, seen from behind" loading="lazy">
-  <div>
+<section class="board loadout">
+  <div class="rack">
+    <h2>Tools</h2>
+      <div class="item" data-photo="suppressing_fire.jpg" data-alt="A green suit firing its chaingun at night"><img src="img/items/chaingun.png" alt=""><h3>Chaingun</h3><p>Tap for heavy shots, hold to spin up a ten-a-second barrage. Eats iron nuggets from your inventory.</p></div>
+      <div class="item" data-photo="em_front.jpg" data-alt="A purple suit lifting a creeper with the EM projector"><img src="img/items/em_projector.png" alt=""><h3>EM Projector</h3><p>Grabs items and mobs, holds them floating and throws them.</p></div>
+      <div class="item" data-photo="mine_cockpit.jpg" data-alt="Drilling into a stone ravine from the cockpit"><img src="img/items/drill.png" alt=""><h3>Mining Drill</h3><p>Diamond-tipped. Digs a 3x3 face at a time.</p></div>
+      <div class="item" data-photo="tree_side.jpg" data-alt="A green suit felling an oak with its chainsaw"><img src="img/items/chainsaw.png" alt=""><h3>Chainsaw</h3><p>Cut a trunk and the whole tree comes down.</p></div>
+      <div class="item"><img src="img/items/flamethrower.png" alt=""><h3>Flamethrower</h3><p>A stream of fire that lights blocks and mobs and cooks food.</p></div>
+      <div class="item"><img src="img/items/tnt_launcher.png" alt=""><h3>TNT Launcher</h3><p>A four-round drum of TNT. Each round blows up the moment it hits, and the visor draws its arc.</p></div>
+      <div class="item"><img src="img/items/rail_cannon.png" alt=""><h3>Rail Cannon</h3><p>Charge it up and let go: one beam through everything in line.</p></div>
     <h2>Engines</h2>
-    <p>The backpack is the engine. Swap it.</p>
-    <ul class="items">
-      <li><img src="img/items/firebox.png" alt=""><b>Firebox</b> Burns furnace fuel. Floods and dies when water covers it.</li>
-      <li><img src="img/items/tidal_engine.png" alt=""><b>Tidal Engine</b> Runs for free under water or in rain; drinks water buckets on land.</li>
-      <li><img src="img/items/star_reactor.png" alt=""><b>Star Reactor</b> Feed it a Nether Star and it runs everything, forever.</li>
-    </ul>
+      <div class="item"><img src="img/items/firebox.png" alt=""><h3>Firebox</h3><p>Burns anything a furnace burns. Floods and dies when water covers it.</p></div>
+      <div class="item" data-photo="reef_back.jpg" data-alt="A yellow suit with a tidal engine walking across a coral reef"><img src="img/items/tidal_engine.png" alt=""><h3>Tidal Engine</h3><p>Runs for free under water or in rain, and drinks water buckets on land.</p></div>
+      <div class="item"><img src="img/items/star_reactor.png" alt=""><h3>Star Reactor</h3><p>Feed it a Nether Star and it runs everything, forever.</p></div>
+  </div>
+  <div class="stage-box" id="stage" aria-live="polite">
+    <div class="t pic"></div>
+    <div class="t desc"><h2></h2><p></p></div>
   </div>
 </section>
-</main>
 
-<footer>
-  <p>
-    Power Suits is open source under the MIT license:
-    <a href="https://github.com/ajac-zero/power-suits">github.com/ajac-zero/power-suits</a>.
-    Bugs and ideas go to the <a href="https://github.com/ajac-zero/power-suits/issues">issues</a>.
-  </p>
-  <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
-</footer>
-
+{{footer}}
 </body>
 </html>

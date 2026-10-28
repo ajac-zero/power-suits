@@ -8,66 +8,41 @@
   <link rel="icon" href="img/favicon.png">
   <meta property="og:title" content="Gallery | Power Suits">
   <meta property="og:description" content="In-game screenshots and Blender key art of the Power Suits mod.">
-  <meta property="og:image" content="https://ajac-zero.github.io/power-suits/img/suppressing_fire.jpg">
+  <meta property="og:image" content="https://ajac-zero.github.io/power-suits/img/containment.jpg">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
+  <link href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="index.html"><img src="img/icon.png" alt="" width="36" height="36"> Power Suits</a>
-  <nav>
-    <a href="suit.html">Suit</a>
-    <a href="tools.html">Tools &amp; engines</a>
-    <a href="gallery.html" class="here">Gallery</a>
-    <a href="install.html">Install</a>
-    <a href="https://github.com/ajac-zero/power-suits">GitHub</a>
-  </nav>
-</header>
 
-<main>
-<div class="pagehead"><h1>Gallery</h1></div>
-<section id="gallery" class="gallery">
-  <p class="note">In-game screenshots, vanilla look, no shaders.</p>
-  <div class="grid">
-    <a href="img/walk_front.jpg"><img src="img/walk_front.jpg" alt="A blue suit walking across a meadow" loading="lazy"></a>
-    <a href="img/dusk_cockpit.jpg"><img src="img/dusk_cockpit.jpg" alt="A red suit's cockpit at dusk" loading="lazy"></a>
-    <a href="img/mine_cockpit.jpg"><img src="img/mine_cockpit.jpg" alt="Drilling into a stone ravine from the cockpit" loading="lazy"></a>
-    <a href="img/tree_side.jpg"><img src="img/tree_side.jpg" alt="A green suit felling an oak with its chainsaw" loading="lazy"></a>
-    <a href="img/reef_back.jpg"><img src="img/reef_back.jpg" alt="A yellow tidal suit on a coral reef" loading="lazy"></a>
-    <a href="img/em_front.jpg"><img src="img/em_front.jpg" alt="A purple suit lifting a creeper with the EM projector" loading="lazy"></a>
-  </div>
-  <p class="note">Key art, rendered in Blender from the mod's own model. The homages are fan art.</p>
-  <div class="grid art">
-    <a href="img/suppressing_fire.jpg"><img src="img/suppressing_fire.jpg" alt="A green suit with a Spartan helmet firing its chaingun at night" loading="lazy"></a>
-    <a href="img/containment.jpg"><img src="img/containment.jpg" alt="An orange suit with a Hunter helmet lifting a slime in a spaceship's cargo bay" loading="lazy"></a>
-    <a href="img/man_of_tomorrow.jpg"><img src="img/man_of_tomorrow.jpg" alt="A lime suit with a chainsaw leaping at a flying caped fighter" loading="lazy"></a>
-    <a href="img/big_daddy.jpg" class="tall"><img src="img/big_daddy.jpg" alt="A brown suit with a drill on the sea floor in front of an ocean monument" loading="lazy"></a>
+{{nav}}
+
+<section class="board">
+  <div class="t title c12">
+    <h1>Gallery</h1>
+    <p>In-game screenshots with the vanilla look and no shaders, then key art rendered in Blender from the mod's own model. The homages are fan art.</p>
   </div>
 </section>
 
-</main>
-
-<footer>
-  <p>
-    Power Suits is open source under the MIT license:
-    <a href="https://github.com/ajac-zero/power-suits">github.com/ajac-zero/power-suits</a>.
-    Bugs and ideas go to the <a href="https://github.com/ajac-zero/power-suits/issues">issues</a>.
-  </p>
-  <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
-</footer>
+<section class="board mosaic" aria-label="Pictures">
+  <a class="t c8 r2" href="img/walk_front.jpg"><img src="img/walk_front.jpg" alt="A blue suit walking across a meadow"></a>
+  <a class="t c4 r3 tall" href="img/big_daddy.jpg"><img src="img/big_daddy.jpg" alt="A brown suit with a drill on the sea floor in front of an ocean monument"></a>
+  <a class="t c4 r2" href="img/mine_cockpit.jpg"><img src="img/mine_cockpit.jpg" alt="Drilling into a stone ravine from the cockpit"></a>
+  <a class="t c4 r2" href="img/tree_side.jpg"><img src="img/tree_side.jpg" alt="A green suit felling an oak with its chainsaw"></a>
+  <a class="t c4" href="img/reef_back.jpg"><img src="img/reef_back.jpg" alt="A yellow tidal suit on a coral reef"></a>
+  <a class="t c4 r2" href="img/em_front.jpg"><img src="img/em_front.jpg" alt="A purple suit lifting a creeper with the EM projector"></a>
+  <a class="t c4 r2" href="img/suppressing_fire.jpg"><img src="img/suppressing_fire.jpg" alt="A green suit with a Spartan helmet firing its chaingun at night"></a>
+  <a class="t c4 r2" href="img/dusk_cockpit.jpg"><img src="img/dusk_cockpit.jpg" alt="A red suit's cockpit at dusk"></a>
+  <a class="t c6 r2" href="img/containment.jpg"><img src="img/containment.jpg" alt="An orange suit with a Hunter helmet lifting a slime in a spaceship's cargo bay"></a>
+  <a class="t c6 r2" href="img/man_of_tomorrow.jpg"><img src="img/man_of_tomorrow.jpg" alt="A lime suit with a chainsaw leaping at a flying caped fighter"></a>
+</section>
 
 <dialog id="viewer"><img alt=""></dialog>
-<script>
-  // Click a gallery picture to see it full size; click again (or Esc) to close.
-  const viewer = document.getElementById("viewer");
-  document.querySelectorAll(".gallery a").forEach(a => a.addEventListener("click", e => {
-    e.preventDefault();
-    viewer.querySelector("img").src = a.href;
-    viewer.querySelector("img").alt = a.querySelector("img").alt;
-    viewer.showModal();
-  }));
-  viewer.addEventListener("click", () => viewer.close());
-</script>
+
+{{footer}}
 </body>
 </html>

@@ -1,70 +1,60 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <!-- A template: tools/build-site.py fills in {{version}}, {{tag}}, {{java}} and the data-since / data-coming
-       markers from the latest GitHub Release when the Pages workflow publishes it. Preview with
-       python3 tools/build-site.py --version 1.1.0 /tmp/site && open /tmp/site/index.html -->
+  <!-- A template: tools/build-site.py fills in {{nav}}, {{footer}} (site/_nav.html, _footer.html), {{version}}, {{tag}},
+       {{java}} and the data-since / data-coming markers from the latest GitHub Release when the Pages workflow
+       publishes it. Preview: python3 tools/build-site.py --version 1.1.0 /tmp/site && open /tmp/site/index.html -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Power Suits: an enterable power suit mod for Minecraft</title>
-  <meta name="description" content="Power Suits is a NeoForge mod for Minecraft 26.3: an enterable power suit with a chaingun, drill, chainsaw, flamethrower and EM projector, swappable engines, a machine mind and rogue suits.">
+  <meta name="description" content="Power Suits is a NeoForge mod for Minecraft 26.3: an enterable power suit with seven power tools, three swappable engines, a machine mind and rogue suits.">
   <link rel="icon" href="img/favicon.png">
-  <meta property="og:title" content="Power Suits">
-  <meta property="og:description" content="For situations where plain old armor isn't enough. An enterable power suit mod for Minecraft (NeoForge 26.3).">
+  <meta property="og:title" content="Power Suits: an enterable power suit mod for Minecraft">
+  <meta property="og:description" content="Power Suits is a NeoForge mod for Minecraft 26.3: an enterable power suit with seven power tools, three swappable engines, a machine mind and rogue suits.">
   <meta property="og:image" content="https://ajac-zero.github.io/power-suits/img/suppressing_fire.jpg">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
+  <link href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
 </head>
 <body>
 
-<header class="top">
-  <a class="brand" href="index.html"><img src="img/icon.png" alt="" width="36" height="36"> Power Suits</a>
-  <nav>
-    <a href="suit.html">Suit</a>
-    <a href="tools.html">Tools &amp; engines</a>
-    <a href="gallery.html">Gallery</a>
-    <a href="install.html">Install</a>
-    <a href="https://github.com/ajac-zero/power-suits">GitHub</a>
-  </nav>
-</header>
+{{nav}}
 
-<section class="hero">
-  <img class="hero-bg" src="img/suppressing_fire.jpg" alt="">
-  <div class="hero-text">
-    <h1>Power Suits</h1>
-    <p class="tagline">For situations where plain old armor isn't enough.</p>
-    <p class="sub">An enterable power suit for Minecraft, with power tools, swappable engines and a mind of its own.</p>
-    <div class="buttons">
-      <a class="btn primary" href="install.html">Install</a>
-      <a class="btn" href="gallery.html">Gallery</a>
-    </div>
-    <p class="badges"><span>Minecraft 26.3</span><span>NeoForge</span><span>GeckoLib 5</span></p>
+<div class="t name-band"><h1>Power Suits</h1></div>
+
+<section class="board hero" aria-label="Power Suits">
+  <div class="rail-l">
+    <div class="t ph"><img src="img/big_daddy.jpg" alt="A brown suit with a drill on the sea floor in front of an ocean monument"></div>
+    <ul class="t t2 facts">
+      <li>Minecraft 26.3</li><li>NeoForge</li><li>GeckoLib 5</li><li>Server and client</li><li>MIT license</li>
+    </ul>
+  </div>
+  <div class="t ph stage">
+    <img src="img/suppressing_fire.jpg" alt="A green suit with a Spartan helmet firing its chaingun at night">
+    <div class="say"><p>An enterable power suit for Minecraft. Climb in for protection, strength and a socket for heavy power tools. It burns fuel, so watch the gauge.</p></div>
+  </div>
+  <div class="rail-r">
+    <div class="t t4 fact"><b>7</b>power tools</div>
+    <div class="t t3 fact"><b>3</b>engines</div>
+    <div class="t t2 fact"><b>6</b>helmet styles</div>
+    <div class="t t1 fact"><b>16</b>dyes</div>
+    <a class="t accent go" href="install.html">Install {{version}}</a>
   </div>
 </section>
 
-<main>
-
-<section class="intro">
-  <p>Craft a suit and climb in: more protection, more strength, and a socket on the arm for heavy power tools. With a helmet on you are immune to fire, frost, poison and drowning, at the cost of fuel.</p>
+<section class="board doors" aria-label="What is in the mod">
+  <a class="t ph c3" href="suit.html"><img src="img/dusk_cockpit.jpg" alt="The view from inside a red suit's cockpit at dusk" loading="lazy"><div class="cap"><h2>The suit</h2><p>Cockpit, visor, dyes, and a mind of its own.</p></div></a>
+  <a class="t ph c3" href="tools.html"><img src="img/tree_side.jpg" alt="A green suit felling an oak with its chainsaw" loading="lazy"><div class="cap"><h2>Tools and engines</h2><p>Seven tools for the arm, three engines for the back.</p></div></a>
+  <a class="t ph c3" href="gallery.html"><img src="img/em_front.jpg" alt="A purple suit lifting a creeper with the EM projector" loading="lazy"><div class="cap"><h2>Gallery</h2><p>Screenshots and key art.</p></div></a>
+  <a class="t accent c3" href="install.html"><h2>Install</h2><p>Two mods in a folder, and a crafting table.</p></a>
 </section>
 
-<section class="pitch">
-  <a href="suit.html"><b>The suit</b> Cockpit, visor HUD, dyes, helmets, and a mind of its own.</a>
-  <a href="tools.html"><b>Tools &amp; engines</b> Seven tools for the socket, three engines for the back.</a>
-  <a href="gallery.html"><b>Gallery</b> Screenshots and key art.</a>
-</section>
+<div class="board"><div class="t c12 marquee" aria-hidden="true"><div class="track"><span>For situations where plain old armor isn't enough. </span><span>For situations where plain old armor isn't enough. </span><span>For situations where plain old armor isn't enough. </span><span>For situations where plain old armor isn't enough. </span></div></div></div>
 
-</main>
-
-<footer>
-  <p>
-    Power Suits is open source under the MIT license:
-    <a href="https://github.com/ajac-zero/power-suits">github.com/ajac-zero/power-suits</a>.
-    Bugs and ideas go to the <a href="https://github.com/ajac-zero/power-suits/issues">issues</a>.
-  </p>
-  <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
-</footer>
-
+{{footer}}
 </body>
 </html>

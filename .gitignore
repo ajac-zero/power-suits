@@ -48,3 +48,4 @@ __pycache__/
 marketing/out/*_raw.png
 marketing/out/*.tiles/
 marketing/.cache/
+.taste-skill/

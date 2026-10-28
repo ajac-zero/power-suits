@@ -5,6 +5,7 @@
 
 The Pages workflow runs it on every deploy, and the Release workflow deploys after publishing a release, so the page
 follows the releases by itself. In every site/*.html page (index, suit, tools, gallery, install):
+  {{nav}} {{footer}}  the shared pieces site/_nav.html and _footer.html (the nav marks the current page)
   {{version}} 1.1.0           {{tag}} v1.1.0 (links pinned to the released source, e.g. the guide)
   {{jar}}     powersuits-1.1.0.jar (the download's file name: jar_name in gradle.properties)
   {{java}}    the JDK the release was built with (from its notes; tools/jdk.env if the notes don't say)
@@ -50,8 +51,13 @@ def gradle_property(name):
     return props[name].strip()
 
 
-def render(html, version, java):
+def render(html, version, java, page="index.html", partials=None):
     released = version_tuple(version)
+    # {{nav}} and {{footer}} are the shared pieces (site/_nav.html, site/_footer.html); the nav marks the current page.
+    for name, body in (partials or {}).items():
+        if name == "nav":
+            body = re.sub(r'(<a class="t link" href="%s")' % re.escape(page), r'\1 aria-current="page"', body)
+        html = html.replace("{{%s}}" % name, body)
     # The comment explaining the template is for people editing it, not for visitors.
     html = re.sub(r"\s*<!-- A template:.*?-->", "", html, count=1, flags=re.S)
     jar = f"{gradle_property('jar_name')}-{version}.jar"
@@ -98,8 +104,11 @@ def main():
     if out.exists():
         shutil.rmtree(out)
     shutil.copytree(ROOT / "site", out)
-    for page in sorted(out.glob("*.html")):
-        page.write_text(render(page.read_text(), version, java))
+    partials = {p.stem.lstrip("_"): p.read_text() for p in out.glob("_*.html")}
+    for page in sorted(out.glob("[!_]*.html")):
+        page.write_text(render(page.read_text(), version, java, page.name, partials))
+    for part in out.glob("_*.html"):
+        part.unlink()
     print(f"site for {version} (Java {java}) -> {out}")
 
 
