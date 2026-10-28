@@ -23,7 +23,9 @@ import org.jspecify.annotations.Nullable;
  */
 final class SuitKey extends AbstractButton {
     static final int SIZE = 18;
-    private static final int SYMBOL_W = 9, SYMBOL_H = 8, SYMBOL_X = 4, SYMBOL_Y = 4;
+    /** The symbol, 8x8, centred on the key (x 5..12 of 0..17: an even width, so its 2 px stem sits in the middle), the
+     *  power key's pip under it (x 7..10, y 13). */
+    private static final int SYMBOL_W = 8, SYMBOL_H = 8, SYMBOL_X = 5, SYMBOL_Y = 4;
     /** The pushed-in key: vanilla's button at 72% brightness, under a 1 px shadow where it sank. */
     private static final int PRESSED_TINT = 0xFFB8B8B8, SHADOW = 0xFF373737;
     private static final int INK = 0xFF3C3C3C, INK_INACTIVE = 0xFF464646, LIT = 0xFF7CFF6B, PIP_OFF = 0xFF501E1E;

@@ -12,7 +12,7 @@ Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outs
 | Get the suit | Creative tab *Tools & Utilities*, or craft it from its parts (see *Crafting the suit* below) |
 | Deploy | Right-click the ground with the item (needs a 3-block-tall space) |
 | Climb in | Right-click the suit |
-| Suit menu | Your inventory with the suit in it, laid out like the inventory screen: **press your inventory key (E) inside the suit**, or sneak + right-click a parked suit. The suit's helmet, engine, burn flame and fuel down the armour column, the suit itself in the preview window, and opposite the armour column: the **Power** key (⏻: pushed in and green while on, out and grey while off), the power tool's socket slot, and the **Pack up** key (greyed out from inside). Where the crafting grid was, a status screen in your visor colour: the suit's name, HULL and FUEL with bars like the visor's, and the status (ONLINE, or why it's dark: NO FUEL, NO ENGINE, FLOODED, POWER OFF, NO HELMET; the ones to fix blink inverted). Over any item, the swap-hands key (F) swaps it with the socket tool |
+| Suit menu | Your inventory with the suit in it, laid out like the inventory screen: **press your inventory key (E) inside the suit**, or sneak + right-click a parked suit. The suit's helmet, engine, burn flame and fuel down the armour column, the suit itself in the preview window, and opposite the armour column: the **Power** key (⏻: pushed in and green while on, out and grey while off), the power tool's socket slot, and the **Pack** key (greyed out from inside). Where the crafting grid was, a status screen in your visor colour: the suit's name, HULL and FUEL with bars like the visor's, and the status (ONLINE, or why it's dark: NO FUEL, NO ENGINE, FLOODED, POWER OFF, NO HELMET; the ones to fix blink inverted). Over any item, the swap-hands key (F) swaps it with the socket tool |
 | Power switch | The suit's power switch, in its menu or on the **H** key while piloting (rebind it in Options > Controls > Key Binds > Power Armor > *Power switch*). Off, the suit acts exactly like one with nothing to burn (it slumps, the mind stops, the visor goes completely dark; the menu's status reads POWER OFF) but keeps its fuel; it stays off when packed up. On again, it stands back up |
 | Helmet | Right-click a suit with a Power Armor Helmet (or use the menu's helmet slot) to put it on. It seals the suit, and the machine mind only runs with it: without one the suit still runs with you inside (unsealed: fire, poison and water reach you, and you can eat), and an empty one stands powered down. Switching it off (below) or taking the helmet off parks a suit. Rogues always wear one |
 | Fuel | Put anything a furnace burns in the fuel slot; it lasts as many ticks as in a furnace (coal 1:20 of walking, blaze rod 2:00, lava bucket 16:40 and the bucket stays, planks 0:15) (for the standard Firebox engine; see *Engines* below) |
@@ -20,8 +20,8 @@ Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outs
 | Walk / run | WASD (3.0 blocks/s walk; S backs up at half speed) / sprint (6.25 blocks/s; double-tap W or tap Ctrl once, it keeps going while W is held) |
 | Jump | Hold Space to charge (the suit crouches), release |
 | Climb out | Shift |
-| Pack it up | **Pack up** key in the suit menu, from outside (keeps damage, name, fuel, tool, helmet, engine and the power switch) |
-| Install a tool | Put a power tool (Chaingun, EM Projector, Mining Drill, Chainsaw, Flamethrower, TNT Launcher, Rail Cannon) in the menu's socket slot (right of the suit preview, between the Power and Pack up keys); it appears on the suit's left arm. **While piloting, the swap-hands key (F) swaps the tool in your hand with the socket's**: keep your tools on the hotbar and change them with F (an empty hand takes the tool out) |
+| Pack it up | **Pack** key in the suit menu, from outside (keeps damage, name, fuel, tool, helmet, engine and the power switch) |
+| Install a tool | Put a power tool (Chaingun, EM Projector, Mining Drill, Chainsaw, Flamethrower, TNT Launcher, Rail Cannon) in the menu's socket slot (right of the suit preview, between the Power and Pack keys); it appears on the suit's left arm. **While piloting, the swap-hands key (F) swaps the tool in your hand with the socket's**: keep your tools on the hotbar and change them with F (an empty hand takes the tool out) |
 | Your hand | Works as normal while piloting: the suit's right hand holds your selected item; left click punches, fights and mines, right click places, opens doors, throws potions... 1.5 blocks extra reach. No eating or drinking (you're sealed in): food in your hand counts as nothing to do, so right click goes to the tool |
 | Use the tool | Right-click when your hand has nothing to do (empty hand, a sword, aiming at the air with blocks...), like a shield in the off hand; hold it as long as you need. The tool arm raises while in use |
 | EM Projector | Hold right-click on a dropped item or mob: it's pulled in and held floating (items go into your inventory); release to throw it (into a wall, or bowling through other mobs: 10 hearts each at full speed), tap to shove. The visor marks what it can pull. 1 fuel/tick while holding, 80 per throw |
@@ -316,7 +316,7 @@ src/main/java/dev/ajaczero/powerarmor/
   entity/SuitEngine.java     the engines (firebox / tidal / reactor); item/EngineItem.java: their items
   entity/ExhaustSmoke.java   client-side smoke from the back pipes
   menu/PowerArmorMenu.java   menu logic: socket, fuel, helmet + engine slots, shift-click, F swaps with the
-                             socket, Power + Pack up keys; opened by E inside (PowerArmorEntity.openCustomInventoryScreen)
+                             socket, Power + Pack keys; opened by E inside (PowerArmorEntity.openCustomInventoryScreen)
   item/SuitLoadout.java      fuel/tool/helmet/engine/half-burnt item carried by a packed suit item
   item/HelmetStyle.java      the helmet styles (design sec. 4c); SuitHelmetItem: name + flavour line, HelmetTemplateItem: the templates
   item/PowerTool.java        what a socket tool is: fuel per use, cooldown, model bone, use(); worked by an operator
@@ -363,7 +363,7 @@ src/main/java/dev/ajaczero/powerarmor/
     CockpitHands.java        first-person viewmodel: socket tool on the left, gauntlet + held item on the right
     CockpitView*.java        its GeckoLib animatable/renderer (geckolib/models/view, cut from the suit by tools/extract-view-geo.py)
     PowerArmorScreen.java    draws the suit menu (the inventory screen with the suit: preview, flame, status screen, keys)
-    SuitKey.java             the menu's slot-sized keys (Power latches pushed in while on; Pack up)
+    SuitKey.java             the menu's slot-sized keys (Power latches pushed in while on; Pack)
     SuitKeys.java            the suit's own key bindings (the power switch)
     SuitHud.java             the pilot's HUD (suit readout, compass + clock, the tool's own HUD) + low-fuel beep; moves boss bars
     hud/                     each socket tool's own visor HUD: ToolHud, ToolHuds (item -> HUD, filled in by ClientSetup),

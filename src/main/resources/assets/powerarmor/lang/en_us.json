@@ -12,7 +12,7 @@
   "item.powerarmor.power_armor.range": "Range: %s of walking",
   "item.powerarmor.power_armor.socket": "Socket: %s",
   "item.powerarmor.power_armor.paint": "Painted: %s",
-  "gui.powerarmor.pack_up": "Pack up",
+  "gui.powerarmor.pack": "Pack",
   "gui.powerarmor.online": "ONLINE",
   "gui.powerarmor.offline": "NO POWER",
   "gui.powerarmor.no_fuel": "NO FUEL",
@@ -287,9 +287,7 @@
   "tooltip.powerarmor.reactor_fuel": "Powers a Star Reactor forever",
   "key.category.powerarmor.power_armor": "Power Armor",
   "key.powerarmor.power_switch": "Power switch (while piloting)",
-  "gui.powerarmor.power": "Power: %s",
-  "gui.powerarmor.power.on": "ON",
-  "gui.powerarmor.power.off": "OFF",
+  "gui.powerarmor.power": "Power",
   "gui.powerarmor.switched_off": "POWER OFF",
   "message.powerarmor.not_a_tool": "Only a power tool fits the suit's socket"
 }

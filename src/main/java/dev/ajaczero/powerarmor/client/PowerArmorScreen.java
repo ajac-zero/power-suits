@@ -52,9 +52,6 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
     /** The suit's name and the rules, as fractions of the visor colour: the name a caption, the rules faint. */
     private static final float TITLE = 0.55F, RULE = 0.3F;
 
-    private SuitKey power;
-    private boolean powerShown;
-
     public PowerArmorScreen(PowerArmorMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
     }
@@ -64,25 +61,22 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         super.init();
         // Buttons in container screens don't need a custom packet: vanilla sends the button id to the
         // server, which calls PowerArmorMenu.clickMenuButton.
-        this.power = this.addRenderableWidget(new SuitKey(this.leftPos + KEY_X, this.topPos + POWER_Y, POWER_SYMBOL,
-                powerName(true), () -> switchedOn(this.menu.getSuit()),
+        // A key has a symbol, no caption: its tooltip is its name, one word (user, 2026-10-27: the key shows its state).
+        SuitKey power = this.addRenderableWidget(new SuitKey(this.leftPos + KEY_X, this.topPos + POWER_Y, POWER_SYMBOL,
+                Component.translatable("gui.powerarmor.power"), () -> switchedOn(this.menu.getSuit()),
                 () -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_POWER)));
-        this.powerShown = !this.power.isDown();
+        power.setTooltip(Tooltip.create(power.getMessage()));
         SuitKey pack = this.addRenderableWidget(new SuitKey(this.leftPos + KEY_X, this.topPos + PACK_Y, PACK_SYMBOL,
-                Component.translatable("gui.powerarmor.pack_up"), null,
+                Component.translatable("gui.powerarmor.pack"), null,
                 () -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_PACK)));
         // Packing up needs you outside: from inside the key is there but greyed out.
         pack.active = !this.menu.isPiloting(this.minecraft.player);
-        pack.setTooltip(Tooltip.create(Component.translatable("gui.powerarmor.pack_up")));
+        pack.setTooltip(Tooltip.create(pack.getMessage()));
     }
 
+    /** Read every frame by the Power key: the switch flips on the server (the key, H), so it follows the synced state. */
     private static boolean switchedOn(PowerArmorEntity suit) {
         return suit == null || suit.power().isSwitchedOn();
-    }
-
-    /** The key's name says its state, for the tooltip and the narrator ("Power: ON"). */
-    private static Component powerName(boolean on) {
-        return Component.translatable("gui.powerarmor.power", Component.translatable(on ? "gui.powerarmor.power.on" : "gui.powerarmor.power.off"));
     }
 
 
@@ -90,13 +84,6 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
     // into GuiGraphicsExtractor, and Minecraft draws that list afterwards. Hence the extract* names.
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // the switch flips on the server (the key, H, a running-dry suit doesn't touch it): name the key by the synced state
-        boolean on = this.power.isDown();
-        if (on != this.powerShown) {
-            this.powerShown = on;
-            this.power.setMessage(powerName(on));
-            this.power.setTooltip(Tooltip.create(powerName(on))); // a key has a symbol, no caption: its name only (user)
-        }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick); // background, slots, labels, item tooltips
         this.renderEmptySlotHints(graphics, mouseX, mouseY);
     }
