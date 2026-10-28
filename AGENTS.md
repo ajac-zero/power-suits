@@ -1,9 +1,8 @@
 # Working on Power Suits
 
 A NeoForge 26.3 + GeckoLib 5.5.7 Minecraft mod (Java 25): an enterable power suit: **Power Suits**
-(mod id `power_suits`, the suit `power_suit`, jar `powersuits-<version>.jar`). 1.0.0 shipped as `powerarmor` ("Power
-Armor", the Fallout-inspired working title); its saved suits and items don't carry over to 1.1 (no legacy aliases:
-the maintainer's call, only test worlds had it). This file is the rules; the
+(mod id `power_suits`, the suit `power_suit`, jar `powersuits-<version>.jar`). Its working title was "Power Armor" (after Fallout 4's): don't bring
+that name back. 1.1.0 is the first release (an earlier test build was withdrawn; no legacy ids are kept). This file is the rules; the
 knowledge lives in the project skills and their references (read the one that matches the task):
 
 | Read | When |
@@ -39,12 +38,11 @@ knowledge lives in the project skills and their references (read the one that ma
   `model/anim/README.md` says, `art/` texture/part scripts); `tools/` export, art and test helpers; `run/` the dev game (not in git); `marketing/` key art (see its README).
 - `site/` the mod's web page (GitHub Pages), a template filled by `tools/build-site.py` from the latest GitHub Release:
   mark features being built with `data-since="1.1.0"` / `<span data-coming="1.1.0">`. Preview:
-  `python3 tools/build-site.py --version 1.0.0 /tmp/site`.
+  `python3 tools/build-site.py --version 1.1.0 /tmp/site`.
 - `.pi/mcp.json` connects pi to Blockbench's MCP server (`localhost:3000/bb-mcp`): start sessions here.
 - **Releasing:** bump `mod_version`, commit, `git tag -a vX.Y.Z -m ... && git push origin main vX.Y.Z`. The tag push runs
   `.github/workflows/release.yml` (reproducible build with the JDK pinned in `tools/jdk.env`, attestation, jar + SHA-256,
-  republishes the page; details in `power-suits-runs.md`). v1.0.0 = 9c9cf00 (Modrinth); the flamethrower and later tools
-  are 1.1.
+  republishes the page; details in `power-suits-runs.md`). v1.1.0 (2026-10-28) is the first public release (GitHub + Modrinth).
 
 ## Setup
 Java 25 from Homebrew (`brew install openjdk@25`) is keg-only. Every shell needs:

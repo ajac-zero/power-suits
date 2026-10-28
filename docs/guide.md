@@ -1,7 +1,7 @@
 # Power Suits
 
 A Minecraft mod (Minecraft 26.3, NeoForge 26.3.0.76 + GeckoLib 5.5.7) that adds a power suit you climb into,
-Fallout / Titanfall style. Mod id `power_suits` (1.0.0 was `powerarmor`: suits and items saved by it don't carry over). Model and animations come from `model/power_suit.bbmodel`.
+Fallout / Titanfall style. Mod id `power_suits`. Model and animations come from `model/power_suit.bbmodel`.
 
 Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outside the repo).
 

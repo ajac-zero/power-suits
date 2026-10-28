@@ -1,12 +1,12 @@
 """Renders the web page template (site/) for publishing, filled in for the latest release.
 
     python3 tools/build-site.py OUT_DIR                      # latest GitHub Release (needs the gh CLI)
-    python3 tools/build-site.py --version 1.0.0 OUT_DIR      # preview as if 1.0.0 were the latest
+    python3 tools/build-site.py --version 1.1.0 OUT_DIR      # preview as if 1.1.0 were the latest
 
 The Pages workflow runs it on every deploy, and the Release workflow deploys after publishing a release, so the page
 follows the releases by itself. In site/index.html:
-  {{version}} 1.0.0           {{tag}} v1.0.0 (links pinned to the released source, e.g. the guide)
-  {{jar}}     powerarmor-1.0.0.jar, powersuits-1.1.0.jar (the download's file name)
+  {{version}} 1.1.0           {{tag}} v1.1.0 (links pinned to the released source, e.g. the guide)
+  {{jar}}     powersuits-1.1.0.jar (the download's file name: jar_name in gradle.properties)
   {{java}}    the JDK the release was built with (from its notes; tools/jdk.env if the notes don't say)
   data-since="1.1.0" on an element: greyed out (class "soon") until 1.1.0 is released
   <span data-coming="1.1.0"></span>: becomes a "coming in 1.1" badge until then, and disappears after
@@ -44,12 +44,17 @@ def pinned_java():
     return env["JDK_RELEASE"].removeprefix("jdk-")
 
 
+def gradle_property(name):
+    props = dict(line.split("=", 1) for line in (ROOT / "gradle.properties").read_text().splitlines()
+                 if "=" in line and not line.startswith("#"))
+    return props[name].strip()
+
+
 def render(html, version, java):
     released = version_tuple(version)
     # The comment explaining the template is for people editing it, not for visitors.
     html = re.sub(r"\s*<!-- A template:.*?-->", "", html, count=1, flags=re.S)
-    # the jar's file name: powerarmor-1.0.0.jar (named after the mod id), powersuits-<version>.jar from 1.1 on
-    jar = f"{'powerarmor' if released <= (1, 0, 0) else 'powersuits'}-{version}.jar"
+    jar = f"{gradle_property('jar_name')}-{version}.jar"
     html = html.replace("{{jar}}", jar)
     html = html.replace("{{version}}", version).replace("{{tag}}", f"v{version}").replace("{{java}}", java)
 

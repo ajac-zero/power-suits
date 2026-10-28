@@ -3,9 +3,8 @@
 #
 # Releasing = bump mod_version in gradle.properties, commit, then tag and push the tag:
 #   git tag -a v1.1.0 -m "Power Suits 1.1.0" && git push origin main v1.1.0
-# A pushed v* tag starts this workflow. Tags from before the workflow existed (v1.0.0) have no copy of it, so GitHub
-# can't start it for them: run it by hand from main (Actions tab > Release > Run workflow, or
-# `gh workflow run release.yml -f tag=v1.0.0`). It always builds the TAG, whichever way it starts.
+# A pushed v* tag starts this workflow. To (re)build a tag by hand: Actions tab > Release > Run workflow, or
+# `gh workflow run release.yml -f tag=vX.Y.Z`. It always builds the TAG, whichever way it starts.
 #
 # What it publishes on the release:
 #   - the mod jar, built with tools/reproducible.gradle by the exact JDK pinned in tools/jdk.env (rebuild the tag with
@@ -13,7 +12,7 @@
 #   - <jar>.sha256, its checksum
 #   - a signed build provenance attestation (Sigstore, stored by GitHub): proof that this exact file was built by this
 #     workflow in this repository from that commit. Check a download with
-#       gh attestation verify powersuits-1.1.0.jar -R ajac-zero/power-suits    (1.0.0: powerarmor-1.0.0.jar)
+#       gh attestation verify powersuits-1.1.0.jar -R ajac-zero/power-suits
 name: Release
 
 on:
@@ -22,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to build and release (e.g. v1.0.0); push it first"
+        description: "Tag to build and release (e.g. v1.1.0); push it first"
         required: true
       notes:
         description: "Release notes (Markdown), above the standard part"
@@ -76,9 +75,8 @@ jobs:
             echo "::error::tag $TAG but gradle.properties says mod_version=$version"; exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
-          # the jar's name: jar_name since 1.1 (powersuits), the mod id before (powerarmor-1.0.0.jar)
           jar=$(grep '^jar_name=' gradle.properties | cut -d= -f2)
-          echo "JAR=${jar:-powerarmor}-$version.jar" >> "$GITHUB_ENV"
+          echo "JAR=$jar-$version.jar" >> "$GITHUB_ENV"
 
       # Only the pinned JDK may compile: no other Java on the runner, no toolchain downloads.
       - name: Build

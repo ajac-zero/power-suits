@@ -39,11 +39,12 @@ constants at the top, later sections move along by themselves.
 - `site/` the mod's web page (GitHub Pages, https://ajac-zero.github.io/power-suits/). A template: `tools/build-site.py`
   fills in `{{version}}` / `{{tag}}` / `{{java}}` from the latest GitHub Release, greys out elements marked
   `data-since="1.1.0"` and shows `<span data-coming="1.1.0">` as "coming in 1.1" until that version is released (mark new
-  features that way while building them). Preview: `python3 tools/build-site.py --version 1.0.0 /tmp/site`. Pictures are
+  features that way while building them). Preview: `python3 tools/build-site.py --version 1.1.0 /tmp/site`. Pictures are
   web copies made by `tools/make-site-images.py`. `.github/workflows/pages.yml` publishes it on pushes to main that touch
   it and after every release.
 - Releasing: bump `mod_version`, commit, `git tag -a vX.Y.Z -m ... && git push origin main vX.Y.Z`. The tag push starts
   `.github/workflows/release.yml`: GitHub builds the tag with the JDK pinned in `tools/jdk.env` (same version as Homebrew's)
   and `tools/reproducible.gradle` (same source = same jar bytes), signs a build attestation, publishes jar + SHA-256 and
-  republishes the page. v1.0.0 = 9c9cf00 (the Modrinth upload, no flamethrower; its tag predates the workflow, so it was
-  run by hand: `gh workflow run release.yml -f tag=v1.0.0`); the flamethrower and the next tools are 1.1.
+  republishes the page. v1.1.0 (2026-10-28) is the first public release; the v1.0.0 tag is an early test build
+  (mod id powerarmor), its release withdrawn. Check a release by rebuilding its tag from a clean checkout (see
+  `tools/reproducible.gradle`: a stray empty folder in src/ once changed the checksum).

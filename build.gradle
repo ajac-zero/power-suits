@@ -350,7 +350,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 // Repeatable builds: fixed timestamps and sorted entries in the jar, so the same code always gives the same file and
-// anyone can check a release by rebuilding it (tools/reproducible.gradle does the same for older tags).
+// anyone can check a release by rebuilding it (the release workflow also passes tools/reproducible.gradle).
 tasks.withType(AbstractArchiveTask).configureEach {
     preserveFileTimestamps = false
     reproducibleFileOrder = true
