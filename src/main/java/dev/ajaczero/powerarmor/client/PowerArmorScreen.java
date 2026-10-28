@@ -1,13 +1,15 @@
 package dev.ajaczero.powerarmor.client;
 
+import dev.ajaczero.powerarmor.HudAlert;
 import dev.ajaczero.powerarmor.PowerArmor;
+import dev.ajaczero.powerarmor.client.hud.HudView;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.PowerArmorItem;
 import dev.ajaczero.powerarmor.menu.PowerArmorMenu;
 import java.util.List;
+import java.util.Locale;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -19,29 +21,42 @@ import net.minecraft.world.entity.player.Inventory;
 
 /**
  * The picture half of the suit menu (client only). Slots and shift-click live in PowerArmorMenu; this draws the
- * background, a live preview of the suit, the burn flame, a status display, the power switch and (from outside) the
- * Pack up button. Numbers come from the suit's synced entity data, so they update while you watch.
+ * background, a live preview of the suit, the burn flame, the status screen and the Power and Pack up keys. Numbers
+ * come from the suit's synced entity data, so they update while you watch.
  * <p>
- * Since 2026-10-27 (user) it looks like vanilla's inventory screen with the suit in it (tools/make-gui.py): the
- * suit's slots down the armour column and in the off-hand slot, the suit in the preview window, the status display and
- * buttons where the crafting grid was. Inside the suit this is your inventory (E).
+ * Since 2026-10-27 (user) it looks like vanilla's inventory screen with the suit in it (tools/make-gui.py): the suit's
+ * helmet, engine and fuel down the armour column; opposite them, right of the preview, the Power key, the socket slot
+ * and the Pack up key ({@link SuitKey}, slot-sized); a terminal screen where the crafting grid was. Inside the suit this
+ * is your inventory (E).
+ * <p>
+ * The screen reads like the visor (user's pick T2, 2026-10-27), in the visor's colour: the suit's name, HULL and FUEL
+ * with the HUD's segmented bars, and the status line. It's the one place that says why a suit is dark (the visor shows
+ * nothing without power): NO FUEL, NO ENGINE, FLOODED (critical: inverted, blinking), POWER OFF, NO HELMET (inverted,
+ * steady), NO POWER (lightning), or ONLINE. Alerts look like the HUD's ({@link HudView#label}).
  */
 public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
     private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/gui/power_armor.png");
     private static final Identifier LIT_PROGRESS = Identifier.withDefaultNamespace("container/furnace/lit_progress");
-    /** The flame between the engine and fuel slots; the preview window (vanilla's player box); the status display
-     *  (three lines) and the two buttons under it. */
+    private static final Identifier POWER_SYMBOL = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "container/power_armor/power");
+    private static final Identifier PACK_SYMBOL = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "container/power_armor/pack");
+    /** The flame between the engine and fuel slots; the preview window (vanilla's player box). */
     private static final int FLAME_X = 9, FLAME_Y = 45;
     private static final int PREVIEW_X0 = 26, PREVIEW_Y0 = 8, PREVIEW_X1 = 75, PREVIEW_Y1 = 78, PREVIEW_SCALE = 18;
-    private static final int DISPLAY_X = 100, DISPLAY_Y = 20, LINE = 8;
-    private static final int BUTTON_X = 97, POWER_Y = 48, PACK_Y = 64, BUTTON_W = 72, BUTTON_H = 15;
-    private static final int GREEN = 0xFF7CFF6B, AMBER = 0xFFFFB13B, RED = 0xFFFF5555;
+    /** The keys, in the column right of the preview: Power opposite the helmet, Pack up opposite the fuel. */
+    private static final int KEY_X = 76, POWER_Y = 7, PACK_Y = 61;
+    /** The status screen's text area (the screen itself is x 97..169, y 7..79 in the background): left and right edges
+     *  (16 bar segments wide), the rows. */
+    private static final int TEXT_X0 = 101, TEXT_X1 = 165, TITLE_Y = 11, RULE1_Y = 20, HULL_Y = 22, HULL_BAR_Y = 31,
+            FUEL_Y = 37, FUEL_BAR_Y = 46, RULE2_Y = 54, STATUS_Y = 58;
+    private static final int SEGMENTS = (TEXT_X1 - TEXT_X0 + 1) / 4;
+    /** The suit's name and the rules, as fractions of the visor colour: the name a caption, the rules faint. */
+    private static final float TITLE = 0.55F, RULE = 0.3F;
 
-    private Button power;
+    private SuitKey power;
+    private boolean powerShown;
 
     public PowerArmorScreen(PowerArmorMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.titleLabelX = 97; // where vanilla's inventory screen says "Crafting"
     }
 
     @Override
@@ -49,32 +64,45 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         super.init();
         // Buttons in container screens don't need a custom packet: vanilla sends the button id to the
         // server, which calls PowerArmorMenu.clickMenuButton.
-        this.power = this.addRenderableWidget(Button.builder(powerLabel(this.menu.getSuit()),
-                        b -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_POWER))
-                .bounds(this.leftPos + BUTTON_X, this.topPos + POWER_Y, BUTTON_W, BUTTON_H)
-                .tooltip(Tooltip.create(Component.translatable("gui.powerarmor.power.tooltip")))
-                .build());
-        if (!this.menu.isPiloting(this.minecraft.player)) {
-            // Packing up needs you outside: from inside there's no button (climb out first).
-            this.addRenderableWidget(Button.builder(Component.translatable("gui.powerarmor.pack_up"),
-                            b -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_PACK))
-                    .bounds(this.leftPos + BUTTON_X, this.topPos + PACK_Y, BUTTON_W, BUTTON_H)
-                    .tooltip(Tooltip.create(Component.translatable("gui.powerarmor.pack_up.tooltip")))
-                    .build());
-        }
+        this.power = this.addRenderableWidget(new SuitKey(this.leftPos + KEY_X, this.topPos + POWER_Y, POWER_SYMBOL,
+                powerName(true), () -> switchedOn(this.menu.getSuit()),
+                () -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_POWER)));
+        this.powerShown = !this.power.isDown();
+        SuitKey pack = this.addRenderableWidget(new SuitKey(this.leftPos + KEY_X, this.topPos + PACK_Y, PACK_SYMBOL,
+                Component.translatable("gui.powerarmor.pack_up"), null,
+                () -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_PACK)));
+        // Packing up needs you outside: from inside the key is there but greyed out, and says why.
+        boolean outside = !this.menu.isPiloting(this.minecraft.player);
+        pack.active = outside;
+        pack.setTooltip(tooltip(Component.translatable("gui.powerarmor.pack_up"),
+                Component.translatable(outside ? "gui.powerarmor.pack_up.tooltip" : "gui.powerarmor.pack_up.inside")));
     }
 
-    /** The switch's caption shows its state, like vanilla's option buttons ("Power: ON"). */
-    private static Component powerLabel(PowerArmorEntity suit) {
-        boolean on = suit == null || suit.power().isSwitchedOn();
+    private static boolean switchedOn(PowerArmorEntity suit) {
+        return suit == null || suit.power().isSwitchedOn();
+    }
+
+    /** The key's name says its state, for the tooltip and the narrator ("Power: ON"). */
+    private static Component powerName(boolean on) {
         return Component.translatable("gui.powerarmor.power", Component.translatable(on ? "gui.powerarmor.power.on" : "gui.powerarmor.power.off"));
+    }
+
+    /** A key's tooltip: its name, then what it does in grey (a key has a symbol, no caption). */
+    private static Tooltip tooltip(Component name, Component hint) {
+        return Tooltip.create(Component.empty().append(name).append("\n").append(hint.copy().withStyle(ChatFormatting.GRAY)));
     }
 
     // Since 1.21.6 screens don't draw directly: each frame they "extract" what to draw (a list of quads, text, items)
     // into GuiGraphicsExtractor, and Minecraft draws that list afterwards. Hence the extract* names.
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        this.power.setMessage(powerLabel(this.menu.getSuit())); // the switch flips on the server: follow the synced state
+        // the switch flips on the server (the key, H, a running-dry suit doesn't touch it): name the key by the synced state
+        boolean on = this.power.isDown();
+        if (on != this.powerShown) {
+            this.powerShown = on;
+            this.power.setMessage(powerName(on));
+            this.power.setTooltip(tooltip(powerName(on), Component.translatable("gui.powerarmor.power.tooltip")));
+        }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick); // background, slots, labels, item tooltips
         this.renderEmptySlotHints(graphics, mouseX, mouseY);
     }
@@ -107,37 +135,69 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         }
     }
 
-    /** The suit's name over the status display (vanilla's "Crafting" spot); no "Inventory" label (vanilla's inventory
-     *  screen has none either: the grid starts right under the preview). */
+    /** The status screen (labels are drawn relative to the background's corner). No vanilla title or "Inventory"
+     *  label: the suit's name is the screen's first line, and vanilla's inventory screen has no "Inventory" either. */
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        graphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFF404040, false);
         PowerArmorEntity suit = this.menu.getSuit();
         if (suit == null) {
             return;
         }
-        int hull = Mth.ceil(suit.getHealth());
-        int max = Mth.ceil(suit.getMaxHealth());
-        int energy = suit.power().getTotalEnergy();
-        int hullColour = hull < max / 4 ? RED : hull < max / 2 ? AMBER : GREEN;
-        int fuelColour = energy == 0 ? RED : suit.power().isLowOnFuel() ? AMBER : GREEN;
-        graphics.text(this.font, Component.translatable("gui.powerarmor.hull", hull, max), DISPLAY_X, DISPLAY_Y, hullColour, false);
-        // A wet tidal engine or a star reactor burns nothing: its range is endless.
-        Component range = suit.power().hasFreePower() ? Component.translatable("gui.powerarmor.range_free")
-                : Component.translatable("gui.powerarmor.range", PowerArmorItem.formatWalkTime(energy));
-        graphics.text(this.font, range, DISPLAY_X, DISPLAY_Y + LINE, suit.power().hasFreePower() ? GREEN : fuelColour, false);
-        // Say why a suit stands down: switched off, no engine, a flooded firebox, (parked) no helmet: its mind needs
-        // the helmet, or nothing left to burn. This is the only place that says it: the visor goes completely dark
-        // without power (SuitHud, user 2026-10-27), so a pilot checks here. NO POWER is left for the rest (lightning).
-        boolean off = !suit.power().isSwitchedOn();
-        boolean warn = off || suit.getEngine() == null || suit.power().isFlooded() || !suit.hasHelmet();
-        Component status = Component.translatable(off ? "gui.powerarmor.switched_off"
-                : suit.getEngine() == null ? "gui.powerarmor.no_engine"
-                : suit.power().isFlooded() ? "gui.powerarmor.flooded"
-                : !suit.hasHelmet() && !suit.isVehicle() ? "gui.powerarmor.no_helmet"
-                : suit.isPowered() ? "gui.powerarmor.online"
-                : energy == 0 && !suit.power().hasFreePower() ? "gui.powerarmor.no_fuel" : "gui.powerarmor.offline");
-        graphics.text(this.font, status, DISPLAY_X, DISPLAY_Y + 2 * LINE, warn ? AMBER : suit.isPowered() ? GREEN : RED, false);
+        int rgb = VisorConfig.colour();
+        int main = 0xFF000000 | rgb;
+        int unlit = 0xFF000000 | VisorConfig.dim(rgb, HudView.DIM);
+        int rule = 0xFF000000 | VisorConfig.dim(rgb, RULE);
+        boolean blink = (suit.tickCount / 5) % 2 == 0;
+        var power = suit.power();
+
+        // the suit's name (a renamed suit shows its own), in capitals like the rest of the terminal
+        String name = this.font.plainSubstrByWidth(this.title.getString().toUpperCase(Locale.ROOT), TEXT_X1 - TEXT_X0);
+        graphics.text(this.font, name, TEXT_X0, TITLE_Y, 0xFF000000 | VisorConfig.dim(rgb, TITLE), false);
+        graphics.fill(TEXT_X0, RULE1_Y, TEXT_X1, RULE1_Y + 1, rule);
+
+        // HULL: like the HUD's (a warning from half, critical in the last 15%)
+        float hull = Mth.clamp(suit.getHealth() / suit.getMaxHealth(), 0F, 1F);
+        HudView.label(graphics, this.font, Component.translatable("hud.powerarmor.hull"), TEXT_X0, HULL_Y, rgb, HudAlert.ofLeft(hull), blink);
+        right(graphics, Component.translatable("hud.powerarmor.percent", Math.round(hull * 100)), HULL_Y, main);
+        HudView.bar(graphics, TEXT_X0, HULL_BAR_Y, SEGMENTS, 3, hull, main, unlit);
+
+        // FUEL: time left at walking pace (endless on a wet tidal engine or a star reactor), the bar how full the slot is
+        int energy = power.getTotalEnergy();
+        boolean free = power.hasFreePower();
+        boolean fuelCritical = !free && (suit.getEngine() == null || power.isFlooded() || energy == 0 || power.isLowOnFuel());
+        HudView.label(graphics, this.font, Component.translatable("hud.powerarmor.fuel"), TEXT_X0, FUEL_Y, rgb, HudView.critical(fuelCritical), blink);
+        right(graphics, free ? Component.translatable("hud.powerarmor.endless") : Component.literal(PowerArmorItem.formatWalkTime(energy)), FUEL_Y, main);
+        HudView.bar(graphics, TEXT_X0, FUEL_BAR_Y, SEGMENTS, 3, power.fuelGauge(), main, unlit);
+        graphics.fill(TEXT_X0, RULE2_Y, TEXT_X1, RULE2_Y + 1, rule);
+
+        // Why a suit stands down. Something to fix (no fuel, no engine, flooded, lightning) blinks; a choice (switched
+        // off, a parked suit without its helmet: its mind needs the helmet) holds steady.
+        boolean off = !power.isSwitchedOn();
+        String status;
+        HudAlert alert;
+        if (off) {
+            status = "gui.powerarmor.switched_off"; alert = HudAlert.WARNING;
+        } else if (suit.getEngine() == null) {
+            status = "gui.powerarmor.no_engine"; alert = HudAlert.CRITICAL;
+        } else if (power.isFlooded()) {
+            status = "gui.powerarmor.flooded"; alert = HudAlert.CRITICAL;
+        } else if (!suit.hasHelmet() && !suit.isVehicle()) {
+            status = "gui.powerarmor.no_helmet"; alert = HudAlert.WARNING;
+        } else if (suit.isPowered()) {
+            status = "gui.powerarmor.online"; alert = HudAlert.NONE;
+        } else if (energy == 0 && !free) {
+            status = "gui.powerarmor.no_fuel"; alert = HudAlert.CRITICAL;
+        } else {
+            status = "gui.powerarmor.offline"; alert = HudAlert.CRITICAL;
+        }
+        // an inverted label needs a pixel of block round it: nudge it in off the left edge
+        int x = alert == HudAlert.NONE ? TEXT_X0 : TEXT_X0 + 1;
+        HudView.label(graphics, this.font, Component.translatable(status), x, STATUS_Y, rgb, alert, blink);
+    }
+
+    /** Text flush with the right end of the bars (font.width counts the gap after the last glyph). */
+    private void right(GuiGraphicsExtractor graphics, Component text, int y, int colour) {
+        graphics.text(this.font, text, TEXT_X1 + 1 - this.font.width(text), y, colour, false);
     }
 
     /** Explain the suit's slots while they're empty. */

@@ -4,10 +4,13 @@
 
 Since 2026-10-27 the suit's menu is the player's inventory with the suit in it (user): E inside the suit opens it, like
 a horse's. So it starts from vanilla's inventory.png and keeps its frame, inventory, hotbar, the preview window and the
-off-hand slot (the socket tool goes there: it's the suit's off hand). The armour column holds the suit's helmet and
-engine, then the burn flame, then the fuel slot (a furnace's order: what burns, the flame, the fuel); the 2x2 crafting
-grid makes way for a status display (the Power and Pack up buttons go under it; they're widgets, drawn by the game).
-Coordinates must match PowerArmorMenu (slots) and PowerArmorScreen (preview, flame, display, buttons).
+off-hand slot's frame. The armour column holds the suit's helmet and engine, then the burn flame, then the fuel slot (a
+furnace's order: what burns, the flame, the fuel). The column right of the preview mirrors it (user, 2026-10-27): the
+Power key opposite the helmet, the socket slot (vanilla's off-hand frame, moved up) opposite the engine, the Pack up key
+opposite the fuel; the keys are widgets the game draws (PowerArmorScreen.SuitKey), their symbols are the two sprites
+written here. The 2x2 crafting grid and the "Crafting" title make way for the status screen, a terminal over the full
+height (PowerArmorScreen draws its text in the visor's colour).
+Coordinates must match PowerArmorMenu (slots) and PowerArmorScreen (preview, flame, screen, keys).
 """
 import io
 import zipfile
@@ -41,9 +44,30 @@ def inset(x, y, w, h, inside):
     img.putpixel((x, y + h - 1), SLOT)
 
 
-fill(95, 7, 172, 81, PANEL)                 # clear the crafting grid, its arrow and result slot (not the off-hand slot)
+fill(95, 4, 172, 81, PANEL)                 # clear the crafting grid, its arrow and result slot, the "Crafting" title
 fill(7, 43, 25, 61, PANEL)                  # the third armour slot becomes the flame's place
 img.paste(flame_bg, (9, 45))                # flame between the engine (above) and the fuel slot (below)
-inset(97, 17, 72, 29, (24, 26, 24, 255))    # status display: three lines (hull, fuel, power)
+socket = img.crop((76, 61, 94, 79))         # vanilla's off-hand slot frame...
+fill(76, 61, 94, 79, PANEL)                 # ...leaves the bottom (the Pack up key goes there)...
+img.paste(socket, (76, 25))                 # ...for the engine's row (the Power key goes over it, opposite the helmet)
+inset(97, 7, 72, 72, (6, 10, 8, 255))       # the status screen: near black, a hint of green like an unlit tube
 img.save('src/main/resources/assets/powerarmor/textures/gui/power_armor.png')
 print('wrote textures/gui/power_armor.png')
+
+# The keys' symbols, white (the screen tints them: grey, or green when the Power key is on), 9x8 at x 4, y 4 on an
+# 18x18 key: the power symbol, and an arrow into a tray for Pack up.
+SYMBOLS = {
+    'power': ["....X....", ".X..X..X.", "X...X...X", "X...X...X", "X.......X", "X.......X", ".X.....X.", "..XXXXX.."],
+    'pack': ["...XXX...", "...XXX...", "...XXX...", ".XXXXXXX.", "..XXXXX..", "...XXX...", "X...X...X", "XXXXXXXXX"],
+}
+for name, rows in SYMBOLS.items():
+    sym = Image.new('RGBA', (9, 8), (0, 0, 0, 0))
+    for y, row in enumerate(rows):
+        for x, ch in enumerate(row):
+            if ch == 'X':
+                sym.putpixel((x, y), LIGHT)
+    path = f'src/main/resources/assets/powerarmor/textures/gui/sprites/container/power_armor/{name}.png'
+    import os
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    sym.save(path)
+    print('wrote', path)

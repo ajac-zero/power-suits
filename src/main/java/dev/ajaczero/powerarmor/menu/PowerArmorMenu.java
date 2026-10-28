@@ -28,8 +28,8 @@ import org.jetbrains.annotations.Nullable;
  * Since 2026-10-27 (user) it's the player's inventory with the suit in it, laid out like vanilla's inventory screen:
  * the pilot opens it with the inventory key (E) from inside, like a horse's (PowerArmorEntity.openCustomInventoryScreen),
  * and sneak + right-click still opens it on a parked suit (under review). The suit's helmet, engine and fuel take the
- * armour column, its socket tool the off-hand slot (the tool is the suit's off hand: the swap-hands key moves it, see
- * {@link #clicked}), the power switch and Pack up the crafting grid's place.
+ * armour column, its socket tool the slot opposite the engine between the Power and Pack up keys (the tool is the
+ * suit's off hand: the swap-hands key moves it, see {@link #clicked}), a status screen the crafting grid's place.
  */
 public class PowerArmorMenu extends AbstractContainerMenu {
     // Two numberings, don't mix them up: the suit's own slots (PowerArmorEntity.FUEL_SLOT etc.: where an item lives in
@@ -47,8 +47,9 @@ public class PowerArmorMenu extends AbstractContainerMenu {
 
     /** Slot positions in the 176x166 background (top-left of the 16x16 item area), vanilla's inventory screen's: the
      *  armour column (x 8) holds the helmet (head), the engine (the backpack, on the chest's row), then the burn flame
-     *  and the fuel; the socket sits in the off-hand slot (tools/make-gui.py draws the frames). */
-    public static final int COLUMN_X = 8, HELMET_Y = 8, ENGINE_Y = 26, FUEL_Y = 62, SOCKET_X = 77, SOCKET_Y = 62;
+     *  and the fuel; the column right of the preview mirrors it (user, 2026-10-27): the Power key, the socket (opposite
+     *  the engine), the Pack up key (opposite the fuel). tools/make-gui.py draws the frames. */
+    public static final int COLUMN_X = 8, HELMET_Y = 8, ENGINE_Y = 26, FUEL_Y = 62, SOCKET_X = 77, SOCKET_Y = 26;
     /** Vanilla's empty-helmet-slot outline. */
     private static final Identifier EMPTY_HELMET = Identifier.withDefaultNamespace("container/slot/helmet");
 

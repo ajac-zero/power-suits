@@ -37,7 +37,7 @@ import net.neoforged.fml.loading.FMLPaths;
  *   <li>The inventory key from inside (what vanilla does for E when the vehicle has its own screen:
  *   {@code sendOpenInventory}): the suit's menu, no Pack up ({@code ap_menu_inside}).</li>
  *   <li>F over the drill on the hotbar: the drill goes into the socket, the chaingun comes out ({@code ap_menu_swapped}).</li>
- *   <li>The Power button: switched off, the status reads POWER OFF ({@code ap_menu_off}); closed, the visor is completely
+ *   <li>The Power key: switched off, it pops out and the status screen reads POWER OFF ({@code ap_menu_off}); closed, the visor is completely
  *   dark, nothing on the glass ({@code ap_menu_hud_off}).</li>
  *   <li>The power switch key (H): on again, the visor warms up ({@code ap_menu_hud_on}).</li>
  *   <li>F outside the screen with the chainsaw selected: the chainsaw goes into the socket ({@code ap_menu_f_back},
@@ -45,6 +45,8 @@ import net.neoforged.fml.loading.FMLPaths;
  *   <li>Out of the suit, sneak + right-click: the same screen from outside, with Pack up ({@code ap_menu_outside}).</li>
  *   <li>Still open, the fuel taken out: the status reads NO FUEL ({@code ap_menu_no_fuel}); the engine taken out: NO
  *   ENGINE ({@code ap_menu_no_engine}). The menu is the only place that says why a suit is dark (SuitHud draws nothing).</li>
+ *   <li>The mouse over the keys: Power ({@code ap_menu_hover_power}), Pack up from outside ({@code ap_menu_hover_pack})
+ *   and, at the start, greyed out from inside ({@code ap_menu_hover_pack_inside}).</li>
  * </ol>
  * Log run/autopilot_menu.csv: per tick the screen open on the client, the server's and the client's socket tool, the
  * switch and power on both sides, the pilot's hand and whether vanilla treats the inventory key as the vehicle's.
@@ -65,8 +67,11 @@ final class MenuScene {
                              mc.player.sendOpenInventory();
                          } }
             case 50 -> AutoPilot.shot(mc, "menu_inside");
+            // the mouse over the Pack up key from inside: greyed out, its tooltip says why
+            case 51 -> pointAt(mc, 76 + 9, 61 + 9);
+            case 53 -> AutoPilot.shot(mc, "menu_hover_pack_inside");
             // F over the drill (hotbar slot 1): the screen's own swap-hands click
-            case 54 -> { phase = "swap"; click(mc, PowerArmorMenu.HOTBAR_START + 1, Inventory.SLOT_OFFHAND, ContainerInput.SWAP); }
+            case 54 -> { phase = "swap"; pointAt(mc, -100, -100); click(mc, PowerArmorMenu.HOTBAR_START + 1, Inventory.SLOT_OFFHAND, ContainerInput.SWAP); }
             case 60 -> AutoPilot.shot(mc, "menu_swapped");
             case 64 -> { phase = "off"; if (mc.player.containerMenu instanceof PowerArmorMenu m) {
                              mc.gameMode.handleInventoryButtonClick(m.containerId, PowerArmorMenu.BUTTON_POWER);
@@ -114,13 +119,30 @@ final class MenuScene {
                               }
                           }); }
             case 224 -> AutoPilot.shot(mc, "menu_no_engine");
-            case 228 -> { mc.player.closeContainer(); close(); return false; }
+            // the keys under the mouse: highlighted, with their tooltips (Power names its state)
+            case 225 -> pointAt(mc, 76 + 9, 7 + 9);
+            case 227 -> AutoPilot.shot(mc, "menu_hover_power");
+            case 229 -> pointAt(mc, 76 + 9, 61 + 9);
+            case 231 -> AutoPilot.shot(mc, "menu_hover_pack");
+            case 234 -> { pointAt(mc, -100, -100); mc.player.closeContainer(); close(); return false; }
             default -> {}
         }
         if (s >= 2) {
             log(mc, s);
         }
         return true;
+    }
+
+    /** Move the mouse to (x, y) in the menu's background (GUI pixels from its top-left corner): what GLFW's cursor
+     *  callback would tell the mouse handler (window coordinates), twice, as the first move after a screen opens only
+     *  sets the position. */
+    private static void pointAt(Minecraft mc, int x, int y) {
+        var window = mc.getWindow();
+        int left = (window.getGuiScaledWidth() - 176) / 2, top = (window.getGuiScaledHeight() - 166) / 2;
+        double sx = (left + x + 0.5) * window.getScreenWidth() / window.getGuiScaledWidth();
+        double sy = (top + y + 0.5) * window.getScreenHeight() / window.getGuiScaledHeight();
+        mc.mouseHandler.onMove(window.handle(), sx, sy, 0, 0);
+        mc.mouseHandler.onMove(window.handle(), sx, sy, 0, 0);
     }
 
     private static void click(Minecraft mc, int slot, int button, ContainerInput input) {
