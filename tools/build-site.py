@@ -4,7 +4,7 @@
     python3 tools/build-site.py --version 1.1.0 OUT_DIR      # preview as if 1.1.0 were the latest
 
 The Pages workflow runs it on every deploy, and the Release workflow deploys after publishing a release, so the page
-follows the releases by itself. In every site/*.html page (index, suit, tools, mind, gallery, install):
+follows the releases by itself. In every site/*.html page (index, suit, tools, gallery, install):
   {{version}} 1.1.0           {{tag}} v1.1.0 (links pinned to the released source, e.g. the guide)
   {{jar}}     powersuits-1.1.0.jar (the download's file name: jar_name in gradle.properties)
   {{java}}    the JDK the release was built with (from its notes; tools/jdk.env if the notes don't say)
