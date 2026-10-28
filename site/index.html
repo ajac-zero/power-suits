@@ -14,46 +14,63 @@
   <meta property="og:image" content="https://ajac-zero.github.io/power-suits/img/suppressing_fire.jpg">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="preconnect" href="https://api.fontshare.com">
-  <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
-  <link href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
 </head>
 <body>
-
 {{nav}}
 
-<div class="t name-band"><h1>Power Suits</h1></div>
+<div id="main" class="wrap clearfix">
+<section class="left">
+  <img class="shot" src="img/suppressing_fire.jpg" alt="A green suit with a Spartan helmet firing its chaingun at night">
+  <p>
+    Power Suits is a mod about climbing into a power suit. It gives you maximum protection, extra strength and a socket
+    on its arm for heavy power tools. Put a helmet on and you are immune to fire, frost, poison and drowning, but soaking
+    up all that punishment burns fuel, so keep an eye on the gauge.
+  </p>
+  <p>
+    Step out and the suit carries on by itself: it can drill, cut trees, guard your home or follow you into a fight.
+    Be careful though. Rogue suits exist, and they aren't friendly. <a href="suit.html">More about the suit</a>.
+  </p>
+  <p>
+    Free and open source. You need NeoForge, GeckoLib 5 and Minecraft 26.3. <a href="install.html">How to install it</a>.
+  </p>
+</section>
+<aside>
+  <img class="art" src="img/big_daddy.jpg" alt="A brown suit with a drill on the sea floor in front of an ocean monument">
+  <p><a class="button" href="https://github.com/ajac-zero/power-suits/releases/latest">Download</a></p>
+  <p>Version {{version}} for Minecraft 26.3<br>or <a href="install.html">read the install guide</a></p>
+  <p>Needs <a href="https://modrinth.com/mod/geckolib">GeckoLib 5</a> and NeoForge.<br>Server and client both need the mod.</p>
+</aside>
 
-<section class="board hero" aria-label="Power Suits">
-  <div class="rail-l">
-    <div class="t ph"><img src="img/big_daddy.jpg" alt="A brown suit with a drill on the sea floor in front of an ocean monument"></div>
-    <ul class="t t2 facts">
-      <li>Minecraft 26.3</li><li>NeoForge</li><li>GeckoLib 5</li><li>Server and client</li><li>MIT license</li>
+<div class="cols">
+  <section>
+    <h2><img class="ico" src="img/items/chaingun.png" alt=""><a href="tools.html">Seven tools</a></h2>
+    <ul class="list">
+      <li><img class="ico" src="img/items/chaingun.png" alt=""><span>Chaingun</span></li>
+      <li><img class="ico" src="img/items/em_projector.png" alt=""><span>EM Projector</span></li>
+      <li><img class="ico" src="img/items/drill.png" alt=""><span>Mining Drill</span></li>
+      <li><img class="ico" src="img/items/chainsaw.png" alt=""><span>Chainsaw</span></li>
+      <li><img class="ico" src="img/items/flamethrower.png" alt=""><span>Flamethrower</span></li>
+      <li><img class="ico" src="img/items/tnt_launcher.png" alt=""><span>TNT Launcher</span></li>
+      <li><img class="ico" src="img/items/rail_cannon.png" alt=""><span>Rail Cannon</span></li>
     </ul>
-  </div>
-  <div class="t ph stage">
-    <img src="img/suppressing_fire.jpg" alt="A green suit with a Spartan helmet firing its chaingun at night">
-    <div class="say"><p>An enterable power suit for Minecraft. Climb in for protection, strength and a socket for heavy power tools. It burns fuel, so watch the gauge.</p></div>
-  </div>
-  <div class="rail-r">
-    <div class="t t4 fact"><b>7</b>power tools</div>
-    <div class="t t3 fact"><b>3</b>engines</div>
-    <div class="t t2 fact"><b>6</b>helmet styles</div>
-    <div class="t t1 fact"><b>16</b>dyes</div>
-    <a class="t accent go" href="install.html">Install {{version}}</a>
-  </div>
-</section>
-
-<section class="board doors" aria-label="What is in the mod">
-  <a class="t ph c3" href="suit.html"><img src="img/dusk_cockpit.jpg" alt="The view from inside a red suit's cockpit at dusk" loading="lazy"><div class="cap"><h2>The suit</h2><p>Cockpit, visor, dyes, and a mind of its own.</p></div></a>
-  <a class="t ph c3" href="tools.html"><img src="img/tree_side.jpg" alt="A green suit felling an oak with its chainsaw" loading="lazy"><div class="cap"><h2>Tools and engines</h2><p>Seven tools for the arm, three engines for the back.</p></div></a>
-  <a class="t ph c3" href="gallery.html"><img src="img/em_front.jpg" alt="A purple suit lifting a creeper with the EM projector" loading="lazy"><div class="cap"><h2>Gallery</h2><p>Screenshots and key art.</p></div></a>
-  <a class="t accent c3" href="install.html"><h2>Install</h2><p>Two mods in a folder, and a crafting table.</p></a>
-</section>
-
-<div class="board"><div class="t c12 marquee" aria-hidden="true"><div class="track"><span>For situations where plain old armor isn't enough. </span><span>For situations where plain old armor isn't enough. </span><span>For situations where plain old armor isn't enough. </span><span>For situations where plain old armor isn't enough. </span></div></div></div>
+  </section>
+  <section>
+    <h2><img class="ico" src="img/items/firebox.png" alt=""><a href="tools.html#engines">Three engines</a></h2>
+    <ul class="list">
+      <li><img class="ico" src="img/items/firebox.png" alt=""><span>Firebox<br><small>burns furnace fuel</small></span></li>
+      <li><img class="ico" src="img/items/tidal_engine.png" alt=""><span>Tidal Engine<br><small>free in water and rain</small></span></li>
+      <li><img class="ico" src="img/items/star_reactor.png" alt=""><span>Star Reactor<br><small>runs on a Nether Star</small></span></li>
+    </ul>
+  </section>
+  <section>
+    <h2><img src="img/icon.png" alt="" style="border-radius:4px"><a href="https://github.com/ajac-zero/power-suits/releases">Latest version</a></h2>
+    <p>Version <b>{{version}}</b> is out. Read what changed on the <a href="https://github.com/ajac-zero/power-suits/releases">releases page</a>.</p>
+    <p>Found a bug, or have an idea? Tell us on the <a href="https://github.com/ajac-zero/power-suits/issues">issue tracker</a>.</p>
+    <p>See the suit in action in the <a href="gallery.html">gallery</a>.</p>
+  </section>
+</div>
+</div>
 
 {{footer}}
 </body>

@@ -56,7 +56,7 @@ def render(html, version, java, page="index.html", partials=None):
     # {{nav}} and {{footer}} are the shared pieces (site/_nav.html, site/_footer.html); the nav marks the current page.
     for name, body in (partials or {}).items():
         if name == "nav":
-            body = re.sub(r'(<a class="t link" href="%s")' % re.escape(page), r'\1 aria-current="page"', body)
+            body = re.sub(r'<li><a href="%s">' % re.escape(page), '<li><a class="here" aria-current="page" href="%s">' % page, body)
         html = html.replace("{{%s}}" % name, body)
     # The comment explaining the template is for people editing it, not for visitors.
     html = re.sub(r"\s*<!-- A template:.*?-->", "", html, count=1, flags=re.S)
