@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install | Power Suits</title>
+  <meta name="description" content="Install Power Suits on NeoForge 26.3 and verify the download.">
+  <link rel="icon" href="img/favicon.png">
+  <meta property="og:title" content="Install | Power Suits">
+  <meta property="og:description" content="Install Power Suits on NeoForge 26.3 and verify the download.">
+  <meta property="og:image" content="https://ajac-zero.github.io/power-suits/img/suppressing_fire.jpg">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="index.html"><img src="img/icon.png" alt="" width="36" height="36"> Power Suits</a>
+  <nav>
+    <a href="suit.html">Suit</a>
+    <a href="tools.html">Tools &amp; engines</a>
+    <a href="mind.html">Autonomy</a>
+    <a href="gallery.html">Gallery</a>
+    <a href="install.html" class="here">Install</a>
+    <a href="https://github.com/ajac-zero/power-suits">GitHub</a>
+  </nav>
+</header>
+
+<main>
+<div class="pagehead"><h1>Install</h1><p>Three files and a crafting table.</p></div>
+<section id="install" class="install">
+  <h2>Install</h2>
+  <ol>
+    <li>Install <a href="https://neoforged.net/">NeoForge</a> for Minecraft 26.3.</li>
+    <li>Download <a href="https://modrinth.com/mod/geckolib">GeckoLib 5</a> for NeoForge 26.3 and put it in your <code>mods</code> folder.</li>
+    <li>Download <a href="https://github.com/ajac-zero/power-suits/releases/latest">Power Suits</a> and put the jar next to it.</li>
+  </ol>
+  <p class="version">Latest version: <b>{{version}}</b>. Every version is on the <a href="https://github.com/ajac-zero/power-suits/releases">releases page</a>.</p>
+  <p>
+    The suit is in the creative tab <i>Tools &amp; Utilities</i>. In survival, craft a torso, two arms and two legs
+    and assemble them like a body at a crafting table, then craft a helmet and an engine for it. Controls, recipes
+    and every number are in the <a href="https://github.com/ajac-zero/power-suits/blob/{{tag}}/docs/guide.md">guide</a>.
+  </p>
+  <p>Server and client both need the mod.</p>
+</section>
+
+
+<section id="verify" class="install verify">
+  <h2>Verify your download</h2>
+  <p>
+    Be careful with mods from websites you don't know: malware has spread through Minecraft mods before. You don't
+    have to take our word for this one:
+  </p>
+  <ul>
+    <li>
+      <b>Built in public.</b> Every release is built by GitHub from the public source code, by a
+      <a href="https://github.com/ajac-zero/power-suits/blob/main/.github/workflows/release.yml">workflow</a> anyone can
+      read. The release links to its build log.
+    </li>
+    <li>
+      <b>Signed.</b> GitHub signs a record of each build: this file, from this repository, at this commit. With the
+      <a href="https://cli.github.com/">GitHub CLI</a>, check the jar you downloaded:
+      <pre>gh attestation verify {{jar}} -R ajac-zero/power-suits</pre>
+    </li>
+    <li>
+      <b>Checksum.</b> Each release lists the jar's SHA-256. Compare it with yours:
+      <code>shasum -a 256 {{jar}}</code> (macOS, Linux) or
+      <code>certutil -hashfile {{jar}} SHA256</code> (Windows).
+    </li>
+    <li>
+      <b>Rebuild it yourself.</b> The build is repeatable: the same source gives the same file, byte for byte.
+      Check out the release's tag and build it with the Java named in the release notes (Temurin
+      {{java}}) and the
+      <a href="https://github.com/ajac-zero/power-suits/blob/main/tools/reproducible.gradle">reproducible.gradle</a>
+      script (saved anywhere): <code>./gradlew build --init-script reproducible.gradle</code>. The checksum should match.
+    </li>
+  </ul>
+  <p>
+    What the mod does: it adds the suit, its parts and tools to the game. It makes no network connections of its own,
+    runs no other programs and loads no code from anywhere else. Its only dependencies are NeoForge and GeckoLib.
+  </p>
+</section>
+
+</main>
+
+<footer>
+  <p>
+    Power Suits is open source under the MIT license:
+    <a href="https://github.com/ajac-zero/power-suits">github.com/ajac-zero/power-suits</a>.
+    Bugs and ideas go to the <a href="https://github.com/ajac-zero/power-suits/issues">issues</a>.
+  </p>
+  <p class="small">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</p>
+</footer>
+
+</body>
+</html>

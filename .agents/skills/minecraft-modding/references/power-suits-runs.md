@@ -36,7 +36,7 @@ constants at the top, later sections move along by themselves.
 
 
 ## The web page and releases
-- `site/` the mod's web page (GitHub Pages, https://ajac-zero.github.io/power-suits/). A template: `tools/build-site.py`
+- `site/` the mod's web page (GitHub Pages, https://ajac-zero.github.io/power-suits/). Six pages (index, suit, tools, mind, gallery, install; header/footer repeated per file). A template: `tools/build-site.py`
   fills in `{{version}}` / `{{tag}}` / `{{java}}` from the latest GitHub Release, greys out elements marked
   `data-since="1.1.0"` and shows `<span data-coming="1.1.0">` as "coming in 1.1" until that version is released (mark new
   features that way while building them). Preview: `python3 tools/build-site.py --version 1.1.0 /tmp/site`. Pictures are
