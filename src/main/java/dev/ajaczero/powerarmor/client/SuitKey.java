@@ -23,19 +23,20 @@ import org.jspecify.annotations.Nullable;
  */
 final class SuitKey extends AbstractButton {
     static final int SIZE = 18;
-    /** The symbol, 8x8, centred on the key (x 5..12 of 0..17: an even width, so its 2 px stem sits in the middle), the
-     *  power key's pip under it (x 7..10, y 13). */
-    private static final int SYMBOL_W = 8, SYMBOL_H = 8, SYMBOL_X = 5, SYMBOL_Y = 4;
+    /** A key's symbol: a white mask (tools/make-gui.py) of this size, drawn at (x, y) on the key. */
+    record Symbol(Identifier sprite, int width, int height, int x, int y) {}
+
     /** The pushed-in key: vanilla's button at 72% brightness, under a 1 px shadow where it sank. */
     private static final int PRESSED_TINT = 0xFFB8B8B8, SHADOW = 0xFF373737;
+    private static final int PIP_W = 5;
     private static final int INK = 0xFF3C3C3C, INK_INACTIVE = 0xFF464646, LIT = 0xFF7CFF6B, PIP_OFF = 0xFF501E1E;
 
-    private final Identifier symbol;
+    private final Symbol symbol;
     @Nullable
     private final BooleanSupplier latched;
     private final Runnable action;
 
-    SuitKey(int x, int y, Identifier symbol, Component name, @Nullable BooleanSupplier latched, Runnable action) {
+    SuitKey(int x, int y, Symbol symbol, Component name, @Nullable BooleanSupplier latched, Runnable action) {
         super(x, y, SIZE, SIZE, name);
         this.symbol = symbol;
         this.latched = latched;
@@ -64,10 +65,13 @@ final class SuitKey extends AbstractButton {
         }
         int dy = down ? 1 : 0;
         int ink = !this.active ? INK_INACTIVE : down ? LIT : INK;
-        // the symbols are white masks (tools/make-gui.py): blitSprite's colour tints them
-        g.blitSprite(RenderPipelines.GUI_TEXTURED, this.symbol, x + SYMBOL_X, y + SYMBOL_Y + dy, SYMBOL_W, SYMBOL_H, ink);
+        // the symbols are white masks: blitSprite's colour tints them
+        Symbol s = this.symbol;
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, s.sprite(), x + s.x(), y + s.y() + dy, s.width(), s.height(), ink);
         if (this.latched != null) {
-            g.fill(x + 7, y + 13 + dy, x + 11, y + 14 + dy, down ? LIT : PIP_OFF);
+            // the pip: as wide as the symbol's bottom line (its middle 5 px) and under it, two rows clear
+            int px = x + s.x() + (s.width() - PIP_W) / 2;
+            g.fill(px, y + s.y() + s.height() + 2 + dy, px + PIP_W, y + s.y() + s.height() + 3 + dy, down ? LIT : PIP_OFF);
         }
     }
 

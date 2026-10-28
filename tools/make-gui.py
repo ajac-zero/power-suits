@@ -54,19 +54,19 @@ inset(97, 7, 72, 72, (6, 10, 8, 255))       # the status screen: near black, a h
 img.save('src/main/resources/assets/powerarmor/textures/gui/power_armor.png')
 print('wrote textures/gui/power_armor.png')
 
-# The keys' symbols, white (the screen tints them: grey, or green when the Power key is on), 8x8 at x 5, y 4 on an
-# 18x18 key (SuitKey): an even width centres on an even key, so the stems are 2 px. The power symbol is a true 8 px
-# circle open at the top (rows 1 and 6 mirror each other) with the stem dropping into it; Pack is an arrow into a tray,
-# a pixel of air between the arrow's tip and the tray's floor (user, 2026-10-27).
+# The keys' symbols, white (the screen tints them: grey, or green when the Power key is on), positioned by
+# PowerArmorScreen. Power, 9x8 (user's pick D, 2026-10-27, over 2 px stems that looked too heavy): a 1 px stem in a ring
+# open at the top; an odd width can't be exactly centred on the 18 px key, it sits half a pixel left. Pack, 8x8 and
+# centred: an arrow into a tray, a pixel of air between the arrow's tip and the tray's floor.
 SYMBOLS = {
-    'power': ["...XX...",
-              ".X.XX.X.",
-              "X..XX..X",
-              "X..XX..X",
-              "X......X",
-              "X......X",
-              ".X....X.",
-              "..XXXX.."],
+    'power': ["....X....",
+              ".X..X..X.",
+              "X...X...X",
+              "X...X...X",
+              "X.......X",
+              "X.......X",
+              ".X.....X.",
+              "..XXXXX.."],
     'pack': ["...XX...",
              "...XX...",
              "...XX...",
@@ -77,7 +77,7 @@ SYMBOLS = {
              "XXXXXXXX"],
 }
 for name, rows in SYMBOLS.items():
-    sym = Image.new('RGBA', (8, 8), (0, 0, 0, 0))
+    sym = Image.new('RGBA', (len(rows[0]), len(rows)), (0, 0, 0, 0))
     for y, row in enumerate(rows):
         for x, ch in enumerate(row):
             if ch == 'X':

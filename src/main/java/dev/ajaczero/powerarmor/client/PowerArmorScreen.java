@@ -37,8 +37,13 @@ import net.minecraft.world.entity.player.Inventory;
 public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
     private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/gui/power_armor.png");
     private static final Identifier LIT_PROGRESS = Identifier.withDefaultNamespace("container/furnace/lit_progress");
-    private static final Identifier POWER_SYMBOL = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "container/power_armor/power");
-    private static final Identifier PACK_SYMBOL = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "container/power_armor/pack");
+    /** The keys' symbols (tools/make-gui.py). Power is 9 wide for a 1 px stem (user's pick D, 2026-10-27): on an 18 px
+     *  key it can't be exactly centred, so it sits half a pixel left, a pixel up (its light goes under it). Pack is 8x8,
+     *  centred (x 5..12). */
+    private static final SuitKey.Symbol POWER_SYMBOL = new SuitKey.Symbol(
+            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "container/power_armor/power"), 9, 8, 4, 3);
+    private static final SuitKey.Symbol PACK_SYMBOL = new SuitKey.Symbol(
+            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "container/power_armor/pack"), 8, 8, 5, 4);
     /** The flame between the engine and fuel slots; the preview window (vanilla's player box). */
     private static final int FLAME_X = 9, FLAME_Y = 45;
     private static final int PREVIEW_X0 = 26, PREVIEW_Y0 = 8, PREVIEW_X1 = 75, PREVIEW_Y1 = 78, PREVIEW_SCALE = 18;
