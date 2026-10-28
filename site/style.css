@@ -26,7 +26,7 @@ p, ul, ol { margin: 1.3em 0 0; }
 
 .wrap { width: 1000px; margin: 0 auto; }
 
-header { position: relative; image-rendering: pixelated; height: 56px; background-color: #211710; background-image: url(img/tex/dirt.png); background-size: 64px; border-bottom: 3px solid #000; }
+header { position: relative; image-rendering: pixelated; height: 56px; background-color: #211710; background-image: url(img/tex/spruce_planks.png); background-size: 64px; border-bottom: 3px solid #000; }
 #logo {
   float: left; width: 270px; height: 48px; display: flex; align-items: center; gap: 10px;
   color: #fff; font-size: 24px; font-weight: bold; letter-spacing: 0.01em; text-shadow: 2px 2px 0 #000;
