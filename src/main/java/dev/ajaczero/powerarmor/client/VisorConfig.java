@@ -1,8 +1,10 @@
 package dev.ajaczero.powerarmor.client;
 
 import java.util.Locale;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.ARGB;
 import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.neoforge.common.TranslatableEnum;
 
 /**
  * The pilot's own visor settings, saved in {@code config/powerarmor-client.toml} (Mods > Power Armor > Config, or edit
@@ -14,11 +16,37 @@ public final class VisorConfig {
     /** Classic terminal green (user, 2026-10-27): the colour of the visor's readouts. */
     public static final String DEFAULT_COLOUR = "#5AFF6E";
 
+    /**
+     * The visor colours to pick from without typing a hex code (user, 2026-10-27); CUSTOM uses visor_colour. A
+     * TranslatableEnum so NeoForge's config screen labels the dropdown with the name drawn in its own colour.
+     */
+    public enum Preset implements TranslatableEnum {
+        GREEN(0x5AFF6E), AMBER(0xFFBA3C), BLUE(0x8EC2FF), WHITE(0xE4ECE8), RED(0xFF5A4A), CUSTOM(-1);
+
+        /** 0xRRGGBB, or -1 for CUSTOM (the hex field). */
+        public final int rgb;
+
+        Preset(int rgb) {
+            this.rgb = rgb;
+        }
+
+        @Override
+        public Component getTranslatedName() {
+            var name = Component.translatable("powerarmor.configuration.visor_preset." + name().toLowerCase(Locale.ROOT));
+            return rgb >= 0 ? name.withColor(rgb) : name;
+        }
+    }
+
     private static final ModConfigSpec.Builder B = new ModConfigSpec.Builder();
 
+    public static final ModConfigSpec.EnumValue<Preset> PRESET = B
+            .comment("The visor's colour: GREEN (terminal green, the default), AMBER, BLUE, WHITE, RED, or CUSTOM (visor_colour below).")
+            .translation("powerarmor.configuration.visor_preset")
+            .defineEnum("visor_preset", Preset.GREEN);
+
     public static final ModConfigSpec.ConfigValue<String> COLOUR = B
-            .comment("The visor's colour as #RRGGBB: its readouts and the light along the helmet's edge. Warnings use it too (inverted).",
-                    "Try #5AFF6E (terminal green, the default), #E4ECE8 (white), #8EC2FF (blue), #FFBA3C (amber).")
+            .comment("Your own visor colour as #RRGGBB, used when visor_preset is CUSTOM: its readouts and the light along the helmet's edge.",
+                    "Warnings use it too (inverted). Something bright reads best: #5AFF6E is the default green.")
             .translation("powerarmor.configuration.visor_colour")
             .define("visor_colour", DEFAULT_COLOUR, v -> v instanceof String s && parse(s) >= 0);
 
@@ -47,8 +75,12 @@ public final class VisorConfig {
 
     public static final ModConfigSpec SPEC = B.build();
 
-    /** The configured colour as 0xRRGGBB (the default if the file holds something unreadable). */
+    /** The configured colour as 0xRRGGBB: the preset's, or with CUSTOM the hex field's (the default if unreadable). */
     public static int colour() {
+        Preset preset = PRESET.get();
+        if (preset != Preset.CUSTOM) {
+            return preset.rgb;
+        }
         int rgb = parse(COLOUR.get());
         return rgb >= 0 ? rgb : parse(DEFAULT_COLOUR);
     }

@@ -104,8 +104,9 @@ view in. When the power comes on (fuel is back, or you climb into a running suit
 appears across the middle of the screen, widens, and splits into two lines that sweep up and down to the edges; what
 they pass is on (the metal turns see-through, the readouts appear). When the power goes, two lines sweep in from the
 top and bottom, switching everything off behind them, meet in the middle and shrink away, leaving the glass completely
-dark. It's terminal green by default: pick your own colour under
-**Mods > Power Armor > Config > Visor** (`visor_colour` in `config/powerarmor-client.toml`, `#RRGGBB`; only you see it).
+dark. It's terminal green by default: pick another under **Mods > Power Armor > Config > Visor > Visor colour** (green,
+amber, blue, white, red, or Custom for any `#RRGGBB` in *Custom colour*; `visor_preset` / `visor_colour` in
+`config/powerarmor-client.toml`; only you see it).
 - **Top left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
   with a **shield** that's lit while the suit is sealed (running with the helmet on) and faded when not, and **FUEL**: how long it lasts at walking pace (∞ on a wet
   tidal engine or a star reactor), a bar for how full the fuel slot is, and three

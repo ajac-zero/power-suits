@@ -3,6 +3,7 @@ package dev.ajaczero.powerarmor.client.dev;
 import dev.ajaczero.powerarmor.PowerArmor;
 import dev.ajaczero.powerarmor.client.SuitHud;
 import dev.ajaczero.powerarmor.client.SuitVisor;
+import dev.ajaczero.powerarmor.client.VisorConfig;
 import dev.ajaczero.powerarmor.entity.PowerArmorEntity;
 import dev.ajaczero.powerarmor.item.TntLauncherItem;
 import dev.ajaczero.powerarmor.registry.ModEntities;
@@ -48,12 +49,14 @@ import net.neoforged.fml.loading.FMLPaths;
  * flamethrower and the drill (nothing); the EM projector scanning on its own (two pigs and some ingots marked), aimed
  * at a pig (named), holding it (a box round it, its name and health, the arc it would be thrown along, the other pig
  * lit up in the way) and bowling it into the other pig ({@code ap_hud_em_bowl_5..9}); the chainsaw (nothing); a star reactor (endless fuel, no embers); boss bars
- * and effects moved out of the way; and without the helmet (no HUD, vanilla's hearts).
+ * and effects moved out of the way; without the helmet (no HUD, vanilla's hearts); then each visor colour preset
+ * ({@code ap_hud_colour_<preset>}, CUSTOM a pink typed in) and the config screen it's picked on
+ * ({@code ap_hud_colour_screen}), putting the player's own colour back after.
  * Shots {@code ap_hud_*.png}; log run/autopilot_hud.csv: per tick what the HUD drew (hull, fuel bar and text, embers,
  * alert (the suit's: none, warning, critical), powered, tool, tool_hud: what the tool's own readout said it drew, e.g. the TNT arc's
  * impact distance and flight ticks; hud_open / visor_sweep: how much of the screen the visor's scan had turned on as
  * the HUD and SuitVisor drew it, 0 .. 1: sweeping in after the fuel runs out ({@code ap_hud_close_*}), sweeping out
- * after the refuel ({@code ap_hud_warm_*})) next to the server's own numbers. Runs alone with ./gradlew
+ * after the refuel ({@code ap_hud_warm_*}); visor_rgb: the colour it's drawn in) next to the server's own numbers. Runs alone with ./gradlew
  * runAutopilotHud (~45 s).
  */
 final class HudScene {
@@ -199,13 +202,49 @@ final class HudScene {
             // no helmet: no HUD (vanilla's vehicle hearts are back)
             case 870 -> { phase = "no_helmet"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, ItemStack.EMPTY)); }
             case 880 -> AutoPilot.shot(mc, "hud_no_helmet");
-            case 882 -> { close(); return false; }
+            // the visor colour presets (VisorConfig.PRESET, 2026-10-27): each one on the HUD, CUSTOM with a pink typed in
+            // the hex field; then the config screen itself (the client section: the preset's name drawn in its colour).
+            // The player's own choice is put back at the end (run/config is a developer's own too).
+            case 882 -> { phase = "colour"; savedPreset = VisorConfig.PRESET.get(); savedColour = VisorConfig.COLOUR.get();
+                          server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()))); }
+            case 940 -> { VisorConfig.PRESET.set(VisorConfig.Preset.AMBER); mc.gui.setScreen(configScreen()); } // its name in amber
+            case 950 -> AutoPilot.shot(mc, "hud_colour_screen");
+            case 952 -> {
+                mc.gui.setScreen(null);
+                VisorConfig.PRESET.set(savedPreset);
+                VisorConfig.COLOUR.set(savedColour);
+                VisorConfig.SPEC.save();
+                close();
+                return false;
+            }
             default -> {}
+        }
+        // one preset every 6 ticks from 900 (a second after the helmet goes back on: the visor's warm-up is over)
+        if (s >= 900 && s < 900 + 6 * VisorConfig.Preset.values().length) {
+            VisorConfig.Preset preset = VisorConfig.Preset.values()[(s - 900) / 6];
+            if ((s - 900) % 6 == 0) {
+                phase = "colour_" + preset.name().toLowerCase(Locale.ROOT);
+                VisorConfig.PRESET.set(preset);
+                VisorConfig.COLOUR.set("#FF66CC");
+            } else if ((s - 900) % 6 == 5) {
+                AutoPilot.shot(mc, "hud_" + phase);
+            }
         }
         if (s >= 6) {
             log(mc, s);
         }
         return true;
+    }
+
+    private static VisorConfig.Preset savedPreset = VisorConfig.Preset.GREEN;
+    private static String savedColour = VisorConfig.DEFAULT_COLOUR;
+
+    /** The mod's client config page, as Mods > Power Armor > Config > Client opens it. */
+    private static net.minecraft.client.gui.screens.Screen configScreen() {
+        var config = net.neoforged.fml.config.ModConfigs.getConfigSet(net.neoforged.fml.config.ModConfig.Type.CLIENT).stream()
+                .filter(c -> c.getModId().equals(PowerArmor.MODID)).findFirst().orElseThrow();
+        return new net.neoforged.neoforge.client.gui.ConfigurationScreen.ConfigurationSectionScreen(null,
+                net.neoforged.fml.config.ModConfig.Type.CLIENT, config, net.minecraft.network.chat.Component.literal("Power Armor visor"));
     }
 
     /** What the scene put out (the TNT arc's cow; the EM projector's pigs and ingots), to remove after. */
@@ -304,7 +343,7 @@ final class HudScene {
     private static void open() {
         try {
             csv = Files.newBufferedWriter(FMLPaths.GAMEDIR.get().resolve("autopilot_hud.csv"));
-            csv.write("tick,phase,shown,hull,fuel_bar,fuel_text,embers,alert,powered,tool,tool_hud,compass,hud_open,visor_sweep,server_health,server_energy,server_powered\n");
+            csv.write("tick,phase,shown,hull,fuel_bar,fuel_text,embers,alert,powered,tool,tool_hud,compass,hud_open,visor_sweep,visor_rgb,server_health,server_energy,server_powered\n");
         } catch (IOException e) {
             PowerArmor.LOGGER.error("hud csv", e);
         }
@@ -320,7 +359,7 @@ final class HudScene {
         SuitHud.Shown h = SuitHud.shown();
         String client = (h == null ? "0,,,,,,,,,," : String.format(Locale.ROOT, "1,%.2f,%.2f,%s,%d,%s,%b,%s,%s,%s,%.2f", h.hull(), h.fuel(),
                 h.fuelText().replace(',', ' '), h.embers(), h.alert().name().toLowerCase(Locale.ROOT), h.powered(), h.tool(), h.toolHud().replace(',', ';'),
-                h.compass().replace(',', ' '), h.open())) + String.format(Locale.ROOT, ",%.2f", SuitVisor.lastSweep());
+                h.compass().replace(',', ' '), h.open())) + String.format(Locale.ROOT, ",%.2f,#%06X", SuitVisor.lastSweep(), VisorConfig.colour());
         Consumer<net.minecraft.server.level.ServerPlayer> write = player -> {
             try {
                 w.write(String.format(Locale.ROOT, "%d,%s,%s,%.1f,%d,%b%n", s, p, client, x.getHealth(),
