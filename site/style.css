@@ -26,7 +26,7 @@ p, ul, ol { margin: 1.3em 0 0; }
 
 .wrap { width: 1000px; margin: 0 auto; }
 
-header { position: relative; image-rendering: pixelated; height: 56px; background-color: #211710; background-image: url(img/tex/dirt.png); background-size: 48px; border-bottom: 3px solid #000; }
+header { position: relative; image-rendering: pixelated; height: 56px; background-color: #211710; background-image: url(img/tex/dirt.png); background-size: 64px; border-bottom: 3px solid #000; }
 #logo {
   float: left; width: 270px; height: 48px; display: flex; align-items: center; gap: 10px;
   color: #fff; font-size: 24px; font-weight: bold; letter-spacing: 0.01em; text-shadow: 2px 2px 0 #000;
@@ -139,7 +139,7 @@ body::before { content: ""; position: fixed; inset: 0; background: rgba(0, 0, 0,
 body { position: relative; z-index: 0; isolation: isolate; }
 
 /* Header: dark dirt, everything centred on one line */
-header::before { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); }
+header::before { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); }
 header .wrap { position: relative; display: flex; align-items: center; height: 100%; }
 #logo { height: auto; float: none; width: auto; margin-right: 36px; }
 #menu { float: none; padding: 0; display: flex; gap: 22px; }
