@@ -71,11 +71,9 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         SuitKey pack = this.addRenderableWidget(new SuitKey(this.leftPos + KEY_X, this.topPos + PACK_Y, PACK_SYMBOL,
                 Component.translatable("gui.powerarmor.pack_up"), null,
                 () -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_PACK)));
-        // Packing up needs you outside: from inside the key is there but greyed out, and says why.
-        boolean outside = !this.menu.isPiloting(this.minecraft.player);
-        pack.active = outside;
-        pack.setTooltip(tooltip(Component.translatable("gui.powerarmor.pack_up"),
-                Component.translatable(outside ? "gui.powerarmor.pack_up.tooltip" : "gui.powerarmor.pack_up.inside")));
+        // Packing up needs you outside: from inside the key is there but greyed out.
+        pack.active = !this.menu.isPiloting(this.minecraft.player);
+        pack.setTooltip(Tooltip.create(Component.translatable("gui.powerarmor.pack_up")));
     }
 
     private static boolean switchedOn(PowerArmorEntity suit) {
@@ -87,10 +85,6 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         return Component.translatable("gui.powerarmor.power", Component.translatable(on ? "gui.powerarmor.power.on" : "gui.powerarmor.power.off"));
     }
 
-    /** A key's tooltip: its name, then what it does in grey (a key has a symbol, no caption). */
-    private static Tooltip tooltip(Component name, Component hint) {
-        return Tooltip.create(Component.empty().append(name).append("\n").append(hint.copy().withStyle(ChatFormatting.GRAY)));
-    }
 
     // Since 1.21.6 screens don't draw directly: each frame they "extract" what to draw (a list of quads, text, items)
     // into GuiGraphicsExtractor, and Minecraft draws that list afterwards. Hence the extract* names.
@@ -101,7 +95,7 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         if (on != this.powerShown) {
             this.powerShown = on;
             this.power.setMessage(powerName(on));
-            this.power.setTooltip(tooltip(powerName(on), Component.translatable("gui.powerarmor.power.tooltip")));
+            this.power.setTooltip(Tooltip.create(powerName(on))); // a key has a symbol, no caption: its name only (user)
         }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick); // background, slots, labels, item tooltips
         this.renderEmptySlotHints(graphics, mouseX, mouseY);

@@ -67,7 +67,7 @@ final class MenuScene {
                              mc.player.sendOpenInventory();
                          } }
             case 50 -> AutoPilot.shot(mc, "menu_inside");
-            // the mouse over the Pack up key from inside: greyed out, its tooltip says why
+            // the mouse over the Pack up key from inside: greyed out, its name as the tooltip
             case 51 -> pointAt(mc, 76 + 9, 61 + 9);
             case 53 -> AutoPilot.shot(mc, "menu_hover_pack_inside");
             // F over the drill (hotbar slot 1): the screen's own swap-hands click
