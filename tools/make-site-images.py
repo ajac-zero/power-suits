@@ -41,7 +41,7 @@ def main():
     icon = Image.open(ROOT / "marketing/out/icon.png").convert("RGB")
     icon.resize((256, 256), Image.LANCZOS).save(OUT / "icon.png", optimize=True)
     icon.resize((64, 64), Image.LANCZOS).save(OUT / "favicon.png", optimize=True)
-    items = ROOT / "src/main/resources/assets/powerarmor/textures/item"
+    items = ROOT / "src/main/resources/assets/power_suits/textures/item"
     (OUT / "items").mkdir(exist_ok=True)
     for png in sorted(items.glob("*.png")):
         (OUT / "items" / png.name).write_bytes(png.read_bytes())

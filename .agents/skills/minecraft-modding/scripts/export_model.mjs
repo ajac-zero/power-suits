@@ -3,7 +3,7 @@
 // Requires Blockbench running with its MCP plugin (http://localhost:3000/bb-mcp).
 //
 //   MOD_ROOT=~/MyMod MOD_ID=mymod NAME=my_entity node export_model.mjs
-// (defaults: mod root = cwd, MOD_ID/NAME from env; Power Armor uses powerarmor / power_armor)
+// (defaults: mod root = cwd, MOD_ID/NAME from env; Power Armor uses power_suits / power_suit)
 //
 // Blockbench's own Bedrock exporter is used, so the files match what "File > Export" would give.
 // Animation names are renamed from animation.<anything>.* to animation.<NAME>.*.
@@ -13,7 +13,7 @@ import path from 'node:path';
 const URL_ = process.env.BB_URL || 'http://localhost:3000/bb-mcp';
 const ROOT = path.resolve(process.env.MOD_ROOT || process.cwd());
 const MOD_ID = process.env.MOD_ID, NAME = process.env.NAME;
-if (!MOD_ID || !NAME) throw new Error('set MOD_ID and NAME (e.g. MOD_ID=powerarmor NAME=power_armor)');
+if (!MOD_ID || !NAME) throw new Error('set MOD_ID and NAME (e.g. MOD_ID=power_suits NAME=power_suit)');
 const ASSETS = path.join(ROOT, 'src/main/resources/assets', MOD_ID);
 
 let session = null, nextId = 1;
@@ -39,7 +39,7 @@ async function bb(code) {
   return JSON.parse(r.content[0].text);
 }
 
-await rpc('initialize', {protocolVersion: '2025-03-26', capabilities: {}, clientInfo: {name: 'powerarmor-export', version: '1'}});
+await rpc('initialize', {protocolVersion: '2025-03-26', capabilities: {}, clientInfo: {name: 'power_suits-export', version: '1'}});
 await rpc('notifications/initialized', {}, true);
 
 const project = JSON.parse(await bb(`JSON.stringify({name: Project.name, format: Format.id, saved: Project.saved})`));

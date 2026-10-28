@@ -22,12 +22,12 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
 
 
     // Copied from CockpitView / its suit when the frame is extracted (the model is posed and drawn later).
-    private static final DataTicket<Part> PART = DataTicket.create("powerarmor_view_part", Part.class);
-    private static final DataTicket<String> TOOL_BONE = DataTicket.create("powerarmor_view_tool_bone", String.class);
-    private static final DataTicket<Float> BARREL_ANGLE = DataTicket.create("powerarmor_view_barrel_angle", Float.class);
+    private static final DataTicket<Part> PART = DataTicket.create("power_suits_view_part", Part.class);
+    private static final DataTicket<String> TOOL_BONE = DataTicket.create("power_suits_view_tool_bone", String.class);
+    private static final DataTicket<Float> BARREL_ANGLE = DataTicket.create("power_suits_view_barrel_angle", Float.class);
     /** The rail cannon's charge and the time (ticks), for its shake. */
-    private static final DataTicket<float[]> RAIL_SHAKE = DataTicket.create("powerarmor_view_rail_shake", float[].class);
-    private static final DataTicket<int[]> GLOW = DataTicket.create("powerarmor_view_glow", int[].class);
+    private static final DataTicket<float[]> RAIL_SHAKE = DataTicket.create("power_suits_view_rail_shake", float[].class);
+    private static final DataTicket<int[]> GLOW = DataTicket.create("power_suits_view_glow", int[].class);
     /** The tool's lights, like on the suit (SuitGlowLayer: one mask per ToolLight). */
     private static final Identifier[] MASKS = SuitGlowLayer.TOOL_MASKS;
 
@@ -80,10 +80,10 @@ final class CockpitViewRenderer extends GeoObjectRenderer<CockpitView, Void, Geo
     }
 
     private static final class Model extends GeoModel<CockpitView> {
-        // GeckoLib 5 ids: assets/powerarmor/geckolib/models/<id>.geo.json and geckolib/animations/<id>.animation.json.
-        private static final Identifier GEO = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "view/power_armor_view");
-        private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor.png");
-        private static final Identifier ANIMATIONS = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "entity/power_armor");
+        // GeckoLib 5 ids: assets/power_suits/geckolib/models/<id>.geo.json and geckolib/animations/<id>.animation.json.
+        private static final Identifier GEO = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "view/power_suit_view");
+        private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_suit.png");
+        private static final Identifier ANIMATIONS = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "entity/power_suit");
 
         @Override
         public Identifier getModelResource(GeoRenderState state) {

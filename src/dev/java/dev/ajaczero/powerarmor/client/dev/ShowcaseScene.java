@@ -65,7 +65,7 @@ import net.neoforged.neoforge.event.EventHooks;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * DEV TOOL, inert unless started with -Dpowerarmor.autopilot=showcase (./gradlew runShowcase): gameplay screenshots for
+ * DEV TOOL, inert unless started with -Dpower_suits.autopilot=showcase (./gradlew runShowcase): gameplay screenshots for
  * the mod's gallery (Modrinth). Unlike the autopilot's test shots these are meant to be pretty: a fresh world with real
  * terrain (fixed seed, so every run finds the same places), a window of 960x540 (1920x1080 pixels on a Retina screen),
  * survival HUD where the shot shows the game as played. Each shot is taken over several ticks
@@ -77,7 +77,7 @@ import org.jetbrains.annotations.Nullable;
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class ShowcaseScene {
-    private static final boolean ENABLED = "showcase".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean ENABLED = "showcase".equals(System.getProperty("power_suits.autopilot"));
     private static final String WORLD = "showcase";
     private static final long SEED = 20261023L;
     /** Ticks between moving to a new set and its first shot: the new chunks must generate, light and render. */

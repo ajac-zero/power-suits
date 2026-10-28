@@ -106,7 +106,7 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
   the animation's offset from its rest pose, so add to it (offsets no longer pile up between frames). Drawing is only
   queued ("submitted"); anything a renderer changes on itself (a field) is gone by then: put it in the render state.
 - *(26.3)* **GeckoLib 5 assets** live in `assets/<mod>/geckolib/models/<id>.geo.json` and
-  `geckolib/animations/<id>.animation.json` (id `entity/power_armor`), not `geo/` + `animations/`.
+  `geckolib/animations/<id>.animation.json` (id `entity/power_suit`), not `geo/` + `animations/`.
 - *(26.3)* **Render type names flipped**: `RenderTypes.entityCutout` is the old *NoCull* (GeckoLib's default, both faces),
   `entityCutoutCull` culls. `LightTexture.FULL_BRIGHT` is `LightCoordsUtil.FULL_BRIGHT`.
 - *(26.3)* **`LivingEntityRenderState` is a `GeoRenderState`** only through GeckoLib's interface injection: the build
@@ -206,9 +206,9 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
 ## Items, recipes and data (26.3)
 - *(26.3)* **Items need `assets/<mod>/items/<item>.json`** (which model to show) next to `models/item/`; recipe
   ingredients are plain strings (`"minecraft:iron_ingot"`, `"#tag"`); config types are LOCAL / CLIENT / SYNCED /
-  STARTUP (ours is LOCAL, file name kept as `powerarmor-common.toml`).
+  STARTUP (ours is LOCAL, file name kept as `power_suits-common.toml`).
 - **Variants of an item are a data component, not new items** (the helmet styles): recipes set it in their result
-  (`"components": {"powerarmor:helmet_style": "spartan"}`) and remove it with `"!powerarmor:helmet_style": {}`; a
+  (`"components": {"power_suits:helmet_style": "spartan"}`) and remove it with `"!power_suits:helmet_style": {}`; a
   smithing_transform's template is optional in 26.3 (`helmet_standard.json` has none); the item model picks the icon
   with `minecraft:select` on `minecraft:component`.
 - *(26.3)* **Loot conditions are keyed `"type"`** (`{"type": "neoforge:loot_table_id", ...}`, `minecraft:any_of` too):
@@ -233,7 +233,7 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
   floor at relative y=1 (stand at y=2) by having an empty bottom layer; it's 9x11x9 and sealed by an invisible barrier
   box the size of the structure. Tests run side by side, so search for entities near your own position only.
 - *(26.3)* **GameTests are registry entries** (no `@GameTest` annotation): `@SuitTest` methods are registered as test
-  functions + instances by `test/SuitTests` (ids are the lower-cased method names, e.g. `powerarmor:pilotclimbsinandout`).
+  functions + instances by `test/SuitTests` (ids are the lower-cased method names, e.g. `power_suits:pilotclimbsinandout`).
 - *(26.3)* **NeoForge won't send mod packets on a connection that didn't negotiate them**: `makeMockServerPlayerInLevel`
   players crashed the test server on GeckoLib's animation triggers. Tests create them with `mockServerPlayer` (adds
   GeckoLib's channels to the fake connection).

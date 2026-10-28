@@ -79,41 +79,41 @@ import net.neoforged.neoforge.common.NeoForgeMod;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * DEV TOOL, inert unless started with -Dpowerarmor.autopilot (./gradlew runAutopilot).
+ * DEV TOOL, inert unless started with -Dpower_suits.autopilot (./gradlew runAutopilot).
  * Creates a flat creative world, climbs into a suit, drives a scripted sequence (walk, sprint, look
  * around, jump), saves screenshots to run/screenshots/ap_*.png, then quits. Lets us check visuals
  * (cockpit view, torso aiming, jump timing) without a human at the keyboard.
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class AutoPilot {
-    private static final boolean ENABLED = System.getProperty("powerarmor.autopilot") != null && !TerrainPilot.enabled() && !ShowcaseScene.enabled();
+    private static final boolean ENABLED = System.getProperty("power_suits.autopilot") != null && !TerrainPilot.enabled() && !ShowcaseScene.enabled();
     private static final String WORLD_PREFIX = "autopilot-";
     /** "view" mode: stay in the cockpit and re-shoot the viewmodel whenever run/view/shoot appears (live tuning). */
-    private static final boolean VIEW = "view".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean VIEW = "view".equals(System.getProperty("power_suits.autopilot"));
     /** "mech" mode: skip straight to the suit-mechanics scene (MECH_START), for quick iterations. */
-    private static final boolean MECH_ONLY = "mech".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean MECH_ONLY = "mech".equals(System.getProperty("power_suits.autopilot"));
     /** "pose" mode: only the pose check (PoseScene: torso lean, tool raise and twist from fixed cameras), ~30 s. */
-    private static final boolean POSE_ONLY = "pose".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean POSE_ONLY = "pose".equals(System.getProperty("power_suits.autopilot"));
     /** "gait" mode: only the foot-slip / leg-turning drive (GaitScene), ~45 s. */
-    private static final boolean GAIT_ONLY = "gait".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean GAIT_ONLY = "gait".equals(System.getProperty("power_suits.autopilot"));
     /** "paint" mode: only the paint scene (PaintScene: dyes and a wet sponge on a suit), ~20 s. */
-    private static final boolean PAINT_ONLY = "paint".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean PAINT_ONLY = "paint".equals(System.getProperty("power_suits.autopilot"));
     /** "styles" mode: only the helmet styles scene (StyleScene: five helmets, paint, the smithing table), ~30 s. */
-    private static final boolean STYLES_ONLY = "styles".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean STYLES_ONLY = "styles".equals(System.getProperty("power_suits.autopilot"));
     /** "engine" mode: only the engine scene (EngineScene: flooded firebox, tidal engine, star reactor), ~35 s. */
-    private static final boolean ENGINE_ONLY = "engine".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean ENGINE_ONLY = "engine".equals(System.getProperty("power_suits.autopilot"));
     /** "flame" mode: only the flamethrower scene (FlameScene: pigs, a plank wall, beef, ice, a campfire), ~30 s. */
-    private static final boolean FLAME_ONLY = "flame".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean FLAME_ONLY = "flame".equals(System.getProperty("power_suits.autopilot"));
     /** "tnt" mode: only the TNT launcher scene (TntScene: a wall, husks, the drum, the ammo slot), ~35 s. */
-    private static final boolean TNT_ONLY = "tnt".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean TNT_ONLY = "tnt".equals(System.getProperty("power_suits.autopilot"));
     /** "rail" mode: only the rail cannon scene (RailScene: glass, husks in a line, a wall, the mind's guard, the ammo slot), ~35 s. */
-    private static final boolean RAIL_ONLY = "rail".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean RAIL_ONLY = "rail".equals(System.getProperty("power_suits.autopilot"));
     /** "hud" mode: only the pilot HUD scene (HudScene: every state the HUD shows, each tool, no helmet), ~35 s. */
-    private static final boolean HUD_ONLY = "hud".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean HUD_ONLY = "hud".equals(System.getProperty("power_suits.autopilot"));
     /** "menu" mode: only the suit's inventory screen scene (MenuScene: E inside, F swaps, the power switch), ~25 s. */
-    private static final boolean MENU_ONLY = "menu".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean MENU_ONLY = "menu".equals(System.getProperty("power_suits.autopilot"));
     /** "vision" mode: only the visor's sight in the dark (VisionScene: night vision vs the lamp, in a cave and a field), ~40 s. */
-    private static final boolean VISION_ONLY = "vision".equals(System.getProperty("powerarmor.autopilot"));
+    private static final boolean VISION_ONLY = "vision".equals(System.getProperty("power_suits.autopilot"));
     // The main script's sections, each starting where the one before ends (its length is the difference). Case labels
     // in script() count from their section's start, so a step added to one section only changes that section's length
     // here; every later section (and the mech scenes, MECH_START) moves along by itself. Screenshot names keep the
@@ -1724,7 +1724,7 @@ public final class AutoPilot {
                 || controller.getPlayState() == PlayState.STOP) {
             return "-";
         }
-        return controller.getCurrentAnimationPoint().animation().name().replace("animation.power_armor.", "");
+        return controller.getCurrentAnimationPoint().animation().name().replace("animation.power_suit.", "");
     }
 
     private static void closeMechLog() {

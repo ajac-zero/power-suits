@@ -76,7 +76,7 @@ public final class PilotHands {
         ItemStack hand = player.getMainHandItem();
         ItemStack tool = suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT);
         if (!hand.isEmpty() && !(hand.getItem() instanceof PowerTool && hand.getCount() == 1)) {
-            player.sendOverlayMessage(Component.translatable("message.powerarmor.not_a_tool"));
+            player.sendOverlayMessage(Component.translatable("message.power_suits.not_a_tool"));
             return;
         }
         if (hand.isEmpty() && tool.isEmpty()) {
@@ -152,7 +152,7 @@ public final class PilotHands {
             event.setCanceled(true);
             event.setCancellationResult(InteractionResult.FAIL);
             if (event.getLevel().isClientSide() && suit.getSocketStack().isEmpty()) {
-                event.getEntity().sendOverlayMessage(Component.translatable("message.powerarmor.sealed_in"));
+                event.getEntity().sendOverlayMessage(Component.translatable("message.power_suits.sealed_in"));
             }
             return;
         }
@@ -198,7 +198,7 @@ public final class PilotHands {
 
     private static void tellUnpowered(Player player) {
         if (player.level().isClientSide()) {
-            player.sendOverlayMessage(Component.translatable("message.powerarmor.hand_unpowered"));
+            player.sendOverlayMessage(Component.translatable("message.power_suits.hand_unpowered"));
         }
     }
 

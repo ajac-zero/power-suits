@@ -8,8 +8,8 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * Our own sound events. A sound event is just a name ("powerarmor:suit.engine"); which audio it plays, how
- * high-pitched and with what subtitle is set in assets/powerarmor/sounds.json. Ours currently point at vanilla
+ * Our own sound events. A sound event is just a name ("power_suits:suit.engine"); which audio it plays, how
+ * high-pitched and with what subtitle is set in assets/power_suits/sounds.json. Ours currently point at vanilla
  * sounds (re-pitched), so swapping in real recordings later only means adding .ogg files and editing that
  * JSON, no code. Resource packs can override them the same way.
  */

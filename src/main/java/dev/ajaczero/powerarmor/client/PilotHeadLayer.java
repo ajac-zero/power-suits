@@ -26,7 +26,7 @@ import org.jspecify.annotations.Nullable;
  */
 public class PilotHeadLayer extends GeoRenderLayer<PowerArmorEntity, Void, LivingEntityRenderState> {
     /** The pilot's skin texture this frame, or absent: no head to draw. */
-    private static final DataTicket<Identifier> PILOT_SKIN = DataTicket.create("powerarmor_pilot_skin", Identifier.class);
+    private static final DataTicket<Identifier> PILOT_SKIN = DataTicket.create("power_suits_pilot_skin", Identifier.class);
     private final SkullModelBase headModel;
 
     public PilotHeadLayer(EntityRendererProvider.Context context, GeoRenderer<PowerArmorEntity, Void, LivingEntityRenderState> renderer) {

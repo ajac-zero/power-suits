@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The suit helmet's alternate looks (design sec. 4c): Easter eggs after famous armoured helmets, made at a smithing
  * table from a template found in the world, the helmet and a style object. Purely cosmetic: every style seals the
- * suit and carries its mind the same way. A helmet without the {@code powerarmor:helmet_style} component is the
+ * suit and carries its mind the same way. A helmet without the {@code power_suits:helmet_style} component is the
  * standard one (so helmets made before the styles existed need nothing).
  *
  * Each style is a bone under the model's head (exported from the .bbmodel, drafted as proto_helm_*); the renderer

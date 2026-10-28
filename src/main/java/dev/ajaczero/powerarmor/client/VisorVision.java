@@ -36,7 +36,7 @@ import org.joml.Vector3f;
  *   everything bright) and colour it like the visor, the way night-vision goggles are green.</li>
  *   <li><b>Lamp</b>: a cone of light from the helmet where you look. The lightmap can't do that (it knows light levels,
  *   not places), so this is a <i>post effect</i>: a shader run over the finished picture
- *   ({@code assets/powerarmor/shaders/post/visor_lamp.fsh}), like vanilla's creeper view. It reads each pixel's
+ *   ({@code assets/power_suits/shaders/post/visor_lamp.fsh}), like vanilla's creeper view. It reads each pixel's
  *   distance from the depth buffer and brightens what's near the middle of the view and close by. Its knobs (strength,
  *   field of view, colour) reach the shader as the pixels of a tiny texture we rewrite when they change: a post
  *   effect's own numbers are fixed in its JSON. First person only: from a camera behind the suit the cone would start
@@ -47,7 +47,7 @@ import org.joml.Vector3f;
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class VisorVision {
     public static final Identifier LAMP_EFFECT = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "visor_lamp");
-    /** Where the post effect's JSON finds its texture input ("location": "powerarmor:visor_lamp" -> textures/effect/). */
+    /** Where the post effect's JSON finds its texture input ("location": "power_suits:visor_lamp" -> textures/effect/). */
     private static final Identifier LAMP_KNOBS = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/effect/visor_lamp.png");
     /** The lamp's colour: a warm white (an incandescent bulb, the suit is dieselpunk). */
     private static final int LAMP_COLOUR = 0xFFE6C0;
@@ -108,7 +108,7 @@ public final class VisorVision {
         return lastLevel > 0.02F ? Indicator.ACTIVE : Indicator.STANDBY;
     }
 
-    /** The key (SuitKeys): flip night vision on or off and keep the choice (powerarmor-client.toml). */
+    /** The key (SuitKeys): flip night vision on or off and keep the choice (power_suits-client.toml). */
     public static void toggle() {
         VisorConfig.NIGHT_VISION_ON.set(!VisorConfig.NIGHT_VISION_ON.get());
         VisorConfig.NIGHT_VISION_ON.save();

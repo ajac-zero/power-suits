@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
  * everything works as before: the hull takes the hits that are redirected to it (PilotProtection), effects reach the
  * pilot, and the pilot's air runs out under water. Lava is not sealed out: it still eats the hull.
  *
- * Which damage counts as "environmental" is a data-driven <b>tag</b>, {@code data/powerarmor/tags/damage_type/sealed_out.json}.
+ * Which damage counts as "environmental" is a data-driven <b>tag</b>, {@code data/power_suits/tags/damage_type/sealed_out.json}.
  * A tag is a named list of registry entries (blocks, items, damage types...) in a JSON file; code asks "is this in the
  * list?" instead of hard-coding it, and datapacks can add to it.
  */

@@ -17,8 +17,8 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * A ton of moving steel goes straight through flimsy blocks. Walking breaks the blocks in
- * {@code powerarmor:suit_smashes_walking} (leaves, panes, cobwebs, snow layers...), sprinting also breaks
- * {@code powerarmor:suit_smashes_sprinting} (glass and ice). Both are block tags in {@code data/powerarmor/tags/block/},
+ * {@code power_suits:suit_smashes_walking} (leaves, panes, cobwebs, snow layers...), sprinting also breaks
+ * {@code power_suits:suit_smashes_sprinting} (glass and ice). Both are block tags in {@code data/power_suits/tags/block/},
  * so a datapack can change the lists. Nothing drops. Server side.
  *
  * Where the suit goes is decided on the pilot's client (ridden movement is client-authoritative), and the client stops

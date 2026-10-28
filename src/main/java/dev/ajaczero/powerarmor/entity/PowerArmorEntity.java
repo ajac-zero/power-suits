@@ -603,7 +603,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
      *  firebox is flooded (design sec. 4b): drain the water or swap the engine first. Returns whether it packed. */
     public boolean packUp(Player player) {
         if (this.power.isFlooded()) {
-            player.sendOverlayMessage(Component.translatable("message.powerarmor.flooded_pack"));
+            player.sendOverlayMessage(Component.translatable("message.power_suits.flooded_pack"));
             this.playSound(SoundEvents.IRON_DOOR_CLOSE, 0.6F, 0.5F);
             return false;
         }
@@ -720,7 +720,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /**
      * Right-click with a dye: the plates take its colour (a new dye paints over the old one) and the dye is used up, like
      * dyeing a sheep. The same colour again does nothing (and keeps the dye). The paint is only a texture: the renderer
-     * picks {@code textures/entity/paint/power_armor_<dye>.png} (tools/make-paint-textures.py).
+     * picks {@code textures/entity/paint/power_suit_<dye>.png} (tools/make-paint-textures.py).
      */
     private InteractionResult paintWith(Player player, ItemStack held, DyeColor dye) {
         if (dye == this.getPaint()) {
@@ -953,7 +953,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
             this.setTarget(null);
             this.power.setBurn(1600, 1600);
             for (Player near : level.getEntitiesOfClass(Player.class, this.getBoundingBox().inflate(32))) {
-                near.sendOverlayMessage(Component.translatable("message.powerarmor.rogue_rebooted"));
+                near.sendOverlayMessage(Component.translatable("message.power_suits.rogue_rebooted"));
             }
         }
         // Knock it out first, so the strike's damage below finds it already off: no flinch over the convulsion.
@@ -973,7 +973,7 @@ public class PowerArmorEntity extends Mob implements GeoEntity, PlayerRideableJu
     /** Death messages and the like say "Rogue Power Armor" for a rogue (synced mind: right on both sides). */
     @Override
     protected Component getTypeName() {
-        return this.isRogue() ? Component.translatable("entity.powerarmor.power_armor.rogue") : super.getTypeName();
+        return this.isRogue() ? Component.translatable("entity.power_suits.power_suit.rogue") : super.getTypeName();
     }
 
     /** Both sides: knocked out by lightning (synced). */

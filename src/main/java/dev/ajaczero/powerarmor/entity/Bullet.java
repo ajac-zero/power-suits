@@ -46,7 +46,7 @@ import net.neoforged.neoforge.event.EventHooks;
 public class Bullet extends Projectile {
     public static final double SPEED = 4.0;        // blocks per tick
     private static final int LIFETIME = 30;
-    /** "powerarmor:bullet", defined in data/powerarmor/damage_type/bullet.json (death message, projectile and
+    /** "power_suits:bullet", defined in data/power_suits/damage_type/bullet.json (death message, projectile and
      *  no_knockback tags). */
     public static final ResourceKey<DamageType> BULLET = ResourceKey.create(Registries.DAMAGE_TYPE,
             Identifier.fromNamespaceAndPath(PowerArmor.MODID, "bullet"));

@@ -16,7 +16,7 @@ public final class ModEntities {
     public static final DeferredRegister.Entities ENTITIES = DeferredRegister.createEntities(PowerArmor.MODID);
 
     public static final DeferredHolder<EntityType<?>, EntityType<PowerArmorEntity>> POWER_ARMOR =
-            ENTITIES.registerEntityType("power_armor", PowerArmorEntity::new, MobCategory.MISC, builder -> builder
+            ENTITIES.registerEntityType("power_suit", PowerArmorEntity::new, MobCategory.MISC, builder -> builder
                     // Hitbox in blocks. The model is about 3 blocks tall (49 px / 16). 2.95, not 3: vanilla's pathfinder
                     // wants floor(height + 1) free blocks, so at 3.0 the machine mind couldn't walk its own 3-high
                     // drill hall (it asked for 4). Physically it already fitted through 3-high gaps.

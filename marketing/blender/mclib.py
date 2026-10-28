@@ -15,7 +15,7 @@ PX = 1 / 16
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
 MARKETING = os.path.join(ROOT, 'marketing')
-TEXTURES = os.path.join(ROOT, 'src/main/resources/assets/powerarmor/textures/entity')
+TEXTURES = os.path.join(ROOT, 'src/main/resources/assets/power_suits/textures/entity')
 
 # Bones the game shows only for one installed part: everything here is deleted unless a scene asks for it.
 TOOL_BONES = ['chaingun', 'em_projector', 'drill', 'chainsaw']
@@ -68,14 +68,14 @@ def load_image(path):
 # ---------------------------------------------------------------- the suit
 
 def import_suit(name='suit', paint=None, tool='chaingun', helmet=None, engine='backpack_parts', glow=None, glow_strength=6.0):
-    """Imports marketing/assets/power_armor.glb under an empty called `name` and keeps only the installed parts.
+    """Imports marketing/assets/power_suit.glb under an empty called `name` and keeps only the installed parts.
 
     paint: dye name ('lime', 'red'...) or None for bare steel. tool / helmet / engine: the bone to keep of each set
     (None: none; with no helmet the pilot's head goes on `pilot_head`, see player_head()).
     Returns (root empty, {bone name: object}).
     """
     before = set(bpy.data.objects)
-    bpy.ops.import_scene.gltf(filepath=os.path.join(MARKETING, 'assets', 'power_armor.glb'))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(MARKETING, 'assets', 'power_suit.glb'))
     new = [o for o in bpy.data.objects if o not in before]
     for o in new:
         o.animation_data_clear()  # rest pose (the importer may leave an animation assigned)
@@ -96,9 +96,9 @@ def import_suit(name='suit', paint=None, tool='chaingun', helmet=None, engine='b
     bones = {o.name: o for o in bpy.data.objects if o.name in bones}
 
     # Texture: the glb embeds the bare steel texture; a dye swaps it for the painted one, as the game does.
-    tex_path = os.path.join(TEXTURES, 'power_armor.png') if paint is None else os.path.join(TEXTURES, 'paint', f'power_armor_{paint}.png')
+    tex_path = os.path.join(TEXTURES, 'power_suit.png') if paint is None else os.path.join(TEXTURES, 'paint', f'power_suit_{paint}.png')
     img = load_image(tex_path)
-    # glow: a glowmask texture name (e.g. 'reactor' for power_armor_glow_reactor.png), drawn as emission the way the
+    # glow: a glowmask texture name (e.g. 'reactor' for power_suit_glow_reactor.png), drawn as emission the way the
     # game's SuitGlowLayer adds it at full brightness. Masks are black/transparent except on the lit pixels.
     # Several masks (a list: e.g. [('visor', VISOR_AMBER), 'tidal']) are added together into one image, as the game
     # draws one additive layer each, every mask multiplied by its tint (SuitGlowLayer: the visor's grey mask takes the
@@ -106,7 +106,7 @@ def import_suit(name='suit', paint=None, tool='chaingun', helmet=None, engine='b
     em = None
     for g in ([glow] if isinstance(glow, str) else glow or []):
         g, tint = (g, (1, 1, 1)) if isinstance(g, str) else g
-        m = load_image(os.path.join(TEXTURES, f'power_armor_glow_{g}.png'))
+        m = load_image(os.path.join(TEXTURES, f'power_suit_glow_{g}.png'))
         px = [v * tint[i % 4] if i % 4 < 3 else v for i, v in enumerate(m.pixels)]
         if em is None:
             em = m.copy()

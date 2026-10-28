@@ -2,7 +2,7 @@
 
     uv run --with pillow python3 tools/make-hud-icons.py
 
-Writes src/main/resources/assets/powerarmor/textures/gui/hud/:
+Writes src/main/resources/assets/power_suits/textures/gui/hud/:
   suit_<piece>.png      the suit figure by the hull bar, one mask per armour piece, all on one canvas (white: the HUD
                         tints each piece)
   seal.png              the seal shield by HULL
@@ -15,7 +15,7 @@ Writes src/main/resources/assets/powerarmor/textures/gui/hud/:
 from pathlib import Path
 from PIL import Image
 
-OUT = Path(__file__).resolve().parent.parent / "src/main/resources/assets/powerarmor/textures/gui/hud"
+OUT = Path(__file__).resolve().parent.parent / "src/main/resources/assets/power_suits/textures/gui/hud"
 
 # The suit as the pilot sits in it (seen from behind: its left is the suit's left, the tool arm), blocky like a player
 # model: a square head (5 px: half the body's height, narrower than it, like a helmet on a torso; at the body's full

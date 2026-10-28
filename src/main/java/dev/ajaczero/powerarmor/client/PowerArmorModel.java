@@ -9,8 +9,8 @@ import net.minecraft.world.item.DyeColor;
 
 /**
  * Points GeckoLib at our three asset files (by naming convention):
- *   geo/entity/power_armor.geo.json, animations/entity/power_armor.animation.json,
- *   textures/entity/power_armor.png
+ *   geo/entity/power_suit.geo.json, animations/entity/power_suit.animation.json,
+ *   textures/entity/power_suit.png
  * The code-driven bone offsets (torso aim, tool raise, barrel spin) live in PowerArmorRenderer.adjustModelBonesForRender.
  */
 public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
@@ -20,12 +20,12 @@ public class PowerArmorModel extends DefaultedEntityGeoModel<PowerArmorEntity> {
 
     static {
         for (DyeColor dye : DyeColor.values()) {
-            PAINTED[dye.getId()] = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/paint/power_armor_" + dye.getName() + ".png");
+            PAINTED[dye.getId()] = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/paint/power_suit_" + dye.getName() + ".png");
         }
     }
 
     public PowerArmorModel() {
-        super(Identifier.fromNamespaceAndPath(PowerArmor.MODID, "power_armor"));
+        super(Identifier.fromNamespaceAndPath(PowerArmor.MODID, "power_suit"));
     }
 
     @Override

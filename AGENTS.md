@@ -1,9 +1,9 @@
 # Working on Power Armor
 
-A NeoForge 26.3 + GeckoLib 5.5.7 Minecraft mod (Java 25): an enterable power suit. **Players see it as Power Suits**
-(mod name, item names "Power Suit ...", site, release titles, jar `powersuits-<version>.jar`); the code, the mod id
-`powerarmor`, the registry names (`power_armor`) and file names keep the old name, because saved worlds store them
-(1.0.0 shipped as `powerarmor`). New player-facing text says Power Suit(s); don't rename ids. This file is the rules; the
+A NeoForge 26.3 + GeckoLib 5.5.7 Minecraft mod (Java 25): an enterable power suit: **Power Suits**
+(mod id `power_suits`, the suit `power_suit`, jar `powersuits-<version>.jar`). 1.0.0 shipped as `powerarmor` ("Power
+Armor", the Fallout-inspired working title); its saved suits and items don't carry over to 1.1 (no legacy aliases:
+the maintainer's call, only test worlds had it). This file is the rules; the
 knowledge lives in the project skills and their references (read the one that matches the task):
 
 | Read | When |
@@ -17,7 +17,7 @@ knowledge lives in the project skills and their references (read the one that ma
 | the design docs (see Conventions) | design decisions, roadmap, art direction |
 
 ## Conventions
-- **The art lives in Blockbench: `model/power_armor.bbmodel`.** Checkpoint before edits. Save it
+- **The art lives in Blockbench: `model/power_suit.bbmodel`.** Checkpoint before edits. Save it
   (`BarItems.save_project.trigger()` via risky_eval; if it's open from elsewhere set `Project.save_path` to this file
   first) and commit it **with every commit that touches the art or animations**, so the model and the exported files
   never drift. Keep it in its in-game rest pose (the animations are built on it).
@@ -35,7 +35,7 @@ knowledge lives in the project skills and their references (read the one that ma
 - `src/main/` the mod (what ships). `src/dev/` GameTests, autopilot scenes, the multiplayer script and `test_pad`: a
   separate source set that sees the mod but isn't in the jar (entry `dev/PowerArmorDev`; every run loads both). New dev
   or test code goes there.
-- `model/` the Blockbench source (`power_armor.bbmodel`, `anim/` procedural animation specs: bake them as
+- `model/` the Blockbench source (`power_suit.bbmodel`, `anim/` procedural animation specs: bake them as
   `model/anim/README.md` says, `art/` texture/part scripts); `tools/` export, art and test helpers; `run/` the dev game (not in git); `marketing/` key art (see its README).
 - `site/` the mod's web page (GitHub Pages), a template filled by `tools/build-site.py` from the latest GitHub Release:
   mark features being built with `data-since="1.1.0"` / `<span data-coming="1.1.0">`. Preview:
@@ -61,7 +61,7 @@ API: grep the sources.
 |---|---|
 | `./gradlew build` | compiles (also compiles `src/dev`) |
 | `./gradlew runGameTestServer` | "All N required tests passed" |
-| `./gradlew runGameTestOnly -Prepeat=5` | the whole suite 5 times side by side: all 715 pass (hunts flaky tests; `-Ptests='powerarmor:name*'` narrows it) |
+| `./gradlew runGameTestOnly -Prepeat=5` | the whole suite 5 times side by side: all 715 pass (hunts flaky tests; `-Ptests='power_suits:name*'` narrows it) |
 | the autopilot scene for the area you touched | screenshots + CSV look right: pick it from `power-armor-runs.md` (`runAutopilot`, `...Mech`, `...Gait`, `...Pose`, `...Terrain`, `...Hud`, a tool's own scene...) |
 
 - Run game tasks in the background under `caffeinate -d -u -i` and poll the log (no `timeout` on macOS; the game can't

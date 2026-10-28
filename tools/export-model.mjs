@@ -5,15 +5,15 @@
 //   node tools/export-model.mjs
 //
 // Blockbench's own Bedrock exporter is used, so the files match what "File > Export" would give.
-// Animation names are renamed from animation.marine.* to animation.power_armor.*.
+// Animation names are renamed from animation.marine.* to animation.power_suit.*.
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const URL_ = process.env.BB_URL || 'http://localhost:3000/bb-mcp';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ASSETS = path.join(ROOT, 'src/main/resources/assets/powerarmor');
-const NAME = 'power_armor';
+const ASSETS = path.join(ROOT, 'src/main/resources/assets/power_suits');
+const NAME = 'power_suit';
 
 let session = null, nextId = 1;
 async function rpc(method, params, notify = false) {
@@ -38,7 +38,7 @@ async function bb(code) {
   return JSON.parse(r.content[0].text);
 }
 
-await rpc('initialize', {protocolVersion: '2025-03-26', capabilities: {}, clientInfo: {name: 'powerarmor-export', version: '1'}});
+await rpc('initialize', {protocolVersion: '2025-03-26', capabilities: {}, clientInfo: {name: 'power_suits-export', version: '1'}});
 await rpc('notifications/initialized', {}, true);
 
 const project = JSON.parse(await bb(`JSON.stringify({name: Project.name, format: Format.id, saved: Project.saved})`));

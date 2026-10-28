@@ -22,7 +22,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 /**
- * DEV TOOL, inert unless the dedicated server starts with -Dpowerarmor.mpscript=true (./gradlew runServerMp).
+ * DEV TOOL, inert unless the dedicated server starts with -Dpower_suits.mpscript=true (./gradlew runServerMp).
  * The server half of the multiplayer check (clients: client/dev/MultiplayerScene). Once players "Driver" and "Watcher"
  * are both in, it directs a scripted story and logs the server's truth to run/mp_server.csv each tick:
  * board (red suit) -> paint blue -> fuel pulled (suit dies) -> fuel back -> driver climbs out.
@@ -31,7 +31,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  */
 @EventBusSubscriber(modid = PowerArmor.MODID)
 public final class MultiplayerScript {
-    private static final boolean ENABLED = Boolean.getBoolean("powerarmor.mpscript");
+    private static final boolean ENABLED = Boolean.getBoolean("power_suits.mpscript");
     private static int tick = -1, settle;
     private static PowerArmorEntity suit;
     private static BufferedWriter csv;

@@ -14,11 +14,11 @@ import org.jetbrains.annotations.Nullable;
  * off again (helmet + iron block). The style changes the name ("Spartan Helmet") and adds a flavour line, nothing else.
  *
  * A data component is a typed piece of data stored on one ItemStack (like a sword's enchantments or a renamed item's
- * name): the item type stays powerarmor:suit_helmet, so the suit, the menu and the recipes need nothing new.
+ * name): the item type stays power_suits:suit_helmet, so the suit, the menu and the recipes need nothing new.
  */
 public class SuitHelmetItem extends SuitPartItem {
     public SuitHelmetItem(Properties properties) {
-        super(properties, "item.powerarmor.suit_helmet.tooltip");
+        super(properties, "item.power_suits.suit_helmet.tooltip");
     }
 
     /** The helmet's style, or null for the standard helmet. */
@@ -30,7 +30,7 @@ public class SuitHelmetItem extends SuitPartItem {
     public Component getName(ItemStack stack) {
         // A name typed in at an anvil still wins: vanilla draws the custom name over this one.
         HelmetStyle style = style(stack);
-        return style == null ? super.getName(stack) : Component.translatable("item.powerarmor.suit_helmet." + style.getSerializedName());
+        return style == null ? super.getName(stack) : Component.translatable("item.power_suits.suit_helmet." + style.getSerializedName());
     }
 
     @Override
@@ -39,7 +39,7 @@ public class SuitHelmetItem extends SuitPartItem {
         HelmetStyle style = style(stack);
         if (style != null) {
             // a line that hints at the helmet's inspiration, in the grey italics vanilla uses for flavour text
-            tooltip.accept(Component.translatable("item.powerarmor.suit_helmet." + style.getSerializedName() + ".flavour")
+            tooltip.accept(Component.translatable("item.power_suits.suit_helmet." + style.getSerializedName() + ".flavour")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         }
     }

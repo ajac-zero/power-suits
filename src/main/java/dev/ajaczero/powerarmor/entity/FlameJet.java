@@ -67,7 +67,7 @@ import net.neoforged.neoforge.event.EventHooks;
  *   <li>Mobs and players it passes through (it doesn't stop at them: a stream washes over a crowd) take a little fire
  *   damage and are set alight. Fire-proof mobs (blazes, magma cubes, a fire resistance potion) ignore it: its damage
  *   type is in {@code minecraft:is_fire}. Its damage type is also in {@code no_knockback} (twenty gobs a second would
- *   shove mobs away) and in {@code powerarmor:sealed_out}, so a powered, sealed suit pays fuel instead of hull.</li>
+ *   shove mobs away) and in {@code power_suits:sealed_out}, so a powered, sealed suit pays fuel instead of hull.</li>
  *   <li>Dropped food in the stream cooks (what a smoker would make of it, the whole stack at once) after about a second.
  *   A gob that touched food doesn't set fire to blocks, or the fire would burn the food it just cooked.</li>
  *   <li>Where it hits a block it stops: ice melts, snow and cobwebs burn away, campfires and candles light, TNT goes off,
@@ -93,7 +93,7 @@ public class FlameJet extends Projectile {
     private static final String HEAT_KEY = PowerArmor.MODID + ":flame_heat";
     /** One in this many gobs that hit a block sets its face on fire (all of them would wall the pilot in at once). */
     private static final int IGNITE_ONE_IN = 3;
-    /** "powerarmor:flamethrower": damage_type/flamethrower.json (death message; tags is_fire, no_knockback, sealed_out). */
+    /** "power_suits:flamethrower": damage_type/flamethrower.json (death message; tags is_fire, no_knockback, sealed_out). */
     public static final ResourceKey<DamageType> FLAMETHROWER = ResourceKey.create(Registries.DAMAGE_TYPE,
             Identifier.fromNamespaceAndPath(PowerArmor.MODID, "flamethrower"));
 

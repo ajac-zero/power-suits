@@ -24,15 +24,15 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
  *   interactions, O the friends screen; H, I, J, K, M, R, U, Y, Z are unbound).</li>
  *   <li><b>Night vision</b> (user, 2026-10-27): the visor's night vision on or off (VisorVision), N by default (free
  *   in 26.3 too). Purely the client's business: no message, the choice is saved in this player's own
- *   powerarmor-client.toml. Only in a suit with a helmet (the visor does it), so N does nothing on foot.</li>
+ *   power_suits-client.toml. Only in a suit with a helmet (the visor does it), so N does nothing on foot.</li>
  * </ul>
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class SuitKeys {
-    public static final KeyMapping.Category CATEGORY = new KeyMapping.Category(Identifier.fromNamespaceAndPath(PowerArmor.MODID, "power_armor"));
-    public static final KeyMapping POWER_SWITCH = new KeyMapping("key.powerarmor.power_switch", InputConstants.Type.KEYBOARD,
+    public static final KeyMapping.Category CATEGORY = new KeyMapping.Category(Identifier.fromNamespaceAndPath(PowerArmor.MODID, "power_suit"));
+    public static final KeyMapping POWER_SWITCH = new KeyMapping("key.power_suits.power_switch", InputConstants.Type.KEYBOARD,
             InputConstants.KEY_H, CATEGORY);
-    public static final KeyMapping NIGHT_VISION = new KeyMapping("key.powerarmor.night_vision", InputConstants.Type.KEYBOARD,
+    public static final KeyMapping NIGHT_VISION = new KeyMapping("key.power_suits.night_vision", InputConstants.Type.KEYBOARD,
             InputConstants.KEY_N, CATEGORY);
 
     private SuitKeys() {

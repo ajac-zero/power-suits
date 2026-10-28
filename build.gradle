@@ -54,7 +54,7 @@ repositories {
 }
 
 base {
-    archivesName = jar_name // powersuits-<version>.jar; the mod id stays powerarmor (gradle.properties)
+    archivesName = jar_name // powersuits-<version>.jar; the mod id stays power_suits (gradle.properties)
 }
 
 // Mojang ships Java 25 to end users in 26.3, so mods should target Java 25.
@@ -82,106 +82,106 @@ neoForge {
         // Dev tool: scripted test drive that saves screenshots to run/screenshots/ap_*.png and quits.
         autopilot {
             client()
-            systemProperty 'powerarmor.autopilot', 'true'
+            systemProperty 'power_suits.autopilot', 'true'
         }
 
         // Dev tool: only the last scenes of the autopilot (smashing blocks, stomp, lightning, lava, punch; the machine mind), ~2 min.
         autopilotMech {
             client()
-            systemProperty 'powerarmor.autopilot', 'mech'
+            systemProperty 'power_suits.autopilot', 'mech'
         }
 
         // Dev tool: only the pose check (torso lean / tool raise / twist from fixed cameras, ap_pose_*.png), ~30 s.
         autopilotPose {
             client()
-            systemProperty 'powerarmor.autopilot', 'pose'
+            systemProperty 'power_suits.autopilot', 'pose'
         }
 
         // Dev tool: only the foot-slip / leg-turning drive (run/autopilot_gait.csv, tools/gait-report.py), ~45 s.
         autopilotGait {
             client()
-            systemProperty 'powerarmor.autopilot', 'gait'
+            systemProperty 'power_suits.autopilot', 'gait'
         }
 
         // Dev tool: only the paint scene (all 16 dyes + a wet sponge on a suit, ap_paint_*.png, run/autopilot_paint.csv), ~30 s.
         autopilotPaint {
             client()
-            systemProperty 'powerarmor.autopilot', 'paint'
+            systemProperty 'power_suits.autopilot', 'paint'
         }
 
         // Dev tool: only the helmet styles scene (five helmets from behind and the front, painted red, the smithing table;
         // ap_style_*.png, ap_menu_smithing.png, run/autopilot_style.csv), ~30 s.
         autopilotStyles {
             client()
-            systemProperty 'powerarmor.autopilot', 'styles'
+            systemProperty 'power_suits.autopilot', 'styles'
         }
 
         // Dev tool: only the engine scene (flooded firebox, tidal engine in and out of water, star reactor; ap_engine_*.png,
         // run/autopilot_engine.csv), ~35 s.
         autopilotEngine {
             client()
-            systemProperty 'powerarmor.autopilot', 'engine'
+            systemProperty 'power_suits.autopilot', 'engine'
         }
 
         // Dev tool: only the flamethrower scene (pigs, a plank wall, beef, ice, a campfire; ap_flame_*.png,
         // run/autopilot_flame.csv), ~30 s.
         autopilotFlame {
             client()
-            systemProperty 'powerarmor.autopilot', 'flame'
+            systemProperty 'power_suits.autopilot', 'flame'
         }
 
         // Dev tool: only the TNT launcher scene (a wall, husks, the drum's turn, the ammo slot; ap_tnt_*.png,
         // ap_menu_ammo.png, run/autopilot_tnt.csv), ~35 s.
         autopilotTnt {
             client()
-            systemProperty 'powerarmor.autopilot', 'tnt'
+            systemProperty 'power_suits.autopilot', 'tnt'
         }
 
         // Dev tool: only the rail cannon scene (glass, husks in a line, a wall, the mind's guard, the ammo slot;
         // ap_rail_*.png, ap_menu_rail.png, run/autopilot_rail.csv), ~35 s.
         autopilotRail {
             client()
-            systemProperty 'powerarmor.autopilot', 'rail'
+            systemProperty 'power_suits.autopilot', 'rail'
         }
 
         // Dev tool: only the pilot HUD scene (every state the HUD shows, each tool, no helmet; ap_hud_*.png,
         // run/autopilot_hud.csv), ~35 s.
         autopilotHud {
             client()
-            systemProperty 'powerarmor.autopilot', 'hud'
+            systemProperty 'power_suits.autopilot', 'hud'
         }
 
         // Dev tool: only the suit's inventory screen scene (E inside, F swaps the socket tool, the power switch, the
         // screen from outside; ap_menu_*.png, run/autopilot_menu.csv), ~25 s.
         autopilotMenu {
             client()
-            systemProperty 'powerarmor.autopilot', 'menu'
+            systemProperty 'power_suits.autopilot', 'menu'
         }
 
         // Dev tool: only the visor's sight in the dark (night vision vs the lamp, a cave and a field at midnight;
         // ap_vision_*.png, run/autopilot_vision.csv), ~40 s.
         autopilotVision {
             client()
-            systemProperty 'powerarmor.autopilot', 'vision'
+            systemProperty 'power_suits.autopilot', 'vision'
         }
 
         // Dev tool: live-tunes the cockpit viewmodel (see AutoPilot.viewTuner); stays open until closed.
         autopilotView {
             client()
-            systemProperty 'powerarmor.autopilot', 'view'
+            systemProperty 'power_suits.autopilot', 'view'
         }
 
         // Dev tool: drives a suit over real terrain in a COPY of run/saves/New World, logs run/autopilot_terrain.csv.
         autopilotTerrain {
             client()
-            systemProperty 'powerarmor.autopilot', 'terrain:New World'
+            systemProperty 'power_suits.autopilot', 'terrain:New World'
         }
 
         // Dev tool: gameplay screenshots for the mod page (client/dev/ShowcaseScene): a fresh seeded world with real
         // terrain, run/screenshots/showcase_*.png at 1920x1080 (960x540 window on a Retina screen), quits by itself.
         showcase {
             client()
-            systemProperty 'powerarmor.autopilot', 'showcase'
+            systemProperty 'power_suits.autopilot', 'showcase'
             programArguments.addAll '--width', '960', '--height', '540'
         }
 
@@ -192,18 +192,18 @@ neoForge {
         serverMp {
             server()
             programArgument '--nogui'
-            systemProperty 'powerarmor.mpscript', 'true'
+            systemProperty 'power_suits.mpscript', 'true'
         }
         mpDriver {
             client()
             gameDirectory = project.file('run/mp-driver')
-            systemProperty 'powerarmor.mp', 'driver'
+            systemProperty 'power_suits.mp', 'driver'
             programArguments.addAll '--username', 'Driver', '--quickPlayMultiplayer', 'localhost:25565', '--width', '640', '--height', '360'
         }
         mpWatch {
             client()
             gameDirectory = project.file('run/mp-watch')
-            systemProperty 'powerarmor.mp', 'watch'
+            systemProperty 'power_suits.mp', 'watch'
             programArguments.addAll '--username', 'Watcher', '--quickPlayMultiplayer', 'localhost:25565', '--width', '960', '--height', '540'
         }
 
@@ -222,12 +222,12 @@ neoForge {
         }
 
         // Dev tool: only some GameTests, as often as you like (hunting a flaky one):
-        //   ./gradlew runGameTestOnly -Ptests='powerarmor:bullethits*' -Prepeat=40
+        //   ./gradlew runGameTestOnly -Ptests='power_suits:bullethits*' -Prepeat=40
         // (--tests takes the test id with wildcards; ids are the lower-cased method names.)
         gameTestOnly {
             type = "gameTestServer"
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-            programArguments.addAll '--tests', (project.findProperty('tests') ?: 'powerarmor:*').toString(),
+            programArguments.addAll '--tests', (project.findProperty('tests') ?: 'power_suits:*').toString(),
                     '--repeatCount', (project.findProperty('repeat') ?: '1').toString()
         }
 

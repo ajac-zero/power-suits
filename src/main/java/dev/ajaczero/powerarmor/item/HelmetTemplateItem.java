@@ -11,8 +11,8 @@ import net.minecraft.world.item.TooltipFlag;
 
 /**
  * A helmet style's smithing template (design sec. 4c): found in chests of the structure its inspiration would come from
- * (loot modifiers in data/powerarmor/loot_modifiers), used up at a smithing table with a suit helmet and the style's
- * object (recipes data/powerarmor/recipe/helmet_*.json), copied like vanilla's trim templates (7 diamonds + the object).
+ * (loot modifiers in data/power_suits/loot_modifiers), used up at a smithing table with a suit helmet and the style's
+ * object (recipes data/power_suits/recipe/helmet_*.json), copied like vanilla's trim templates (7 diamonds + the object).
  *
  * Vanilla's SmithingTemplateItem already draws the tooltip ("Applies to: ... Ingredients: ...") and the smithing
  * screen's hints for the empty slots; this only adds the style's flavour line under it.
@@ -22,10 +22,10 @@ public class HelmetTemplateItem extends SmithingTemplateItem implements ModToolt
     private final HelmetStyle style;
 
     public HelmetTemplateItem(Properties properties, HelmetStyle style) {
-        super(Component.translatable("item.powerarmor.helmet_template.applies_to").withStyle(ChatFormatting.BLUE),
-                Component.translatable("item.powerarmor." + style.getSerializedName() + "_template.ingredients").withStyle(ChatFormatting.BLUE),
-                Component.translatable("item.powerarmor.helmet_template.base_slot_description"),
-                Component.translatable("item.powerarmor." + style.getSerializedName() + "_template.additions_slot_description"),
+        super(Component.translatable("item.power_suits.helmet_template.applies_to").withStyle(ChatFormatting.BLUE),
+                Component.translatable("item.power_suits." + style.getSerializedName() + "_template.ingredients").withStyle(ChatFormatting.BLUE),
+                Component.translatable("item.power_suits.helmet_template.base_slot_description"),
+                Component.translatable("item.power_suits." + style.getSerializedName() + "_template.additions_slot_description"),
                 List.of(EMPTY_SLOT_HELMET), List.of(), properties);
         this.style = style;
     }
@@ -36,7 +36,7 @@ public class HelmetTemplateItem extends SmithingTemplateItem implements ModToolt
 
     @Override
     public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
-        tooltip.accept(Component.translatable("item.powerarmor.suit_helmet." + this.style.getSerializedName() + ".flavour")
+        tooltip.accept(Component.translatable("item.power_suits.suit_helmet." + this.style.getSerializedName() + ".flavour")
                 .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
     }
 }

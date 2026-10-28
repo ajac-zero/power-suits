@@ -45,7 +45,7 @@ public class DrillItem extends Item implements PowerTool, ModTooltip {
     // Fuel per block and the pause after each 3x3: PowerArmorConfig.
     /** Mining speed of a diamond pickaxe / shovel (no enchantments). */
     public static final float SPEED = 8F;
-    private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_armor.drill_run");
+    private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_suit.drill_run");
 
 
     public DrillItem(Properties properties) {
@@ -197,15 +197,15 @@ public class DrillItem extends Item implements PowerTool, ModTooltip {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
-            player.sendOverlayMessage(Component.translatable("message.powerarmor.tool_on_foot"));
+            player.sendOverlayMessage(Component.translatable("message.power_suits.tool_on_foot"));
         }
         return InteractionResult.PASS;
     }
 
     @Override
     public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
-        tooltip.accept(Component.translatable("item.powerarmor.drill.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.translatable("item.powerarmor.drill.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.drill.tooltip").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.drill.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.accept(Component.translatable("item.power_suits.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

@@ -26,7 +26,7 @@ public class EngineItem extends Item implements ModTooltip {
 
     @Override
     public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
-        // e.g. "item.powerarmor.tidal_engine.tooltip": what it runs on and where.
+        // e.g. "item.power_suits.tidal_engine.tooltip": what it runs on and where.
         tooltip.accept(Component.translatable(this.getDescriptionId() + ".tooltip").withStyle(ChatFormatting.GRAY));
     }
 }

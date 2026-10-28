@@ -18,9 +18,9 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ASSETS = ROOT / 'src/main/resources/assets/powerarmor'
-SUIT = ASSETS / 'geckolib/models/entity/power_armor.geo.json'
-OUT = ASSETS / 'geckolib/models/view/power_armor_view.geo.json'
+ASSETS = ROOT / 'src/main/resources/assets/power_suits'
+SUIT = ASSETS / 'geckolib/models/entity/power_suit.geo.json'
+OUT = ASSETS / 'geckolib/models/view/power_suit_view.geo.json'
 
 # root name: (bone whose cubes it takes, which of them (a test on the cube, in the bone's own coordinates), bone the
 #             cubes go to, top-level bones re-parented under the root, joint to centre on)
@@ -84,7 +84,7 @@ def main():
             if n == cubes_to:
                 b['cubes'] = b.get('cubes', []) + own
             out.append(b)
-    desc = dict(geo['description'], identifier='geometry.power_armor_view', visible_bounds_width=3,
+    desc = dict(geo['description'], identifier='geometry.power_suit_view', visible_bounds_width=3,
                 visible_bounds_height=3, visible_bounds_offset=[0, 0, 0])
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({'format_version': json.loads(SUIT.read_text())['format_version'],

@@ -56,7 +56,7 @@ public final class TntLauncherHud implements ToolHud {
         v.ammoRow(g, r.count(), last);
         int loaded = TntLauncherItem.loaded(v.suit.getSocketStack());
         if (r.bar() > 0F) {
-            v.cornerLabel(g, Component.translatable("hud.powerarmor.load"), HudView.CORNER_Y0 + 18, v.faint());
+            v.cornerLabel(g, Component.translatable("hud.power_suits.load"), HudView.CORNER_Y0 + 18, v.faint());
         }
         drum(g, v, v.cornerLeft() - DRUM_GAP - (2 * SPREAD + CHAMBER) / 2, HudView.CORNER_Y0 + 16, loaded, r.bar());
         return String.format(Locale.ROOT, "drum=%d reserve=%d loading=%.2f %s", loaded, r.count(), r.bar(), arc);
@@ -85,7 +85,7 @@ public final class TntLauncherHud implements ToolHud {
             int x = Math.round(p[0]), y = Math.round(p[1]);
             if (flight.hit()) {
                 HudView.diamond(g, x, y, MARK, v.main());
-                v.label(g, Component.translatable("hud.powerarmor.metres", Math.round(distance)), x + MARK + 3, y - 3,
+                v.label(g, Component.translatable("hud.power_suits.metres", Math.round(distance)), x + MARK + 3, y - 3,
                         HudView.critical(danger));
             } else if (!(danger && v.blink)) {
                 // goes off in the air (the fuse): a small x, blinking if that's in the blast's reach

@@ -146,7 +146,7 @@ public final class EmProjectorHud implements ToolHud {
         // The label above the box, over its top-left bracket: "PIG", the health bar under it. (Beside the box it
         // sat on the thing itself: a mob's model reaches past its hit box, a pig's head by a third of a block.)
         Component label = EmProjectorItem.isHeavy(e)
-                ? Component.translatable("hud.powerarmor.heavy").append(" ").append(name(e)) : name(e);
+                ? Component.translatable("hud.power_suits.heavy").append(" ").append(name(e)) : name(e);
         int lx, ly;
         if (box != null) {
             lx = box[0] - PAD;

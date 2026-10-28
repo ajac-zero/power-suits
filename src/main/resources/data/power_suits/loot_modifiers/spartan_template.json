@@ -1,0 +1,17 @@
+{
+  "type": "neoforge:add_table",
+  "condition": {
+    "type": "minecraft:any_of",
+    "terms": [
+      {
+        "type": "neoforge:loot_table_id",
+        "loot_table_id": "minecraft:chests/trial_chambers/reward"
+      },
+      {
+        "type": "neoforge:loot_table_id",
+        "loot_table_id": "minecraft:chests/trial_chambers/reward_ominous"
+      }
+    ]
+  },
+  "table": "power_suits:chests/spartan_template"
+}

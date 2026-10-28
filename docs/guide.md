@@ -1,7 +1,7 @@
 # Power Suits
 
 A Minecraft mod (Minecraft 26.3, NeoForge 26.3.0.76 + GeckoLib 5.5.7) that adds a power suit you climb into,
-Fallout / Titanfall style (the mod is Power Suits; the code and its ids still say powerarmor, the id 1.0.0 shipped with). Model and animations come from `model/power_armor.bbmodel`.
+Fallout / Titanfall style. Mod id `power_suits` (1.0.0 was `powerarmor`: suits and items saved by it don't carry over). Model and animations come from `model/power_suit.bbmodel`.
 
 Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outside the repo).
 
@@ -36,12 +36,12 @@ Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outs
 | Sealed suit | While powered and wearing its helmet: fire, frost, magma, cactus/berry bushes and harmful effects (poison, wither, slowness...) don't reach you or the hull; keeping them out costs fuel. You breathe under water (0.5 fuel/tick extra). A running suit never catches fire (lava excepted: it burns while in it, the flames die as it steps out). Lava still eats the hull (wade through at a third of your speed). No power, no seal: an empty or knocked-out suit burns like anything else. What's already inside you stays yours: poison or wither you had when you climbed in (food poisoning) hurts you, not the suit |
 | Strength | Every melee hit from inside (bare hand, sword, axe...) does +4 damage |
 | Stomp | Landing from 3.5+ blocks hurts everything around you (not you): 2 damage per block fallen, up to 30, half at the edge of the shock wave (2-3.5 blocks); things get thrown. A normal jump doesn't stomp |
-| Smashing through | Walking breaks leaves, glass panes, cobwebs, snow layers, berry bushes, bamboo...; sprinting also breaks glass and ice. Nothing drops. Block tags `powerarmor:suit_smashes_walking` / `_sprinting`; can be switched off in the config |
+| Smashing through | Walking breaks leaves, glass panes, cobwebs, snow layers, berry bushes, bamboo...; sprinting also breaks glass and ice. Nothing drops. Block tags `power_suits:suit_smashes_walking` / `_sprinting`; can be switched off in the config |
 | Machine mind | A powered suit with its helmet on and nobody inside is driven by its own mind (green visor): it works for its owner (whoever last piloted it, or deployed it) from its home (the block where the pilot got out, or where it was deployed). Its job depends on the socket tool: none (or a tool whose job isn't built yet) = stand guard at home, look at people nearby, walk back if pushed away; **chaingun** = follow its owner like a tamed wolf (walks over 7 blocks away, sprints past 16, stops at 4, no teleporting) and defend them: it shoots whatever attacks the owner or the suit, whatever the owner attacks, and monsters within 16 blocks of the owner, never with the owner, a villager, a pet or another suit in the line of fire; **EM projector** = guard home: monsters within 12 blocks of home (config) are caught one by one, lifted overhead and flung ~30 blocks up (44 blocks/s, config) so the fall kills them; creepers are thrown up and away from home instead. Never animals, villagers, players or pets; **drill** = clear an open hall at home level, 3 blocks high, ring by ring outward from home within 12 blocks (config `work_radius`): it never digs down or into the ceiling, leaves a wall wherever a block touches lava or water and leaves columns standing over holes in the floor; **chainsaw** = fell the natural trees within 12 blocks of home, nearest first (never log cabins); **rail cannon** = a long-range guard at home: it charges and shoots monsters it can see within 40 blocks of home (config), and whatever attacks it or its owner, never with a friend anywhere on the beam. The mind's tools never run out of ammo. Drops stay on the floor: give allays the items you want (an allay given coal brings every coal it sees to you); the stone and dirt nobody collects despawn after 5 minutes. Design sec. 8. It burns fuel like a piloted suit (idle 0.25/tick): **to park a suit, switch it off** |
 | Helmet styles | Easter eggs: five smithing templates hide in structure chests (ocean ruins and shipwrecks, trial chamber vaults, end cities, ancient cities, desert pyramids and jungle temples). At a smithing table, template + Power Suit Helmet + the object the template names gives that helmet its new look (name, icon and model change; it works the same). Helmet + iron block with no template gives the standard helmet back; 7 diamonds round a template and its object copy it. Rogues sometimes wear one. Design sec. 4c |
 | Paint | Right-click the suit with any dye: its armour plates (shoulder pads, upper arms, chest, collar, belly plate, hips, thighs, the helmet's shell) take the colour and the dye is used up; another dye paints over it, a wet sponge washes it back to bare steel (the sponge stays wet). Only the look changes. A packed suit keeps its paint |
 | Ammo | The tools take their ammo from **your inventory**, like a bow's arrows (off hand first): iron nuggets for the chaingun, TNT for the TNT launcher, iron ingots for the rail cannon; free in creative. The suit carries none: the machine mind's tools never run out. (Suits from before 1.1 drop what their old ammo slot and nugget store held, as items, the first time they load) |
-| Rogue suits | Extremely rare (2% chance per in-game day, config): a rogue suit with a red visor turns up 48-64 blocks from a player. It needs no fuel or ammo and attacks any player or mob it sees: a chaingun rogue shoots, an EM rogue hurls (players too; a suit is too heavy to lift: it pins yours in place, you crawl at a quarter speed, then shoves it). It can't be boarded. Defeated, it drops only its tool; **struck by lightning** (a storm, a Channeling trident, a lightning rod) its mind reboots friendly with one coal's worth of fuel, and the first player to climb in claims it. It leaves after an in-game day once nobody is near. Your chaingun suits shoot rogues on sight. Test one: `/summon powerarmor:power_armor ~ ~ ~5 {Mind:"ROGUE",Inventory:{Items:[{Slot:1b,id:"powerarmor:chaingun",count:1}]}}` (or `powerarmor:em_projector`) |
+| Rogue suits | Extremely rare (2% chance per in-game day, config): a rogue suit with a red visor turns up 48-64 blocks from a player. It needs no fuel or ammo and attacks any player or mob it sees: a chaingun rogue shoots, an EM rogue hurls (players too; a suit is too heavy to lift: it pins yours in place, you crawl at a quarter speed, then shoves it). It can't be boarded. Defeated, it drops only its tool; **struck by lightning** (a storm, a Channeling trident, a lightning rod) its mind reboots friendly with one coal's worth of fuel, and the first player to climb in claims it. It leaves after an in-game day once nobody is near. Your chaingun suits shoot rogues on sight. Test one: `/summon power_suits:power_suit ~ ~ ~5 {Mind:"ROGUE",Inventory:{Items:[{Slot:1b,id:"power_suits:chaingun",count:1}]}}` (or `power_suits:em_projector`) |
 | Lightning | A strike knocks a fuelled suit out: it convulses, slumps (you're stuck, the seal is off, so the fire the bolt leaves at your feet usually catches it) and restarts by itself after 5 s; the flames die as it powers up |
 
 ### Crafting the suit
@@ -69,9 +69,9 @@ The engines (swapped in the menu's engine slot; a new suit has none, so craft on
 | Star Reactor | iron blocks in the corners, diamonds on the edges, an end crystal in the middle (its Nether Star goes in the fuel slot) |
 
 ### Balance and config
-Everything that costs fuel, plus damage, ranges and speeds, is in `config/powerarmor-common.toml` (in the
+Everything that costs fuel, plus damage, ranges and speeds, is in `config/power_suits-common.toml` (in the
 game folder, `run/config/` when developing) and in game under **Mods > Power Suits > Config**. Changes apply
-at once. Your own visor colour is a separate file, `config/powerarmor-client.toml` (see *The visor and its HUD*). Fuel is counted in energy: walking burns 1 per tick, so 20 energy = 1 s of walking. Defaults (Phase 6
+at once. Your own visor colour is a separate file, `config/power_suits-client.toml` (see *The visor and its HUD*). Fuel is counted in energy: walking burns 1 per tick, so 20 energy = 1 s of walking. Defaults (Phase 6
 balance pass), with what one piece of coal (1600) buys:
 
 | Use | Cost | Per coal |
@@ -93,7 +93,7 @@ The firebox burns what a furnace burns, as long as a furnace burns it: coal and 
 A powered suit is quiet: no engine loop. Now and then its backpack makes a soft sound (the firebox crackles, the tidal
 pump bubbles under water, the star reactor hums), a little more often and louder as it works harder (walking, sprinting,
 a tool running). The drill whirs, the chainsaw buzzes, the chaingun's motor whines, the flamethrower roars and the rail cannon hums while charging (subtitles included).
-They are vanilla sounds re-pitched in `assets/powerarmor/sounds.json`: swap in your own `.ogg` files there.
+They are vanilla sounds re-pitched in `assets/power_suits/sounds.json`: swap in your own `.ogg` files there.
 
 ### The visor and its HUD
 With the helmet on you see the inside of the helmet from the cockpit (first person): black pieces in the four
@@ -106,7 +106,7 @@ they pass is on (the metal turns see-through, the readouts appear). When the pow
 top and bottom, switching everything off behind them, meet in the middle and shrink away, leaving the glass completely
 dark. It's terminal green by default: pick another under **Mods > Power Suits > Config > Visor > Visor colour** (green,
 amber, blue, white, red, or Custom for any `#RRGGBB` in *Custom colour*; `visor_preset` / `visor_colour` in
-`config/powerarmor-client.toml`; only you see it).
+`config/power_suits-client.toml`; only you see it).
 - **Top left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
   with a **shield** that's lit while the suit is sealed (running with the helmet on) and faded when not, and **FUEL**: how long it lasts at walking pace (∞ on a wet
   tidal engine or a star reactor), a bar for how full the fuel slot is, and three
@@ -181,7 +181,7 @@ With an empty socket or no fuel the trigger just clicks.
 
 **EM Projector** (crafted: iron ingots in the corners, copper ingots top and bottom middle, redstone either
 side of a lodestone). Grabs dropped items, mobs and players (players only where PvP is on) within 16 blocks; a rider is caught with their
-mount. Other suits and the heavyweights in the entity tag `powerarmor:em_heavy` (bosses, iron golems, ravagers, wardens; a
+mount. Other suits and the heavyweights in the entity tag `power_suits:em_heavy` (bosses, iron golems, ravagers, wardens; a
 datapack can add more) are too heavy to lift:
 they fight the field, held in place and slowed to a crawl (a piloted suit moves at a quarter speed), dragged a little,
 and letting go only shoves them. Never spectators, creative players or no-AI "statue" mobs.
@@ -297,8 +297,8 @@ upgrades a world the first time it's opened and there's no way back: let it make
 | `uv run --with pillow python3 model/art/item_icons_art.py [--sheet out.png]` | Draws every item icon: hand-made 16 px pixel art (vanilla style), not rendered from the model; `--sheet` writes a review sheet |
 | `python3 tools/extract-view-geo.py` | Rebuilds the cockpit viewmodel (`geckolib/models/view`) from the suit model (run after `export-model.mjs`) |
 | `uv run --with pillow python3 tools/make-visor-textures.py` | Rebuilds the helmet edge pieces the pilot sees (`textures/gui/visor/`: corners, brow, and their lips alone, all that shows while powered) |
-| `uv run --with pillow python3 tools/make-glowmasks.py` | Rebuilds the glowmasks (`power_armor_glow_{fire,visor,heat,heat_barrel,em_core,em_arc}.png`) from the texture's reserved colours (run after `export-model.mjs`) |
-| `uv run --with pillow python3 tools/make-paint-textures.py` | Rebuilds the painted textures (`textures/entity/paint/power_armor_<dye>.png`, one per dye) from the steel texture (run after `export-model.mjs`) |
+| `uv run --with pillow python3 tools/make-glowmasks.py` | Rebuilds the glowmasks (`power_suit_glow_{fire,visor,heat,heat_barrel,em_core,em_arc}.png`) from the texture's reserved colours (run after `export-model.mjs`) |
+| `uv run --with pillow python3 tools/make-paint-textures.py` | Rebuilds the painted textures (`textures/entity/paint/power_suit_<dye>.png`, one per dye) from the steel texture (run after `export-model.mjs`) |
 | `./gradlew runAutopilotPaint` | Dev tool (~30 s): a suit right-clicked with dyes and a wet sponge; `run/screenshots/ap_paint_*.png` (in-game back view + front), `run/autopilot_paint.csv` (server/client paint, dyes left) |
 | `./gradlew runAutopilotStyles` | Dev tool (~30 s): the helmet styles side by side (in-game back view + front, painted), the smithing table making one; `run/screenshots/ap_style_*.png`, `ap_menu_smithing.png`, `run/autopilot_style.csv` |
 | `tools/view-tuner.sh start\|shoot\|stop` | Live-tunes the cockpit viewmodel's placement (`run/view/tuning.json`, shots `run/screenshots/ap_view_*.png`) |
@@ -360,11 +360,11 @@ src/main/java/dev/ajaczero/powerarmor/
   item/PowerArmorItem.java   deploying / packing / repairing
   PilotProtection.java       redirects damage from the pilot to the suit (not "suffocating" against a wall)
   SuitSeal.java              sealed suit: fire/frost/effects kept out for fuel, air under water (tag damage_type/sealed_out)
-  entity/SuitStomp.java      landing dust, stomp shock wave (damage type powerarmor:stomp)
+  entity/SuitStomp.java      landing dust, stomp shock wave (damage type power_suits:stomp)
   entity/SuitSmash.java      breaking leaves/panes/glass/ice while walking/sprinting (block tags suit_smashes_*)
   PilotHands.java            hand needs power, +1.5 reach, +4 melee damage, F swaps the hand with the socket tool
-  PowerArmorConfig.java      balance knobs (config/powerarmor-common.toml)
-  registry/ModSounds.java    engine + tool sound events (audio picked in assets/powerarmor/sounds.json)
+  PowerArmorConfig.java      balance knobs (config/power_suits-common.toml)
+  registry/ModSounds.java    engine + tool sound events (audio picked in assets/power_suits/sounds.json)
   client/                    rendering only (never loaded on servers)
     PowerArmorModel.java     points GeckoLib at the asset files
     PowerArmorRenderer.java  copies the suit's state for the frame (SuitRenderData), aims the torso/head, raises the tool
@@ -382,7 +382,7 @@ src/main/java/dev/ajaczero/powerarmor/
                              ChaingunHud, RailCannonHud, TntLauncherHud (drum + the round's arc), EmProjectorHud (box + throw arc)
                              and effect icons out of its way
     SuitVisor.java           the helmet's edge around the first-person view (solid pieces unpowered, only their outline powered)
-    VisorConfig.java         the player's own visor colour and night vision (CLIENT config, powerarmor-client.toml)
+    VisorConfig.java         the player's own visor colour and night vision (CLIENT config, power_suits-client.toml)
     VisorVision.java         the visor's night vision (raises the lightmap's floor); the lamp (a post effect, parked for an upgrade)
     VisorPower.java          the visor's warm-up and shutdown scan (lines sweeping from the screen's middle)
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
@@ -397,22 +397,22 @@ src/main/java/dev/ajaczero/powerarmor/
 src/dev/java/dev/ajaczero/powerarmor/   development tools: compiled against the mod, NOT in the jar players get
   dev/PowerArmorDev.java     their @Mod entry point (dev runs load src/main + src/dev as one mod, see build.gradle)
   test/PowerArmorTests.java  GameTests (@SuitTest methods, registered by test/SuitTests.java)
-  client/dev/AutoPilot.java  scripted screenshot test drive (only with -Dpowerarmor.autopilot); *Scene.java: its scenes,
+  client/dev/AutoPilot.java  scripted screenshot test drive (only with -Dpower_suits.autopilot); *Scene.java: its scenes,
                              TerrainPilot (real terrain), ShowcaseScene (the mod page's pictures)
   dev/MultiplayerScript.java + client/dev/MultiplayerScene.java   the scripted multiplayer check
-src/dev/resources/data/powerarmor/structure/test_pad.nbt   floor used by the GameTests (9x11x9, floor on its second layer)
+src/dev/resources/data/power_suits/structure/test_pad.nbt   floor used by the GameTests (9x11x9, floor on its second layer)
 src/main/resources/
-  assets/powerarmor/geckolib/models|animations/entity/, textures/entity/   exported from Blockbench
-  assets/powerarmor/textures/gui/power_armor.png      suit menu background (tools/make-gui.py)
-  assets/powerarmor/post_effect/visor_lamp.json, shaders/post/visor_lamp.fsh   the visor lamp (parked: no setting turns it on)
-  assets/powerarmor/geckolib/models/view/power_armor_view.geo.json  cockpit viewmodel: tools + gauntlet cut out of the suit model (tools/extract-view-geo.py)
-  assets/powerarmor/models/item/chaingun.json         a flat hand-held item, like a vanilla tool (item/handheld)
-  assets/powerarmor/items/<item>.json                 which model each item shows (needed since 1.21.4)
-  assets/powerarmor/textures/item/*.png               every item icon, 16 px pixel art drawn by model/art/item_icons_art.py
-  data/powerarmor/damage_type/bullet.json             "shredded" damage type (+ minecraft is_projectile, no_knockback, bypasses_cooldown tags)
-  data/powerarmor/damage_type/em_slam.json            "slammed into a wall" (EM throws)
-  data/powerarmor/damage_type/em_struck.json          "bowled over" (a thrown mob hitting another)
-  data/powerarmor/recipe/*.json                       crafting recipes (suit parts, suit + 4 tools)
+  assets/power_suits/geckolib/models|animations/entity/, textures/entity/   exported from Blockbench
+  assets/power_suits/textures/gui/power_suit.png      suit menu background (tools/make-gui.py)
+  assets/power_suits/post_effect/visor_lamp.json, shaders/post/visor_lamp.fsh   the visor lamp (parked: no setting turns it on)
+  assets/power_suits/geckolib/models/view/power_suit_view.geo.json  cockpit viewmodel: tools + gauntlet cut out of the suit model (tools/extract-view-geo.py)
+  assets/power_suits/models/item/chaingun.json         a flat hand-held item, like a vanilla tool (item/handheld)
+  assets/power_suits/items/<item>.json                 which model each item shows (needed since 1.21.4)
+  assets/power_suits/textures/item/*.png               every item icon, 16 px pixel art drawn by model/art/item_icons_art.py
+  data/power_suits/damage_type/bullet.json             "shredded" damage type (+ minecraft is_projectile, no_knockback, bypasses_cooldown tags)
+  data/power_suits/damage_type/em_slam.json            "slammed into a wall" (EM throws)
+  data/power_suits/damage_type/em_struck.json          "bowled over" (a thrown mob hitting another)
+  data/power_suits/recipe/*.json                       crafting recipes (suit parts, suit + 4 tools)
 ```
 
 ## Notes

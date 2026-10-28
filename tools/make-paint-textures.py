@@ -21,7 +21,7 @@ The ramps: blue is the suit's old paint exactly (the blue dye gives back the pre
 built from its main colour like the blue: each step keeps the blue's lightness offset from its main shade (scaled
 by RANGE: white and black need a narrower one) and chroma profile, and the hue leans warm in the lights and cool in
 the shadows (yellows shade towards orange). The printed ramps can be pinned by hand in FIXED.
-Output: textures/entity/paint/power_armor_<dye>.png (PowerArmorModel picks one by the suit's paint).
+Output: textures/entity/paint/power_suit_<dye>.png (PowerArmorModel picks one by the suit's paint).
 """
 import json
 import math
@@ -32,8 +32,8 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-TEX = ROOT / 'src/main/resources/assets/powerarmor/textures/entity'
-MODEL = ROOT / 'model/power_armor.bbmodel'
+TEX = ROOT / 'src/main/resources/assets/power_suits/textures/entity'
+MODEL = ROOT / 'model/power_suit.bbmodel'
 H = lambda s: tuple(int(s[i:i + 2], 16) for i in (0, 2, 4))
 hexs = lambda c: '%02x%02x%02x' % c
 
@@ -120,7 +120,7 @@ def plate_texels(model):
 
 
 def main():
-    base = Path(sys.argv[1]) if len(sys.argv) > 1 else TEX / 'power_armor.png'
+    base = Path(sys.argv[1]) if len(sys.argv) > 1 else TEX / 'power_suit.png'
     outdir = Path(sys.argv[2]) if len(sys.argv) > 2 else TEX / 'paint'
     outdir.mkdir(parents=True, exist_ok=True)
     src = Image.open(base).convert('RGBA')
@@ -137,7 +137,7 @@ def main():
         px = im.load()
         for xy in plates:
             px[xy] = H(r[step[px[xy][:3]]]) + (255,)
-        im.save(outdir / f'power_armor_{dye}.png')
+        im.save(outdir / f'power_suit_{dye}.png')
         print(f'{dye:11s}', ' '.join(r))
 
 

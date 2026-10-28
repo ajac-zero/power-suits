@@ -3,7 +3,7 @@
 Key art rendered in Blender from the mod's own model, so it always matches the game.
 
 ## Pipeline
-1. **Model**: `assets/power_armor.glb`, exported from the open Blockbench project (glTF, binary, scale 16 = 1 unit per
+1. **Model**: `assets/power_suit.glb`, exported from the open Blockbench project (glTF, binary, scale 16 = 1 unit per
    block, animations included). Re-export after model changes. Blockbench's MCP `risky_eval`:
    `Codecs.gltf.compile({encoding:'binary', animations:true, scale:16})`, then `Blockbench.writeFile(path,
    {content: Buffer.from(result), savetype: 'buffer'})`. Wait for the compile promise in a separate call, because MCP

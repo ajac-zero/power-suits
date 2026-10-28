@@ -29,12 +29,12 @@ import org.slf4j.Logger;
  */
 @Mod(PowerArmor.MODID)
 public class PowerArmor {
-    public static final String MODID = "powerarmor";
+    public static final String MODID = "power_suits";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public PowerArmor(IEventBus modBus, ModContainer container) {
-        // Balance knobs: config/powerarmor-common.toml (see PowerArmorConfig). LOCAL = read on both sides from the
-        // game's config folder, not synced (what 1.21.1 called COMMON; the file keeps its old name so edits survive).
+        // Balance knobs: config/power_suits-common.toml (see PowerArmorConfig). LOCAL = read on both sides from the
+        // game's config folder, not synced (what 1.21.1 called COMMON; the file keeps that name so edits survive).
         container.registerConfig(ModConfig.Type.LOCAL, PowerArmorConfig.SPEC, PowerArmor.MODID + "-common.toml");
         // Registries: tell Minecraft our entity type and item exist.
         ModEntities.ENTITIES.register(modBus);

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "CPI"
+  ],
+  "key": {
+    "C": "minecraft:copper_block",
+    "P": "minecraft:piston",
+    "I": "minecraft:iron_block"
+  },
+  "result": {
+    "id": "power_suits:suit_arm",
+    "count": 1
+  }
+}

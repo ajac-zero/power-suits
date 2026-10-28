@@ -35,14 +35,14 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 
 /**
- * DEV TOOL, inert unless started with -Dpowerarmor.autopilot=terrain:<world> (./gradlew runAutopilotTerrain).
+ * DEV TOOL, inert unless started with -Dpower_suits.autopilot=terrain:<world> (./gradlew runAutopilotTerrain).
  * Copies the given save to "autopilot-terrain" (the original is never opened), loads the copy, climbs
  * into a suit and jogs / sprints in four directions over real terrain. Logs one CSV row per tick to
  * run/autopilot_terrain.csv and saves cockpit screenshots run/screenshots/ap_terrain_*.png.
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class TerrainPilot {
-    private static final String MODE = System.getProperty("powerarmor.autopilot", "");
+    private static final String MODE = System.getProperty("power_suits.autopilot", "");
     private static final boolean ENABLED = MODE.startsWith("terrain:");
     private static final String COPY = "autopilot-terrain";
     private static final int LEG_TICKS = 100; // per gait per direction

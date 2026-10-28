@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": "power_suits:robot_template",
+  "base": "power_suits:suit_helmet",
+  "addition": "#c:music_discs",
+  "result": {
+    "id": "power_suits:suit_helmet",
+    "components": {
+      "power_suits:helmet_style": "robot"
+    }
+  }
+}

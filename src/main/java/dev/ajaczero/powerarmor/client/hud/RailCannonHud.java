@@ -33,9 +33,9 @@ public final class RailCannonHud implements ToolHud {
         if (ready) {
             // locked: a second set of short brackets just inside
             HudView.brackets(g, cx - d + 3, cy - d + 3, cx + d - 3, cy + d - 3, 2, v.main());
-            v.centred(g, Component.translatable("hud.powerarmor.ready"), cx + 1, cy + TEXT_Y, v.main());
+            v.centred(g, Component.translatable("hud.power_suits.ready"), cx + 1, cy + TEXT_Y, v.main());
         } else if (charge > 0F) {
-            v.centred(g, Component.translatable("hud.powerarmor.percent", Math.round(charge * 100)), cx + 1, cy + TEXT_Y, v.main());
+            v.centred(g, Component.translatable("hud.power_suits.percent", Math.round(charge * 100)), cx + 1, cy + TEXT_Y, v.main());
         }
         v.pips(g, r, cx + 1, cy + PIPS_Y, MAX_PIPS);
         return String.format(Locale.ROOT, "charge=%.2f rounds=%d%s", charge, r.count(), ready ? " ready" : "");

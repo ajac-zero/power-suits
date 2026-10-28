@@ -118,12 +118,12 @@ public final class SuitHud {
         var power = suit.power();
         boolean free = power.hasFreePower() && powered;
         int energy = power.getTotalEnergy();
-        // Every word and sign on the HUD comes from the language file (hud.powerarmor.*), so a translation covers it all.
+        // Every word and sign on the HUD comes from the language file (hud.power_suits.*), so a translation covers it all.
         // (NO FUEL only shows here for a moment: a suit with nothing left powers down and the glass goes dark.)
-        Component fuelText = free ? Component.translatable("hud.powerarmor.endless")
-                : power.isFlooded() ? Component.translatable("gui.powerarmor.flooded")
+        Component fuelText = free ? Component.translatable("hud.power_suits.endless")
+                : power.isFlooded() ? Component.translatable("gui.power_suits.flooded")
                 : energy > 0 ? Component.literal(PowerArmorItem.formatWalkTime(energy))
-                : Component.translatable("gui.powerarmor.no_fuel");
+                : Component.translatable("gui.power_suits.no_fuel");
         float hull = Mth.clamp(suit.getHealth() / suit.getMaxHealth(), 0F, 1F);
         if (!powered && scan.off()) {
             // The projector runs on the suit's power: with none, the glass is dark, nothing at all on it (once the
@@ -166,14 +166,14 @@ public final class SuitHud {
             g.blit(RenderPipelines.GUI_TEXTURED, piece, x0 + 5, y0 + 4, 0F, 0F, FIGURE_W, FIGURE_H, FIGURE_W, FIGURE_H, main);
         }
         int lx = x0 + 26, rx = x1 - 4, segments = (rx - lx + 1) / 4;
-        Component hullLabel = Component.translatable("hud.powerarmor.hull");
-        Component fuelLabel = Component.translatable("hud.powerarmor.fuel");
+        Component hullLabel = Component.translatable("hud.power_suits.hull");
+        Component fuelLabel = Component.translatable("hud.power_suits.fuel");
         // the seal shield and the embers start in one column, past the longer label
         int ix = lx + Math.max(font.width(hullLabel), font.width(fuelLabel)) + 4;
         HudView.label(g, font, hullLabel, lx, y0 + 4, rgb, hullAlert, blink);
         // sealed (running with the helmet on: fire, frost, gas and water kept out) or faded like an unlit ember
         g.blit(RenderPipelines.GUI_TEXTURED, SEAL, ix, y0 + 4, 0F, 0F, 6, 7, 6, 7, suit.isSealed() ? main : dim);
-        Component hullText = Component.translatable("hud.powerarmor.percent", Math.round(hull * 100));
+        Component hullText = Component.translatable("hud.power_suits.percent", Math.round(hull * 100));
         // the numbers stay put: the label carries the alert (one blinking thing per row, not two)
         g.text(font, hullText, rx - font.width(hullText), y0 + 4, main, false);
         HudView.bar(g, lx, y0 + 13, segments, 3, hull, main, dim);
@@ -231,7 +231,7 @@ public final class SuitHud {
         for (int i = 0; i < TAPE; i++) {
             int deg = Mth.positiveModulo(centre + (i - mid) * DEGREES_PER_CELL, 360);
             if (deg % 45 == 0) {
-                String name = Component.translatable("hud.powerarmor.compass." + deg / 45).getString();
+                String name = Component.translatable("hud.power_suits.compass." + deg / 45).getString();
                 for (int k = 0; k < name.length() && i + k < TAPE; k++) {
                     marks[i + k] = String.valueOf(name.charAt(k));
                     letter[i + k] = true;
@@ -265,7 +265,7 @@ public final class SuitHud {
         VisorVision.Indicator nv = VisorVision.indicator();
         String nvText = "";
         if (nv != VisorVision.Indicator.NONE) {
-            nvText = Component.translatable("hud.powerarmor.night_vision").getString();
+            nvText = Component.translatable("hud.power_suits.night_vision").getString();
             cells(g, font, nvText, x0 + (TAPE - nvText.length()) * CELL, READOUT_Y, nv == VisorVision.Indicator.ACTIVE ? main : faint);
             nvText = " " + nvText + (nv == VisorVision.Indicator.ACTIVE ? "" : "~");
         }

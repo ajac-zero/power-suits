@@ -465,7 +465,7 @@ def flamer_slim(pre, glow=True, skin=None):
     d[f"{pre}_cap"] = ([-12.5, 12.125, -1], [-10.5, 13.125, 1], on('steel'))
     d[f"{pre}_pilot_rod"] = ([-12, 9.625, 0], [-11, 12.125, 1], on('iron'))
     d[f"{pre}_pilot_arm"] = ([-12, 9.625, -1], [-11, 10.625, 0], on('iron'))
-    # the tip glows (reserved dark blues u / v, lit by power_armor_glow_pilot.png); a draft built next to a glowing
+    # the tip glows (reserved dark blues u / v, lit by power_suit_glow_pilot.png); a draft built next to a glowing
     # flamethrower can't use them (the kit refuses reserved colours already in the texture): glow=False paints a look-alike
     u, v = ('u', 'v') if glow else ('w', 'w')
     d[f"{pre}_pilot_tip"] = ([-12, 9.625, -2], [-11, 10.625, -1],

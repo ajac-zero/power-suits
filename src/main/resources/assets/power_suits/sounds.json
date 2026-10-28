@@ -1,0 +1,90 @@
+{
+  "suit.engine.firebox": {
+    "subtitle": "subtitles.power_suits.suit.engine.firebox",
+    "sounds": [
+      {
+        "name": "minecraft:block.furnace.fire_crackle",
+        "type": "event",
+        "pitch": 0.8,
+        "volume": 0.3
+      }
+    ]
+  },
+  "suit.engine.tidal": {
+    "subtitle": "subtitles.power_suits.suit.engine.tidal",
+    "sounds": [
+      {
+        "name": "minecraft:block.bubble_column.upwards_ambient",
+        "type": "event",
+        "pitch": 0.8,
+        "volume": 0.25
+      }
+    ]
+  },
+  "suit.engine.reactor": {
+    "subtitle": "subtitles.power_suits.suit.engine.reactor",
+    "sounds": [
+      {
+        "name": "minecraft:block.beacon.ambient",
+        "type": "event",
+        "pitch": 0.6,
+        "volume": 0.12
+      }
+    ]
+  },
+  "tool.drill": {
+    "subtitle": "subtitles.power_suits.tool.drill",
+    "sounds": [
+      {
+        "name": "minecraft:entity.minecart.riding",
+        "type": "event",
+        "pitch": 1.7,
+        "volume": 0.9
+      }
+    ]
+  },
+  "tool.chainsaw": {
+    "subtitle": "subtitles.power_suits.tool.chainsaw",
+    "sounds": [
+      {
+        "name": "minecraft:entity.bee.loop_aggressive",
+        "type": "event",
+        "pitch": 0.75,
+        "volume": 1.0
+      }
+    ]
+  },
+  "tool.chaingun": {
+    "subtitle": "subtitles.power_suits.tool.chaingun",
+    "sounds": [
+      {
+        "name": "minecraft:entity.minecart.riding",
+        "type": "event",
+        "pitch": 1.0,
+        "volume": 0.8
+      }
+    ]
+  },
+  "tool.flamethrower": {
+    "subtitle": "subtitles.power_suits.tool.flamethrower",
+    "sounds": [
+      {
+        "name": "minecraft:entity.blaze.burn",
+        "type": "event",
+        "pitch": 0.7,
+        "volume": 1.0
+      }
+    ]
+  },
+  "tool.rail_cannon": {
+    "subtitle": "subtitles.power_suits.tool.rail_cannon",
+    "sounds": [
+      {
+        "name": "minecraft:entity.guardian.attack",
+        "type": "event",
+        "pitch": 1.0,
+        "volume": 0.9
+      }
+    ]
+  }
+}

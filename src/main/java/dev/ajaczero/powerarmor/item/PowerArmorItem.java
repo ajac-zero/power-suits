@@ -53,7 +53,7 @@ public class PowerArmorItem extends Item implements ModTooltip {
 
         if (!level.noCollision(suit, suit.getBoundingBox())) {
             if (player != null) {
-                player.sendOverlayMessage(Component.translatable("message.powerarmor.no_room"));
+                player.sendOverlayMessage(Component.translatable("message.power_suits.no_room"));
             }
             return InteractionResult.FAIL;
         }
@@ -93,10 +93,10 @@ public class PowerArmorItem extends Item implements ModTooltip {
 
     @Override
     public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
-        tooltip.accept(Component.translatable("item.powerarmor.power_armor.tooltip").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.power_suit.tooltip").withStyle(ChatFormatting.GRAY));
         DyeColor paint = stack.get(ModDataComponents.PAINT.get());
         if (paint != null) { // vanilla names every dye colour ("color.minecraft.red" = "Red")
-            tooltip.accept(Component.translatable("item.powerarmor.power_armor.paint",
+            tooltip.accept(Component.translatable("item.power_suits.power_suit.paint",
                     Component.translatable("color.minecraft." + paint.getName())).withStyle(ChatFormatting.GRAY));
         }
         SuitLoadout loadout = stack.get(ModDataComponents.LOADOUT.get());
@@ -107,22 +107,22 @@ public class PowerArmorItem extends Item implements ModTooltip {
                     : SuitEngine.of(engineStack);
             if (engineStack != null) {
                 tooltip.accept(engineStack.isEmpty()
-                        ? Component.translatable("item.powerarmor.power_armor.no_engine").withStyle(ChatFormatting.RED)
-                        : Component.translatable("item.powerarmor.power_armor.engine", engineStack.getHoverName()).withStyle(ChatFormatting.GRAY));
+                        ? Component.translatable("item.power_suits.power_suit.no_engine").withStyle(ChatFormatting.RED)
+                        : Component.translatable("item.power_suits.power_suit.engine", engineStack.getHoverName()).withStyle(ChatFormatting.GRAY));
             }
             int energy = loadout.burnLeft() + loadout.fuel().getCount() * SuitFuel.energyOf(engine, loadout.fuel(), context.level());
             if (!loadout.fuel().isEmpty()) {
-                tooltip.accept(Component.translatable("item.powerarmor.power_armor.fuel", loadout.fuel().getCount(), loadout.fuel().getHoverName())
+                tooltip.accept(Component.translatable("item.power_suits.power_suit.fuel", loadout.fuel().getCount(), loadout.fuel().getHoverName())
                         .withStyle(ChatFormatting.GOLD));
             }
             if (energy > 0) {
-                tooltip.accept(Component.translatable("item.powerarmor.power_armor.range", formatWalkTime(energy)).withStyle(ChatFormatting.GOLD));
+                tooltip.accept(Component.translatable("item.power_suits.power_suit.range", formatWalkTime(energy)).withStyle(ChatFormatting.GOLD));
             }
             if (loadout.nuggets() > 0) {
-                tooltip.accept(Component.translatable("item.powerarmor.power_armor.nuggets", loadout.nuggets()).withStyle(ChatFormatting.GRAY));
+                tooltip.accept(Component.translatable("item.power_suits.power_suit.nuggets", loadout.nuggets()).withStyle(ChatFormatting.GRAY));
             }
             if (!loadout.socket().isEmpty()) {
-                tooltip.accept(Component.translatable("item.powerarmor.power_armor.socket", loadout.socket().getHoverName()).withStyle(ChatFormatting.AQUA));
+                tooltip.accept(Component.translatable("item.power_suits.power_suit.socket", loadout.socket().getHoverName()).withStyle(ChatFormatting.AQUA));
             }
         }
     }

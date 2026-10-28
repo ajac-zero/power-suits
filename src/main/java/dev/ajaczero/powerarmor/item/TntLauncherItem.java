@@ -156,7 +156,7 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
             // the pilot's inventory it's only reloading; with none, say so.
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.2F);
             if (!SuitAmmo.has(pilot, TntLauncherItem::isRound)) {
-                pilot.sendOverlayMessage(Component.translatable("message.powerarmor.no_tnt"));
+                pilot.sendOverlayMessage(Component.translatable("message.power_suits.no_tnt"));
             }
             return false;
         }
@@ -220,17 +220,17 @@ public class TntLauncherItem extends Item implements PowerTool, ModTooltip {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
-            player.sendOverlayMessage(Component.translatable("message.powerarmor.tool_on_foot"));
+            player.sendOverlayMessage(Component.translatable("message.power_suits.tool_on_foot"));
         }
         return InteractionResult.PASS;
     }
 
     @Override
     public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
-        tooltip.accept(Component.translatable("item.powerarmor.tnt_launcher.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.translatable("item.powerarmor.tnt_launcher.stats", loaded(stack),
+        tooltip.accept(Component.translatable("item.power_suits.tnt_launcher.tooltip").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.tnt_launcher.stats", loaded(stack),
                 String.format("%.1f", this.cooldownTicks() / 20F),
                 String.format("%.1f", PowerArmorConfig.TNT_LAUNCHER_RELOAD.get() / 20F)).withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

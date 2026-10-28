@@ -44,7 +44,7 @@ public class SuitGlowLayer extends GeoRenderLayer<PowerArmorEntity, Void, Living
             Arrays.stream(TOOL_MASKS)).toArray(Identifier[]::new);
 
     private static Identifier mask(String name) {
-        return Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_armor_glow_" + name + ".png");
+        return Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/entity/power_suit_glow_" + name + ".png");
     }
 
     /** A tool light's glowmask file (written by tools/make-glowmasks.py). */

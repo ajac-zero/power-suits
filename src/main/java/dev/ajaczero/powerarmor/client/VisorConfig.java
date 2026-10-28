@@ -7,7 +7,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.TranslatableEnum;
 
 /**
- * The pilot's own visor settings, saved in {@code config/powerarmor-client.toml} (Mods > Power Armor > Config, or edit
+ * The pilot's own visor settings, saved in {@code config/power_suits-client.toml} (Mods > Power Armor > Config, or edit
  * the file; changes show at once). A CLIENT config: it lives on each player's computer and never reaches a server, so
  * every player picks their own colour and nobody else sees it. (The balance numbers are a different file:
  * PowerArmorConfig.)
@@ -32,7 +32,7 @@ public final class VisorConfig {
 
         @Override
         public Component getTranslatedName() {
-            var name = Component.translatable("powerarmor.configuration.visor_preset." + name().toLowerCase(Locale.ROOT));
+            var name = Component.translatable("power_suits.configuration.visor_preset." + name().toLowerCase(Locale.ROOT));
             return rgb >= 0 ? name.withColor(rgb) : name;
         }
     }
@@ -41,13 +41,13 @@ public final class VisorConfig {
 
     public static final ModConfigSpec.EnumValue<Preset> PRESET = B
             .comment("The visor's colour: GREEN (terminal green, the default), AMBER, BLUE, WHITE, RED, or CUSTOM (visor_colour below).")
-            .translation("powerarmor.configuration.visor_preset")
+            .translation("power_suits.configuration.visor_preset")
             .defineEnum("visor_preset", Preset.GREEN);
 
     public static final ModConfigSpec.ConfigValue<String> COLOUR = B
             .comment("Your own visor colour as #RRGGBB, used when visor_preset is CUSTOM: its readouts and the light along the helmet's edge.",
                     "Warnings use it too (inverted). Something bright reads best: #5AFF6E is the default green.")
-            .translation("powerarmor.configuration.visor_colour")
+            .translation("power_suits.configuration.visor_colour")
             .define("visor_colour", DEFAULT_COLOUR, v -> v instanceof String s && parse(s) >= 0);
 
     /** What the visor can do in the dark (VisorVision). The game uses NIGHT_VISION (or OFF, the key); the lamp is parked
@@ -60,17 +60,17 @@ public final class VisorConfig {
     public static final ModConfigSpec.BooleanValue NIGHT_VISION_ON = B
             .comment("Night vision on or off: the powered visor lifts the dark around you when it's dark (caves, nights).",
                     "The night vision key (N) flips it; the HUD shows NV under the compass while it's on. Only on your screen.")
-            .translation("powerarmor.configuration.visor_night_vision_on")
+            .translation("power_suits.configuration.visor_night_vision_on")
             .define("visor_night_vision_on", true);
 
     public static final ModConfigSpec.DoubleValue NIGHT_VISION = B
             .comment("How far the night vision lifts the dark, 0..1 (vanilla's potion is about 0.6: everything bright).")
-            .translation("powerarmor.configuration.visor_night_vision")
+            .translation("power_suits.configuration.visor_night_vision")
             .defineInRange("visor_night_vision", 0.3, 0.0, 1.0);
 
     public static final ModConfigSpec.EnumValue<VisionTint> VISION_TINT = B
             .comment("The night vision's colour: VISOR (the visor colour, like night-vision goggles) or WHITE.")
-            .translation("powerarmor.configuration.visor_vision_tint")
+            .translation("power_suits.configuration.visor_vision_tint")
             .defineEnum("visor_vision_tint", VisionTint.VISOR);
 
     public static final ModConfigSpec SPEC = B.build();

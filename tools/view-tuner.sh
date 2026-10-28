@@ -22,7 +22,7 @@ case "$1" in
     touch $V/quit; i=0; while [ -f $V/pid ] && [ $i -lt 15 ]; do sleep 2; i=$((i+1)); done
     if [ -f $V/pid ]; then kill "$(cat $V/pid)" 2>/dev/null || true; rm -f $V/pid; fi
     rm -f $V/quit; ./gradlew --stop -q >/dev/null 2>&1 || true
-    pgrep -fl "fml.modFolders=powerarmor" >/dev/null && echo "WARNING: a game client is still running" || echo "stopped" ;;
+    pgrep -fl "fml.modFolders=power_suits" >/dev/null && echo "WARNING: a game client is still running" || echo "stopped" ;;
   once)
     trap '"$0" stop' EXIT
     "$0" start ;;

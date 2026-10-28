@@ -1,0 +1,48 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:component",
+    "component": "power_suits:helmet_style",
+    "cases": [
+      {
+        "when": "protector",
+        "model": {
+          "type": "minecraft:model",
+          "model": "power_suits:item/suit_helmet_protector"
+        }
+      },
+      {
+        "when": "spartan",
+        "model": {
+          "type": "minecraft:model",
+          "model": "power_suits:item/suit_helmet_spartan"
+        }
+      },
+      {
+        "when": "noble",
+        "model": {
+          "type": "minecraft:model",
+          "model": "power_suits:item/suit_helmet_noble"
+        }
+      },
+      {
+        "when": "robot",
+        "model": {
+          "type": "minecraft:model",
+          "model": "power_suits:item/suit_helmet_robot"
+        }
+      },
+      {
+        "when": "hunter",
+        "model": {
+          "type": "minecraft:model",
+          "model": "power_suits:item/suit_helmet_hunter"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "power_suits:item/suit_helmet"
+    }
+  }
+}

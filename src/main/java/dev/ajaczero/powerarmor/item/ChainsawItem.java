@@ -52,7 +52,7 @@ public class ChainsawItem extends Item implements PowerTool, ModTooltip {
     public static final int BREAK_DELAY = 4;
     /** A tree needs at least this many natural leaf blocks touching its logs. */
     private static final int MIN_LEAVES = 4;
-    private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_armor.chainsaw_run");
+    private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_suit.chainsaw_run");
 
 
     public ChainsawItem(Properties properties) {
@@ -261,15 +261,15 @@ public class ChainsawItem extends Item implements PowerTool, ModTooltip {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
-            player.sendOverlayMessage(Component.translatable("message.powerarmor.tool_on_foot"));
+            player.sendOverlayMessage(Component.translatable("message.power_suits.tool_on_foot"));
         }
         return InteractionResult.PASS;
     }
 
     @Override
     public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
-        tooltip.accept(Component.translatable("item.powerarmor.chainsaw.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.translatable("item.powerarmor.chainsaw.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.chainsaw.tooltip").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.chainsaw.stats", this.energyPerUse()).withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.accept(Component.translatable("item.power_suits.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

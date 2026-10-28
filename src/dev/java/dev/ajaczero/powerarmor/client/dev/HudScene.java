@@ -184,20 +184,20 @@ final class HudScene {
             // two boss bars and two effects: vanilla draws them where the compass and the tool readout are; with the
             // HUD up they move down (boss bars under the compass, effect icons under the top right corner)
             case 854 -> { phase = "bosses"; server(mc, (p, x) -> {
-                              command(p, "bossbar add powerarmor:hud_a \"Wither\"");
-                              command(p, "bossbar set powerarmor:hud_a color purple");
-                              command(p, "bossbar set powerarmor:hud_a value 70");
-                              command(p, "bossbar add powerarmor:hud_b \"Ender Dragon\"");
-                              command(p, "bossbar set powerarmor:hud_b color pink");
-                              command(p, "bossbar set powerarmor:hud_b value 35");
-                              command(p, "bossbar set powerarmor:hud_a players @a");
-                              command(p, "bossbar set powerarmor:hud_b players @a");
+                              command(p, "bossbar add power_suits:hud_a \"Wither\"");
+                              command(p, "bossbar set power_suits:hud_a color purple");
+                              command(p, "bossbar set power_suits:hud_a value 70");
+                              command(p, "bossbar add power_suits:hud_b \"Ender Dragon\"");
+                              command(p, "bossbar set power_suits:hud_b color pink");
+                              command(p, "bossbar set power_suits:hud_b value 35");
+                              command(p, "bossbar set power_suits:hud_a players @a");
+                              command(p, "bossbar set power_suits:hud_b players @a");
                               p.addEffect(new MobEffectInstance(MobEffects.SPEED, 600));
                               p.addEffect(new MobEffectInstance(MobEffects.POISON, 600)); }); }
             case 864 -> AutoPilot.shot(mc, "hud_bosses");
             case 866 -> server(mc, (p, x) -> {
-                              command(p, "bossbar remove powerarmor:hud_a");
-                              command(p, "bossbar remove powerarmor:hud_b");
+                              command(p, "bossbar remove power_suits:hud_a");
+                              command(p, "bossbar remove power_suits:hud_b");
                               p.removeAllEffects(); });
             // no helmet: no HUD (vanilla's vehicle hearts are back)
             case 870 -> { phase = "no_helmet"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, ItemStack.EMPTY)); }

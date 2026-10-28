@@ -23,16 +23,16 @@ public final class FuelTooltip {
         var level = Minecraft.getInstance().level;
         int energy = SuitFuel.energyOf(SuitEngine.FIREBOX, stack, level);
         if (energy > 0) {
-            event.getToolTip().add(Component.translatable("tooltip.powerarmor.fuel", PowerArmorItem.formatWalkTime(energy))
+            event.getToolTip().add(Component.translatable("tooltip.power_suits.fuel", PowerArmorItem.formatWalkTime(energy))
                     .withStyle(ChatFormatting.GOLD));
         }
         int water = SuitFuel.energyOf(SuitEngine.TIDAL, stack, level); // a tidal engine on land
         if (water > 0) {
-            event.getToolTip().add(Component.translatable("tooltip.powerarmor.tidal_fuel", PowerArmorItem.formatWalkTime(water))
+            event.getToolTip().add(Component.translatable("tooltip.power_suits.tidal_fuel", PowerArmorItem.formatWalkTime(water))
                     .withStyle(ChatFormatting.AQUA));
         }
         if (SuitFuel.powersForever(SuitEngine.REACTOR, stack)) {
-            event.getToolTip().add(Component.translatable("tooltip.powerarmor.reactor_fuel").withStyle(ChatFormatting.LIGHT_PURPLE));
+            event.getToolTip().add(Component.translatable("tooltip.power_suits.reactor_fuel").withStyle(ChatFormatting.LIGHT_PURPLE));
         }
     }
 

@@ -15,14 +15,14 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
- * DEV TOOL, inert unless started with -Dpowerarmor.mp=driver|watch (./gradlew runMpDriver / runMpWatch, against
+ * DEV TOOL, inert unless started with -Dpower_suits.mp=driver|watch (./gradlew runMpDriver / runMpWatch, against
  * runServerMp). Both clients log what THEY see of the suit each tick to mp_client.csv (own game directory); the driver
  * also walks forward once seated. The watcher takes screenshots at the phase changes (ap_mp_*.png).
  * Compare with the server's run/mp_server.csv (by hand: there is no report script yet).
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
 public final class MultiplayerScene {
-    private static final String ROLE = System.getProperty("powerarmor.mp", "");
+    private static final String ROLE = System.getProperty("power_suits.mp", "");
     private static int tick;
     private static BufferedWriter csv;
 

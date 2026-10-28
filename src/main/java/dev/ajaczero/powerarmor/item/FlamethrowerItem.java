@@ -152,7 +152,7 @@ public class FlamethrowerItem extends Item implements PowerTool, ModTooltip {
                 level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.5F, 1.4F);
             }
             if (s.message == 0 && operator instanceof Player pilot) {
-                pilot.sendOverlayMessage(Component.translatable("message.powerarmor.flamethrower_wet"));
+                pilot.sendOverlayMessage(Component.translatable("message.power_suits.flamethrower_wet"));
                 s.message = 60;
             }
             return;
@@ -199,18 +199,18 @@ public class FlamethrowerItem extends Item implements PowerTool, ModTooltip {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
-            player.sendOverlayMessage(Component.translatable("message.powerarmor.tool_on_foot"));
+            player.sendOverlayMessage(Component.translatable("message.power_suits.tool_on_foot"));
         }
         return InteractionResult.PASS;
     }
 
     @Override
     public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
-        tooltip.accept(Component.translatable("item.powerarmor.flamethrower.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.translatable("item.powerarmor.flamethrower.stats",
+        tooltip.accept(Component.translatable("item.power_suits.flamethrower.tooltip").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.flamethrower.stats",
                 String.format("%.1f", PowerArmorConfig.FLAMETHROWER_DAMAGE.get() / 2),
                 String.format("%.0f", PowerArmorConfig.FLAMETHROWER_BURN_SECONDS.get()),
                 this.energyPerUse() * 20).withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

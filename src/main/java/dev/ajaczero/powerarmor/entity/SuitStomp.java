@@ -22,7 +22,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Landings: dust on every heavy landing (client), and the stomp: a big drop hurts everything around (server). */
 public final class SuitStomp {
-    /** "powerarmor:stomp" (data/powerarmor/damage_type/stomp.json): "was flattened by". */
+    /** "power_suits:stomp" (data/power_suits/damage_type/stomp.json): "was flattened by". */
     public static final ResourceKey<DamageType> STOMP = ResourceKey.create(Registries.DAMAGE_TYPE,
             Identifier.fromNamespaceAndPath(PowerArmor.MODID, "stomp"));
     /** The shock wave's reach (blocks from the suit's centre): grows with the drop, up to vanilla's mace ring (3.5). */

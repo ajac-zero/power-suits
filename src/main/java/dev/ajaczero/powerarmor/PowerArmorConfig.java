@@ -3,7 +3,7 @@ package dev.ajaczero.powerarmor;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
- * Balance knobs, saved in {@code config/powerarmor-common.toml} (created on first launch, comments included).
+ * Balance knobs, saved in {@code config/power_suits-common.toml} (created on first launch, comments included).
  * Edit the file or use Mods > Power Armor > Config in game; changes apply immediately, no restart.
  *
  * Fuel is counted in "energy": walking burns 1 per tick, so 20 energy = 1 second of walking and a piece of
@@ -169,7 +169,7 @@ public final class PowerArmorConfig {
             .defineInRange("cooldown_ticks", 20, 0, 1200);
     public static final ModConfigSpec.BooleanValue RAIL_BREAKS_BLOCKS = B
             .comment("A pilot's beam breaks what a sprinting suit smashes through (glass, panes, leaves, ice...: block tag",
-                    "powerarmor:suit_smashes_sprinting) and goes on; it stops at anything else. Off: it stops at those too.",
+                    "power_suits:suit_smashes_sprinting) and goes on; it stops at anything else. Off: it stops at those too.",
                     "The machine mind's beam never breaks blocks.").translation(key("rail_breaks_blocks"))
             .define("breaks_blocks", true);
 
@@ -200,8 +200,8 @@ public final class PowerArmorConfig {
             .comment("A lightning strike knocks the suit out for this many ticks (sparks, slump), then it restarts.").translation(key("lightning_stun_ticks"))
             .defineInRange("lightning_stun_ticks", 100, 0, 6000);
     public static final ModConfigSpec.BooleanValue SMASH_BLOCKS = B
-            .comment("Walking breaks leaves, panes, cobwebs, snow layers (block tag powerarmor:suit_smashes_walking); sprinting also",
-                    "breaks glass and ice (powerarmor:suit_smashes_sprinting). Nothing drops.").translation(key("smash_blocks"))
+            .comment("Walking breaks leaves, panes, cobwebs, snow layers (block tag power_suits:suit_smashes_walking); sprinting also",
+                    "breaks glass and ice (power_suits:suit_smashes_sprinting). Nothing drops.").translation(key("smash_blocks"))
             .define("smash_blocks", true);
 
     // ---- The machine mind (design sec. 8): what a powered suit does with nobody inside

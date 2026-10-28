@@ -50,7 +50,7 @@ import org.jetbrains.annotations.Nullable;
  *  - Release: whatever is held is launched along the view. A quick tap shoves a target away.
  *  - Thrown mobs and players that hit a wall take damage, and bowl through any mob in their way (2026-10-27, user: a
  *    combat move): each one they hit takes the impact too, and so do they, and they fly on.
- *  - Heavy things fight the field (decided 2026-10-13): other power armor suits and the entity tag powerarmor:em_heavy
+ *  - Heavy things fight the field (decided 2026-10-13): other power armor suits and the entity tag power_suits:em_heavy
  *    (bosses, iron golems, ravagers, wardens; datapacks can add more) aren't lifted. The beam holds them in place (they slow to a crawl) and drags them a little; letting go only
  *    shoves them.
  * Players (and a mount or suit with a player on it) only where the server allows PvP; a rogue mind ignores that. Never
@@ -65,7 +65,7 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
     private static final double HOLD_DISTANCE = 3.5;
     /** Launch speeds, blocks per tick (x20 = blocks per second). */
     public static final double MOB_PUSH = 1.6, ITEM_PUSH = 1.2;
-    /** "powerarmor:em_heavy" (data/powerarmor/tags/entity_type/em_heavy.json): too heavy to lift. A tag, not a size
+    /** "power_suits:em_heavy" (data/power_suits/tags/entity_type/em_heavy.json): too heavy to lift. A tag, not a size
      *  rule: hitbox size was a poor guess at weight (a warden is thinner than an iron golem), and a tag lets datapacks
      *  and other mods add their own heavyweights. */
     public static final TagKey<EntityType<?>> HEAVY = TagKey.create(Registries.ENTITY_TYPE,
@@ -73,7 +73,7 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
     /** Impacts faster than this (blocks per tick) hurt: a full-speed throw's ({@link #MOB_PUSH}) does the config's
      *  slam damage, slower ones less in proportion to the speed above this. */
     private static final double SLAM_SPEED = 0.5;
-    /** "powerarmor:em_struck" (data/powerarmor/damage_type/em_struck.json): "bowled over" by something thrown. */
+    /** "power_suits:em_struck" (data/power_suits/damage_type/em_struck.json): "bowled over" by something thrown. */
     public static final ResourceKey<DamageType> EM_STRUCK = ResourceKey.create(Registries.DAMAGE_TYPE,
             Identifier.fromNamespaceAndPath(PowerArmor.MODID, "em_struck"));
     /** How hard a mob that's bowled over is knocked along the throw (vanilla's knockback strength; a sword's is 0.4). */
@@ -81,7 +81,7 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
     private static final int COOLDOWN_TICKS = 8;
     /** Heavy things are only shoved: this fraction of a throw. */
     private static final double HEAVY_SHOVE = 0.25;
-    /** "powerarmor:em_slam" (data/powerarmor/damage_type/em_slam.json): "slammed into a wall". */
+    /** "power_suits:em_slam" (data/power_suits/damage_type/em_slam.json): "slammed into a wall". */
     public static final ResourceKey<DamageType> EM_SLAM = ResourceKey.create(Registries.DAMAGE_TYPE,
             Identifier.fromNamespaceAndPath(PowerArmor.MODID, "em_slam"));
 
@@ -425,16 +425,16 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
-            player.sendOverlayMessage(Component.translatable("message.powerarmor.tool_on_foot"));
+            player.sendOverlayMessage(Component.translatable("message.power_suits.tool_on_foot"));
         }
         return InteractionResult.PASS;
     }
 
     @Override
     public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
-        tooltip.accept(Component.translatable("item.powerarmor.em_projector.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.translatable("item.powerarmor.em_projector.stats", PowerArmorConfig.EM_HOLD_ENERGY.get() * 20, PowerArmorConfig.EM_THROW_ENERGY.get())
+        tooltip.accept(Component.translatable("item.power_suits.em_projector.tooltip").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.em_projector.stats", PowerArmorConfig.EM_HOLD_ENERGY.get() * 20, PowerArmorConfig.EM_THROW_ENERGY.get())
                 .withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

@@ -35,15 +35,15 @@ import net.minecraft.world.entity.player.Inventory;
  * steady), NO POWER (lightning), or ONLINE. Alerts look like the HUD's ({@link HudView#label}).
  */
 public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
-    private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/gui/power_armor.png");
+    private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(PowerArmor.MODID, "textures/gui/power_suit.png");
     private static final Identifier LIT_PROGRESS = Identifier.withDefaultNamespace("container/furnace/lit_progress");
     /** The keys' symbols (tools/make-gui.py). Power is 9 wide for a 1 px stem (user's pick D, 2026-10-27): on an 18 px
      *  key it can't be exactly centred, so it sits half a pixel left, a pixel up (its light goes under it). Pack is 8x8,
      *  centred (x 5..12). */
     private static final SuitKey.Symbol POWER_SYMBOL = new SuitKey.Symbol(
-            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "container/power_armor/power"), 9, 8, 4, 3);
+            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "container/power_suit/power"), 9, 8, 4, 3);
     private static final SuitKey.Symbol PACK_SYMBOL = new SuitKey.Symbol(
-            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "container/power_armor/pack"), 8, 8, 5, 4);
+            Identifier.fromNamespaceAndPath(PowerArmor.MODID, "container/power_suit/pack"), 8, 8, 5, 4);
     /** The flame between the engine and fuel slots; the preview window (vanilla's player box). */
     private static final int FLAME_X = 9, FLAME_Y = 45;
     private static final int PREVIEW_X0 = 26, PREVIEW_Y0 = 8, PREVIEW_X1 = 75, PREVIEW_Y1 = 78, PREVIEW_SCALE = 18;
@@ -68,11 +68,11 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         // server, which calls PowerArmorMenu.clickMenuButton.
         // A key has a symbol, no caption: its tooltip is its name, one word (user, 2026-10-27: the key shows its state).
         SuitKey power = this.addRenderableWidget(new SuitKey(this.leftPos + KEY_X, this.topPos + POWER_Y, POWER_SYMBOL,
-                Component.translatable("gui.powerarmor.power"), () -> switchedOn(this.menu.getSuit()),
+                Component.translatable("gui.power_suits.power"), () -> switchedOn(this.menu.getSuit()),
                 () -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_POWER)));
         power.setTooltip(Tooltip.create(power.getMessage()));
         SuitKey pack = this.addRenderableWidget(new SuitKey(this.leftPos + KEY_X, this.topPos + PACK_Y, PACK_SYMBOL,
-                Component.translatable("gui.powerarmor.pack"), null,
+                Component.translatable("gui.power_suits.pack"), null,
                 () -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, PowerArmorMenu.BUTTON_PACK)));
         // Packing up needs you outside: from inside the key is there but greyed out.
         pack.active = !this.menu.isPiloting(this.minecraft.player);
@@ -143,16 +143,16 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
 
         // HULL: like the HUD's (a warning from half, critical in the last 15%)
         float hull = Mth.clamp(suit.getHealth() / suit.getMaxHealth(), 0F, 1F);
-        HudView.label(graphics, this.font, Component.translatable("hud.powerarmor.hull"), TEXT_X0, HULL_Y, rgb, HudAlert.ofLeft(hull), blink);
-        right(graphics, Component.translatable("hud.powerarmor.percent", Math.round(hull * 100)), HULL_Y, main);
+        HudView.label(graphics, this.font, Component.translatable("hud.power_suits.hull"), TEXT_X0, HULL_Y, rgb, HudAlert.ofLeft(hull), blink);
+        right(graphics, Component.translatable("hud.power_suits.percent", Math.round(hull * 100)), HULL_Y, main);
         HudView.bar(graphics, TEXT_X0, HULL_BAR_Y, SEGMENTS, 3, hull, main, unlit);
 
         // FUEL: time left at walking pace (endless on a wet tidal engine or a star reactor), the bar how full the slot is
         int energy = power.getTotalEnergy();
         boolean free = power.hasFreePower();
         boolean fuelCritical = !free && (suit.getEngine() == null || power.isFlooded() || energy == 0 || power.isLowOnFuel());
-        HudView.label(graphics, this.font, Component.translatable("hud.powerarmor.fuel"), TEXT_X0, FUEL_Y, rgb, HudView.critical(fuelCritical), blink);
-        right(graphics, free ? Component.translatable("hud.powerarmor.endless") : Component.literal(PowerArmorItem.formatWalkTime(energy)), FUEL_Y, main);
+        HudView.label(graphics, this.font, Component.translatable("hud.power_suits.fuel"), TEXT_X0, FUEL_Y, rgb, HudView.critical(fuelCritical), blink);
+        right(graphics, free ? Component.translatable("hud.power_suits.endless") : Component.literal(PowerArmorItem.formatWalkTime(energy)), FUEL_Y, main);
         HudView.bar(graphics, TEXT_X0, FUEL_BAR_Y, SEGMENTS, 3, power.fuelGauge(), main, unlit);
         graphics.fill(TEXT_X0, RULE2_Y, TEXT_X1, RULE2_Y + 1, rule);
 
@@ -162,19 +162,19 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         String status;
         HudAlert alert;
         if (off) {
-            status = "gui.powerarmor.switched_off"; alert = HudAlert.WARNING;
+            status = "gui.power_suits.switched_off"; alert = HudAlert.WARNING;
         } else if (suit.getEngine() == null) {
-            status = "gui.powerarmor.no_engine"; alert = HudAlert.CRITICAL;
+            status = "gui.power_suits.no_engine"; alert = HudAlert.CRITICAL;
         } else if (power.isFlooded()) {
-            status = "gui.powerarmor.flooded"; alert = HudAlert.CRITICAL;
+            status = "gui.power_suits.flooded"; alert = HudAlert.CRITICAL;
         } else if (!suit.hasHelmet() && !suit.isVehicle()) {
-            status = "gui.powerarmor.no_helmet"; alert = HudAlert.WARNING;
+            status = "gui.power_suits.no_helmet"; alert = HudAlert.WARNING;
         } else if (suit.isPowered()) {
-            status = "gui.powerarmor.online"; alert = HudAlert.NONE;
+            status = "gui.power_suits.online"; alert = HudAlert.NONE;
         } else if (energy == 0 && !free) {
-            status = "gui.powerarmor.no_fuel"; alert = HudAlert.CRITICAL;
+            status = "gui.power_suits.no_fuel"; alert = HudAlert.CRITICAL;
         } else {
-            status = "gui.powerarmor.offline"; alert = HudAlert.CRITICAL;
+            status = "gui.power_suits.offline"; alert = HudAlert.CRITICAL;
         }
         // an inverted label needs a pixel of block round it: nudge it in off the left edge
         int x = alert == HudAlert.NONE ? TEXT_X0 : TEXT_X0 + 1;
@@ -192,10 +192,10 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
             return;
         }
         int index = this.menu.slots.indexOf(this.hoveredSlot);
-        String key = index == PowerArmorMenu.MENU_SOCKET ? "gui.powerarmor.socket_slot"
-                : index == PowerArmorMenu.MENU_FUEL ? "gui.powerarmor.fuel_slot"
-                : index == PowerArmorMenu.MENU_HELMET ? "gui.powerarmor.helmet_slot"
-                : index == PowerArmorMenu.MENU_ENGINE ? "gui.powerarmor.engine_slot" : null;
+        String key = index == PowerArmorMenu.MENU_SOCKET ? "gui.power_suits.socket_slot"
+                : index == PowerArmorMenu.MENU_FUEL ? "gui.power_suits.fuel_slot"
+                : index == PowerArmorMenu.MENU_HELMET ? "gui.power_suits.helmet_slot"
+                : index == PowerArmorMenu.MENU_ENGINE ? "gui.power_suits.engine_slot" : null;
         if (key != null) {
             graphics.setComponentTooltipForNextFrame(this.font, List.of(Component.translatable(key),
                     Component.translatable(key + ".hint").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);

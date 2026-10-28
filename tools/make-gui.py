@@ -1,4 +1,4 @@
-"""Builds the suit menu background (textures/gui/power_armor.png) from vanilla's inventory screen.
+"""Builds the suit menu background (textures/gui/power_suit.png) from vanilla's inventory screen.
 
     uv run --with pillow python3 tools/make-gui.py
 
@@ -51,8 +51,8 @@ socket = img.crop((76, 61, 94, 79))         # vanilla's off-hand slot frame...
 fill(76, 61, 94, 79, PANEL)                 # ...leaves the bottom (the Pack up key goes there)...
 img.paste(socket, (76, 25))                 # ...for the engine's row (the Power key goes over it, opposite the helmet)
 inset(97, 7, 72, 72, (6, 10, 8, 255))       # the status screen: near black, a hint of green like an unlit tube
-img.save('src/main/resources/assets/powerarmor/textures/gui/power_armor.png')
-print('wrote textures/gui/power_armor.png')
+img.save('src/main/resources/assets/power_suits/textures/gui/power_suit.png')
+print('wrote textures/gui/power_suit.png')
 
 # The keys' symbols, white (the screen tints them: grey, or green when the Power key is on), positioned by
 # PowerArmorScreen. Power, 9x8 (user's pick D, 2026-10-27, over 2 px stems that looked too heavy): a 1 px stem in a ring
@@ -82,7 +82,7 @@ for name, rows in SYMBOLS.items():
         for x, ch in enumerate(row):
             if ch == 'X':
                 sym.putpixel((x, y), LIGHT)
-    path = f'src/main/resources/assets/powerarmor/textures/gui/sprites/container/power_armor/{name}.png'
+    path = f'src/main/resources/assets/power_suits/textures/gui/sprites/container/power_suit/{name}.png'
     import os
     os.makedirs(os.path.dirname(path), exist_ok=True)
     sym.save(path)

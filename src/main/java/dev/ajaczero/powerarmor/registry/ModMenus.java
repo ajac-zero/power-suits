@@ -13,7 +13,7 @@ public final class ModMenus {
 
     /** IMenuTypeExtension.create lets the server send extra data when opening (here: which suit). */
     public static final DeferredHolder<MenuType<?>, MenuType<PowerArmorMenu>> POWER_ARMOR =
-            MENUS.register("power_armor", () -> IMenuTypeExtension.create(PowerArmorMenu::fromNetwork));
+            MENUS.register("power_suit", () -> IMenuTypeExtension.create(PowerArmorMenu::fromNetwork));
 
     private ModMenus() {}
 }

@@ -45,7 +45,7 @@ import org.jetbrains.annotations.Nullable;
  * tick), so it times its own shots. The spin, heat and a shot counter are synced to every client through the suit:
  * they drive the barrel spin, the recoil, the muzzle burst, the heat glow and the motor whine.
  *
- * <p>Registered as powerarmor:chaingun; the old ids powerarmor:plasma_cannon and powerarmor:rivet_gun are aliases, so
+ * <p>Registered as power_suits:chaingun; the old ids power_suits:plasma_cannon and power_suits:rivet_gun are aliases, so
  * those items in old worlds load as chainguns. A flat item like a vanilla tool; only the suit wears it in 3D.
  */
 public class ChaingunItem extends Item implements PowerTool, ModTooltip {
@@ -189,7 +189,7 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
             level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.6F);
             if (s.noAmmoMessage == 0) {
                 if (operator instanceof Player pilot) {
-                    pilot.sendOverlayMessage(Component.translatable("message.powerarmor.no_bullets"));
+                    pilot.sendOverlayMessage(Component.translatable("message.power_suits.no_bullets"));
                 }
                 s.noAmmoMessage = 40;
             }
@@ -308,19 +308,19 @@ public class ChaingunItem extends Item implements PowerTool, ModTooltip {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
-            player.sendOverlayMessage(Component.translatable("message.powerarmor.tool_on_foot"));
+            player.sendOverlayMessage(Component.translatable("message.power_suits.tool_on_foot"));
         }
         return InteractionResult.PASS;
     }
 
     @Override
     public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
-        tooltip.accept(Component.translatable("item.powerarmor.chaingun.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.translatable("item.powerarmor.chaingun.stats",
+        tooltip.accept(Component.translatable("item.power_suits.chaingun.tooltip").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.chaingun.stats",
                 String.format("%.1f", damage(0F) / 2), String.format("%.1f", damage(1F) / 2),
                 String.format("%.0f", 20F / PowerArmorConfig.CHAINGUN_FAST_INTERVAL.get()),
                 perTick(PowerArmorConfig.CHAINGUN_SLOW_SPIN_ENERGY.get()), perTick(PowerArmorConfig.CHAINGUN_FULL_SPIN_ENERGY.get()))
                 .withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

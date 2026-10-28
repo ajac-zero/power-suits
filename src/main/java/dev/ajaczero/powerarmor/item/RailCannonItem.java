@@ -51,7 +51,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Decided with the user: hold to charge, fires only at full charge (no weaker partial shots), an instant beam that
  * pierces, breaking the blocks a sprinting suit smashes through on its way (glass, panes, leaves, ice: the
- * {@code powerarmor:suit_smashes_sprinting} tag) and stopping at anything solid; each shot costs an iron ingot from the
+ * {@code power_suits:suit_smashes_sprinting} tag) and stopping at anything solid; each shot costs an iron ingot from the
  * pilot's inventory (2026-10-27; it was the suit's ammo slot) plus fuel; the machine mind uses it as a long-range guard (entity/ai/RailGuard); rogues never carry it.
  *
  * <p>A continuous tool: the suit calls {@link #holdTick} every tick the trigger is held (the charge builds), and
@@ -60,7 +60,7 @@ import org.jetbrains.annotations.Nullable;
  * counter; each client then draws the beam from the muzzle it sees (RailCannonEffects).
  */
 public class RailCannonItem extends Item implements PowerTool, ModTooltip {
-    /** "powerarmor:rail" (data/powerarmor/damage_type/rail.json): "skewered by a rail beam". It's in
+    /** "power_suits:rail" (data/power_suits/damage_type/rail.json): "skewered by a rail beam". It's in
      *  minecraft:bypasses_cooldown, so a mob that was just hurt by something else still takes the whole hit. */
     public static final ResourceKey<DamageType> RAIL = ResourceKey.create(Registries.DAMAGE_TYPE,
             Identifier.fromNamespaceAndPath(PowerArmor.MODID, "rail"));
@@ -200,7 +200,7 @@ public class RailCannonItem extends Item implements PowerTool, ModTooltip {
                 level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.4F);
                 if (operator instanceof Player pilot) {
                     pilot.sendOverlayMessage(Component.translatable(suit.power().hasEnergyFor(this.energyPerUse())
-                            ? "message.powerarmor.no_rail_ammo" : "message.powerarmor.rail_no_fuel"));
+                            ? "message.power_suits.no_rail_ammo" : "message.power_suits.rail_no_fuel"));
                 }
                 s.noAmmoMessage = 40;
             }
@@ -328,17 +328,17 @@ public class RailCannonItem extends Item implements PowerTool, ModTooltip {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
-            player.sendOverlayMessage(Component.translatable("message.powerarmor.tool_on_foot"));
+            player.sendOverlayMessage(Component.translatable("message.power_suits.tool_on_foot"));
         }
         return InteractionResult.PASS;
     }
 
     @Override
     public void addTooltip(ItemStack stack, TooltipContext context, Consumer<Component> tooltip, TooltipFlag flag) {
-        tooltip.accept(Component.translatable("item.powerarmor.rail_cannon.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.translatable("item.powerarmor.rail_cannon.stats",
+        tooltip.accept(Component.translatable("item.power_suits.rail_cannon.tooltip").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.rail_cannon.stats",
                 String.format("%.0f", PowerArmorConfig.RAIL_DAMAGE.get() / 2), String.format("%.1f", PowerArmorConfig.RAIL_CHARGE.get() / 20F),
                 PowerArmorConfig.RAIL_CHARGE_ENERGY.get()).withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.accept(Component.translatable("item.powerarmor.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("item.power_suits.power_tool.install").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

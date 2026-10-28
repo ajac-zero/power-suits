@@ -1,0 +1,15 @@
+{
+  "values": [
+    "minecraft:in_fire",
+    "minecraft:on_fire",
+    "minecraft:campfire",
+    "minecraft:hot_floor",
+    "minecraft:freeze",
+    "minecraft:cactus",
+    "minecraft:sweet_berry_bush",
+    "minecraft:magic",
+    "minecraft:wither",
+    "#neoforge:is_poison",
+    "power_suits:flamethrower"
+  ]
+}

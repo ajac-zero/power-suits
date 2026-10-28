@@ -54,7 +54,7 @@ public final class RogueSpawner {
         ).apply(i, Countdown::new));
     }
 
-    /** Saved in the world as data/powerarmor/rogues.dat. */
+    /** Saved in the world as data/power_suits/rogues.dat. */
     private static final SavedDataType<Countdown> TYPE = new SavedDataType<>(
             Identifier.fromNamespaceAndPath(PowerArmor.MODID, "rogues"), Countdown::new, Countdown.CODEC);
 

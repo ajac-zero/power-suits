@@ -3,7 +3,7 @@ inside it, drawn on Minecraft's GUI pixel grid like the pumpkin overlay but only
 
     uv run --with pillow python3 tools/make-visor-textures.py
 
-Writes src/main/resources/assets/powerarmor/textures/gui/visor/:
+Writes src/main/resources/assets/power_suits/textures/gui/visor/:
   corner_top.png / corner_bottom.png   the top-left / bottom-left corner pieces (the right ones are the same, drawn
                                        mirrored), solid black like the pumpkin's overlay: what you see without power
   brow.png                             the middle piece of the top edge (the helmet's visor band), on its own
@@ -18,7 +18,7 @@ screen's edge on their own (u0 = 0.8), so nothing joins them to the brow.
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter
 
-OUT = Path(__file__).resolve().parent.parent / "src/main/resources/assets/powerarmor/textures/gui/visor"
+OUT = Path(__file__).resolve().parent.parent / "src/main/resources/assets/power_suits/textures/gui/visor"
 # The solid piece (no power) is pure black and opaque, like the pumpkin's overlay (user, 2026-10-27: dark slate at 96%
 # read as grey and see-through). The lip texture keeps its steel: it's what's left of the piece while the visor has power.
 BLACK, LIP = (0, 0, 0, 255), (54, 60, 70, 250)

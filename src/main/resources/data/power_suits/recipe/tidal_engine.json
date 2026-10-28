@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "BPB",
+    "PHP",
+    "BPB"
+  ],
+  "key": {
+    "B": "minecraft:iron_block",
+    "P": "minecraft:dark_prismarine",
+    "H": "minecraft:heart_of_the_sea"
+  },
+  "result": {
+    "id": "power_suits:tidal_engine",
+    "count": 1
+  }
+}

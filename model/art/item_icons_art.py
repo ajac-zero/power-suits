@@ -15,7 +15,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / 'src/main/resources/assets/powerarmor/textures/item'
+OUT = ROOT / 'src/main/resources/assets/power_suits/textures/item'
 N = 16
 
 
@@ -217,7 +217,7 @@ def helmet_hunter(ic):  # Samus: a crest, a painted brow, a visor wrapping round
         ic.rect(x, 10, x, 12, SLATE[3] if x in (3, 10) else SLATE[1])
     ic.rect(6, 11, 8, 11, STEEL[2])
 
-def power_armor(ic):
+def power_suit(ic):
     """The suit as a bust (helmet, chest, pauldrons): a whole suit at 16 px was a blur of limbs."""
     ic.box(3, 9, 12, 14, STEEL, 4)               # chest
     ic.rect(4, 9, 11, 9, STEEL[6])
@@ -502,7 +502,7 @@ def t_hunter(ic):
 
 
 ICONS = {
-    'power_armor': power_armor,
+    'power_suit': power_suit,
     'suit_helmet': helmet_standard,
     'suit_helmet_protector': helmet_protector,
     'suit_helmet_spartan': helmet_spartan,

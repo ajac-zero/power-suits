@@ -7,29 +7,29 @@ dark glass. Each reserved colour maps to a bright colour in one glowmask; everyt
 which draws nothing (SuitGlowLayer draws the masks full-bright on top, tinted per frame; in 26.3 the "eyes" pass blends
 by alpha, it doesn't add light, so a dark mask colour paints the part darker: lights that fade fade by opacity, and a
 colour may carry its own opacity, the third item in GLOW):
-  power_armor_glow_fire.png   the firebox coals (yellow at the bottom -> red at the top), painted flat on the backpack
-  power_armor_glow_visor.png  the visor glass, white (tinted green / amber / red by the suit's state)
-  power_armor_glow_heat.png   the chaingun's barrel tips (tinted by the barrels' heat)
-  power_armor_glow_heat_barrel.png  the barrels further back (dark red -> orange-red toward the tips) and the front collar
+  power_suit_glow_fire.png   the firebox coals (yellow at the bottom -> red at the top), painted flat on the backpack
+  power_suit_glow_visor.png  the visor glass, white (tinted green / amber / red by the suit's state)
+  power_suit_glow_heat.png   the chaingun's barrel tips (tinted by the barrels' heat)
+  power_suit_glow_heat_barrel.png  the barrels further back (dark red -> orange-red toward the tips) and the front collar
                               around them; it lights up
                               only when the barrels get really hot, so the heat creeps back from the tips. It's what
                               the pilot sees: from the cockpit the front collar hides the tips.
-  power_armor_glow_em_core.png  the EM projector's redstone lens and the vent slits round its housing
-  power_armor_glow_em_arc.png   the EM projector's redstone prong tips (they spark while the beam holds something)
-  power_armor_glow_tidal.png    the tidal engine's Heart of the Sea in the pump's porthole (teal)
-  power_armor_glow_reactor.png  the star reactor's core and the energy in its canisters' glass strips (violet -> white)
-  power_armor_glow_pilot.png    the flamethrower's pilot light, the tip of the slate rod by its nozzle (blue)
-  power_armor_glow_rail_flow_{0,1,2}.png  the core's rings, a third each: lit in turn, energy runs along the core
-  power_armor_glow_rail_emit.png  the emitter in the band's hole the energy comes out of (opaque, lit by the charge)
+  power_suit_glow_em_core.png  the EM projector's redstone lens and the vent slits round its housing
+  power_suit_glow_em_arc.png   the EM projector's redstone prong tips (they spark while the beam holds something)
+  power_suit_glow_tidal.png    the tidal engine's Heart of the Sea in the pump's porthole (teal)
+  power_suit_glow_reactor.png  the star reactor's core and the energy in its canisters' glass strips (violet -> white)
+  power_suit_glow_pilot.png    the flamethrower's pilot light, the tip of the slate rod by its nozzle (blue)
+  power_suit_glow_rail_flow_{0,1,2}.png  the core's rings, a third each: lit in turn, energy runs along the core
+  power_suit_glow_rail_emit.png  the emitter in the band's hole the energy comes out of (opaque, lit by the charge)
 The script refuses to run if a reserved colour turns up outside the expected amount (someone painted with it).
-The rail cannon's core colours are see-through (SEE_THROUGH): cleared from power_armor.png once their masks are made, so
+The rail cannon's core colours are see-through (SEE_THROUGH): cleared from power_suit.png once their masks are made, so
 run make-paint-textures.py after this script.
 """
 from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-TEX = ROOT / 'src/main/resources/assets/powerarmor/textures/entity'
+TEX = ROOT / 'src/main/resources/assets/power_suits/textures/entity'
 H = lambda s: tuple(int(s[i:i + 2], 16) for i in (0, 2, 4))
 
 # reserved base colour -> (mask, glow colour)
@@ -97,7 +97,7 @@ SEE_THROUGH = {'rail_flow_0', 'rail_flow_1', 'rail_flow_2'}
 
 
 def main():
-    path = TEX / 'power_armor.png'
+    path = TEX / 'power_suit.png'
     src = Image.open(path).convert('RGBA')
     masks = {name: Image.new('RGBA', src.size, (0, 0, 0, 0)) for name in EXPECTED}
     count = dict.fromkeys(EXPECTED, 0)
@@ -112,7 +112,7 @@ def main():
                 if hit[0] in SEE_THROUGH:
                     clear.append((x, y))
     # Run again on a texture already cleared (no new export): the see-through masks are kept as they are.
-    kept = {name for name in SEE_THROUGH if count[name] == 0 and (TEX / f'power_armor_glow_{name}.png').exists()}
+    kept = {name for name in SEE_THROUGH if count[name] == 0 and (TEX / f'power_suit_glow_{name}.png').exists()}
     for name in kept:
         count[name] = EXPECTED[name]
     if count != EXPECTED:
@@ -120,9 +120,9 @@ def main():
                          f'glowing parts changed (update EXPECTED)')
     for name, im in masks.items():
         if name in kept:
-            print(f'kept power_armor_glow_{name}.png (its pixels were already cleared from the texture)')
+            print(f'kept power_suit_glow_{name}.png (its pixels were already cleared from the texture)')
             continue
-        out = TEX / f'power_armor_glow_{name}.png'
+        out = TEX / f'power_suit_glow_{name}.png'
         im.save(out)
         print(f'wrote {out.relative_to(ROOT)} ({count[name]} pixels)')
     if clear:

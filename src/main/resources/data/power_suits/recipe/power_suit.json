@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "ATA",
+    "L L"
+  ],
+  "key": {
+    "A": "power_suits:suit_arm",
+    "T": "power_suits:suit_torso",
+    "L": "power_suits:suit_leg"
+  },
+  "result": {
+    "id": "power_suits:power_suit",
+    "count": 1
+  }
+}

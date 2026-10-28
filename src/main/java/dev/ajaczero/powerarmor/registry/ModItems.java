@@ -28,7 +28,7 @@ public final class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(PowerArmor.MODID);
 
     /** The packed-up suit. Its durability bar is the suit's health, so you can repair it in an anvil. */
-    public static final DeferredItem<PowerArmorItem> POWER_ARMOR = ITEMS.registerItem("power_armor", PowerArmorItem::new, props -> props
+    public static final DeferredItem<PowerArmorItem> POWER_ARMOR = ITEMS.registerItem("power_suit", PowerArmorItem::new, props -> props
                     .durability(PowerArmorEntity.MAX_HEALTH)
                     .repairable(Items.IRON_INGOT) // anvil repair with iron ingots
                     .rarity(Rarity.UNCOMMON));
@@ -37,7 +37,7 @@ public final class ModItems {
     public static final DeferredItem<ChaingunItem> CHAINGUN = ITEMS.registerItem("chaingun", ChaingunItem::new, props -> props.stacksTo(1).rarity(Rarity.UNCOMMON));
 
     static {
-        // Worlds saved before the renames store "powerarmor:plasma_cannon" or "powerarmor:rivet_gun": load those stacks
+        // Worlds saved before the renames store "power_suits:plasma_cannon" or "power_suits:rivet_gun": load those stacks
         // as chainguns instead of dropping them as unknown items.
         for (String old : new String[] {"plasma_cannon", "rivet_gun"}) {
             ITEMS.addAlias(Identifier.fromNamespaceAndPath(PowerArmor.MODID, old),
@@ -66,11 +66,11 @@ public final class ModItems {
     // arm and a leg are crafted twice: both sides are the same piece), the helmet goes in the suit's helmet slot.
     // Stack to 1 like vanilla armour.
     public static final DeferredItem<SuitPartItem> SUIT_TORSO = ITEMS.registerItem("suit_torso",
-            props -> new SuitPartItem(props, "item.powerarmor.suit_part.tooltip"), props -> props.stacksTo(1));
+            props -> new SuitPartItem(props, "item.power_suits.suit_part.tooltip"), props -> props.stacksTo(1));
     public static final DeferredItem<SuitPartItem> SUIT_ARM = ITEMS.registerItem("suit_arm",
-            props -> new SuitPartItem(props, "item.powerarmor.suit_part.tooltip"), props -> props.stacksTo(1));
+            props -> new SuitPartItem(props, "item.power_suits.suit_part.tooltip"), props -> props.stacksTo(1));
     public static final DeferredItem<SuitPartItem> SUIT_LEG = ITEMS.registerItem("suit_leg",
-            props -> new SuitPartItem(props, "item.powerarmor.suit_part.tooltip"), props -> props.stacksTo(1));
+            props -> new SuitPartItem(props, "item.power_suits.suit_part.tooltip"), props -> props.stacksTo(1));
     /** The helmet: its look (design sec. 4c) is a data component, set at a smithing table (SuitHelmetItem). */
     public static final DeferredItem<SuitHelmetItem> SUIT_HELMET = ITEMS.registerItem("suit_helmet", SuitHelmetItem::new, props -> props.stacksTo(1));
 

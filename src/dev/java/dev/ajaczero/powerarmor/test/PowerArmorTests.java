@@ -443,12 +443,12 @@ public final class PowerArmorTests {
     public static void itemTooltipsShowTheirLines(GameTestHelper helper) {
         var context = Item.TooltipContext.of(helper.getLevel());
         List<String> chaingun = tooltipKeys(new ItemStack(ModItems.CHAINGUN.get()), context);
-        helper.assertTrue(chaingun.size() >= 4 && chaingun.get(1).equals("item.powerarmor.chaingun.tooltip")
-                && chaingun.contains("item.powerarmor.power_tool.install"), "the chaingun's lines, got " + chaingun);
+        helper.assertTrue(chaingun.size() >= 4 && chaingun.get(1).equals("item.power_suits.chaingun.tooltip")
+                && chaingun.contains("item.power_suits.power_tool.install"), "the chaingun's lines, got " + chaingun);
         ItemStack spartan = new ItemStack(ModItems.SUIT_HELMET.get());
         spartan.set(ModDataComponents.HELMET_STYLE.get(), HelmetStyle.SPARTAN);
         List<String> helmet = tooltipKeys(spartan, context);
-        helper.assertTrue(helmet.contains("item.powerarmor.suit_helmet.spartan.flavour"), "the style's flavour line, got " + helmet);
+        helper.assertTrue(helmet.contains("item.power_suits.suit_helmet.spartan.flavour"), "the style's flavour line, got " + helmet);
         helper.succeed();
     }
 
@@ -2309,7 +2309,7 @@ public final class PowerArmorTests {
     @SuitTest
     public static void readmeSummonMakesARogue(GameTestHelper helper) throws Exception {
         CompoundTag tag = TagParser.parseCompoundFully(
-                "{id:\"powerarmor:power_armor\",Mind:\"ROGUE\",Inventory:{Items:[{Slot:1b,id:\"powerarmor:chaingun\",count:1}]}}");
+                "{id:\"power_suits:power_suit\",Mind:\"ROGUE\",Inventory:{Items:[{Slot:1b,id:\"power_suits:chaingun\",count:1}]}}");
         var entity = EntityType.loadEntityRecursive(tag, helper.getLevel(), new EntitySpawnRequest(EntitySpawnReason.COMMAND, false), e -> e);
         helper.assertTrue(entity instanceof PowerArmorEntity suit && suit.isRogue()
                 && suit.getInventory().getItem(PowerArmorEntity.SOCKET_SLOT).is(ModItems.CHAINGUN.get()), "a chaingun rogue");
@@ -2906,7 +2906,7 @@ public final class PowerArmorTests {
         helper.assertTrue(named.getHoverName().getString().equals("Bucket"), "an anvil name still wins over the style's");
         ItemStack spartan = styled(HelmetStyle.SPARTAN);
         helper.assertTrue(spartan.getHoverName().getContents() instanceof TranslatableContents t
-                && t.getKey().equals("item.powerarmor.suit_helmet.spartan"), "a styled helmet is named after its style, got " + spartan.getHoverName());
+                && t.getKey().equals("item.power_suits.suit_helmet.spartan"), "a styled helmet is named after its style, got " + spartan.getHoverName());
         helper.assertTrue(smith(helper, new ItemStack(ModItems.SPARTAN_TEMPLATE.get()), new ItemStack(ModItems.SUIT_HELMET.get()),
                 new ItemStack(Items.TURTLE_HELMET)).isEmpty(), "a template only takes its own style object");
         helper.assertTrue(smith(helper, new ItemStack(ModItems.SPARTAN_TEMPLATE.get()), new ItemStack(Items.IRON_HELMET),

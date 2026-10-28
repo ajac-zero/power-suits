@@ -44,31 +44,31 @@ public final class SuitAnimator {
     /** How long the jump animation is forced after release, covering the delay + takeoff. */
     private static final int JUMP_ANIM_HOLD_TICKS = 6;
     // ---- Animations (names from the exported Blockbench animation file) --------------------
-    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.power_armor.idle");
-    private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.power_armor.walk");
+    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.power_suit.idle");
+    private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.power_suit.walk");
     /** The walk with its keys reversed in time (made in Blockbench from the walk): backing up steps backwards. */
-    private static final RawAnimation WALK_BACK = RawAnimation.begin().thenLoop("animation.power_armor.walk_back");
-    private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_armor.run");
-    private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.power_armor.death");
-    private static final RawAnimation HIT = RawAnimation.begin().thenPlay("animation.power_armor.hit");
+    private static final RawAnimation WALK_BACK = RawAnimation.begin().thenLoop("animation.power_suit.walk_back");
+    private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.power_suit.run");
+    private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.power_suit.death");
+    private static final RawAnimation HIT = RawAnimation.begin().thenPlay("animation.power_suit.hit");
     // jump plays once (push-off + tuck) and flows straight into the airborne loop
-    private static final RawAnimation JUMP = RawAnimation.begin().thenPlay("animation.power_armor.jump").thenLoop("animation.power_armor.fall");
-    private static final RawAnimation FALL = RawAnimation.begin().thenLoop("animation.power_armor.fall");
-    private static final RawAnimation LAND = RawAnimation.begin().thenPlay("animation.power_armor.land");
-    private static final RawAnimation JUMP_CHARGE = RawAnimation.begin().thenPlayAndHold("animation.power_armor.jump_charge");
+    private static final RawAnimation JUMP = RawAnimation.begin().thenPlay("animation.power_suit.jump").thenLoop("animation.power_suit.fall");
+    private static final RawAnimation FALL = RawAnimation.begin().thenLoop("animation.power_suit.fall");
+    private static final RawAnimation LAND = RawAnimation.begin().thenPlay("animation.power_suit.land");
+    private static final RawAnimation JUMP_CHARGE = RawAnimation.begin().thenPlayAndHold("animation.power_suit.jump_charge");
     // Out of fuel: slump and hold. powered_off is the last frame of shutdown, for suits that were already off.
-    private static final RawAnimation SHUTDOWN = RawAnimation.begin().thenPlayAndHold("animation.power_armor.shutdown");
-    private static final RawAnimation POWERED_OFF = RawAnimation.begin().thenPlayAndHold("animation.power_armor.powered_off");
-    private static final RawAnimation STARTUP = RawAnimation.begin().thenPlay("animation.power_armor.startup");
+    private static final RawAnimation SHUTDOWN = RawAnimation.begin().thenPlayAndHold("animation.power_suit.shutdown");
+    private static final RawAnimation POWERED_OFF = RawAnimation.begin().thenPlayAndHold("animation.power_suit.powered_off");
+    private static final RawAnimation STARTUP = RawAnimation.begin().thenPlay("animation.power_suit.startup");
     // Struck by lightning: convulse (the electrified loop, played once) and then slump like an empty tank. thenPlay would
     // use the JSON's loop setting ("loop": true for electrified) and convulse forever; PLAY_ONCE moves on to the slump.
     private static final RawAnimation ZAPPED = RawAnimation.begin()
-            .then("animation.power_armor.electrified", LoopType.PLAY_ONCE)
-            .thenPlayAndHold("animation.power_armor.shutdown");
-    private static final RawAnimation TOOL_RECOIL = RawAnimation.begin().thenPlay("animation.power_armor.tool_recoil");
+            .then("animation.power_suit.electrified", LoopType.PLAY_ONCE)
+            .thenPlayAndHold("animation.power_suit.shutdown");
+    private static final RawAnimation TOOL_RECOIL = RawAnimation.begin().thenPlay("animation.power_suit.tool_recoil");
     // Right hand (a_hand.js): carry pose while the pilot holds something, quick reach on every use.
-    private static final RawAnimation HOLD_ITEM = RawAnimation.begin().thenLoop("animation.power_armor.hold_item");
-    private static final RawAnimation USE_ITEM = RawAnimation.begin().thenPlay("animation.power_armor.use_item");
+    private static final RawAnimation HOLD_ITEM = RawAnimation.begin().thenLoop("animation.power_suit.hold_item");
+    private static final RawAnimation USE_ITEM = RawAnimation.begin().thenPlay("animation.power_suit.use_item");
 
     private final PowerArmorEntity suit;
     /** Client only: smoothed horizontal speed in blocks per second, used to pick walk/run/idle. */
@@ -291,7 +291,7 @@ public final class SuitAnimator {
         var manager = this.suit.getAnimatableInstanceCache().getManagerForId(this.suit.getId());
         var controller = manager == null ? null : manager.getAnimationControllers().get("movement");
         var current = controller == null ? null : controller.getCurrentAnimationPoint();
-        return current == null ? "-" : current.animation().name().replace("animation.power_armor.", "");
+        return current == null ? "-" : current.animation().name().replace("animation.power_suit.", "");
     }
     /** Client: how hard the engine works, 0 idle .. 1 sprinting, +0.3 while a tool runs (engine sound). */
     public float engineLoad() {

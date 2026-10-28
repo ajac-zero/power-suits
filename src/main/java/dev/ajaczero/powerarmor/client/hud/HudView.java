@@ -183,7 +183,7 @@ public final class HudView {
     /** The first row: the count on the big counter, AMMO beside it on its baseline, inverted on the last rounds. */
     public void ammoRow(GuiGraphicsExtractor g, int count, boolean last) {
         this.counter(g, count, this.cornerRight(), CORNER_Y0 + 2, this.main());
-        this.cornerLabel(g, Component.translatable("hud.powerarmor.ammo"), CORNER_Y0 + 9, critical(last));
+        this.cornerLabel(g, Component.translatable("hud.power_suits.ammo"), CORNER_Y0 + 9, critical(last));
     }
 
     /** The second row (the left's FUEL row): a bar under the counter, its label beside it (the alert's). */
@@ -270,7 +270,7 @@ public final class HudView {
     /** Fallout's ammo counter: three digits at twice the font's size (006; 999 = "999 or more"; endless = the sign),
      *  ending at {@code right}. Returns its left edge. */
     public int counter(GuiGraphicsExtractor g, int count, int right, int y, int colour) {
-        Component text = count == HudReadout.ENDLESS ? Component.translatable("hud.powerarmor.endless")
+        Component text = count == HudReadout.ENDLESS ? Component.translatable("hud.power_suits.endless")
                 : Component.literal(String.format(java.util.Locale.ROOT, "%03d", Math.min(Math.max(count, 0), 999)));
         int w = 2 * (this.font.width(text) - 1); // without the font's trailing gap
         var pose = g.pose();
@@ -289,11 +289,11 @@ public final class HudView {
     public void pips(GuiGraphicsExtractor g, HudReadout r, int x, int y, int max) {
         HudAlert alert = critical(r.lowAmmo() || r.count() == 0);
         if (r.count() == HudReadout.ENDLESS) {
-            this.centred(g, Component.translatable("hud.powerarmor.endless"), x, y - 2, alert);
+            this.centred(g, Component.translatable("hud.power_suits.endless"), x, y - 2, alert);
             return;
         }
         if (r.count() <= 0) {
-            this.centred(g, Component.translatable("hud.powerarmor.empty"), x, y - 2, alert);
+            this.centred(g, Component.translatable("hud.power_suits.empty"), x, y - 2, alert);
             return;
         }
         int n = Math.min(r.count(), max);

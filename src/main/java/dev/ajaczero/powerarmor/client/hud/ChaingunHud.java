@@ -24,7 +24,7 @@ public final class ChaingunHud implements ToolHud {
         }
         v.ammoRow(g, r.count(), r.lowAmmo());
         boolean locked = r.barLocked();
-        v.gaugeRow(g, Component.translatable(locked ? "hud.powerarmor.overheat" : "hud.powerarmor.heat"), r.bar(), r.barAlert());
+        v.gaugeRow(g, Component.translatable(locked ? "hud.power_suits.overheat" : "hud.power_suits.heat"), r.bar(), r.barAlert());
         return String.format(Locale.ROOT, "ammo=%d heat=%.2f %s%s%s", r.count(), r.bar(), r.barAlert().name().toLowerCase(Locale.ROOT),
                 r.lowAmmo() ? " low" : "", locked ? " overheat" : "");
     }
