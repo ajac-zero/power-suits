@@ -131,7 +131,7 @@ html:not(.js) .carousel .slide:first-child { opacity: 1; }
 aside p:first-child { margin-top: 0; }
 
 
-body > * { image-rendering: auto; }
+body > *:not(header) { image-rendering: auto; }
 header > * { image-rendering: auto; }
 
 /* Dim the page texture with an overlay layer; the texture file itself stays untouched and crisp */
