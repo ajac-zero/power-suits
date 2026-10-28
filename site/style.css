@@ -4,7 +4,7 @@
 html { overflow-y: scroll; height: 100%; }
 body {
   margin: 0; color: #e0d0d0; background-color: #111;
-  background-image: url(img/tex/deepslate.png);
+  background-image: url(img/tex/deepslate_tiles.png);
   background-size: 64px; image-rendering: pixelated;
   font: 15px/1.5 "Helvetica Neue", Helvetica, Arial, sans-serif;
   min-height: 100%; display: flex; flex-direction: column;
@@ -26,7 +26,7 @@ p, ul, ol { margin: 1.3em 0 0; }
 
 .wrap { width: 1000px; margin: 0 auto; }
 
-header { position: relative; image-rendering: pixelated; height: 56px; background-color: #211710; background-image: url(img/tex/spruce_planks.png); background-size: 64px; border-bottom: 3px solid #000; }
+header { position: relative; image-rendering: pixelated; height: 56px; background-color: #211710; background-image: url(img/tex/cut_copper.png); background-size: 64px; border-bottom: 3px solid #000; }
 #logo {
   float: left; width: 270px; height: 48px; display: flex; align-items: center; gap: 10px;
   color: #fff; font-size: 24px; font-weight: bold; letter-spacing: 0.01em; text-shadow: 2px 2px 0 #000;
@@ -135,7 +135,7 @@ body > *:not(header) { image-rendering: auto; }
 header > * { image-rendering: auto; }
 
 /* Dim the page texture with an overlay layer; the texture file itself stays untouched and crisp */
-body::before { content: ""; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.68); z-index: -1; pointer-events: none; }
+body::before { content: ""; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); z-index: -1; pointer-events: none; }
 body { position: relative; z-index: 0; isolation: isolate; }
 
 /* Header: dark dirt, everything centred on one line */
