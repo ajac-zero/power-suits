@@ -1,7 +1,7 @@
 // TOOL_RECOIL (power armor): the tool arm's kick for one heavy push (the EM projector's shove). Upper-body overlay, the
 // arm/torso recoil of the old plasma_shot / rivet_shot (from a_attack.js), without gun parts. 0.5 s: GeckoLib won't
 // restart a triggered animation that is still playing. The chaingun doesn't use it: its shots kick in code
-// (PowerArmorModel, recoil from the synced shot counter), ten a second at full spin.
+// (PowerSuitModel, recoil from the synced shot counter), ten a second at full spin.
 // Spec frame: the tool arm is right_* here (kit.json mirrors it onto the live left arm).
 const {spring,addTo,vnoise,track}=K;
 const T=0.5;

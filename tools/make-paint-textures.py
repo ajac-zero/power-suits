@@ -3,7 +3,7 @@
     uv run --with pillow python3 tools/make-paint-textures.py [base.png] [outdir]
 
 The suit is bare polished steel (model/art/steel_art.py); right-clicking it with a dye paints its armour plates
-(PowerArmorEntity.paintWith). Painting is a palette swap, the way Minecraft builds armour trims: the steel armour is
+(PowerSuitEntity.paintWith). Painting is a palette swap, the way Minecraft builds armour trims: the steel armour is
 drawn in eight shades (STEEL, deep shadow .. glint), and on the plates each shade becomes the same step of the dye's
 ramp. So every dye keeps the plates' shading (rims, tuck shadows, marks) and a repaint of the steel in Blockbench
 repaints every dye with it.
@@ -21,7 +21,7 @@ The ramps: blue is the suit's old paint exactly (the blue dye gives back the pre
 built from its main colour like the blue: each step keeps the blue's lightness offset from its main shade (scaled
 by RANGE: white and black need a narrower one) and chroma profile, and the hue leans warm in the lights and cool in
 the shadows (yellows shade towards orange). The printed ramps can be pinned by hand in FIXED.
-Output: textures/entity/paint/power_suit_<dye>.png (PowerArmorModel picks one by the suit's paint).
+Output: textures/entity/paint/power_suit_<dye>.png (PowerSuitModel picks one by the suit's paint).
 """
 import json
 import math

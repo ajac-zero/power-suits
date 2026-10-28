@@ -21,7 +21,7 @@ TEXTURES = os.path.join(ROOT, 'src/main/resources/assets/power_suits/textures/en
 TOOL_BONES = ['chaingun', 'em_projector', 'drill', 'chainsaw']
 HELMET_BONES = ['helmet', 'helm_protector', 'helm_spartan', 'helm_noble', 'helm_robot', 'helm_hunter']
 ENGINE_BONES = ['backpack_parts', 'pack_tidal', 'pack_reactor']
-# The visor's colours (PowerArmorEntity): amber with a pilot, green for a friendly mind, red for a rogue.
+# The visor's colours (PowerSuitEntity): amber with a pilot, green for a friendly mind, red for a rogue.
 VISOR_AMBER, VISOR_GREEN, VISOR_RED = (1.0, 0.68, 0.22), (0.35, 1.0, 0.45), (1.0, 0.12, 0.08)
 
 

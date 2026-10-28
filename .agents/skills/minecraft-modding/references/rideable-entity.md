@@ -1,6 +1,6 @@
 # Rideable / enterable entities (vehicles, mechs)
 
-All of this is in `src/main/java/dev/ajaczero/powerarmor/entity/PowerArmorEntity.java` with comments.
+All of this is in `src/main/java/dev/ajaczero/powersuits/entity/PowerSuitEntity.java` with comments.
 
 ## Riding: reuse the horse hooks (LivingEntity / Mob, 1.21.1)
 | Hook | Use |

@@ -1,7 +1,7 @@
 # Testing and verification
 
 Three layers, all used on every change: build, GameTests (logic, headless), autopilot (real client,
-screenshots + per-tick CSV). Example implementations: `src/dev/java/dev/ajaczero/powerarmor/test/`
+screenshots + per-tick CSV). Example implementations: `src/dev/java/dev/ajaczero/powersuits/test/`
 and `client/dev/` in `~/Developer/PowerArmor`.
 
 **Flaky tests**: run only the suspect, many times side by side, with a gameTestServer run that passes vanilla's

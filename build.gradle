@@ -29,7 +29,7 @@ sourceSets.main.resources {
 // Development tools: src/dev/ holds the GameTests, the autopilot scenes, the multiplayer script and the test_pad
 // structure. A second source set: it compiles against the mod (main) but isn't packed into the jar players download
 // (`jar` only takes main). The runs below load main + dev together as one mod (neoForge.mods), so every dev run
-// (runClient, runGameTestServer, runAutopilot...) has them. Entry point: dev/PowerArmorDev.
+// (runClient, runGameTestServer, runAutopilot...) has them. Entry point: dev/PowerSuitsDev.
 sourceSets {
     dev {
         compileClasspath += sourceSets.main.output

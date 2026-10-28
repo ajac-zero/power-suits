@@ -307,12 +307,12 @@ upgrades a world the first time it's opened and there's no way back: let it make
 ## Where things live
 
 ```
-src/main/java/dev/ajaczero/powerarmor/
-  PowerArmor.java            entry point: registers everything
+src/main/java/dev/ajaczero/powersuits/
+  PowerSuits.java            entry point: registers everything
   registry/ModEntities.java  the entity type (hitbox size, pilot seat height)
   registry/ModItems.java     the item
   registry/ModMenus.java     the suit menu type; ModDataComponents.java: the loadout stored on a packed item
-  entity/PowerArmorEntity.java  the suit as Minecraft sees it: vanilla hooks (riding, movement, water, jumping, damage,
+  entity/PowerSuitEntity.java  the suit as Minecraft sees it: vanilla hooks (riding, movement, water, jumping, damage,
                              death, saving), the synced data table, the slots, the tick that runs its parts:
     entity/SuitDriving.java  how it moves: the pilot's keys, walk/sprint speeds, stepping down ledges, sinking and walking
                              in water and lava, the charged jump, crawling in an EM field, the legs turning under the torso
@@ -326,8 +326,8 @@ src/main/java/dev/ajaczero/powerarmor/
   entity/FireboxFuel.java    asks a never-placed furnace how long it burns an item (the firebox's table)
   entity/SuitEngine.java     the engines (firebox / tidal / reactor); item/EngineItem.java: their items
   entity/ExhaustSmoke.java   client-side smoke from the back pipes
-  menu/PowerArmorMenu.java   menu logic: socket, fuel, helmet + engine slots, shift-click, F swaps with the
-                             socket, Power + Pack keys; opened by E inside (PowerArmorEntity.openCustomInventoryScreen)
+  menu/PowerSuitMenu.java   menu logic: socket, fuel, helmet + engine slots, shift-click, F swaps with the
+                             socket, Power + Pack keys; opened by E inside (PowerSuitEntity.openCustomInventoryScreen)
   item/SuitLoadout.java      fuel/tool/helmet/engine/half-burnt item carried by a packed suit item
   item/HelmetStyle.java      the helmet styles (design sec. 4c); SuitHelmetItem: name + flavour line, HelmetTemplateItem: the templates
   item/PowerTool.java        what a socket tool is: fuel per use, cooldown, model bone, use(); worked by an operator
@@ -357,23 +357,23 @@ src/main/java/dev/ajaczero/powerarmor/
   entity/Bullet.java         the tracer bullet (flight, hit without immunity, sparks off blocks)
   network/ToolTriggerPayload.java  client -> server "tool button pressed/released"
   network/PowerSwitchPayload.java  client -> server "the pilot pressed the power switch key"
-  item/PowerArmorItem.java   deploying / packing / repairing
+  item/PowerSuitItem.java   deploying / packing / repairing
   PilotProtection.java       redirects damage from the pilot to the suit (not "suffocating" against a wall)
   SuitSeal.java              sealed suit: fire/frost/effects kept out for fuel, air under water (tag damage_type/sealed_out)
   entity/SuitStomp.java      landing dust, stomp shock wave (damage type power_suits:stomp)
   entity/SuitSmash.java      breaking leaves/panes/glass/ice while walking/sprinting (block tags suit_smashes_*)
   PilotHands.java            hand needs power, +1.5 reach, +4 melee damage, F swaps the hand with the socket tool
-  PowerArmorConfig.java      balance knobs (config/power_suits-common.toml)
+  PowerSuitsConfig.java      balance knobs (config/power_suits-common.toml)
   registry/ModSounds.java    engine + tool sound events (audio picked in assets/power_suits/sounds.json)
   client/                    rendering only (never loaded on servers)
-    PowerArmorModel.java     points GeckoLib at the asset files
-    PowerArmorRenderer.java  copies the suit's state for the frame (SuitRenderData), aims the torso/head, raises the tool
+    PowerSuitModel.java     points GeckoLib at the asset files
+    PowerSuitRenderer.java  copies the suit's state for the frame (SuitRenderData), aims the torso/head, raises the tool
                              arm, shows the installed tool; draws only the legs in first person (cockpit)
     SuitRenderData.java      what the renderer and its layers read from the suit each frame (GeckoLib DataTickets)
     PilotView.java           hides the pilot and vanilla hands, pulls the camera back
     CockpitHands.java        first-person viewmodel: socket tool on the left, gauntlet + held item on the right
     CockpitView*.java        its GeckoLib animatable/renderer (geckolib/models/view, cut from the suit by tools/extract-view-geo.py)
-    PowerArmorScreen.java    draws the suit menu (the inventory screen with the suit: preview, flame, status screen, keys)
+    PowerSuitScreen.java    draws the suit menu (the inventory screen with the suit: preview, flame, status screen, keys)
     SuitKey.java             the menu's slot-sized keys (Power latches pushed in while on; Pack)
     SuitKeys.java            the suit's own key bindings (the power switch, night vision)
     SuitHud.java             the pilot's HUD (suit readout, compass + clock, the tool's own HUD) + low-fuel beep; moves boss bars
@@ -391,12 +391,12 @@ src/main/java/dev/ajaczero/powerarmor/
     BulletRenderer.java      the glowing tracer streak
     ToolRotors.java          turns the chaingun's barrels / the TNT drum, shakes the rail cannon (suit + cockpit viewmodel)
     ClientSetup.java         registers the renderer
-    PowerArmorClient.java    client-only @Mod entry: the visor config + the in-game config screen
+    PowerSuitsClient.java    client-only @Mod entry: the visor config + the in-game config screen
     SuitSounds.java          engine sounds now and then + tool loops (tickable sounds that follow the suit)
     FuelTooltip.java         "Power Suit fuel: 1:20 of walking" on every fuel
-src/dev/java/dev/ajaczero/powerarmor/   development tools: compiled against the mod, NOT in the jar players get
-  dev/PowerArmorDev.java     their @Mod entry point (dev runs load src/main + src/dev as one mod, see build.gradle)
-  test/PowerArmorTests.java  GameTests (@SuitTest methods, registered by test/SuitTests.java)
+src/dev/java/dev/ajaczero/powersuits/   development tools: compiled against the mod, NOT in the jar players get
+  dev/PowerSuitsDev.java     their @Mod entry point (dev runs load src/main + src/dev as one mod, see build.gradle)
+  test/PowerSuitTests.java  GameTests (@SuitTest methods, registered by test/SuitTests.java)
   client/dev/AutoPilot.java  scripted screenshot test drive (only with -Dpower_suits.autopilot); *Scene.java: its scenes,
                              TerrainPilot (real terrain), ShowcaseScene (the mod page's pictures)
   dev/MultiplayerScript.java + client/dev/MultiplayerScene.java   the scripted multiplayer check
@@ -432,7 +432,7 @@ src/main/resources/
   launches 2 ticks later, then `fall` loops; `land` plays after ~0.5 s in the air. Other players
   see the jump via a synced counter bumped by the server.
 - Turning: legs (`yBodyRot`) follow the direction of travel; the torso (with arms and tool) twists
-  up to 90 degrees and leans to face where the pilot looks (`PowerArmorRenderer.adjustModelBonesForRender`).
+  up to 90 degrees and leans to face where the pilot looks (`PowerSuitRenderer.adjustModelBonesForRender`).
 - First person: the eye sits at the visor (0.55 forward), the head/torso/hip shell is hidden and the
   suit is drawn with back-face culling, so no insides of cubes show.
 - Animation sources (procedural specs) live in `model/anim/`.
@@ -441,7 +441,7 @@ src/main/resources/
   The torso stops following the view while powered down. Spec: `model/anim/a_power.js`.
 - Socket: the left arm ends in an elbow socket and the installed tool is the forearm, carried at the hip (rest pose:
   upper arm 18 deg forward, elbow 62 deg); `socket` (coupling plate) shows when empty, the installed
-  tool's bone (`chaingun`, `em_projector`, `drill`, `chainsaw`) otherwise (`PowerArmorRenderer`). The EM push plays `tool_recoil` (0.5 s overlay, `a_tool_recoil.js`); the chaingun's barrels spin and its shots kick in code (`ToolRotors`, `PowerArmorRenderer`), and `tool_recoil`
+  tool's bone (`chaingun`, `em_projector`, `drill`, `chainsaw`) otherwise (`PowerSuitRenderer`). The EM push plays `tool_recoil` (0.5 s overlay, `a_tool_recoil.js`); the chaingun's barrels spin and its shots kick in code (`ToolRotors`, `PowerSuitRenderer`), and `tool_recoil`
   is triggered per shot; it must stay shorter than the cooldown because GeckoLib won't restart a running one.
 - Mining tools: while a continuous tool runs, the suit syncs `TOOL_RUNNING` and a fourth controller (`tool`)
   loops the tool's own animation: `drill_run` spins the `drill_bit` 4 turns/s and buzzes the head,

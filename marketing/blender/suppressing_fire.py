@@ -82,7 +82,7 @@ for side in ('right', 'left'):
 TWIST = arg('--twist', 20.0)
 for bone in ('body', 'hips'):
     M.pose(S[bone], (-HUNCH, 0, 0))
-M.pose(S['torso'], (0, 0, TWIST))  # the bone the game turns (PowerArmorRenderer.aim)
+M.pose(S['torso'], (0, 0, TWIST))  # the bone the game turns (PowerSuitRenderer.aim)
 M.update()
 
 # Where it fires: up at AIM_UP degrees, turned AIM_OUT past the torso's facing out to its left (away from us). The

@@ -16,13 +16,13 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
   are re-checked every tick (`checkSlotCopies`: a stack shrunk in place never tells its container). Keep new pairs that way.
 - *(26.3)* **No `ItemStack` in static initializers** ("Components not bound yet" crashed the client at startup):
   create them on first use.
-- **Balance values live in `PowerArmorConfig`** (COMMON config, hot-reloaded): read `.get()` where used, never
+- **Balance values live in `PowerSuitsConfig`** (COMMON config, hot-reloaded): read `.get()` where used, never
   cache in static fields; GameTests must compare against the config, not literal numbers (the dev `run/config`
   file is shared by the client, the GameTest server and your own edits).
 - **No deprecated Minecraft calls** (cleared 2026-10-26; check with `-Xlint:deprecation`): damage with
   `hurtServer(level, ...)` (not `hurt`), water with `isEyeInFluidType(NeoForgeMod.WATER_TYPE.value())`, fluid pushing by
   overriding `isPushedByFluid(FluidType)`, `level.isLoaded(pos)`, `EventHooks.finalizeMobSpawn`; item tooltips come from
-  `item/ModTooltip` (one NeoForge tooltip appender registered in `PowerArmor`), not `Item.appendHoverText`.
+  `item/ModTooltip` (one NeoForge tooltip appender registered in `PowerSuits`), not `Item.appendHoverText`.
 
 ## Client and server
 - **Shared code never touches client classes** (`Minecraft`, cameras, screens): they don't exist on a dedicated server, which
@@ -69,7 +69,7 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
 - **Fire is tracked on both sides**: the pilot's client moves the suit, touches fire blocks itself and draws flames from its
   own fire ticks, while the server's baseTick (early in the tick) sets the "on fire" flag other clients see, and a piloted
   suit also touches fire between ticks (move packets). Putting a running suit out needs `clearFire()` at the start and end
-  of the tick on both sides (`PowerArmorEntity.putOutFire`); log the client's `isOnFire()`, not only the server's.
+  of the tick on both sides (`PowerSuitEntity.putOutFire`); log the client's `isOnFire()`, not only the server's.
 - **Damage you cancel never reaches vanilla's hit immunity**: a fire block "hits" every tick, so paying fuel per absorbed hit
   needs its own half-second cooldown (`SuitSeal.SEAL_COOLDOWN_TICKS`).
 
@@ -78,7 +78,7 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
   players and walks back to its home; anything that leaves fuelled suits around (tests, autopilot scenes) gets that.
   To park one, switch it off (`flipPowerSwitch`, 2026-10-27) or take the fuel out. Its state is only set on its first tick: tests wait 2 ticks before boarding/aiming.
 - **Vanilla mobs move at speed squared**: `MoveControl` passes the speed as the forward input (zza) and `moveRelative`
-  applies it again (a 0.119 suit crawled at 0.6 blocks/s). `PowerArmorEntity.travel` normalises the mind's input, so
+  applies it again (a 0.119 suit crawled at 0.6 blocks/s). `PowerSuitEntity.travel` normalises the mind's input, so
   a navigation speed of 1.0 = the pilot's walk. Measure position deltas, not `getDeltaMovement()` (it already holds the
   next tick's drag: it read 2.9 for a 5.2 blocks/s walk).
 - **`Mob.serverAiStep` is final**: gate the mind with each goal's `canUse`/`canContinueToUse` + `updateControlFlags`.
@@ -239,10 +239,10 @@ to Minecraft 26.3 / GeckoLib 5. Add a new lesson to the right section when somet
   GeckoLib's channels to the fake connection).
 - **Menus can't be opened by GameTest mock players**: `makeMockPlayer` ignores `openMenu`, and
   `makeMockServerPlayerInLevel` throws on NeoForge's `advanced_open_screen` payload. Test menu logic by
-  constructing `PowerArmorMenu` directly; check the real screen in the autopilot (`ap_menu_*`).
+  constructing `PowerSuitMenu` directly; check the real screen in the autopilot (`ap_menu_*`).
 - **Mock players look where their HEAD points** (2026-10-26): `getViewVector` uses `yHeadRot`, and a mock player's head
   starts at a random yaw, so a test that only called `setYRot` aimed up to 5 degrees off (`bulletHitsWhatThePilotAimsAt`
-  missed 1 run in 5 for a week). Turn test pilots with `PowerArmorTests.lookAt` / `turn` (body, head, pitch, now and last
+  missed 1 run in 5 for a week). Turn test pilots with `PowerSuitTests.lookAt` / `turn` (body, head, pitch, now and last
   tick, like a real client).
 - **GameTests run side by side, also copies of the same test**: no shared mutable state in tests. World-wide settings
   (game rules, weather) go in the batch's test environment (`SuitTests.environmentFor`: the framework sets them before the

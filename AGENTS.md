@@ -33,7 +33,7 @@ knowledge lives in the project skills and their references (read the one that ma
 
 ## Layout
 - `src/main/` the mod (what ships). `src/dev/` GameTests, autopilot scenes, the multiplayer script and `test_pad`: a
-  separate source set that sees the mod but isn't in the jar (entry `dev/PowerArmorDev`; every run loads both). New dev
+  separate source set that sees the mod but isn't in the jar (entry `dev/PowerSuitsDev`; every run loads both). New dev
   or test code goes there.
 - `model/` the Blockbench source (`power_suit.bbmodel`, `anim/` procedural animation specs: bake them as
   `model/anim/README.md` says, `art/` texture/part scripts); `tools/` export, art and test helpers; `run/` the dev game (not in git); `marketing/` key art (see its README).
@@ -76,7 +76,7 @@ API: grep the sources.
 
 ## Rules for code
 Why each rule exists is in `power-armor-lessons.md`.
-- **Where things go.** `PowerArmorEntity` is the suit as Minecraft sees it (vanilla hooks, the synced data table, the
+- **Where things go.** `PowerSuitEntity` is the suit as Minecraft sees it (vanilla hooks, the synced data table, the
   slots, the tick); its rules live in its parts, one class each: `SuitDriving`, `SuitPower`, `SuitSocket`, `SuitBrain`,
   client `SocketVisuals`, `SuitAnimator`, `SuitLights`. A tool lives in its own files: its item (`PowerTool`: what it
   does, `mindUse()` / `mindGoals()` its mind job, `createEffects()` its looks) and its `ToolEffects`; a new tool must not
@@ -87,7 +87,7 @@ Why each rule exists is in `power-armor-lessons.md`.
 - **Server state with a synced copy has one setter that writes both** (`SuitPower.setBurnState`); slot copies are
   re-checked every tick. Persisted tuning is re-applied on load (`BASE_STATS` in `readAdditionalSaveData`). Keep old save
   keys and formats.
-- **Balance values live in `PowerArmorConfig`** (hot-reloaded): read `.get()` where used, never cache them; tests compare
+- **Balance values live in `PowerSuitsConfig`** (hot-reloaded): read `.get()` where used, never cache them; tests compare
   against the config, not literals.
 - **Ridden movement is client-authoritative**: gate it on synced state; read the pilot's keys on the server through
   `SuitDriving.pilotInput`.

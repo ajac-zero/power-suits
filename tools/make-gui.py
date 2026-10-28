@@ -7,10 +7,10 @@ a horse's. So it starts from vanilla's inventory.png and keeps its frame, invent
 off-hand slot's frame. The armour column holds the suit's helmet and engine, then the burn flame, then the fuel slot (a
 furnace's order: what burns, the flame, the fuel). The column right of the preview mirrors it (user, 2026-10-27): the
 Power key opposite the helmet, the socket slot (vanilla's off-hand frame, moved up) opposite the engine, the Pack up key
-opposite the fuel; the keys are widgets the game draws (PowerArmorScreen.SuitKey), their symbols are the two sprites
+opposite the fuel; the keys are widgets the game draws (PowerSuitScreen.SuitKey), their symbols are the two sprites
 written here. The 2x2 crafting grid and the "Crafting" title make way for the status screen, a terminal over the full
-height (PowerArmorScreen draws its text in the visor's colour).
-Coordinates must match PowerArmorMenu (slots) and PowerArmorScreen (preview, flame, screen, keys).
+height (PowerSuitScreen draws its text in the visor's colour).
+Coordinates must match PowerSuitMenu (slots) and PowerSuitScreen (preview, flame, screen, keys).
 """
 import io
 import zipfile
@@ -55,7 +55,7 @@ img.save('src/main/resources/assets/power_suits/textures/gui/power_suit.png')
 print('wrote textures/gui/power_suit.png')
 
 # The keys' symbols, white (the screen tints them: grey, or green when the Power key is on), positioned by
-# PowerArmorScreen. Power, 9x8 (user's pick D, 2026-10-27, over 2 px stems that looked too heavy): a 1 px stem in a ring
+# PowerSuitScreen. Power, 9x8 (user's pick D, 2026-10-27, over 2 px stems that looked too heavy): a 1 px stem in a ring
 # open at the top; an odd width can't be exactly centred on the 18 px key, it sits half a pixel left. Pack, 8x8 and
 # centred: an arrow into a tray, a pixel of air between the arrow's tip and the tray's floor.
 SYMBOLS = {

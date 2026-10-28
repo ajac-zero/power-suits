@@ -8,7 +8,7 @@ for r in rows: by[r['phase']].append(r)
 print(f"{'phase':8} {'avgSpd':>6} {'free':>5} {'target':>6} {'%air':>5} {'drops':>5} {'stepUps':>7} {'hColl%':>6} {'y range':>12} anims")
 for ph,rs in by.items():
     rs=rs[10:]
-    tgt=6.25 if ph.startswith('sprint') else 2.22  # PowerArmorEntity: the run's and walk's authored speeds
+    tgt=6.25 if ph.startswith('sprint') else 2.22  # PowerSuitEntity: the run's and walk's authored speeds
     free=[r['speed'] for r in rs if not r['hCollide'] and r['onGround']]
     air=sum(not r['onGround'] for r in rs)/len(rs)*100
     ups=sum(1 for a,b in zip(rs,rs[1:]) if b['y']-a['y']>0.3 and a['onGround'] and b['onGround'])
