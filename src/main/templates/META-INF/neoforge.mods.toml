@@ -34,7 +34,12 @@ displayName="${mod_name}" #mandatory
 #displayURL="https://change.me.to.your.mods.homepage.example.invalid/" #optional
 
 # A file name (in the root of the mod JAR) containing a logo for display
-#logoFile="examplemod.png" #optional
+# The Modrinth icon (marketing/out/icon.png) in the Mods list. NeoForge 26.3 reads iconFile (the list entry, 24 px:
+# a 48 px copy, smoothed) and bannerFile (the top of the info panel, 50 px high: 256 px); logoFile is deprecated and
+# brings up a warning screen at startup.
+iconFile="powersuits_icon.png" #optional
+iconBlur=true #optional
+bannerFile="powersuits_banner.png" #optional
 
 # A text field displayed in the mod UI
 #credits="" #optional

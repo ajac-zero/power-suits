@@ -51,7 +51,7 @@ import net.neoforged.fml.loading.FMLPaths;
  * lit up in the way) and bowling it into the other pig ({@code ap_hud_em_bowl_5..9}); the chainsaw (nothing); a star reactor (endless fuel, no embers); boss bars
  * and effects moved out of the way; without the helmet (no HUD, vanilla's hearts); then each visor colour preset
  * ({@code ap_hud_colour_<preset>}, CUSTOM a pink typed in) and the config screen it's picked on
- * ({@code ap_hud_colour_screen}), putting the player's own colour back after.
+ * ({@code ap_hud_colour_screen}) and the Mods list with this mod's logo ({@code ap_hud_mods_list}), putting the player's own colour back after.
  * Shots {@code ap_hud_*.png}; log run/autopilot_hud.csv: per tick what the HUD drew (hull, fuel bar and text, embers,
  * alert (the suit's: none, warning, critical), powered, tool, tool_hud: what the tool's own readout said it drew, e.g. the TNT arc's
  * impact distance and flight ticks; hud_open / visor_sweep: how much of the screen the visor's scan had turned on as
@@ -209,7 +209,13 @@ final class HudScene {
                           server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.HELMET_SLOT, new ItemStack(ModItems.SUIT_HELMET.get()))); }
             case 940 -> { VisorConfig.PRESET.set(VisorConfig.Preset.AMBER); mc.gui.setScreen(configScreen()); } // its name in amber
             case 950 -> AutoPilot.shot(mc, "hud_colour_screen");
-            case 952 -> {
+            // the Mods list, searched down to this mod (the only entry is selected): its logo and name
+            case 952 -> mc.gui.setScreen(net.neoforged.neoforge.client.gui.modlist.ModListScreen.create(null));
+            case 956 -> mc.gui.screen().children().stream()
+                    .filter(c -> c instanceof net.minecraft.client.gui.components.EditBox)
+                    .findFirst().ifPresent(c -> ((net.minecraft.client.gui.components.EditBox) c).setValue("Power Suits"));
+            case 964 -> AutoPilot.shot(mc, "hud_mods_list");
+            case 966 -> {
                 mc.gui.setScreen(null);
                 VisorConfig.PRESET.set(savedPreset);
                 VisorConfig.COLOUR.set(savedColour);
