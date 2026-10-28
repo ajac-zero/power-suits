@@ -4,7 +4,6 @@ import dev.ajaczero.powerarmor.PowerArmorConfig;
 import dev.ajaczero.powerarmor.SuitSeal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.FluidTags;
@@ -156,7 +155,7 @@ public final class SuitPower {
         this.setBurnState(this.burnLeft + energy, energy);
     }
 
-    /** Server: turns the synced "powered" flag on or off, with the sounds and (for the pilot) why it went off. */
+    /** Server: turns the synced "powered" flag on or off, with the sounds. */
     void setPowered(boolean powered) {
         if (powered == this.suit.getEntityData().get(PowerArmorEntity.POWERED)) {
             return;
@@ -168,15 +167,8 @@ public final class SuitPower {
         } else {
             this.suit.playSound(SoundEvents.BEACON_DEACTIVATE, 1.0F, 0.6F);
             this.suit.playSound(SoundEvents.IRON_GOLEM_DAMAGE, 0.6F, 0.5F);
-            if (this.suit.getControllingPassenger() instanceof Player pilot) {
-                SuitEngine engine = this.suit.getEngine();
-                pilot.sendOverlayMessage(Component.translatable(this.stunTicks > 0 ? "message.powerarmor.lightning"
-                        : !this.switchedOn ? "message.powerarmor.switched_off"
-                        : engine == null ? "message.powerarmor.no_engine"
-                        : this.isFlooded() ? "message.powerarmor.flooded"
-                        : engine == SuitEngine.TIDAL ? "message.powerarmor.tidal_dry"
-                        : "message.powerarmor.out_of_fuel"));
-            }
+            // No message to the pilot (user, 2026-10-27): the visor just goes dark, and the suit menu's status line
+            // says why (PowerArmorScreen).
         }
     }
 
