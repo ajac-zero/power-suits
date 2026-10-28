@@ -21,7 +21,15 @@
 
 <div id="main" class="wrap clearfix">
 <section class="left">
-  <img class="shot" src="img/suppressing_fire.jpg" alt="A green suit with a Spartan helmet firing its chaingun at night">
+  <div class="carousel" id="carousel" aria-roledescription="carousel" aria-label="Screenshots">
+    <img class="slide on" src="img/suppressing_fire.jpg" alt="A green suit with a Spartan helmet firing its chaingun at night">
+    <img class="slide" src="img/dusk_cockpit.jpg" alt="The view from inside a red suit's cockpit at dusk, with a village ahead" loading="lazy">
+    <img class="slide" src="img/mine_cockpit.jpg" alt="Drilling into a stone ravine from the cockpit" loading="lazy">
+    <img class="slide" src="img/tree_side.jpg" alt="A green suit felling an oak with its chainsaw" loading="lazy">
+    <img class="slide" src="img/reef_back.jpg" alt="A yellow suit with a tidal engine walking across a coral reef" loading="lazy">
+    <img class="slide" src="img/em_front.jpg" alt="A purple suit lifting a creeper with the EM projector" loading="lazy">
+    <img class="slide" src="img/walk_front.jpg" alt="A blue power suit walking toward the camera across a meadow" loading="lazy">
+  </div>
   <p>
     Power Suits is a mod about climbing into a power suit. It gives you maximum protection, extra strength and a socket
     on its arm for heavy power tools. Put a helmet on and you are immune to fire, frost, poison and drowning, but soaking
@@ -36,7 +44,6 @@
   </p>
 </section>
 <aside>
-  <img class="art" src="img/big_daddy.jpg" alt="A brown suit with a drill on the sea floor in front of an ocean monument">
   <p><a class="button" href="https://github.com/ajac-zero/power-suits/releases/latest">Download</a></p>
   <p>Version {{version}} for Minecraft 26.3<br>or <a href="install.html">read the install guide</a></p>
   <p>Needs <a href="https://modrinth.com/mod/geckolib">GeckoLib 5</a> and NeoForge.<br>Server and client both need the mod.</p>
@@ -73,5 +80,36 @@
 </div>
 
 {{footer}}
+<script>
+  // Screenshot carousel: arrows, dots, and a slow auto-advance that stops on hover, focus or reduced motion.
+  (function () {
+    const box = document.getElementById("carousel");
+    const slides = [...box.querySelectorAll(".slide")];
+    let at = 0, timer;
+    const nav = document.createElement("div");
+    nav.className = "car-ui";
+    nav.innerHTML = '<button type="button" class="prev" aria-label="Previous screenshot">&#8249;</button>' +
+      '<button type="button" class="next" aria-label="Next screenshot">&#8250;</button>' +
+      '<div class="dots">' + slides.map((_, i) => '<button type="button" aria-label="Screenshot ' + (i + 1) + '"></button>').join("") + '</div>';
+    box.appendChild(nav);
+    const dots = [...nav.querySelectorAll(".dots button")];
+    function show(i) {
+      at = (i + slides.length) % slides.length;
+      slides.forEach((s, n) => s.classList.toggle("on", n === at));
+      dots.forEach((d, n) => d.setAttribute("aria-current", String(n === at)));
+    }
+    function play() {
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      stop(); timer = setInterval(() => show(at + 1), 6000);
+    }
+    function stop() { clearInterval(timer); }
+    nav.querySelector(".prev").onclick = () => { show(at - 1); play(); };
+    nav.querySelector(".next").onclick = () => { show(at + 1); play(); };
+    dots.forEach((d, n) => d.onclick = () => { show(n); play(); });
+    box.addEventListener("mouseenter", stop); box.addEventListener("mouseleave", play);
+    box.addEventListener("focusin", stop); box.addEventListener("focusout", play);
+    show(0); play();
+  })();
+</script>
 </body>
 </html>

@@ -108,3 +108,22 @@ footer p { margin: 0 0 8px; }
 }
 .thing .shot { height: 260px; }
 @media (max-width: 1040px) { .thing .shot { height: auto; } }
+
+/* Home screenshot carousel: slides stack and cross-fade; without script the first one just shows */
+.carousel { position: relative; width: 630px; height: 350px; background: #000; overflow: hidden; }
+.carousel .slide { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.6s; }
+.carousel .slide.on, .carousel .slide:first-child:last-of-type { opacity: 1; }
+html:not(.js) .carousel .slide:first-child { opacity: 1; }
+.car-ui button { cursor: pointer; border: 0; color: #fff; }
+.car-ui .prev, .car-ui .next {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 60px; font-size: 34px; line-height: 1;
+  background: rgba(0, 0, 0, 0.5);
+}
+.car-ui .prev { left: 0; } .car-ui .next { right: 0; }
+.car-ui .prev:hover, .car-ui .next:hover { background: #e8912d; }
+.dots { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; justify-content: center; gap: 8px; }
+.dots button { width: 12px; height: 12px; padding: 0; background: rgba(255, 255, 255, 0.45); }
+.dots button[aria-current="true"] { background: #e8912d; }
+@media (max-width: 1040px) { .carousel { width: 100%; height: auto; aspect-ratio: 9 / 5; } }
+@media (prefers-reduced-motion: reduce) { .carousel .slide { transition: none; } }
+aside p:first-child { margin-top: 0; }
