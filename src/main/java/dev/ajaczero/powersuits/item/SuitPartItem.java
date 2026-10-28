@@ -9,7 +9,7 @@ import net.minecraft.world.item.TooltipFlag;
 
 /**
  * A piece of the suit (torso, arm, leg, helmet): crafted on its own from iron blocks, lapis blocks and vanilla parts.
- * Torso, arms and legs are assembled into the Power Armor at a crafting table (recipes in
+ * Torso, arms and legs are assembled into the Power Suit at a crafting table (recipes in
  * data/power_suits/recipe/suit_*.json and power_suit.json); the helmet goes on the finished suit (its helmet slot):
  * it seals the suit and lets its machine mind run.
  */

@@ -3,7 +3,7 @@
 // Requires Blockbench running with its MCP plugin (http://localhost:3000/bb-mcp).
 //
 //   MOD_ROOT=~/MyMod MOD_ID=mymod NAME=my_entity node export_model.mjs
-// (defaults: mod root = cwd, MOD_ID/NAME from env; Power Armor uses power_suits / power_suit)
+// (defaults: mod root = cwd, MOD_ID/NAME from env; Power Suits uses power_suits / power_suit)
 //
 // Blockbench's own Bedrock exporter is used, so the files match what "File > Export" would give.
 // Animation names are renamed from animation.<anything>.* to animation.<NAME>.*.

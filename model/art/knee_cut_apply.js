@@ -1,6 +1,6 @@
 // Apply .scratch/knee-plan.json (from knee_cut_art.py) to the live project. Codemode function body:
 //   const apply = new Function("tools", (await tools.bash({command: "cat model/art/knee_cut_apply.js"})).output)(tools);
-//   await apply("/Users/ajac-zero/Developer/PowerArmor/.scratch/knee-plan.json");
+//   await apply("/Users/ajac-zero/Developer/PowerSuits/.scratch/knee-plan.json");
 // Checkpoint, then paint (one undoable tex.edit), resize/re-net the existing knee cubes, place the new ones.
 return async function apply(planPath, checkpoint = "before knee cutout") {
   const plan = JSON.parse((await tools.bash({command: `cat '${planPath}'`})).output);

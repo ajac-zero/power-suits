@@ -1,6 +1,6 @@
 # Entity inventory, menu, screen, item data, HUD (NeoForge 21.1)
 
-Built for the Power Armor suit menu (fuel + tool socket, Pack up button) and fuel gauge. Files:
+Built for the power suit menu (fuel + tool socket, Pack up button) and fuel gauge. Files:
 `menu/PowerSuitMenu.java`, `client/PowerSuitScreen.java`, `client/SuitHud.java` (was `FuelGauge`),
 `item/SuitLoadout.java`, `registry/ModMenus.java`, `registry/ModDataComponents.java`.
 

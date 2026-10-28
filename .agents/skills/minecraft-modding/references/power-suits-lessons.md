@@ -1,4 +1,4 @@
-# Power Armor: lessons from the game code
+# Power Suits: lessons from the game code
 
 Each of these cost a debugging round on this mod (moved here from `AGENTS.md` on 2026-10-26; the rules that follow from
 them are in `AGENTS.md`). Read the section that matches what you're changing. *(26.3)* marks what changed with the port

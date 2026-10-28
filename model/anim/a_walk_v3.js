@@ -1,4 +1,4 @@
-// WALK v3 (power armor): heavy power-march, no double support, stride 17, 0.6 s. ~3.5 blocks/s.
+// WALK v3 (power suit): heavy power-march, no double support, stride 17, 0.6 s. ~3.5 blocks/s.
 // v2 (2.35 blocks/s) in a_walk_v2.js; v1 = old IK walk + a_walk_upper.js.
 const {TAU,spring,addTo,pnoise,plant,gaitFoot,REST}=K;
 const T=0.6, beta=0.5, S=17, zc=-1.8;

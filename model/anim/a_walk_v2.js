@@ -1,4 +1,4 @@
-// WALK v2 (power armor): full-body gait, long heavy stride, solved planted feet. 2.35 blocks/s.
+// WALK v2 (power suit): full-body gait, long heavy stride, solved planted feet. 2.35 blocks/s.
 // Replaces the old IK walk + a_walk_upper.js layer (kept for reference).
 const {TAU,spring,addTo,pnoise,plant,gaitFoot,REST}=K;
 const T=0.76, beta=0.56, S=16, zc=-1.6;

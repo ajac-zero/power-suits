@@ -1,4 +1,4 @@
-// RIVET_SHOT (power armor): one rivet. Upper-body overlay, replaces plasma_shot (same arm/torso recoil, from a_attack.js).
+// RIVET_SHOT (power suit): one rivet. Upper-body overlay, replaces plasma_shot (same arm/torso recoil, from a_attack.js).
 // 0.5 s, shorter than the 0.6 s cooldown: GeckoLib won't restart a triggered animation that is still playing.
 // The rivet leaves at t=0. Gun parts: the piston slams toward the muzzle and eases back; the ammo drum turns 90 deg in
 // stepped keys and snaps back to 0 at the end (it's square, so the snap is invisible, and GeckoLib doesn't slowly

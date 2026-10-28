@@ -1,4 +1,4 @@
-// WALK v4 (power armor): heavy jog, short flight phase, stride 18, 0.6 s, ~4.95 blocks/s. Cannon stabilized.
+// WALK v4 (power suit): heavy jog, short flight phase, stride 18, 0.6 s, ~4.95 blocks/s. Cannon stabilized.
 // v3 march (3.54 b/s) a_walk_v3.js, v2 (2.35) a_walk_v2.js, v1 = old IK walk + a_walk_upper.js.
 const {TAU,spring,addTo,pnoise,plant,gaitFoot,REST}=K;
 const T=0.6, beta=0.375, S=18, zc=-1.8;

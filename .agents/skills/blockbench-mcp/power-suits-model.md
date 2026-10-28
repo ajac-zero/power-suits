@@ -1,6 +1,6 @@
-# Power Armor: lessons from the model, rig and texture
+# Power Suits: lessons from the model, rig and texture
 
-What the Power Armor model (`model/power_suit.bbmodel`) taught us, by topic (moved here from `AGENTS.md` on
+What the Power Suits model (`model/power_suit.bbmodel`) taught us, by topic (moved here from `AGENTS.md` on
 2026-10-26). Read it before rig, animation or texture work, together with this skill's `SKILL.md` + `ANIMATION.md` and
 the Art direction page of the design docs. Add a new lesson to the right section when something costs a round.
 

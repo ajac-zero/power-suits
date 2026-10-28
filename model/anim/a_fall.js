@@ -1,4 +1,4 @@
-// FALL (power armor): airborne loop. Legs pedal slowly, free arm balances, cannon drifts. t=0 == end of jump.
+// FALL (power suit): airborne loop. Legs pedal slowly, free arm balances, cannon drifts. t=0 == end of jump.
 // --- shared airborne pose (same block in a_jump.js and a_fall.js) ---
 const {TAU,track,spring,addTo,plant,flatPivot,footR,rolled,REST,lerp,smoother,pnoise}=K;
 const STANCE={};for(const s of ['r','l'])STANCE[s]={pv:flatPivot(s,REST[s].pivot[0],REST[s].pivot[2],REST[s].yaw),yaw:REST[s].yaw};

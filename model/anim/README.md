@@ -1,8 +1,8 @@
-# Power Armor animation sources
+# Power Suits animation sources
 
 Procedural specs that generated the animations in `../power_suit.bbmodel`. Pipeline docs: `../../.agents/skills/blockbench-mcp/ANIMATION.md`.
 
-With the model open in Blockbench (MCP plugin on `localhost:3000`), run this from the repo root (`~/Developer/PowerArmor`):
+With the model open in Blockbench (MCP plugin on `localhost:3000`), run this from the repo root (`~/Developer/PowerSuits`):
 
 ```sh
 node .agents/skills/blockbench-mcp/scripts/run.mjs model/anim/a_idle.js 0,1,2,3 fl   # bake, upload, film
@@ -11,7 +11,7 @@ DRY=1 node .agents/skills/blockbench-mcp/scripts/run.mjs model/anim/a_run.js non
 
 Uploading replaces the animation of the same name. Save in Blockbench afterwards.
 
-**The model is mirrored relative to these specs.** On 2026-10-13 Power Armor swapped the arms (working hand on the
+**The model is mirrored relative to these specs.** On 2026-10-13 Power Suits swapped the arms (working hand on the
 right, socket tools on the left) by mirroring the whole model across x = 0 (checkpoint "before arm swap mirror").
 The specs below are still written for the original rig (cannon on `right_forearm`, hand on `left_hand`), and
 `kit.json` (`"mirror": true`) tells `bb.mjs` to show them the model mirrored back and to mirror what they bake onto
@@ -72,4 +72,4 @@ arms vs thighs).
 | a_rivet_shot.js | rivet_shot: the rivet gun's shot (piston, drum); **removed from the model** with the rivet gun, kept as reference | legacy |
 | a_plasma_shot.js | plasma_shot: the old plasma cannon's shot with muzzle flash (**removed from the model**, kept as reference) | legacy |
 | a_power.js | shutdown (hold, 1.6 s), powered_off (hold, last frame), startup (once, 1.4 s): `K_JSON='{"MODE":"startup"}'` etc. | full body, planted feet |
-| a_tools.js | drill_run (loop 0.5 s: `drill_bit` 2 turns, head buzz), chainsaw_run (`K_JSON='{"MODE":"chainsaw_run"}'`: stepped chain shimmer, saw buzz). Keys only tool bones (GeckoLib overrides whole bones per controller) | tool overlays (Power Armor Phase 5) |
+| a_tools.js | drill_run (loop 0.5 s: `drill_bit` 2 turns, head buzz), chainsaw_run (`K_JSON='{"MODE":"chainsaw_run"}'`: stepped chain shimmer, saw buzz). Keys only tool bones (GeckoLib overrides whole bones per controller) | tool overlays (Power Suits Phase 5) |

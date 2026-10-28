@@ -1,4 +1,4 @@
-// RUN v4 (power armor): bounding sprint, long flight phase, stride 19, 0.42 s, ~10 blocks/s. Cannon stabilized.
+// RUN v4 (power suit): bounding sprint, long flight phase, stride 19, 0.42 s, ~10 blocks/s. Cannon stabilized.
 // v3 (8.52 b/s) a_run_v3.js, v2 (6.36) a_run_v2.js, v1 (3.35) a_run_v1.js
 const {TAU,spring,addTo,pnoise,plant,gaitFoot,REST}=K;
 const T=0.42, beta=0.283, S=19, zc=-1.9;

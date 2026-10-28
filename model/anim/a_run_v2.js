@@ -1,4 +1,4 @@
-// RUN v2 (power armor): long sprint stride, flight phase, solved planted feet, big arm pump, heavy cannon lag. 6.25 blocks/s.
+// RUN v2 (power suit): long sprint stride, flight phase, solved planted feet, big arm pump, heavy cannon lag. 6.25 blocks/s.
 // v1 (stride 13, 0.64 s, 3.35 blocks/s) is in a_run_v1.js
 const {TAU,spring,addTo,pnoise,plant,gaitFoot,REST}=K;
 const T=0.5, beta=0.34, S=17, zc=-1.6;

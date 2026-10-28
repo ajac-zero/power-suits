@@ -4,7 +4,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
  * Balance knobs, saved in {@code config/power_suits-common.toml} (created on first launch, comments included).
- * Edit the file or use Mods > Power Armor > Config in game; changes apply immediately, no restart.
+ * Edit the file or use Mods > Power Suits > Config in game; changes apply immediately, no restart.
  *
  * Fuel is counted in "energy": walking burns 1 per tick, so 20 energy = 1 second of walking and a piece of
  * coal (1600 by default) = 80 s. The comments express costs in those terms so they're easy to compare.

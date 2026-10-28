@@ -1,7 +1,7 @@
 // Boot sole heights through Blockbench's own playback: heel / toe height and pitch of each foot per time. Catches what a
-// spec can't: keys baked for an older rig (Power Armor: a walk baked for the heel hinge, played after the hinge moved,
+// spec can't: keys baked for an older rig (Power Suits: a walk baked for the heel hinge, played after the hinge moved,
 // tilted the planted boot up to 30 deg toes-up = "walking up a slope", and sank it 3 px).
-// usage: node livefeet.mjs [anim=walk] [heelZ=3.85] [toeZ=-8.8] [soleY=-0.225] [x=5.5]   (Power Armor's boot by default)
+// usage: node livefeet.mjs [anim=walk] [heelZ=3.85] [toeZ=-8.8] [soleY=-0.225] [x=5.5]   (Power Suits' boot by default)
 import * as B from './bb.mjs';
 await B.connect();const [an='walk',hz='3.85',tz='-8.8',sy='-0.225',xx='5.5']=process.argv.slice(2);const anim='animation.marine.'+an;
 const len=(await B.model()).animations.find(a=>a.name===anim).length;

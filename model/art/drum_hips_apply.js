@@ -1,6 +1,6 @@
 // Apply .scratch/drum-hips-plan.json (from drum_hips_art.py) to the live project. Codemode function body:
 //   const apply = new Function("tools", (await tools.bash({command: "cat model/art/drum_hips_apply.js"})).output)(tools);
-//   await apply("/Users/ajac-zero/Developer/PowerArmor/.scratch/drum-hips-plan.json");
+//   await apply("/Users/ajac-zero/Developer/PowerSuits/.scratch/drum-hips-plan.json");
 // Checkpoint "before drum hips"; paint; remove the V / band / fill / tip, the hip joints, thigh_top and the old
 // thigh_main; shorten the abdomen (now inside the hoods and the chest); create the hips / right_hood / left_hood bones
 // under the root; place the new cubes.

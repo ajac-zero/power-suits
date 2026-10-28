@@ -1,14 +1,14 @@
 # Vehicle-mounted tools, input packets, projectiles, GeckoLib items (NeoForge 21.1)
 
-Built for the Power Armor plasma cannon, then rivet gun, now its chaingun. Files: `item/PowerTool.java`,
+Built for the Power Suits plasma cannon, then rivet gun, now its chaingun. Files: `item/PowerTool.java`,
 `item/ChaingunItem.java`, `entity/Bullet.java`, `network/ToolTriggerPayload.java`, `client/ToolInput.java`,
 `client/BulletRenderer.java`, `entity/SuitSocket.tick`. (The rivet gun's sticking
 projectile is in git history, commit 299d91b.)
 
 ## Hold-to-use input from a vehicle
-- Client, a dedicated button (Power Armor until 2026-10-13: attack): `InputEvent.InteractionKeyMappingTriggered` ->
+- Client, a dedicated button (Power Suits until 2026-10-13: attack): `InputEvent.InteractionKeyMappingTriggered` ->
   `if (event.isAttack() && piloting) { setCanceled(true); setSwingHand(false); }` (stops punching / mining).
-- Client, shield-style on right click (Power Armor now): vanilla's `startUseItem` tries MAIN_HAND then OFF_HAND and
+- Client, shield-style on right click (Power Suits now): vanilla's `startUseItem` tries MAIN_HAND then OFF_HAND and
   NeoForge fires InteractionKeyMappingTriggered (`isUseItem()`, `getHand()`) before each; the event for OFF_HAND means
   the main hand had nothing to do (block use, item use, entity interaction all passed). Claim the press there
   (`toolHeld = true`), cancel it and every later use event (vanilla repeats every 4 ticks while held) until
@@ -93,14 +93,14 @@ projectile is in git history, commit 299d91b.)
   translate `(1/16, 0.125, 0)` for a right hand, `(-1/16, ...)` for a left one, at a bone placed at the grip, not the
   shoulder), scale for the bigger hand, `renderStatic(entity, stack, THIRD_PERSON_RIGHT_HAND, false, ...)`
   (`THIRD_PERSON_LEFT_HAND, true` for a left hand: vanilla mirrors the item's display transform). Skip it in the rider's own first-person view.
-- First person (Power Armor now draws a whole viewmodel instead, `CockpitHands`): cancel `RenderHandEvent` and redraw the item with vanilla's first-person math (mirrored for a left hand)
+- First person (Power Suits now draws a whole viewmodel instead, `CockpitHands`): cancel `RenderHandEvent` and redraw the item with vanilla's first-person math (mirrored for a left hand)
   (`applyItemArmTransform`, `applyItemArmAttackTransform`, swing translate, `applyEatTransform` are private:
   copy their few lines), `ItemInHandRenderer.renderItem(player, stack, FIRST_PERSON_LEFT_HAND, true, ...)`.
 - Swing reaction: watch the rider's `swinging` rising edge on the client (other players' swings arrive as
   packets) and `triggerAnim` locally; hold pose = a controller added after the gait controller (it owns the
   bones it animates while playing). Return STOP when the vehicle is off so the slump pose wins.
 - Rules for the rider: cancel `AttackEntityEvent`, `PlayerInteractEvent.LeftClickBlock`, `BlockEvent.BreakEvent`,
-  `RightClickBlock/RightClickItem/EntityInteract(Specific)` when the vehicle is unpowered (Power Armor once also blocked
+  `RightClickBlock/RightClickItem/EntityInteract(Specific)` when the vehicle is unpowered (Power Suits once also blocked
   attacking/mining always). Riders mine 5x slower (vanilla `if (!onGround()) speed /= 5`, and a passenger is never on
   the ground): `PlayerEvent.BreakSpeed` -> `setNewSpeed(speed * 5)` while the vehicle stands. Test with
   `CommonHooks.onLeftClickBlock/onRightClickBlock(...).isCanceled()` and `player.attack(mob)` in GameTests.

@@ -1,4 +1,4 @@
-// Power-tool loops (power armor, Phase 5). Played by the suit's "tool" controller while the tool runs.
+// Power-tool loops (power suit, Phase 5). Played by the suit's "tool" controller while the tool runs.
 // Only the tools' own bones are keyed: GeckoLib controllers override per bone, so touching the forearm
 // here would freeze the walk/run arm. MODE (K_JSON='{"MODE":"chainsaw_run"}'):
 //  - drill_run (default): drill_bit spins 2 turns per 0.5 s loop (4 rev/s), the drill head buzzes.

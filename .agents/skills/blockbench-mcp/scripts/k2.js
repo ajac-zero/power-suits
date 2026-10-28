@@ -37,15 +37,15 @@ function plantRaw(pose,s,pivot,Rw){const S=SIDE[s];
       try{return plantRaw(pose,s,[pivot[0],pivot[1]-lo,pivot[2]],Rw);}finally{OPT.lifting=false;}}}}
   return err;}
 // Ankle bend limits (degrees, foot X rotation incl. its rest, + = toes up toward the shin; null = free). A rig whose
-// ankle is hidden inside a boot (Power Armor's stompers: -25..+30) can't bend the foot far against the shin: plant() then rolls the foot instead,
+// ankle is hidden inside a boot (Power Suits' stompers: -25..+30) can't bend the foot far against the shin: plant() then rolls the foot instead,
 // about its lowest edge while it touches the ground (the contact point doesn't slip), lifting it if it would dig in.
 const OPT={ankle:null,square:false,kneeFloor:2};
-// the least knee flex plant() accepts (deg). A boot hinged in front of the shin's axis (offset -22.6 on Power Armor's
+// the least knee flex plant() accepts (deg). A boot hinged in front of the shin's axis (offset -22.6 on Power Suits'
 // v10 legs) has a straighter solution below -offset that flips back and forth with the bent one near full stretch
 // (knee jumps of 30-47 deg in a frame): such rigs set the floor at -offset (kit.json "kneeFloor") and stay bent.
 function setKneeFloor(d){OPT.kneeFloor=d;}   // ankle: [min, max] degrees or null (free); square: the ankle only bends (pitch)
 function setAnkleLimit(d){OPT.ankle=Array.isArray(d)?d:[-d,d];}
-// A foot that sits in a slot of the shin (Power Armor's boots) can't twist or roll against it: plant() then keeps the
+// A foot that sits in a slot of the shin (Power Suits' boots) can't twist or roll against it: plant() then keeps the
 // foot's Y/Z at zero total (square to the shin) and only bends it; the sole follows the shin's small yaw/roll.
 function setAnkleSquare(b){OPT.square=!!b;}
 function plant(pose,s,pivot,Rw){const S=SIDE[s];
@@ -108,7 +108,7 @@ function bodyLow(pose){const W=fk(rig,pose);let m=1e9;
   for(const n of rig.order){if(n==='muzzle_flash'||n==='grenade')continue;for(const c of rig.bones[n].cubes)for(const p of cubeCorners(c)){const y=xf(W[n],p)[1];if(y<m)m=y;}}return m;}
 // leg length hip pivot -> ankle pivot with the knee bent kneeDeg (thigh/shin lengths from the rig). kneeDeg is the
 // bone's flex (-(shin x rotation incl. rest)), not the angle between the pivot lines: an ankle pivot behind the knee
-// (Power Armor's boot hinges at its heel, 4 px back) makes the pivot line lean back ~19 deg at a straight bone, and
+// (Power Suits' boot hinges at its heel, 4 px back) makes the pivot line lean back ~19 deg at a straight bone, and
 // treating the two as equal let reachHip hyperextend the knee by that much.
 // An ankle pivot IN FRONT of the shin's axis (a boot hinged at the shin's front edge) gives a negative offset: the
 // pivot line is straightest with the knee bent by -offset, and a straighter knee bends the pivot line the other way

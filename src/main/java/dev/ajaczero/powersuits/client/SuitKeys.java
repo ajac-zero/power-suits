@@ -15,7 +15,7 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 /**
- * The suit's own keys (Options > Controls > Key Binds, under "Power Armor"). A key binding is client-only: the game
+ * The suit's own keys (Options > Controls > Key Binds, under "Power Suits"). A key binding is client-only: the game
  * remembers the key a player picked in options.txt and counts presses; what a press does on the world is the server's
  * business, so we send it a message (PowerSwitchPayload).
  * <ul>

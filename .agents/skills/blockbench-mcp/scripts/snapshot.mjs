@@ -1,5 +1,5 @@
 // Snapshot of the live project for the art scripts: {model, texture (data URL)} -> file.
-// usage: node snapshot.mjs out.json   (Power Armor: .scratch/stomper-source.json for model/art/legs_stomper_art.py)
+// usage: node snapshot.mjs out.json   (Power Suits: .scratch/stomper-source.json for model/art/legs_stomper_art.py)
 import * as B from './bb.mjs';
 import fs from 'node:fs';
 await B.connect();const m=await B.model();

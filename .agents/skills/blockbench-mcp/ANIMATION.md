@@ -57,7 +57,7 @@ return {name:'animation.x.idle', length:4.0, loop:'loop'|'once'|'hold', fps:20,
 - **Falls / death**: author FK key tracks for the collapse, blend the planted-feet IK into them over ~0.3 s, then each frame lift the root so `bodyLow(pose) = 0` while in contact (only prevent penetration before contact). A short `lift` bounce track on top gives the impact. When face-down, arms "forward" point into the ground; lay them along the body/side instead.
 - **Convulsions**: `pnoise` with harmonics 9\u201321 over the loop length for jitter plus 1\u20134 for slow waves; feet planted; stiff, locked-out arms.
 
-## Lessons from the Power Armor (Minecraft/GeckoLib) port
+## Lessons from the Power Suits (Minecraft/GeckoLib) port
 - Arm IK (4 DOF: arm x/y/z + forearm x) has an elbow-forward and an elbow-backward branch; the solver follows its seed. Seed on the natural flex side (check the sign on the rig: here +forearm X flexes), start every sample from the same seed so related animations meet at identical poses, and look at the result from the side before trusting small residuals.
 - Planted-feet IK can lower the hips but not raise them above the rest stance (legs nearly straight): put "jolt" / overshoot accents on the torso and head instead (IK error jumped 0.04 -> 0.34 at a hip rise of 0.3).
 - Stabilize a held weapon in gait specs: wrap `sample` so arm IK holds the elbow near its cycle-average position (keep ~25% of the bob) and `orient` the forearm to the average world rotation (keep ~15% of the sway). Cut run aim swing 25 deg -> 3.7 deg. See `stabilize()` in `model/anim/a_walk.js`.
@@ -67,7 +67,7 @@ return {name:'animation.x.idle', length:4.0, loop:'loop'|'once'|'hold', fps:20,
 - The `read` tool may serve a cached image for a path it already read; copy to a new filename to view a regenerated montage.
 - Z-fight scans must orient face normals outward: flush stacked cubes (opposite normals) are harmless; same-direction coplanar faces flicker. Inflate 0.1 fixes them without touching box UVs.
 
-## Gait iteration (Power Armor walk v6 / run v8, 2026-10-15)
+## Gait iteration (Power Suits walk v6 / run v8, 2026-10-15)
 The method that turned "baby steps", "hopping" and "a stutter" into gaits the user approved:
 1. **Translate the user's words into gait numbers** before touching anything: cycle length T, stance length S, duty
    beta (speed = S / (beta T); keep the game speed, so a longer T means longer steps), flight time, hip height curve,
@@ -107,7 +107,7 @@ Lessons, each from a real failure:
 - **Measure the live result too** (`livefeet.mjs`): keys baked for an older pivot play "fine" in Blockbench while the
   planted boot tilts and sinks.
 - **A hinge moved off the bone's axis changes which knee the IK can use**: a pivot at a limb's edge kinks the hip-knee-ankle
-  pivot line (the kit's `kneeOff`), so the leg is longest with the knee bent that much (Power Armor: knee hinge at the
+  pivot line (the kit's `kneeOff`), so the leg is longest with the knee bent that much (Power Suits: knee hinge at the
   shin's back corner -> 65 deg; hip hinge at the thigh's front edge -> knee 46, a squatting walk). Sweep the gaits on a
   `movepivot.py` copy (`MODEL=`) before moving any hinge.
 - **Sample finer than the bake**: at 120 fps the walk's foot dips 0.4 px for an instant between its 30 fps keys (the
@@ -121,7 +121,7 @@ Lessons, each from a real failure:
 
 ## Swapping sides (mirror the whole model)
 Moving a weapon/hand to the other arm: mirror the **whole** model across x = 0 instead of swapping only the arms
-(Power Armor, 2026-10-13). In one undoable `risky_eval` edit (`Undo.initEdit({elements: Cube.all, outliner: true,
+(Power Suits, 2026-10-13). In one undoable `risky_eval` edit (`Undo.initEdit({elements: Cube.all, outliner: true,
 animations: Animation.all})`): cubes `from.x/to.x` -> `-to.x/-from.x`, origin x negated, rotation y/z negated,
 `mirror_uv` toggled (box UV: exactly the mirror image); groups origin x and rotation y/z negated; keyframes rotation
 y/z and position x negated (data points are numeric strings; wrap Molang as `-(expr)`); swap `right_`/`left_` and

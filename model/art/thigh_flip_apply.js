@@ -1,6 +1,6 @@
 // Apply .scratch/thigh-flip-plan.json (from thigh_flip_art.py) to the live project. Codemode function body:
 //   const apply = new Function("tools", (await tools.bash({command: "cat model/art/thigh_flip_apply.js"})).output)(tools);
-//   await apply("/Users/ajac-zero/Developer/PowerArmor/.scratch/thigh-flip-plan.json");
+//   await apply("/Users/ajac-zero/Developer/PowerSuits/.scratch/thigh-flip-plan.json");
 // Checkpoint "before thigh flip"; paint (one undoable tex.edit); remove the old thigh cubes (one undoable edit); place
 // the new ones.
 return async function apply(planPath) {

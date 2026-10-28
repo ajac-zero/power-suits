@@ -1,4 +1,4 @@
-// WALK v5 (power armor, 2026-10-14 overhaul): a real walk, one foot always down (duty > 0.5), hips as high as the
+// WALK v5 (power suit, 2026-10-14 overhaul): a real walk, one foot always down (duty > 0.5), hips as high as the
 // planted foot allows (knee >= KMIN, reachHip), heel strike -> flat -> toe-off, low swing. Tool arm stabilized.
 // v4 (5 b/s jog with a flight phase and hips 3.6 px down: knees to 128 deg, clipping) in a_walk_v4.js.
 const {TAU,spring,addTo,pnoise,plant,gaitFoot,reachHip,REST}=K;

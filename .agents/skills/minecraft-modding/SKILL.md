@@ -1,11 +1,11 @@
 ---
 name: minecraft-modding
-description: Use when building or changing a Minecraft Java mod with NeoForge (1.21.x or 26.x) and GeckoLib (4 or 5), or porting one between them, especially animated Blockbench models as entities, rideable/enterable vehicles or mechs, GameTests, scripted in-game autopilot verification (screenshots, CSV logs), camera/HUD tweaks, water/terrain movement, saved-data migration, or teaching a first-time modder. Covers project setup on macOS, the Blockbench -> GeckoLib export pipeline, vanilla riding hooks, verification loops and the pitfalls that cost real debugging rounds on the Power Armor mod.
+description: Use when building or changing a Minecraft Java mod with NeoForge (1.21.x or 26.x) and GeckoLib (4 or 5), or porting one between them, especially animated Blockbench models as entities, rideable/enterable vehicles or mechs, GameTests, scripted in-game autopilot verification (screenshots, CSV logs), camera/HUD tweaks, water/terrain movement, saved-data migration, or teaching a first-time modder. Covers project setup on macOS, the Blockbench -> GeckoLib export pipeline, vanilla riding hooks, verification loops and the pitfalls that cost real debugging rounds on the Power Suits mod.
 ---
 
 # Minecraft modding (NeoForge + GeckoLib)
 
-Learned while building Power Armor (`~/Developer/PowerArmor`, an enterable mech suit from a Blockbench
+Learned while building Power Suits (`~/Developer/PowerSuits`, an enterable mech suit from a Blockbench
 model) with a user who had never modded before. Read the reference that matches the task:
 
 | Reference | Read when |
@@ -16,8 +16,8 @@ model) with a user who had never modded before. Read the reference that matches 
 | [references/rideable-entity.md](references/rideable-entity.md) | vehicles/mechs: riding, movement, camera, damage, terrain, water, saved data |
 | [references/testing.md](references/testing.md) | GameTests (incl. menus), the autopilot client harness, measuring in-game, protecting user worlds |
 | [references/tools-projectiles.md](references/tools-projectiles.md) | vehicle-mounted tools, hold-to-use input packets, aiming from a muzzle, projectiles, damage types, tool bones, GeckoLib items cut from an entity model |
-| [references/power-armor-lessons.md](references/power-armor-lessons.md) | changing Power Armor's code: the lessons each area cost, by topic (the rules are in the repo's `AGENTS.md`) |
-| [references/power-armor-runs.md](references/power-armor-runs.md) | verifying Power Armor: every command and autopilot scene, what it drives and logs; the web page and releases |
+| [references/power-suits-lessons.md](references/power-suits-lessons.md) | changing Power Suits' code: the lessons each area cost, by topic (the rules are in the repo's `AGENTS.md`) |
+| [references/power-suits-runs.md](references/power-suits-runs.md) | verifying Power Suits: every command and autopilot scene, what it drives and logs; the web page and releases |
 | [references/menus-hud.md](references/menus-hud.md) | entity inventories, menus + screens, menu buttons, item data components, synced entity data, HUD layers, particles |
 
 Scripts (run from anywhere, paths relative to this skill): `scripts/make_test_structure.py`
@@ -39,14 +39,14 @@ For model and animation work use the Blockbench skill:
    state per tick (speed, ground contact, animation name, camera height) and look for the pattern.
    When a calculation and a measurement disagree, trust the measurement.
 5. **Protect the user's things.** Never open their world (copy it, checksum the original), checkpoint
-   Blockbench before edits, commit after each verified step (on Power Armor the user wants the .bbmodel
+   Blockbench before edits, commit after each verified step (on Power Suits the user wants the .bbmodel
    saved together with every commit that changes art; ask what a new user prefers).
 6. **Teach as you go** (first-time modders): after each change explain one concept in plain words:
    client vs server, registries, events, synced data, why a bug happened. Comment the "why" in code.
 7. **Before handing off**, write the spec (with OPEN questions), the plan (phases, files, APIs, tests) and
    `AGENTS.md` (setup, verification loop, the rules every agent must follow; keep it short, put the lessons behind
    the rules in skill references, and keep one person's preferences in the agent's memory, not in the repo). Ask where
-   the user keeps design docs: Power Armor's live outside the repo; a new project may want `docs/design.md` +
+   the user keeps design docs: Power Suits' live outside the repo; a new project may want `docs/design.md` +
    `docs/implementation-plan.md` in the repo. Check that every API
    the plan names exists in the pinned versions.
 
@@ -74,7 +74,7 @@ For model and animation work use the Blockbench skill:
   `updateControlFlags`); apply your own aim in `customServerAiStep` (after the goals, before `LookControl`, which
   zeroes the pitch every tick); paths of wide mobs end short of the target (finish with `setWantedPosition`).
   Goals that depend on equipment come and go with it (vanilla's skeletons: `reassessWeaponGoal`): let each item list
-  its goals and swap them outside the selector's tick (Power Armor: `PowerTool.mindGoals`, `SuitBrain.updateToolGoals`),
+  its goals and swap them outside the selector's tick (Power Suits: `PowerTool.mindGoals`, `SuitBrain.updateToolGoals`),
   so the shared goal file never learns about items.
 - **Tool caching**: the image `read` tool may return a cached image for a path it read before; write
   regenerated images to a new filename.

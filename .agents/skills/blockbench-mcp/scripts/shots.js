@@ -1,7 +1,7 @@
 // Review shots of the open Blockbench project, tiled into one labelled image, including the
 // in-game third-person view from behind (what the player looks at most: the suit's back).
 // Codemode function body. Usage:
-//   const SKILL = "/Users/ajac-zero/Developer/PowerArmor/.agents/skills/blockbench-mcp/scripts";
+//   const SKILL = "/Users/ajac-zero/Developer/PowerSuits/.agents/skills/blockbench-mcp/scripts";
 //   const src = (await tools.bash({command: `cat ${SKILL}/shots.js`})).output;   // (tools.read can serve a stale copy)
 //   const shots = new Function("tools", "image", src)(tools, image);
 //   await shots();                                    // default set -> /private/tmp/shots/review.jpg
@@ -49,7 +49,7 @@ return async function shots(opts = {}) {
   }
   const decode = files.map(f => `base64 -d -i ${f}.b64 -o ${f}.jpg`).join(" && ");
   const r = await tools.bash({command: `${decode} && uv run --with pillow python3 ` +
-    `/Users/ajac-zero/Developer/PowerArmor/.agents/skills/blockbench-mcp/scripts/montage.py ${out} ` +
+    `/Users/ajac-zero/Developer/PowerSuits/.agents/skills/blockbench-mcp/scripts/montage.py ${out} ` +
     `--cols ${opts.cols || 5} ${files.map((f, i) => (i && views[i].row ? "--row " : "") + f + ".jpg").join(" ")}`});
   if (r.exit_code) throw new Error(r.output);
   if (opts.show !== false) {          // read a fresh copy: tools.read may serve a cached file by path

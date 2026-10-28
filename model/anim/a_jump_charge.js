@@ -1,4 +1,4 @@
-// JUMP_CHARGE (power armor): wind-up crouch while the pilot holds jump. Ends exactly on jump t=0 (hold last frame).
+// JUMP_CHARGE (power suit): wind-up crouch while the pilot holds jump. Ends exactly on jump t=0 (hold last frame).
 const {track,addTo,plant,flatPivot,footR,REST,spring,pnoise}=K;
 const T=0.35;
 const STANCE={};for(const s of ['r','l'])STANCE[s]={pv:flatPivot(s,REST[s].pivot[0],REST[s].pivot[2],REST[s].yaw),R:footR(REST[s].yaw)};

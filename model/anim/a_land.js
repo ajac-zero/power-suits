@@ -1,4 +1,4 @@
-// LAND (power armor): heavy impact. Feet planted in stance, hips drop and spring back, torso pitches,
+// LAND (power suit): heavy impact. Feet planted in stance, hips drop and spring back, torso pitches,
 // cannon and pads lag, settles to the rest stance (all offsets 0) so idle/walk blend in cleanly.
 const {TAU,track,spring,addTo,plant,flatPivot,footR,REST,vnoise}=K;
 const T=0.6;

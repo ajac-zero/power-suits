@@ -1,4 +1,4 @@
-// RUN v3 (power armor): bounding sprint, long flight phase, stride 18, 0.44 s. ~8.5 blocks/s.
+// RUN v3 (power suit): bounding sprint, long flight phase, stride 18, 0.44 s. ~8.5 blocks/s.
 // v2 (6.36 blocks/s) in a_run_v2.js, v1 (3.35 blocks/s) in a_run_v1.js
 const {TAU,spring,addTo,pnoise,plant,gaitFoot,REST}=K;
 const T=0.44, beta=0.3, S=18, zc=-1.8;

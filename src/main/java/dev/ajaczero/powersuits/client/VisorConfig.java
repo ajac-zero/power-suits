@@ -7,7 +7,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.TranslatableEnum;
 
 /**
- * The pilot's own visor settings, saved in {@code config/power_suits-client.toml} (Mods > Power Armor > Config, or edit
+ * The pilot's own visor settings, saved in {@code config/power_suits-client.toml} (Mods > Power Suits > Config, or edit
  * the file; changes show at once). A CLIENT config: it lives on each player's computer and never reaches a server, so
  * every player picks their own colour and nobody else sees it. (The balance numbers are a different file:
  * PowerSuitsConfig.)

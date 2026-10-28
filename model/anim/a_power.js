@@ -1,4 +1,4 @@
-// POWER (power armor): out of fuel / refuelled. One spec, three animations (K.MODE):
+// POWER (power suit): out of fuel / refuelled. One spec, three animations (K.MODE):
 //   shutdown    (hold, 1.6 s): power cut jolt, servos give way, sags into a slump, settles, last twitch
 //   powered_off (hold, 0.05 s): the final slump pose (for suits that were already off when loaded)
 //   startup     (once, 1.4 s): servo kick, pushes up out of the slump, small overshoot, ends at rest (0)

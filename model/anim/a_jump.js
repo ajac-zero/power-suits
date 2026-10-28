@@ -1,4 +1,4 @@
-// JUMP (power armor): crouch-launch, toe push-off, legs tuck into the airborne pose (ends exactly on fall t=0).
+// JUMP (power suit): crouch-launch, toe push-off, legs tuck into the airborne pose (ends exactly on fall t=0).
 // Played the moment the suit leaves the ground; chain: jump (once) -> fall (loop).
 // --- shared airborne pose (same block in a_jump.js and a_fall.js) ---
 const {TAU,track,spring,addTo,plant,flatPivot,footR,rolled,REST,lerp,smoother,pnoise}=K;

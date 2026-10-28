@@ -1,6 +1,6 @@
 // Apply .scratch/shin-drop-plan.json (from shin_drop_art.py) to the live project. Codemode function body:
 //   const apply = new Function("tools", (await tools.bash({command: "cat model/art/shin_drop_apply.js"})).output)(tools);
-//   await apply("/Users/ajac-zero/Developer/PowerArmor/.scratch/shin-drop-plan.json");
+//   await apply("/Users/ajac-zero/Developer/PowerSuits/.scratch/shin-drop-plan.json");
 // Checkpoint "before shorter shins"; paint (one undoable tex.edit); move/shorten the shin cubes in one undoable edit;
 // then place the lower knee joint boxes.
 return async function apply(planPath) {

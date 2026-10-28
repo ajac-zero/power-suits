@@ -1,6 +1,6 @@
 # Porting 1.21.1 -> 26.3 (NeoForge 26.3, GeckoLib 5) — what changed for this mod
 
-Done 2026-10-14 on Power Armor (branch `port-26.3`). The other references were written on 1.21.1; where their
+Done 2026-10-14 on Power Suits (branch `port-26.3`). The other references were written on 1.21.1; where their
 snippets use old names, this table maps them. Method: bump versions, `./gradlew compileJava` with
 `-Xmaxerrs 5000`, fix by grepping the new sources (`build/moddev/artifacts/minecraft-patched-*-sources.jar`,
 NeoForge `*-sources.jar` in the Gradle cache, GeckoLib from GitHub), then GameTests, then the autopilot CSVs

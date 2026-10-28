@@ -12,7 +12,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
-/** Adds "Power Armor fuel: 1:20 of walking" to the tooltip of every suit fuel (anything a furnace burns, water for the
+/** Adds "Power Suit fuel: 1:20 of walking" to the tooltip of every suit fuel (anything a furnace burns, water for the
  *  tidal engine, the Nether Star).
  *  ItemTooltipEvent lets a mod add lines to *other* items' tooltips, vanilla ones included. */
 @EventBusSubscriber(modid = PowerSuits.MODID, value = Dist.CLIENT)

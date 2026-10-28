@@ -1,4 +1,4 @@
-// PLASMA_SHOT (power armor): one heavy plasma shot. Upper-body overlay (layers over idle/walk/run), from a_attack.js.
+// PLASMA_SHOT (power suit): one heavy plasma shot. Upper-body overlay (layers over idle/walk/run), from a_attack.js.
 // 0.5 s, shorter than the 0.6 s cooldown: GeckoLib won't restart a triggered animation that is still playing.
 // Muzzle flash at t=0 (the bolt spawns the same tick). Ends at exactly zero offset.
 const {spring,addTo,vnoise,track}=K;

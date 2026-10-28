@@ -1,6 +1,6 @@
 // Apply .scratch/elbow/plan.json (from elbow_art.py) to the live project. Codemode function body:
 //   const apply = new Function("tools", (await tools.bash({command: "cat model/art/elbow_apply.js"})).output)(tools);
-//   await apply("/Users/ajac-zero/Developer/PowerArmor/.scratch/elbow/plan.json");
+//   await apply("/Users/ajac-zero/Developer/PowerSuits/.scratch/elbow/plan.json");
 // Also applies pads_shell_art.py's plan: apply(path, "before shell pads", "Shell pads"). Checkpoint (default "before elbows"); paint (one undoable tex.edit); remove the old upper arms / joints (one edit); shorten the
 // pads and gauntlets (one edit); place the new cubes.
 return async function apply(planPath, checkpoint = "before elbows", label = "Elbows") {

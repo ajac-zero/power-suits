@@ -1,4 +1,4 @@
-// HAND (power armor): the left hand holding / using the pilot's selected item. Left-arm overlays only
+// HAND (power suit): the left hand holding / using the pilot's selected item. Left-arm overlays only
 // (left_arm, left_forearm, left_pad), on their own controller in the game, which overrides the gait's left arm.
 //   hold_item (loop 2 s):  carry pose, forearm forward at waist height (like holding a torch), gentle sway
 //   use_item  (once 0.3 s): quick reach forward and up (place / use) and back to the hold pose

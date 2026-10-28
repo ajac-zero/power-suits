@@ -2,10 +2,10 @@
 
 Three layers, all used on every change: build, GameTests (logic, headless), autopilot (real client,
 screenshots + per-tick CSV). Example implementations: `src/dev/java/dev/ajaczero/powersuits/test/`
-and `client/dev/` in `~/Developer/PowerArmor`.
+and `client/dev/` in `~/Developer/PowerSuits`.
 
 **Flaky tests**: run only the suspect, many times side by side, with a gameTestServer run that passes vanilla's
-`--tests <id with wildcards>` and `--repeatCount N` program arguments (Power Armor: `runGameTestOnly -Ptests=... -Prepeat=40`),
+`--tests <id with wildcards>` and `--repeatCount N` program arguments (Power Suits: `runGameTestOnly -Ptests=... -Prepeat=40`),
 make the failure message carry a per-tick trace (`helper.onEachTick`), and run the whole suite with a repeat count to
 find tests that share state. Two causes found that way: mock players aim with their head yaw (`yHeadRot`, random at
 spawn: set it with the body yaw), and tests that set a world-wide game rule and "restore" it (use a `SetGameRules` test
@@ -32,7 +32,7 @@ Main must never reference dev classes (it can't: they aren't on its classpath, s
 `Consumer<GameTestHelper>`) and a test *instance* (`FunctionGameTestInstance(functionKey, new TestData<>(environment,
 structureId, maxTicks, setupTicks, required))`, registered in NeoForge's `RegisterGameTestsEvent` on the mod bus,
 together with a test environment: tests are batched per environment). There is no `@GameTest` annotation any more.
-Power Armor keeps the old style with its own annotation: `test/SuitTest.java` (`@SuitTest(timeoutTicks = 200, batch =
+Power Suits keeps the old style with its own annotation: `test/SuitTest.java` (`@SuitTest(timeoutTicks = 200, batch =
 "...")`) and `test/SuitTests.java` (finds the methods by reflection, registers both entries, only when
 `GameTestHooks.isGametestEnabled()`). Test ids are lower-case (`mymod:mytestname`).
 ```java
@@ -43,7 +43,7 @@ public static void sinks(GameTestHelper h) { ...; h.runAfterDelay(150, () -> { h
 - Template = `data/<modid>/structure/<name>.nbt`. Make one without NBT libraries:
   `python3 <skill>/scripts/make_test_structure.py out.nbt --size 9 10 9` (stone floor at y=0).
 - **Coordinates**: on 1.21.1 the structure was placed one block above the test origin; on 26.x it starts at the
-  origin. Power Armor's `test_pad` therefore has an empty bottom layer (9x11x9, floor at y=1), so the relative floor
+  origin. Power Suits' `test_pad` therefore has an empty bottom layer (9x11x9, floor at y=1), so the relative floor
   is y=1 and entities stand at y=2 on both (`helper.spawn(type, new BlockPos(4, 2, 4))` uses the bottom centre).
 - **Mock server players** (`makeMockServerPlayerInLevel`) have a connection that never negotiated mod channels; on
   26.x NeoForge throws when anything sends them a mod packet (GeckoLib's `entity_anim_trigger`). Add the channels:
@@ -61,7 +61,7 @@ public static void sinks(GameTestHelper h) { ...; h.runAfterDelay(150, () -> { h
   (open it server-side with `entity.interact(serverPlayer, hand)` while `setShiftKeyDown(true)`, then screenshot).
 - Things that tick on the server (fuel burn, timers) work with a mock pilot: set `pilot.zza = 1` /
   `setSprinting(true)` to simulate WASD. On 26.x a real `ServerPlayer`'s `xxa/zza` stay 0 (the input packet fills
-  `getLastClientInput()` instead), so server code reads both (Power Armor: `SuitDriving.pilotInput`).
+  `getLastClientInput()` instead), so server code reads both (Power Suits: `SuitDriving.pilotInput`).
 - Build scenes with `helper.setBlock`; use `helper.absolutePos/absoluteVec` for world coordinates.
 - Trace a mystery failure by sampling state every few ticks (`runAfterDelay` loop) and putting it in the
   assertion message; `getLastDamageSource()` forgets after 40 ticks.
@@ -102,7 +102,7 @@ Crop + upscale regions when the subject is small.
 - Before copying, make sure the game isn't running on it (`pgrep -fl java`; a long-running Gradle daemon
   is not the game) and compare file mtimes with the session.
 
-## What each layer caught on Power Armor
+## What each layer caught on Power Suits
 | Bug | Caught by |
 |---|---|
 | Suits spawned inside the GameTest floor (y offset), neighbour tests' entities found | GameTests |

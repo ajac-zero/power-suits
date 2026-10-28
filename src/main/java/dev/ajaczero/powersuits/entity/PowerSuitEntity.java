@@ -68,7 +68,7 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
 /**
- * The power armor suit. It is a living entity (it has health and armor and can die) that a player
+ * The power suit. It is a living entity (it has health and armor and can die) that a player
  * can ride. While ridden, the player steers it like a horse, and the player's model is hidden.
  *
  * Minecraft runs every entity twice: on the server (the real game state) and on each client
@@ -970,7 +970,7 @@ public class PowerSuitEntity extends Mob implements GeoEntity, PlayerRideableJum
         }
     }
 
-    /** Death messages and the like say "Rogue Power Armor" for a rogue (synced mind: right on both sides). */
+    /** Death messages and the like say "Rogue Power Suit" for a rogue (synced mind: right on both sides). */
     @Override
     protected Component getTypeName() {
         return this.isRogue() ? Component.translatable("entity.power_suits.power_suit.rogue") : super.getTypeName();

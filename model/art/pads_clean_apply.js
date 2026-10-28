@@ -1,7 +1,7 @@
 // Paint .scratch/pads-clean/plan.json (from pads_clean_art.py) into the live texture: one checkpoint, one undoable
 // tex.edit. Codemode function body:
 //   const apply = new Function("tools", (await tools.bash({command: "cat model/art/pads_clean_apply.js"})).output)(tools);
-//   await apply("/Users/ajac-zero/Developer/PowerArmor/.scratch/pads-clean/plan.json");
+//   await apply("/Users/ajac-zero/Developer/PowerSuits/.scratch/pads-clean/plan.json");
 return async function apply(planPath, checkpoint = "before clean pads", label = "Clean pads") {
   const plan = JSON.parse((await tools.bash({command: `cat '${planPath}'`})).output);
   await tools.mcp__blockbench__save_checkpoint({name: checkpoint});

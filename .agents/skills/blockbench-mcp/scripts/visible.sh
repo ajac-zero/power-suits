@@ -1,5 +1,5 @@
 # Where do some cubes show? Films an animation with and without the cubes matching REGEX and tints the pixels that
-# change magenta (on top: the plain frames). Found the "hollow bracket" at Power Armor's hip (dark undersides seen at an
+# change magenta (on top: the plain frames). Found the "hollow bracket" at Power Suits' hip (dark undersides seen at an
 # angle) and checked new hip joints for showing between the legs. Arm/tool bones are hidden unless HIDE is set.
 # usage: bash visible.sh <anim> <times csv> <view json> <cube regex> <out.jpg>     env HIDE=<group regex>
 S=$(cd "$(dirname "$0")" && pwd); A=$1; TS=$2; V=$3; RE=$4; OUT=$5; HIDE=${HIDE:-arm|forearm|hand|socket|elbow|shoulder|pad|chaingun|drill|chainsaw|em_}

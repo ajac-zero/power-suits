@@ -1,4 +1,4 @@
-# Working on Power Armor
+# Working on Power Suits
 
 A NeoForge 26.3 + GeckoLib 5.5.7 Minecraft mod (Java 25): an enterable power suit: **Power Suits**
 (mod id `power_suits`, the suit `power_suit`, jar `powersuits-<version>.jar`). 1.0.0 shipped as `powerarmor` ("Power
@@ -9,9 +9,9 @@ knowledge lives in the project skills and their references (read the one that ma
 | Read | When |
 |---|---|
 | `.agents/skills/minecraft-modding/SKILL.md` | any game code: setup, GeckoLib, riding, testing (its `references/`) |
-| `.agents/skills/minecraft-modding/references/power-armor-lessons.md` | before changing code in an area: what each part of this mod already cost us |
-| `.agents/skills/minecraft-modding/references/power-armor-runs.md` | every verification command and autopilot scene, what it drives and logs |
-| `.agents/skills/blockbench-mcp/SKILL.md` + `ANIMATION.md` + `power-armor-model.md` | model, rig, animation, texture work |
+| `.agents/skills/minecraft-modding/references/power-suits-lessons.md` | before changing code in an area: what each part of this mod already cost us |
+| `.agents/skills/minecraft-modding/references/power-suits-runs.md` | every verification command and autopilot scene, what it drives and logs |
+| `.agents/skills/blockbench-mcp/SKILL.md` + `ANIMATION.md` + `power-suits-model.md` | model, rig, animation, texture work |
 | `.agents/skills/key-art/SKILL.md` | marketing pictures (Blender) |
 | `README.md`, `docs/guide.md` | what the mod does, controls, the file map |
 | the design docs (see Conventions) | design decisions, roadmap, art direction |
@@ -43,7 +43,7 @@ knowledge lives in the project skills and their references (read the one that ma
 - `.pi/mcp.json` connects pi to Blockbench's MCP server (`localhost:3000/bb-mcp`): start sessions here.
 - **Releasing:** bump `mod_version`, commit, `git tag -a vX.Y.Z -m ... && git push origin main vX.Y.Z`. The tag push runs
   `.github/workflows/release.yml` (reproducible build with the JDK pinned in `tools/jdk.env`, attestation, jar + SHA-256,
-  republishes the page; details in `power-armor-runs.md`). v1.0.0 = 9c9cf00 (Modrinth); the flamethrower and later tools
+  republishes the page; details in `power-suits-runs.md`). v1.0.0 = 9c9cf00 (Modrinth); the flamethrower and later tools
   are 1.1.
 
 ## Setup
@@ -62,7 +62,7 @@ API: grep the sources.
 | `./gradlew build` | compiles (also compiles `src/dev`) |
 | `./gradlew runGameTestServer` | "All N required tests passed" |
 | `./gradlew runGameTestOnly -Prepeat=5` | the whole suite 5 times side by side: all 715 pass (hunts flaky tests; `-Ptests='power_suits:name*'` narrows it) |
-| the autopilot scene for the area you touched | screenshots + CSV look right: pick it from `power-armor-runs.md` (`runAutopilot`, `...Mech`, `...Gait`, `...Pose`, `...Terrain`, `...Hud`, a tool's own scene...) |
+| the autopilot scene for the area you touched | screenshots + CSV look right: pick it from `power-suits-runs.md` (`runAutopilot`, `...Mech`, `...Gait`, `...Pose`, `...Terrain`, `...Hud`, a tool's own scene...) |
 
 - Run game tasks in the background under `caffeinate -d -u -i` and poll the log (no `timeout` on macOS; the game can't
   start while the display sleeps). If one stalls, `jstack` its PID before killing it. Dev games must not linger
@@ -75,7 +75,7 @@ API: grep the sources.
   after the last one (ticks from 0; `AutoPilot.script()` case labels count from their section's start, `WATER + 17`).
 
 ## Rules for code
-Why each rule exists is in `power-armor-lessons.md`.
+Why each rule exists is in `power-suits-lessons.md`.
 - **Where things go.** `PowerSuitEntity` is the suit as Minecraft sees it (vanilla hooks, the synced data table, the
   slots, the tick); its rules live in its parts, one class each: `SuitDriving`, `SuitPower`, `SuitSocket`, `SuitBrain`,
   client `SocketVisuals`, `SuitAnimator`, `SuitLights`. A tool lives in its own files: its item (`PowerTool`: what it
@@ -109,7 +109,7 @@ Why each rule exists is in `power-armor-lessons.md`.
   pilot's hand first; call `setSprinting(false)` after a sprint.
 
 ## Rules for the model and textures
-Details in `.agents/skills/blockbench-mcp/power-armor-model.md`.
+Details in `.agents/skills/blockbench-mcp/power-suits-model.md`.
 - Simple boxes, detail in the texture; armour plates in the 8 steel shades only (paint swaps them); re-run
   `tools/make-paint-textures.py` after every texture export.
 - Drafts are hidden `proto_*` groups with new, unused cube prefixes (grep the model first); keep them hidden when saving.

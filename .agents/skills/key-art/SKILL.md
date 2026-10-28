@@ -1,9 +1,9 @@
 ---
 name: key-art
-description: Use when making marketing pictures for the Power Armor mod (key art, posters, gallery or social images) with Blender from the mod's own Blockbench model and Minecraft player skins. Covers the creative process that worked with this user (reference → staging → casting → backdrop picks → final), the marketing/ pipeline (glTF export, mclib.py scenes, previews, debug views, skin casting sheets, bloom pass), Minecraft-proportion staging rules and Blender/Cycles pitfalls on macOS.
+description: Use when making marketing pictures for the Power Suits mod (key art, posters, gallery or social images) with Blender from the mod's own Blockbench model and Minecraft player skins. Covers the creative process that worked with this user (reference → staging → casting → backdrop picks → final), the marketing/ pipeline (glTF export, mclib.py scenes, previews, debug views, skin casting sheets, bloom pass), Minecraft-proportion staging rules and Blender/Cycles pitfalls on macOS.
 ---
 
-# Key art for Power Armor
+# Key art for Power Suits
 
 Learned on the first picture, `marketing/out/man_of_tomorrow.png` (2026-10-22): a homage to the "Man of Tomorrow"
 comic cover. Lex Luthor in a lime suit fights Superman high above the clouds. The scripts and render commands are in

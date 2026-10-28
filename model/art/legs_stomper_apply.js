@@ -1,6 +1,6 @@
 // Apply .scratch/stomper-plan.json (from legs_stomper_art.py) to the live project. Codemode function body:
 //   const apply = new Function("tools", (await tools.bash({command: "cat model/art/legs_stomper_apply.js"})).output)(tools);
-//   await apply("/Users/ajac-zero/Developer/PowerArmor/.scratch/stomper-plan.json");
+//   await apply("/Users/ajac-zero/Developer/PowerSuits/.scratch/stomper-plan.json");
 // Checkpoint "before stomper legs"; paint (one undoable tex.edit); in one undoable edit remove the old leg cubes,
 // move the leg bones' pivots out and widen the pelvis shell; then place the new cubes.
 return async function apply(planPath) {

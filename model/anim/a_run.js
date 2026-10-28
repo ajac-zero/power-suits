@@ -3,7 +3,7 @@
 // sinkAt) and drives back up through a push-off that throws the trailing leg out behind; hips otherwise as high as the
 // legs reach (KMIN 30, cap), a 1.5 px rise in flight, swing targets eased into the leg's reach (swingK, soft), the knee
 // kept on its bent solution (kneeFloor 22). v7 (0.9 s bounds, "hopping, frolicking") and v6 ("baby steps") rejected.
-// RUN v6 (power armor, 2026-10-14): an energetic bounding sprint (the suit smashes glass at this pace). Forward lean,
+// RUN v6 (power suit, 2026-10-14): an energetic bounding sprint (the suit smashes glass at this pace). Forward lean,
 // long flight, big vertical bounce, push-off with the leg fully extended behind, the heel kicks up behind and the knee
 // drives forward-high before the foot reaches out and paws back into the next strike; free arm pumps hard, the torso
 // counter-twists, every footfall lands with a jolt. 6.25 blocks/s. Knee up to 101 deg in the heel kick (the knee

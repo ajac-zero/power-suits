@@ -36,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The pilot's HUD, projected on the helmet's visor (design sec. 6). Since 2026-10-27 it belongs to the visor
  * ({@link SuitVisor} draws the helmet's edge around the view): no boxes, the readouts float on the glass in the visor
- * colour (Mods > Power Armor > Config, {@link VisorConfig}; terminal green by default) in the top corners, with a
+ * colour (Mods > Power Suits > Config, {@link VisorConfig}; terminal green by default) in the top corners, with a
  * compass and a clock between them (the helmet is crafted with both).
  * <ul>
  *   <li>Top left, the suit: its figure (one block per armour piece, like Fallout's), HULL (health) with the seal shield,

@@ -6,7 +6,7 @@ Blockbench's own exporter through the MCP (`risky_eval`, read-only):
 - geometry: `JSON.stringify(Codecs.bedrock.compile({raw: true}))`
 - animations: `JSON.stringify(Animator.buildFile())`
 - texture: `Texture.all[0].getDataURL()` (base64 PNG)
-`../scripts/export_model.mjs` does all three over HTTP MCP and writes (GeckoLib 4 layout; Power Armor's
+`../scripts/export_model.mjs` does all three over HTTP MCP and writes (GeckoLib 4 layout; Power Suits'
 `tools/export-model.mjs` writes the GeckoLib 5 one: `assets/<modid>/geckolib/models/entity/<name>.geo.json`,
 `geckolib/animations/entity/<name>.animation.json`, model id `<modid>:entity/<name>`)
 `assets/<modid>/geo/entity/<name>.geo.json`, `animations/entity/<name>.animation.json`,
@@ -16,7 +16,7 @@ in content (JSON compare). Catmull-Rom keys and simple Molang (`math.sin(q.anim_
 Item icon trick: an offscreen Blockbench view screenshot (`set_camera_angle`, png) has a transparent
 background; crop to the bbox, resize to 32x32 LANCZOS, threshold alpha, add a dark 1 px outline.
 
-## GeckoLib 5 (Minecraft 1.21.2+, used by Power Armor on 26.3)
+## GeckoLib 5 (Minecraft 1.21.2+, used by Power Suits on 26.3)
 Rendering is split like vanilla's: **extract** (with the entity: copy what you need into the render state) then
 **render** (only the render state; drawing is queued and runs later).
 ```java
@@ -53,7 +53,7 @@ public class MyRenderer extends GeoEntityRenderer<MyEntity, LivingEntityRenderSt
   (it reads tint / light / overlay from the state's `RENDER_COLOR` / `PACKED_LIGHT` / `PACKED_OVERLAY` tickets when
   called: set, submit, restore). Items on bones: `BlockAndItemGeoLayer` with `RenderData.item(bone, context,
   RenderUtil.createRenderStateForItem(stack, itemModelResolver, context, entity))`.
-- Objects that aren't entities (Power Armor's cockpit viewmodel): `GeoObjectRenderer<T, Void, GeoRenderState>` and
+- Objects that aren't entities (Power Suits' cockpit viewmodel): `GeoObjectRenderer<T, Void, GeoRenderState>` and
   `performRenderPass(animatable, null, poseStack, collector, cameraState, light, partial)`; anything that differs
   between two passes in a frame must go into the render state (fields are read too late).
 - Paths: `assets/<mod>/geckolib/models/<id>.geo.json`, `geckolib/animations/<id>.animation.json`; textures unchanged.
@@ -124,7 +124,7 @@ public class MyRenderer extends GeoEntityRenderer<MyEntity> { ... }        // re
   buffers.getBuffer(type), partialTick, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, argb)` once per mask.
   `eyes` is additive and ignores light: black mask pixels add nothing, and scaling the colour dims the glow.
   GeckoLib's `AutoGlowingGeoLayer` does the same with a fixed colour and one `<texture>_glowmask.png`.
-  Power Armor: `SuitGlowLayer`, masks generated from reserved texture colours by `tools/make-glowmasks.py`.
+  Power Suits: `SuitGlowLayer`, masks generated from reserved texture colours by `tools/make-glowmasks.py`.
 
 ## Flicker checklist
 1. **Static z-fighting**: two cubes with coplanar, overlapping faces whose outward normals point the same

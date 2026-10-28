@@ -8,8 +8,8 @@ description: Use when inspecting or editing a model in the user's open Blockbenc
 Learned from real sessions: rigging/posing a Bedrock entity, fixing its walk cycle and flicker, adding textured parts, a full premium animation set (idle, walk, run, sneak, attack, throw, death, electrified, helmet off/on, stim, hit, fidget) built with the toolkit in `scripts/`, and a chest-armour redesign driven by a clearance check. Follow these before touching the user's project.
 
 - **Building or reworking animations?** Read [ANIMATION.md](ANIMATION.md) (pipeline, toolkit API, recipes, pitfalls) and use `scripts/`.
-- **Working on the Power Armor model?** Read [power-armor-model.md](power-armor-model.md): what its rig, gaits, texture, glow and drafts already taught us.
-- **Taking a model into Minecraft (NeoForge + GeckoLib)?** See `~/Developer/PowerArmor/.agents/skills/minecraft-modding/SKILL.md` (export pipeline, rendering, flicker, testing in game).
+- **Working on the Power Suits model?** Read [power-suits-model.md](power-suits-model.md): what its rig, gaits, texture, glow and drafts already taught us.
+- **Taking a model into Minecraft (NeoForge + GeckoLib)?** See `~/Developer/PowerSuits/.agents/skills/minecraft-modding/SKILL.md` (export pipeline, rendering, flicker, testing in game).
 - Example production specs for a real rig: `model/anim/a_*.js` (model: `model/power_suit.bbmodel`).
 
 ## 1. Access: MCP tools live in `codemode`
@@ -99,7 +99,7 @@ Known gaps with no tool (use `risky_eval`): delete an animation, save the projec
 
 ## 5. Undo and safety
 - Call `save_checkpoint({name})` before each meaningful change. It shows up in `get_undo_stack`. Report checkpoint names to the user.
-- Never save, export or overwrite files unless asked (or the project has a standing rule: the Power Armor user wants `power_suit.bbmodel` saved with every mod commit that changes it). Say the project is unsaved when you finish. Saving the `.bbmodel` does not export Bedrock geo/animation files; mention that.
+- Never save, export or overwrite files unless asked (or the project has a standing rule: the Power Suits user wants `power_suit.bbmodel` saved with every mod commit that changes it). Say the project is unsaved when you finish. Saving the `.bbmodel` does not export Bedrock geo/animation files; mention that.
 - Tell the user before using anything not clearly read-only.
 - **Moving the project file** (user asked): check the target does not exist, `mv` it, then `risky_eval` `Project.save_path = "<new path>"` so later saves go to the new place (otherwise Blockbench recreates the old file).
 
@@ -132,7 +132,7 @@ Known gaps with no tool (use `risky_eval`): delete an animation, save the projec
 - **Rebuilding a group changes its UUID.** Animation keyframes are keyed by group UUID. After `rename` + `create` + `remove_element`, the new group may have no keyframes. Warn the user and check animations afterwards.
 - **Clipping on the live project: `scripts/livesweep.js`** (codemode helper): pairs of cube-name regexes, deepest
   point of A inside B at rest and over every animation, using Blockbench's own meshes. Parts animated on their own
-  (the Power Armor pauldrons had keys of their own) clip things their parent bone never would: sweep, don't reason.
+  (the Power Suits pauldrons had keys of their own) clip things their parent bone never would: sweep, don't reason.
 - **Bigger parts clip more in motion.** After adding geometry to a moving limb, sample points on the new cubes, transform them into the neighbouring bone's frame at every animation phase, and measure how deep they go inside its boxes. Compare against the rest-pose overlap (intended armor wrap) as the baseline.
 - **Armour clearance ("chest clips the helmet").** Build the head's swept envelope: for every animation sample, transform head/helmet cube points into the torso's rest frame (only head/helmet channels matter, since head is a child of torso) and record the lowest y per z slice. Redesign the chest below that envelope (a single plate tilted back ~34° worked) and re-check with `scripts/clipcheck.mjs`, restricted to the new cubes. Tweak the worst animation (e.g. less head pitch, more yaw/roll toward the side that rises) instead of shrinking the armour. Ignore intended overlaps (the neck socket inside the chest block) by measuring only the visible-front cubes.
 - **Cross-body arm reach clips bulky torsos.** A support hand on a cannon across the chest gave ≥ 2 units of upper-arm/elbow penetration for every grip point and elbow swivel tried. Check with the clip checker before committing; prefer a guard pose or a reach that stays on the arm's own side.
@@ -154,7 +154,7 @@ Known gaps with no tool (use `risky_eval`): delete an animation, save the projec
   into the shin without poking through; the same for a joint block inset 1 px from both limbs: let its excess sit
   inside them instead of fitting it exactly.
 - **Bones meet at an angle in the rest pose.** A piece on the shin that reaches up inside the thigh is straight while the
-  thigh leans (Power Armor: thigh 6 deg forward, shin -6); its corner poked out of the thigh's front. Check overlaps in
+  thigh leans (Power Suits: thigh 6 deg forward, shin -6); its corner poked out of the thigh's front. Check overlaps in
   the posed model, not in model coordinates.
 - **`livesweep.js` samples box corners and edge midpoints only**: an edge cutting through the middle of a face is missed
   (it read 0 for a thigh sliding 1.9 px into the hips). Use `scripts/densesweep.js` (a grid on every face) to confirm 0.

@@ -43,7 +43,7 @@ export function kit(m,extra={}){
   const L=new Function(src('lib.js'))();const rig=L.makeRig(m);
   const K=new Function('L','rig',src('k1.js')+'\n'+src('k2.js')+'\n'+src('k3.js')+`\nreturn {${KIT_EXPORTS}};`)(L,rig);
   Object.assign(K,extra);return K;}
-// ---- Mirrored rigs. A model can be mirrored across x = 0 after its specs were written (Power Armor swapped its arms
+// ---- Mirrored rigs. A model can be mirrored across x = 0 after its specs were written (Power Suits swapped its arms
 // that way: the tool arm went from right to left). A `kit.json` with {"mirror": true} next to the spec files says
 // "these specs are authored for the un-mirrored rig": the spec then sees the model mirrored back (mirrorModel), and
 // what it bakes is mirrored onto the live rig (mirrorChannels) before upload. Tools that measure a spec (check,

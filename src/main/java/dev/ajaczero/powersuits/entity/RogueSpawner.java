@@ -81,7 +81,7 @@ public final class RogueSpawner {
             ServerPlayer player = players.get(level.getRandom().nextInt(players.size()));
             PowerSuitEntity rogue = spawnNear(level, player.blockPosition(), MIN_DISTANCE, MAX_DISTANCE);
             if (rogue != null) {
-                PowerSuits.LOGGER.info("A rogue power armor turned up at {} ({} blocks from {})", rogue.blockPosition(),
+                PowerSuits.LOGGER.info("A rogue power suit turned up at {} ({} blocks from {})", rogue.blockPosition(),
                         Math.round(rogue.distanceTo(player)), player.getName().getString());
             }
         }

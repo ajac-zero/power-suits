@@ -228,7 +228,7 @@ public final class SuitBrain {
             return player;
         }
         UUID id = this.ownerId != null ? this.ownerId : WILD_SUIT_ID;
-        Player fake = FakePlayerFactory.get((ServerLevel) this.suit.level(), new GameProfile(id, "[Power Armor]"));
+        Player fake = FakePlayerFactory.get((ServerLevel) this.suit.level(), new GameProfile(id, "[Power Suit]"));
         fake.snapTo(this.suit.getX(), this.suit.getY(), this.suit.getZ(), this.suit.getYHeadRot(), this.suit.getXRot()); // mods may check where it stands
         return fake;
     }

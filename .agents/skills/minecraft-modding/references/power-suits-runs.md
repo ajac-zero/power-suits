@@ -1,4 +1,4 @@
-# Power Armor: the verification runs
+# Power Suits: the verification runs
 
 Every command that checks the mod, and what each autopilot scene drives and logs (moved here from `AGENTS.md` on
 2026-10-26; `AGENTS.md` keeps the loop every change goes through), and how the web page and releases work. Run game tasks in the background and poll the log

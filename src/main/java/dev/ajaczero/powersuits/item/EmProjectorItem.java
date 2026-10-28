@@ -50,7 +50,7 @@ import org.jetbrains.annotations.Nullable;
  *  - Release: whatever is held is launched along the view. A quick tap shoves a target away.
  *  - Thrown mobs and players that hit a wall take damage, and bowl through any mob in their way (2026-10-27, user: a
  *    combat move): each one they hit takes the impact too, and so do they, and they fly on.
- *  - Heavy things fight the field (decided 2026-10-13): other power armor suits and the entity tag power_suits:em_heavy
+ *  - Heavy things fight the field (decided 2026-10-13): other power suits and the entity tag power_suits:em_heavy
  *    (bosses, iron golems, ravagers, wardens; datapacks can add more) aren't lifted. The beam holds them in place (they slow to a crawl) and drags them a little; letting go only
  *    shoves them.
  * Players (and a mount or suit with a player on it) only where the server allows PvP; a rogue mind ignores that. Never
@@ -136,7 +136,7 @@ public class EmProjectorItem extends Item implements PowerTool, ModTooltip {
         return e instanceof Mob mob && !mob.isNoAi();
     }
 
-    /** Too heavy to lift: other power armor suits (always) and anything in the em_heavy tag. They fight the field. */
+    /** Too heavy to lift: other power suits (always) and anything in the em_heavy tag. They fight the field. */
     public static boolean isHeavy(Entity e) {
         return e instanceof PowerSuitEntity || e.is(HEAVY);
     }

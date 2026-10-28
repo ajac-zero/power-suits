@@ -3,7 +3,7 @@
 // animation, default 24). Uses Blockbench's own meshes (cube rotation, inflate and the bone chain
 // exactly as Blockbench draws them), so no rig maths to keep in sync.
 // Codemode function body. Usage:
-//   const SKILL = "/Users/ajac-zero/Developer/PowerArmor/.agents/skills/blockbench-mcp/scripts";
+//   const SKILL = "/Users/ajac-zero/Developer/PowerSuits/.agents/skills/blockbench-mcp/scripts";
 //   const sweep = new Function("tools", (await tools.bash({command: `cat ${SKILL}/livesweep.js`})).output)(tools);
 //   const r = await sweep({pairs: [["^shoulder_joint_r$", "^pad_.*_r$"], ["^upper_arm_r$", "^chest"]]});
 //   // r = {"<A> > <B>": {rest: {d, a, b}, worst: {anim, t, d, a, b}, anims: {name: {t, d, a, b}}}}
