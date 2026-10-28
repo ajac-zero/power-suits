@@ -20,8 +20,8 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
  *   lies between them is on: the readouts are there, the helmet's metal is see-through (only its lip); what they haven't
  *   reached yet is still off (no readouts, solid black metal).</li>
  *   <li>Power off (out of fuel, flooded): two lines come in from the top and bottom edges (0.35 s), switching off what
- *   they pass, meet in the middle, and the line left there shrinks to the centre (0.15 s); only then does NO FUEL
- *   start blinking.</li>
+ *   they pass, meet in the middle, and the line left there shrinks to the centre (0.15 s), leaving the glass
+ *   completely dark (the suit menu says why).</li>
  * </ul>
  * Timed on the wall clock (ms), not game ticks: a tick is 50 ms, a frame far less, and a sweep stepped per tick shows
  * its steps. Climbing into a suit that's already off shows it off at once (no shutdown to watch). Client-only state,
@@ -46,7 +46,7 @@ public final class VisorPower {
         static final Scan ON = new Scan(1F, 0F, false);
         static final Scan OFF = new Scan(0F, 0F, false);
 
-        /** Nothing on the glass any more: the powered-down HUD (the blinking NO FUEL) takes over. */
+        /** Nothing on the glass any more: the powered-down HUD (dark, nothing drawn) takes over. */
         public boolean off() {
             return this.sweep <= 0F && !this.lit;
         }

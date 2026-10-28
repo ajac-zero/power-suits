@@ -13,7 +13,7 @@ Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outs
 | Deploy | Right-click the ground with the item (needs a 3-block-tall space) |
 | Climb in | Right-click the suit |
 | Suit menu | Your inventory with the suit in it, laid out like the inventory screen: **press your inventory key (E) inside the suit**, or sneak + right-click a parked suit. The suit's helmet, engine, burn flame and fuel down the armour column, its power tool in the off-hand slot, the suit itself in the preview window, and where the crafting grid was: hull, fuel and power status, the **Power** switch and (from outside only) **Pack up**. Over any item, the swap-hands key (F) swaps it with the socket tool |
-| Power switch | The suit's power switch, in its menu or on the **H** key while piloting (rebind it in Options > Controls > Key Binds > Power Armor > *Power switch*). Off, the suit acts exactly like one with nothing to burn (it slumps, the mind stops, the visor goes dark and reads POWER OFF) but keeps its fuel; it stays off when packed up. On again, it stands back up |
+| Power switch | The suit's power switch, in its menu or on the **H** key while piloting (rebind it in Options > Controls > Key Binds > Power Armor > *Power switch*). Off, the suit acts exactly like one with nothing to burn (it slumps, the mind stops, the visor goes completely dark; the menu's status reads POWER OFF) but keeps its fuel; it stays off when packed up. On again, it stands back up |
 | Helmet | Right-click a suit with a Power Armor Helmet (or use the menu's helmet slot) to put it on. It seals the suit, and the machine mind only runs with it: without one the suit still runs with you inside (unsealed: fire, poison and water reach you, and you can eat), and an empty one stands powered down. Switching it off (below) or taking the helmet off parks a suit. Rogues always wear one |
 | Fuel | Put anything a furnace burns in the fuel slot; it lasts as many ticks as in a furnace (coal 1:20 of walking, blaze rod 2:00, lava bucket 16:40 and the bucket stays, planks 0:15) (for the standard Firebox engine; see *Engines* below) |
 | Engines | The backpack is the suit's engine, swapped in the menu's engine slot. **Firebox** (a new suit has no engine: craft one): burns fuel, floods and dies when water covers it (no pack-up while flooded: drain the water or swap the engine). **Tidal Engine** (crafted with a Heart of the Sea; twin diving tanks that bubble under water): free while wet (its backpack under water, or in rain); on land it drinks water buckets (0:15) or bottles (0:05) from the fuel slot, so carry some to climb out of the water. **Star Reactor** (diamonds + an end crystal; glowing energy canisters drawing in ender particles): a Nether Star in the fuel slot runs everything, tools included, forever (bullets still take iron nuggets). Each engine is its own backpack on the suit |
@@ -102,12 +102,12 @@ glass (no helmet, no HUD: then vanilla's vehicle hearts show the hull); without 
 view in. When the power comes on (fuel is back, or you climb into a running suit) the visor scans itself on: a line
 appears across the middle of the screen, widens, and splits into two lines that sweep up and down to the edges; what
 they pass is on (the metal turns see-through, the readouts appear). When the power goes, two lines sweep in from the
-top and bottom, switching everything off behind them, meet in the middle and shrink away; then NO FUEL starts
-blinking. It's terminal green by default: pick your own colour under
+top and bottom, switching everything off behind them, meet in the middle and shrink away, leaving the glass completely
+dark. It's terminal green by default: pick your own colour under
 **Mods > Power Armor > Config > Visor** (`visor_colour` in `config/powerarmor-client.toml`, `#RRGGBB`; only you see it).
 - **Top left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
   with a **shield** that's lit while the suit is sealed (running with the helmet on) and faded when not, and **FUEL**: how long it lasts at walking pace (∞ on a wet
-  tidal engine or a star reactor; NO FUEL, also with no engine; FLOODED), a bar for how full the fuel slot is, and three
+  tidal engine or a star reactor), a bar for how full the fuel slot is, and three
   **embers** for how fast it burns, about one per walking's worth: one idling or walking, two sprinting, three with a
   hungry tool at work (a charging rail cannon, the chaingun at full spin, the flamethrower; the chaingun's climb from one
   to three as its barrels spin up), none when nothing burns.
@@ -143,7 +143,8 @@ blinking. It's terminal green by default: pick your own colour under
   steady, **critical** (the last 15%, or something you can't use yet) blinks it. Only the label in trouble changes:
   HULL under half (steady) and in its last 15% (blinking), FUEL when low, a tool's own: the last rounds (AMMO: 16
   bullets, the last TNT; the rail cannon's last ingot pip), a hot or overheated chaingun (HEAT, OVERHEAT). With **no
-  power** the glass goes dark: only the helmet's edge and **NO FUEL** (or FLOODED), blinking inverted, are left.
+  power** the glass goes completely dark: only the helmet's edge is left. Why it went dark is in the suit menu (E):
+  its status line reads **NO FUEL**, **NO ENGINE**, **FLOODED** or **POWER OFF**.
 - While the HUD is up, vanilla's boss bars move down under the compass and the effect icons under the top right corner.
 
 Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It burns whenever

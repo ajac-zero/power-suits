@@ -57,8 +57,8 @@ import org.jetbrains.annotations.Nullable;
  * {@link HudView#label}). How urgent a readout is ({@link HudAlert}) inverts its label like an old terminal: a solid
  * block with the text cut in, steady as a warning (HULL at half), blinking when critical (HULL in its last 15%, FUEL
  * low); only the label in trouble, so a tool's (the last rounds, a hot or overheated barrel) marks only its own. Without
- * power the projector is dark: only NO FUEL (or FLOODED) is left, blinking inverted (POWER OFF, steady, when the suit
- * was switched off). The helmet carries the projector: no helmet, no HUD (vanilla's vehicle hearts then stand in for the hull, as on any mount). With the HUD up
+ * power the projector is dark: nothing at all on the glass, only the helmet's edge (user, 2026-10-27); the suit menu's
+ * status says why (NO FUEL, NO ENGINE, FLOODED, POWER OFF). The helmet carries the projector: no helmet, no HUD (vanilla's vehicle hearts then stand in for the hull, as on any mount). With the HUD up
  * those hearts are hidden, and vanilla's boss bars and effect icons move down out of its way.
  * <p>
  * It's a "GUI layer" (registered in ClientSetup), drawn every frame after the vanilla hotbar. Everything it shows comes
@@ -117,20 +117,17 @@ public final class SuitHud {
         boolean free = power.hasFreePower() && powered;
         int energy = power.getTotalEnergy();
         // Every word and sign on the HUD comes from the language file (hud.powerarmor.*), so a translation covers it all.
-        // No engine reads NO FUEL too (user, 2026-10-27: players get it; the menu still says NO ENGINE).
+        // (NO FUEL only shows here for a moment: a suit with nothing left powers down and the glass goes dark.)
         Component fuelText = free ? Component.translatable("hud.powerarmor.endless")
                 : power.isFlooded() ? Component.translatable("gui.powerarmor.flooded")
                 : energy > 0 ? Component.literal(PowerArmorItem.formatWalkTime(energy))
                 : Component.translatable("gui.powerarmor.no_fuel");
         float hull = Mth.clamp(suit.getHealth() / suit.getMaxHealth(), 0F, 1F);
         if (!powered && scan.off()) {
-            // The projector runs on the suit's power: with none, the glass is dark but for the reason, blinking inverted
-            // (once the shutdown's scan is over: VisorPower). Switched off it's no alarm: POWER OFF, steady.
-            boolean switchedOff = !power.isSwitchedOn();
-            Component reason = switchedOff ? Component.translatable("hud.powerarmor.switched_off") : fuelText;
-            HudAlert alert = switchedOff ? HudAlert.NONE : HudAlert.CRITICAL;
-            HudView.label(g, font, reason, x0 + 26, y0 + 4, VisorConfig.colour(), alert, blink);
-            shown = new Shown(hull, power.fuelGauge(), reason.getString(), 0, alert, false, "", "", "", 0F);
+            // The projector runs on the suit's power: with none, the glass is dark, nothing at all on it (once the
+            // shutdown's scan is over: VisorPower). Why it went dark (NO FUEL, NO ENGINE, FLOODED, POWER OFF) is the
+            // suit menu's status line to tell (user, 2026-10-27: the HUD shuts off completely; the menu says why).
+            shown = new Shown(hull, power.fuelGauge(), "", 0, HudAlert.NONE, false, "", "", "", 0F);
             return;
         }
 

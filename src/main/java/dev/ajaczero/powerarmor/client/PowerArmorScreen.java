@@ -126,15 +126,17 @@ public class PowerArmorScreen extends AbstractContainerScreen<PowerArmorMenu> {
         Component range = suit.power().hasFreePower() ? Component.translatable("gui.powerarmor.range_free")
                 : Component.translatable("gui.powerarmor.range", PowerArmorItem.formatWalkTime(energy));
         graphics.text(this.font, range, DISPLAY_X, DISPLAY_Y + LINE, suit.power().hasFreePower() ? GREEN : fuelColour, false);
-        // Say why a suit stands down: switched off, no engine, a flooded firebox, or (parked) no helmet: its mind needs
-        // the helmet.
+        // Say why a suit stands down: switched off, no engine, a flooded firebox, (parked) no helmet: its mind needs
+        // the helmet, or nothing left to burn. This is the only place that says it: the visor goes completely dark
+        // without power (SuitHud, user 2026-10-27), so a pilot checks here. NO POWER is left for the rest (lightning).
         boolean off = !suit.power().isSwitchedOn();
         boolean warn = off || suit.getEngine() == null || suit.power().isFlooded() || !suit.hasHelmet();
         Component status = Component.translatable(off ? "gui.powerarmor.switched_off"
                 : suit.getEngine() == null ? "gui.powerarmor.no_engine"
                 : suit.power().isFlooded() ? "gui.powerarmor.flooded"
                 : !suit.hasHelmet() && !suit.isVehicle() ? "gui.powerarmor.no_helmet"
-                : suit.isPowered() ? "gui.powerarmor.online" : "gui.powerarmor.offline");
+                : suit.isPowered() ? "gui.powerarmor.online"
+                : energy == 0 && !suit.power().hasFreePower() ? "gui.powerarmor.no_fuel" : "gui.powerarmor.offline");
         graphics.text(this.font, status, DISPLAY_X, DISPLAY_Y + 2 * LINE, warn ? AMBER : suit.isPowered() ? GREEN : RED, false);
     }
 

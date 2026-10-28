@@ -297,7 +297,6 @@
   "key.category.powerarmor.power_armor": "Power Armor",
   "key.powerarmor.power_switch": "Power switch (while piloting)",
   "message.powerarmor.switched_off": "Power switched off",
-  "hud.powerarmor.switched_off": "POWER OFF",
   "gui.powerarmor.power": "Power: %s",
   "gui.powerarmor.power.on": "ON",
   "gui.powerarmor.power.off": "OFF",

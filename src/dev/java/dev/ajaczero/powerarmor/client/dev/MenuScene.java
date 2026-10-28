@@ -37,16 +37,18 @@ import net.neoforged.fml.loading.FMLPaths;
  *   <li>The inventory key from inside (what vanilla does for E when the vehicle has its own screen:
  *   {@code sendOpenInventory}): the suit's menu, no Pack up ({@code ap_menu_inside}).</li>
  *   <li>F over the drill on the hotbar: the drill goes into the socket, the chaingun comes out ({@code ap_menu_swapped}).</li>
- *   <li>The Power button: switched off, the status reads POWER OFF ({@code ap_menu_off}); closed, the visor is dark and
- *   reads POWER OFF ({@code ap_menu_hud_off}).</li>
+ *   <li>The Power button: switched off, the status reads POWER OFF ({@code ap_menu_off}); closed, the visor is completely
+ *   dark, nothing on the glass ({@code ap_menu_hud_off}).</li>
  *   <li>The power switch key (H): on again, the visor warms up ({@code ap_menu_hud_on}).</li>
  *   <li>F outside the screen with the chainsaw selected: the chainsaw goes into the socket ({@code ap_menu_f_back},
  *   the in-game back view).</li>
  *   <li>Out of the suit, sneak + right-click: the same screen from outside, with Pack up ({@code ap_menu_outside}).</li>
+ *   <li>Still open, the fuel taken out: the status reads NO FUEL ({@code ap_menu_no_fuel}); the engine taken out: NO
+ *   ENGINE ({@code ap_menu_no_engine}). The menu is the only place that says why a suit is dark (SuitHud draws nothing).</li>
  * </ol>
  * Log run/autopilot_menu.csv: per tick the screen open on the client, the server's and the client's socket tool, the
  * switch and power on both sides, the pilot's hand and whether vanilla treats the inventory key as the vehicle's.
- * Runs alone with ./gradlew runAutopilotMenu (~25 s) and at the end of runAutopilotMech.
+ * Runs alone with ./gradlew runAutopilotMenu (~26 s) and at the end of runAutopilotMech.
  */
 final class MenuScene {
     private static volatile BlockPos base;
@@ -96,7 +98,23 @@ final class MenuScene {
                               p.setShiftKeyDown(false);
                           }); }
             case 196 -> AutoPilot.shot(mc, "menu_outside");
-            case 200 -> { mc.player.closeContainer(); close(); return false; }
+            // the menu is the only place that says why a suit is dark (the visor shows nothing): out of fuel, then no engine
+            case 200 -> { phase = "no_fuel"; AutoPilot.onServer(mc, p -> {
+                              PowerArmorEntity x = suit;
+                              if (x != null) {
+                                  x.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, ItemStack.EMPTY);
+                                  x.power().setBurn(0, 0);
+                              }
+                          }); }
+            case 210 -> AutoPilot.shot(mc, "menu_no_fuel");
+            case 214 -> { phase = "no_engine"; AutoPilot.onServer(mc, p -> {
+                              PowerArmorEntity x = suit;
+                              if (x != null) {
+                                  x.getInventory().setItem(PowerArmorEntity.ENGINE_SLOT, ItemStack.EMPTY);
+                              }
+                          }); }
+            case 224 -> AutoPilot.shot(mc, "menu_no_engine");
+            case 228 -> { mc.player.closeContainer(); close(); return false; }
             default -> {}
         }
         if (s >= 2) {

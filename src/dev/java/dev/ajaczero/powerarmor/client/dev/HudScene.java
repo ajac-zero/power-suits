@@ -41,7 +41,7 @@ import net.neoforged.fml.loading.FMLPaths;
  * ember, visor colour), walking (one), sprinting (two, orange); the charging rail cannon later (three, red); a long burst until the barrels overheat (the
  * chaingun's corner readout: HEAT orange from half, red in its last 15%, then OVERHEAT, staying red while it cools all
  * the way down: {@code ap_hud_chaingun_cooling}; the rest of the HUD stays in the visor colour); down to the last
- * bullets (the AMMO counter red); the hull under half (orange), then in its last 15% (red); low fuel (red, beeping); no fuel (faded, NO FUEL); then each tool in turn with its
+ * bullets (the AMMO counter red); the hull under half (orange), then in its last 15% (red); low fuel (red, beeping); no fuel (the glass dark, nothing on it); then each tool in turn with its
  * own visor HUD (client/hud, 2026-10-27): the rail cannon's brackets closing in as it charges and locking at READY; the
  * TNT launcher's drum full, firing, empty and loading back chamber by chamber, its arc near and far, ending on a cow,
  * and a real round flying along it; the
@@ -101,11 +101,10 @@ final class HudScene {
             // out of fuel: the suit powers down, the HUD fades
             case 436 -> { phase = "off"; server(mc, (p, x) -> x.power().setBurn(0, 0)); }
             // the visor shutting down (VisorPower): two lines sweep in from the top and bottom, turning the metal black
-            // and wiping the readouts as they pass, meet in the middle and shrink away (0.5 s), then NO FUEL (hud_open)
+            // and wiping the readouts as they pass, meet in the middle and shrink away (0.5 s), then nothing (hud_open)
             case 439, 440, 441, 442, 443, 445 -> AutoPilot.shot(mc, "hud_close_" + (s - 436));
             case 460 -> AutoPilot.shot(mc, "hud_off");
-            case 465 -> AutoPilot.shot(mc, "hud_off_blink"); // NO FUEL blinks inverted every 5 ticks: one of the two shows the block
-            case 468 -> { phase = "refuel"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 40))); }
+                        case 468 -> { phase = "refuel"; server(mc, (p, x) -> x.getInventory().setItem(PowerArmorEntity.FUEL_SLOT, new ItemStack(Items.COAL, 40))); }
             // the visor's warm-up: a line across the middle widens, splits and sweeps up and down, turning the metal
             // see-through and uncovering the readouts as it passes (0.57 s; hud_open / visor_sweep columns)
             case 471, 472, 473, 474, 475, 476, 477, 479 -> AutoPilot.shot(mc, "hud_warm_" + (s - 468));
