@@ -3,7 +3,9 @@
 * { box-sizing: border-box; }
 html { overflow-y: scroll; height: 100%; }
 body {
-  margin: 0; color: #e0d0d0; background: #111 url(img/bg_main.png);
+  margin: 0; color: #e0d0d0; background-color: #111;
+  background-image: linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.72)), url(img/tex/cobbled_deepslate.png);
+  background-size: auto, 64px;
   font: 15px/1.5 "Helvetica Neue", Helvetica, Arial, sans-serif;
   min-height: 100%; display: flex; flex-direction: column;
 }
@@ -24,7 +26,7 @@ p, ul, ol { margin: 1.3em 0 0; }
 
 .wrap { width: 1000px; margin: 0 auto; }
 
-header { height: 48px; background: #211710 url(img/bg_top.png); }
+header { height: 48px; background-color: #211710; background-image: linear-gradient(rgba(0,0,0,.4), rgba(0,0,0,.4)), url(img/tex/dirt.png); background-size: auto, 48px; border-bottom: 3px solid #000; }
 #logo {
   float: left; width: 270px; height: 48px; display: flex; align-items: center; gap: 10px;
   color: #fff; font-size: 24px; font-weight: bold; letter-spacing: 0.01em; text-shadow: 2px 2px 0 #000;
@@ -127,3 +129,6 @@ html:not(.js) .carousel .slide:first-child { opacity: 1; }
 @media (max-width: 1040px) { .carousel { width: 100%; height: auto; aspect-ratio: 9 / 5; } }
 @media (prefers-reduced-motion: reduce) { .carousel .slide { transition: none; } }
 aside p:first-child { margin-top: 0; }
+
+body, header { image-rendering: pixelated; }
+body > *, header * { image-rendering: auto; }
