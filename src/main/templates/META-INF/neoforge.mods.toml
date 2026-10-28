@@ -13,7 +13,7 @@
 license="${mod_license}"
 
 # A URL to refer people to when problems occur with this mod
-#issueTrackerURL="https://change.me.to.your.issue.tracker.example.invalid/" #optional
+issueTrackerURL="https://github.com/ajac-zero/power-suits/issues" #optional
 
 # A list of mods - how many allowed here is determined by the individual mod loader
 [[mods]] #mandatory
@@ -31,7 +31,7 @@ displayName="${mod_name}" #mandatory
 #updateJSONURL="https://change.me.example.invalid/updates.json" #optional
 
 # A URL for the "homepage" for this mod, displayed in the mod UI
-#displayURL="https://change.me.to.your.mods.homepage.example.invalid/" #optional
+displayURL="https://ajac-zero.github.io/power-suits/" #optional
 
 # A file name (in the root of the mod JAR) containing a logo for display
 # The Modrinth icon (marketing/out/icon.png) in the Mods list. NeoForge 26.3 reads iconFile (the list entry, 24 px:
