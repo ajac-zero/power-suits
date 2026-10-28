@@ -239,12 +239,12 @@ final class HudScene {
     private static VisorConfig.Preset savedPreset = VisorConfig.Preset.GREEN;
     private static String savedColour = VisorConfig.DEFAULT_COLOUR;
 
-    /** The mod's client config page, as Mods > Power Armor > Config > Client opens it. */
+    /** The mod's client config page, as Mods > Power Suits > Config > Client opens it. */
     private static net.minecraft.client.gui.screens.Screen configScreen() {
         var config = net.neoforged.fml.config.ModConfigs.getConfigSet(net.neoforged.fml.config.ModConfig.Type.CLIENT).stream()
                 .filter(c -> c.getModId().equals(PowerArmor.MODID)).findFirst().orElseThrow();
         return new net.neoforged.neoforge.client.gui.ConfigurationScreen.ConfigurationSectionScreen(null,
-                net.neoforged.fml.config.ModConfig.Type.CLIENT, config, net.minecraft.network.chat.Component.literal("Power Armor visor"));
+                net.neoforged.fml.config.ModConfig.Type.CLIENT, config, net.minecraft.network.chat.Component.literal("Power Suits visor"));
     }
 
     /** What the scene put out (the TNT arc's cow; the EM projector's pigs and ingots), to remove after. */

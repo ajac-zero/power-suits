@@ -1,6 +1,6 @@
-<img src="https://raw.githubusercontent.com/ajac-zero/power-suits/main/marketing/out/man_of_tomorrow_transparent.png" alt="A lime power armor suit with a chainsaw raised, leaping at a flying caped fighter" align="right" width="320">
+<img src="https://raw.githubusercontent.com/ajac-zero/power-suits/main/marketing/out/man_of_tomorrow_transparent.png" alt="A lime power suit with a chainsaw raised, leaping at a flying caped fighter" align="right" width="320">
 
-# Power Armor
+# Power Suits
 
 For situations where plain old armor isn't enough. This power suit provides maximum protection while also enabling access to special power tools. Inside, your inventory is the suit's: keep tools on your hotbar, swap them onto the suit's arm with F, and switch the suit off to park it with its fuel in.
 

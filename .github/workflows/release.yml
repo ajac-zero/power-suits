@@ -2,7 +2,7 @@
 # a public build log, not from anyone's computer. Then it republishes the web page for the new version.
 #
 # Releasing = bump mod_version in gradle.properties, commit, then tag and push the tag:
-#   git tag -a v1.1.0 -m "Power Armor 1.1.0" && git push origin main v1.1.0
+#   git tag -a v1.1.0 -m "Power Suits 1.1.0" && git push origin main v1.1.0
 # A pushed v* tag starts this workflow. Tags from before the workflow existed (v1.0.0) have no copy of it, so GitHub
 # can't start it for them: run it by hand from main (Actions tab > Release > Run workflow, or
 # `gh workflow run release.yml -f tag=v1.0.0`). It always builds the TAG, whichever way it starts.
@@ -13,7 +13,7 @@
 #   - <jar>.sha256, its checksum
 #   - a signed build provenance attestation (Sigstore, stored by GitHub): proof that this exact file was built by this
 #     workflow in this repository from that commit. Check a download with
-#       gh attestation verify powerarmor-1.0.0.jar -R ajac-zero/power-suits
+#       gh attestation verify powersuits-1.1.0.jar -R ajac-zero/power-suits    (1.0.0: powerarmor-1.0.0.jar)
 name: Release
 
 on:
@@ -76,6 +76,9 @@ jobs:
             echo "::error::tag $TAG but gradle.properties says mod_version=$version"; exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
+          # the jar's name: jar_name since 1.1 (powersuits), the mod id before (powerarmor-1.0.0.jar)
+          jar=$(grep '^jar_name=' gradle.properties | cut -d= -f2)
+          echo "JAR=${jar:-powerarmor}-$version.jar" >> "$GITHUB_ENV"
 
       # Only the pinned JDK may compile: no other Java on the runner, no toolchain downloads.
       - name: Build
@@ -90,19 +93,19 @@ jobs:
         run: |
           cd build/libs
           ls -l
-          sha256sum "powerarmor-$VERSION.jar" | tee "powerarmor-$VERSION.jar.sha256"
+          sha256sum "$JAR" | tee "$JAR.sha256"
 
       - name: Sign the build provenance
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: build/libs/powerarmor-${{ env.VERSION }}.jar
+          subject-path: build/libs/${{ env.JAR }}
 
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           NOTES: ${{ inputs.notes }}
         run: |
-          sum=$(cut -d' ' -f1 "build/libs/powerarmor-$VERSION.jar.sha256")
+          sum=$(cut -d' ' -f1 "build/libs/$JAR.sha256")
           {
             [ -n "$NOTES" ] && printf '%s\n\n' "$NOTES"
             echo "Needs NeoForge for Minecraft 26.3 and GeckoLib 5 (server and client)."
@@ -111,11 +114,11 @@ jobs:
             echo
             echo "Built by [this workflow run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) from the tag $TAG"
             echo "with Java: $JDK_NAME and tools/reproducible.gradle."
-            echo "Check your download: \`gh attestation verify powerarmor-$VERSION.jar -R $GITHUB_REPOSITORY\`"
+            echo "Check your download: \`gh attestation verify $JAR -R $GITHUB_REPOSITORY\`"
           } > notes.md
           gh release create "$TAG" \
-            "build/libs/powerarmor-$VERSION.jar" "build/libs/powerarmor-$VERSION.jar.sha256" \
-            --title "Power Armor $VERSION" --notes-file notes.md --verify-tag
+            "build/libs/$JAR" "build/libs/$JAR.sha256" \
+            --title "Power Suits $VERSION" --notes-file notes.md --verify-tag
 
       # A release made with the workflow's own token doesn't trigger other workflows (GitHub's loop guard), except
       # when started explicitly like this.

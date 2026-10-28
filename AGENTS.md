@@ -1,6 +1,9 @@
 # Working on Power Armor
 
-A NeoForge 26.3 + GeckoLib 5.5.7 Minecraft mod (Java 25): an enterable power-armor suit. This file is the rules; the
+A NeoForge 26.3 + GeckoLib 5.5.7 Minecraft mod (Java 25): an enterable power suit. **Players see it as Power Suits**
+(mod name, item names "Power Suit ...", site, release titles, jar `powersuits-<version>.jar`); the code, the mod id
+`powerarmor`, the registry names (`power_armor`) and file names keep the old name, because saved worlds store them
+(1.0.0 shipped as `powerarmor`). New player-facing text says Power Suit(s); don't rename ids. This file is the rules; the
 knowledge lives in the project skills and their references (read the one that matches the task):
 
 | Read | When |

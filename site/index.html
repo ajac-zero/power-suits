@@ -6,10 +6,10 @@
        python3 tools/build-site.py --version 1.0.0 /tmp/site && open /tmp/site/index.html -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Power Armor: a power suit mod for Minecraft</title>
-  <meta name="description" content="Power Armor is a NeoForge mod for Minecraft 26.3: an enterable power suit with a chaingun, drill, chainsaw, flamethrower and EM projector, swappable engines, a machine mind and rogue suits.">
+  <title>Power Suits: an enterable power suit mod for Minecraft</title>
+  <meta name="description" content="Power Suits is a NeoForge mod for Minecraft 26.3: an enterable power suit with a chaingun, drill, chainsaw, flamethrower and EM projector, swappable engines, a machine mind and rogue suits.">
   <link rel="icon" href="img/favicon.png">
-  <meta property="og:title" content="Power Armor">
+  <meta property="og:title" content="Power Suits">
   <meta property="og:description" content="For situations where plain old armor isn't enough. An enterable power suit mod for Minecraft (NeoForge 26.3).">
   <meta property="og:image" content="https://ajac-zero.github.io/power-suits/img/suppressing_fire.jpg">
   <meta property="og:type" content="website">
@@ -19,7 +19,7 @@
 <body>
 
 <header class="top">
-  <a class="brand" href="#"><img src="img/icon.png" alt="" width="36" height="36"> Power Armor</a>
+  <a class="brand" href="#"><img src="img/icon.png" alt="" width="36" height="36"> Power Suits</a>
   <nav>
     <a href="#features">Features</a>
     <a href="#gallery">Gallery</a>
@@ -32,7 +32,7 @@
 <section class="hero">
   <img class="hero-bg" src="img/suppressing_fire.jpg" alt="">
   <div class="hero-text">
-    <h1>Power Armor</h1>
+    <h1>Power Suits</h1>
     <p class="tagline">For situations where plain old armor isn't enough.</p>
     <p class="sub">An enterable power suit for Minecraft, with power tools, swappable engines and a mind of its own.</p>
     <div class="buttons">
@@ -130,7 +130,7 @@
 </section>
 
 <section class="feature">
-  <img class="shot" src="img/walk_front.jpg" alt="A blue power armor suit walking toward the camera across a meadow" loading="lazy">
+  <img class="shot" src="img/walk_front.jpg" alt="A blue power suit walking toward the camera across a meadow" loading="lazy">
   <div>
     <h2>Make it yours</h2>
     <p>
@@ -177,7 +177,7 @@
   <ol>
     <li>Install <a href="https://neoforged.net/">NeoForge</a> for Minecraft 26.3.</li>
     <li>Download <a href="https://modrinth.com/mod/geckolib">GeckoLib 5</a> for NeoForge 26.3 and put it in your <code>mods</code> folder.</li>
-    <li>Download <a href="https://github.com/ajac-zero/power-suits/releases/latest">Power Armor</a> and put the jar next to it.</li>
+    <li>Download <a href="https://github.com/ajac-zero/power-suits/releases/latest">Power Suits</a> and put the jar next to it.</li>
   </ol>
   <p class="version">Latest version: <b>{{version}}</b>. Every version is on the <a href="https://github.com/ajac-zero/power-suits/releases">releases page</a>.</p>
   <p>
@@ -203,12 +203,12 @@
     <li>
       <b>Signed.</b> GitHub signs a record of each build: this file, from this repository, at this commit. With the
       <a href="https://cli.github.com/">GitHub CLI</a>, check the jar you downloaded:
-      <pre>gh attestation verify powerarmor-{{version}}.jar -R ajac-zero/power-suits</pre>
+      <pre>gh attestation verify {{jar}} -R ajac-zero/power-suits</pre>
     </li>
     <li>
       <b>Checksum.</b> Each release lists the jar's SHA-256. Compare it with yours:
-      <code>shasum -a 256 powerarmor-{{version}}.jar</code> (macOS, Linux) or
-      <code>certutil -hashfile powerarmor-{{version}}.jar SHA256</code> (Windows).
+      <code>shasum -a 256 {{jar}}</code> (macOS, Linux) or
+      <code>certutil -hashfile {{jar}} SHA256</code> (Windows).
     </li>
     <li>
       <b>Rebuild it yourself.</b> The build is repeatable: the same source gives the same file, byte for byte.
@@ -228,7 +228,7 @@
 
 <footer>
   <p>
-    Power Armor is open source under the MIT license:
+    Power Suits is open source under the MIT license:
     <a href="https://github.com/ajac-zero/power-suits">github.com/ajac-zero/power-suits</a>.
     Bugs and ideas go to the <a href="https://github.com/ajac-zero/power-suits/issues">issues</a>.
   </p>

@@ -54,7 +54,7 @@ repositories {
 }
 
 base {
-    archivesName = mod_id
+    archivesName = jar_name // powersuits-<version>.jar; the mod id stays powerarmor (gradle.properties)
 }
 
 // Mojang ships Java 25 to end users in 26.3, so mods should target Java 25.

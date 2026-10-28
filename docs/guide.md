@@ -1,7 +1,7 @@
-# Power Armor
+# Power Suits
 
-A Minecraft mod (Minecraft 26.3, NeoForge 26.3.0.76 + GeckoLib 5.5.7) that adds a power armor suit you climb into,
-Fallout / Titanfall style. Model and animations come from `model/power_armor.bbmodel`.
+A Minecraft mod (Minecraft 26.3, NeoForge 26.3.0.76 + GeckoLib 5.5.7) that adds a power suit you climb into,
+Fallout / Titanfall style (the mod is Power Suits; the code and its ids still say powerarmor, the id 1.0.0 shipped with). Model and animations come from `model/power_armor.bbmodel`.
 
 Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outside the repo).
 
@@ -13,9 +13,9 @@ Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outs
 | Deploy | Right-click the ground with the item (needs a 3-block-tall space) |
 | Climb in | Right-click the suit |
 | Suit menu | Your inventory with the suit in it, laid out like the inventory screen: **press your inventory key (E) inside the suit**, or sneak + right-click a parked suit. The suit's helmet, engine, burn flame and fuel down the armour column, the suit itself in the preview window, and opposite the armour column: the **Power** key (⏻: pushed in and green while on, out and grey while off), the power tool's socket slot, and the **Pack** key (greyed out from inside). Where the crafting grid was, a status screen in your visor colour: the suit's name, HULL and FUEL with bars like the visor's, and the status (ONLINE, or why it's dark: NO FUEL, NO ENGINE, FLOODED, POWER OFF, NO HELMET; the ones to fix blink inverted). Over any item, the swap-hands key (F) swaps it with the socket tool |
-| Night vision | The powered visor lifts the dark when it's dark around you (a cave, any night outside), tinted in your visor colour like night-vision goggles; it fades in over a second and goes with the visor's power. **N** switches it on and off while you pilot a suit with a helmet (rebind it in Options > Controls > Key Binds > Power Armor > *Night vision*); **NV** under the compass, right of the clock, while it's on. Only on your screen: nothing in the world is lit |
-| Power switch | The suit's power switch, in its menu or on the **H** key while piloting (rebind it in Options > Controls > Key Binds > Power Armor > *Power switch*). Off, the suit acts exactly like one with nothing to burn (it slumps, the mind stops, the visor goes completely dark; the menu's status reads POWER OFF) but keeps its fuel; it stays off when packed up. On again, it stands back up |
-| Helmet | Right-click a suit with a Power Armor Helmet (or use the menu's helmet slot) to put it on. It seals the suit, and the machine mind only runs with it: without one the suit still runs with you inside (unsealed: fire, poison and water reach you, and you can eat), and an empty one stands powered down. Switching it off (below) or taking the helmet off parks a suit. Rogues always wear one |
+| Night vision | The powered visor lifts the dark when it's dark around you (a cave, any night outside), tinted in your visor colour like night-vision goggles; it fades in over a second and goes with the visor's power. **N** switches it on and off while you pilot a suit with a helmet (rebind it in Options > Controls > Key Binds > Power Suits > *Night vision*); **NV** under the compass, right of the clock, while it's on. Only on your screen: nothing in the world is lit |
+| Power switch | The suit's power switch, in its menu or on the **H** key while piloting (rebind it in Options > Controls > Key Binds > Power Suits > *Power switch*). Off, the suit acts exactly like one with nothing to burn (it slumps, the mind stops, the visor goes completely dark; the menu's status reads POWER OFF) but keeps its fuel; it stays off when packed up. On again, it stands back up |
+| Helmet | Right-click a suit with a Power Suit Helmet (or use the menu's helmet slot) to put it on. It seals the suit, and the machine mind only runs with it: without one the suit still runs with you inside (unsealed: fire, poison and water reach you, and you can eat), and an empty one stands powered down. Switching it off (below) or taking the helmet off parks a suit. Rogues always wear one |
 | Fuel | Put anything a furnace burns in the fuel slot; it lasts as many ticks as in a furnace (coal 1:20 of walking, blaze rod 2:00, lava bucket 16:40 and the bucket stays, planks 0:15) (for the standard Firebox engine; see *Engines* below) |
 | Engines | The backpack is the suit's engine, swapped in the menu's engine slot. **Firebox** (a new suit has no engine: craft one): burns fuel, floods and dies when water covers it (no pack-up while flooded: drain the water or swap the engine). **Tidal Engine** (crafted with a Heart of the Sea; twin diving tanks that bubble under water): free while wet (its backpack under water, or in rain); on land it drinks water buckets (0:15) or bottles (0:05) from the fuel slot, so carry some to climb out of the water. **Star Reactor** (diamonds + an end crystal; glowing energy canisters drawing in ender particles): a Nether Star in the fuel slot runs everything, tools included, forever (bullets still take iron nuggets). Each engine is its own backpack on the suit |
 | Walk / run | WASD (3.0 blocks/s walk; S backs up at half speed) / sprint (6.25 blocks/s; double-tap W or tap Ctrl once, it keeps going while W is held) |
@@ -38,7 +38,7 @@ Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outs
 | Stomp | Landing from 3.5+ blocks hurts everything around you (not you): 2 damage per block fallen, up to 30, half at the edge of the shock wave (2-3.5 blocks); things get thrown. A normal jump doesn't stomp |
 | Smashing through | Walking breaks leaves, glass panes, cobwebs, snow layers, berry bushes, bamboo...; sprinting also breaks glass and ice. Nothing drops. Block tags `powerarmor:suit_smashes_walking` / `_sprinting`; can be switched off in the config |
 | Machine mind | A powered suit with its helmet on and nobody inside is driven by its own mind (green visor): it works for its owner (whoever last piloted it, or deployed it) from its home (the block where the pilot got out, or where it was deployed). Its job depends on the socket tool: none (or a tool whose job isn't built yet) = stand guard at home, look at people nearby, walk back if pushed away; **chaingun** = follow its owner like a tamed wolf (walks over 7 blocks away, sprints past 16, stops at 4, no teleporting) and defend them: it shoots whatever attacks the owner or the suit, whatever the owner attacks, and monsters within 16 blocks of the owner, never with the owner, a villager, a pet or another suit in the line of fire; **EM projector** = guard home: monsters within 12 blocks of home (config) are caught one by one, lifted overhead and flung ~30 blocks up (44 blocks/s, config) so the fall kills them; creepers are thrown up and away from home instead. Never animals, villagers, players or pets; **drill** = clear an open hall at home level, 3 blocks high, ring by ring outward from home within 12 blocks (config `work_radius`): it never digs down or into the ceiling, leaves a wall wherever a block touches lava or water and leaves columns standing over holes in the floor; **chainsaw** = fell the natural trees within 12 blocks of home, nearest first (never log cabins); **rail cannon** = a long-range guard at home: it charges and shoots monsters it can see within 40 blocks of home (config), and whatever attacks it or its owner, never with a friend anywhere on the beam. The mind's tools never run out of ammo. Drops stay on the floor: give allays the items you want (an allay given coal brings every coal it sees to you); the stone and dirt nobody collects despawn after 5 minutes. Design sec. 8. It burns fuel like a piloted suit (idle 0.25/tick): **to park a suit, switch it off** |
-| Helmet styles | Easter eggs: five smithing templates hide in structure chests (ocean ruins and shipwrecks, trial chamber vaults, end cities, ancient cities, desert pyramids and jungle temples). At a smithing table, template + Power Armor Helmet + the object the template names gives that helmet its new look (name, icon and model change; it works the same). Helmet + iron block with no template gives the standard helmet back; 7 diamonds round a template and its object copy it. Rogues sometimes wear one. Design sec. 4c |
+| Helmet styles | Easter eggs: five smithing templates hide in structure chests (ocean ruins and shipwrecks, trial chamber vaults, end cities, ancient cities, desert pyramids and jungle temples). At a smithing table, template + Power Suit Helmet + the object the template names gives that helmet its new look (name, icon and model change; it works the same). Helmet + iron block with no template gives the standard helmet back; 7 diamonds round a template and its object copy it. Rogues sometimes wear one. Design sec. 4c |
 | Paint | Right-click the suit with any dye: its armour plates (shoulder pads, upper arms, chest, collar, belly plate, hips, thighs, the helmet's shell) take the colour and the dye is used up; another dye paints over it, a wet sponge washes it back to bare steel (the sponge stays wet). Only the look changes. A packed suit keeps its paint |
 | Ammo | The tools take their ammo from **your inventory**, like a bow's arrows (off hand first): iron nuggets for the chaingun, TNT for the TNT launcher, iron ingots for the rail cannon; free in creative. The suit carries none: the machine mind's tools never run out. (Suits from before 1.1 drop what their old ammo slot and nugget store held, as items, the first time they load) |
 | Rogue suits | Extremely rare (2% chance per in-game day, config): a rogue suit with a red visor turns up 48-64 blocks from a player. It needs no fuel or ammo and attacks any player or mob it sees: a chaingun rogue shoots, an EM rogue hurls (players too; a suit is too heavy to lift: it pins yours in place, you crawl at a quarter speed, then shoves it). It can't be boarded. Defeated, it drops only its tool; **struck by lightning** (a storm, a Channeling trident, a lightning rod) its mind reboots friendly with one coal's worth of fuel, and the first player to climb in claims it. It leaves after an in-game day once nobody is near. Your chaingun suits shoot rogues on sight. Test one: `/summon powerarmor:power_armor ~ ~ ~5 {Mind:"ROGUE",Inventory:{Items:[{Slot:1b,id:"powerarmor:chaingun",count:1}]}}` (or `powerarmor:em_projector`) |
@@ -50,11 +50,11 @@ Each part is crafted on its own, then torso, arms and legs are assembled like a 
 
 | Item | Recipe |
 |---|---|
-| Power Armor Helmet | top row: iron block, redstone block, iron block; middle row: compass, glass, clock (they become the visor's compass and clock) |
-| Power Armor Torso | iron blocks in the corners, copper blocks on the edges, a redstone block in the middle |
-| Power Armor Arm (x2) | a row: copper block, piston, iron block (either way round) |
-| Power Armor Leg (x2) | a column: copper block, piston, iron block (top to bottom) |
-| Power Armor | arm, torso, arm across the top row; legs in the corners below |
+| Power Suit Helmet | top row: iron block, redstone block, iron block; middle row: compass, glass, clock (they become the visor's compass and clock) |
+| Power Suit Torso | iron blocks in the corners, copper blocks on the edges, a redstone block in the middle |
+| Power Suit Arm (x2) | a row: copper block, piston, iron block (either way round) |
+| Power Suit Leg (x2) | a column: copper block, piston, iron block (top to bottom) |
+| Power Suit | arm, torso, arm across the top row; legs in the corners below |
 
 The helmet isn't part of the assembly: put it on the finished suit (see *Helmet* above). A whole suit with its helmet
 takes 12 iron blocks, 8 copper blocks, 2 redstone blocks, 4 pistons and glass (no lapis or furnaces since 2026-10-23). It comes out bare polished steel; paint it with dyes
@@ -70,7 +70,7 @@ The engines (swapped in the menu's engine slot; a new suit has none, so craft on
 
 ### Balance and config
 Everything that costs fuel, plus damage, ranges and speeds, is in `config/powerarmor-common.toml` (in the
-game folder, `run/config/` when developing) and in game under **Mods > Power Armor > Config**. Changes apply
+game folder, `run/config/` when developing) and in game under **Mods > Power Suits > Config**. Changes apply
 at once. Your own visor colour is a separate file, `config/powerarmor-client.toml` (see *The visor and its HUD*). Fuel is counted in energy: walking burns 1 per tick, so 20 energy = 1 s of walking. Defaults (Phase 6
 balance pass), with what one piece of coal (1600) buys:
 
@@ -104,7 +104,7 @@ view in. When the power comes on (fuel is back, or you climb into a running suit
 appears across the middle of the screen, widens, and splits into two lines that sweep up and down to the edges; what
 they pass is on (the metal turns see-through, the readouts appear). When the power goes, two lines sweep in from the
 top and bottom, switching everything off behind them, meet in the middle and shrink away, leaving the glass completely
-dark. It's terminal green by default: pick another under **Mods > Power Armor > Config > Visor > Visor colour** (green,
+dark. It's terminal green by default: pick another under **Mods > Power Suits > Config > Visor > Visor colour** (green,
 amber, blue, white, red, or Custom for any `#RRGGBB` in *Custom colour*; `visor_preset` / `visor_colour` in
 `config/powerarmor-client.toml`; only you see it).
 - **Top left, the suit:** a blocky figure of the suit (one block per armour piece), **HULL** (its health, % and a bar)
@@ -393,7 +393,7 @@ src/main/java/dev/ajaczero/powerarmor/
     ClientSetup.java         registers the renderer
     PowerArmorClient.java    client-only @Mod entry: the visor config + the in-game config screen
     SuitSounds.java          engine sounds now and then + tool loops (tickable sounds that follow the suit)
-    FuelTooltip.java         "Power Armor fuel: 1:20 of walking" on every fuel
+    FuelTooltip.java         "Power Suit fuel: 1:20 of walking" on every fuel
 src/dev/java/dev/ajaczero/powerarmor/   development tools: compiled against the mod, NOT in the jar players get
   dev/PowerArmorDev.java     their @Mod entry point (dev runs load src/main + src/dev as one mod, see build.gradle)
   test/PowerArmorTests.java  GameTests (@SuitTest methods, registered by test/SuitTests.java)
