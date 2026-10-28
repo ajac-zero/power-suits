@@ -22,6 +22,9 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
  *   <li><b>Power switch</b> (user, 2026-10-27): flips the suit's power on and off while you pilot it, like the switch
  *   in its menu. H by default (user, 2026-10-27): one of the letters vanilla 26.3 leaves free (P is social
  *   interactions, O the friends screen; H, I, J, K, M, R, U, Y, Z are unbound).</li>
+ *   <li><b>Night vision</b> (user, 2026-10-27): the visor's night vision on or off (VisorVision), N by default (free
+ *   in 26.3 too). Purely the client's business: no message, the choice is saved in this player's own
+ *   powerarmor-client.toml. Only in a suit with a helmet (the visor does it), so N does nothing on foot.</li>
  * </ul>
  */
 @EventBusSubscriber(modid = PowerArmor.MODID, value = Dist.CLIENT)
@@ -29,6 +32,8 @@ public final class SuitKeys {
     public static final KeyMapping.Category CATEGORY = new KeyMapping.Category(Identifier.fromNamespaceAndPath(PowerArmor.MODID, "power_armor"));
     public static final KeyMapping POWER_SWITCH = new KeyMapping("key.powerarmor.power_switch", InputConstants.Type.KEYBOARD,
             InputConstants.KEY_H, CATEGORY);
+    public static final KeyMapping NIGHT_VISION = new KeyMapping("key.powerarmor.night_vision", InputConstants.Type.KEYBOARD,
+            InputConstants.KEY_N, CATEGORY);
 
     private SuitKeys() {
     }
@@ -38,15 +43,23 @@ public final class SuitKeys {
     public static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
         event.register(POWER_SWITCH);
+        event.register(NIGHT_VISION);
     }
 
-    /** Every client tick: hand each press to the server, if this player pilots a suit. */
+    /** Every client tick: hand each power switch press to the server, if this player pilots a suit; flip the night
+     *  vision here. */
     @SubscribeEvent
     public static void clientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         while (POWER_SWITCH.consumeClick()) {
             if (mc.player != null && mc.player.getVehicle() instanceof PowerArmorEntity suit && suit.getControllingPassenger() == mc.player) {
                 ClientPacketDistributor.sendToServer(new PowerSwitchPayload());
+            }
+        }
+        while (NIGHT_VISION.consumeClick()) {
+            if (mc.player != null && mc.player.getVehicle() instanceof PowerArmorEntity suit && suit.getControllingPassenger() == mc.player
+                    && suit.hasHelmet()) {
+                VisorVision.toggle();
             }
         }
     }

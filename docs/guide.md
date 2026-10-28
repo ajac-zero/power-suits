@@ -13,6 +13,7 @@ Working notes for agents: `AGENTS.md` (the design spec and roadmap are kept outs
 | Deploy | Right-click the ground with the item (needs a 3-block-tall space) |
 | Climb in | Right-click the suit |
 | Suit menu | Your inventory with the suit in it, laid out like the inventory screen: **press your inventory key (E) inside the suit**, or sneak + right-click a parked suit. The suit's helmet, engine, burn flame and fuel down the armour column, the suit itself in the preview window, and opposite the armour column: the **Power** key (⏻: pushed in and green while on, out and grey while off), the power tool's socket slot, and the **Pack** key (greyed out from inside). Where the crafting grid was, a status screen in your visor colour: the suit's name, HULL and FUEL with bars like the visor's, and the status (ONLINE, or why it's dark: NO FUEL, NO ENGINE, FLOODED, POWER OFF, NO HELMET; the ones to fix blink inverted). Over any item, the swap-hands key (F) swaps it with the socket tool |
+| Night vision | The powered visor lifts the dark when it's dark around you (a cave, any night outside), tinted in your visor colour like night-vision goggles; it fades in over a second and goes with the visor's power. **N** switches it on and off while you pilot a suit with a helmet (rebind it in Options > Controls > Key Binds > Power Armor > *Night vision*); **NV** under the compass while it's on. Only on your screen: nothing in the world is lit |
 | Power switch | The suit's power switch, in its menu or on the **H** key while piloting (rebind it in Options > Controls > Key Binds > Power Armor > *Power switch*). Off, the suit acts exactly like one with nothing to burn (it slumps, the mind stops, the visor goes completely dark; the menu's status reads POWER OFF) but keeps its fuel; it stays off when packed up. On again, it stands back up |
 | Helmet | Right-click a suit with a Power Armor Helmet (or use the menu's helmet slot) to put it on. It seals the suit, and the machine mind only runs with it: without one the suit still runs with you inside (unsealed: fire, poison and water reach you, and you can eat), and an empty one stands powered down. Switching it off (below) or taking the helmet off parks a suit. Rogues always wear one |
 | Fuel | Put anything a furnace burns in the fuel slot; it lasts as many ticks as in a furnace (coal 1:20 of walking, blaze rod 2:00, lava bucket 16:40 and the bucket stays, planks 0:15) (for the standard Firebox engine; see *Engines* below) |
@@ -137,7 +138,8 @@ dark. It's terminal green by default: pick your own colour under
   character (5°) at a time with a `^` under where you face, the suit's coordinates to its left (the block it stands
   on, like F3's `Block:`; `--- --- ---` in a world with reduced debug info) and the time to its right (`18:40`). Like
   the vanilla items the compass and clock only work in the overworld: elsewhere the tape spins and the time reads
-  `--:--`; the coordinates work everywhere.
+  `--:--`; the coordinates work everywhere. Under the `^`, **NV** while the night vision is switched on (N): in the
+  visor colour while it lifts the dark, faint while it waits for the dark (in daylight or torchlight).
 - The whole visor is one colour, warnings too: a readout in trouble shows its label in **inverse video**, like an old
   terminal (a solid block of the visor colour with the word cut into it). A **warning** (half gone) holds the block
   steady, **critical** (the last 15%, or something you can't use yet) blinks it. Only the label in trouble changes:
@@ -146,6 +148,13 @@ dark. It's terminal green by default: pick your own colour under
   power** the glass goes completely dark: only the helmet's edge is left. Why it went dark is in the suit menu (E):
   its status line reads **NO FUEL**, **NO ENGINE**, **FLOODED** or **POWER OFF**.
 - While the HUD is up, vanilla's boss bars move down under the compass and the effect icons under the top right corner.
+- **Night vision**: when the light around you falls (light level 7 and under, full at 4: caves, any night outside) the
+  visor lifts the dark, tinted in the visor colour, over a second; it goes off with the visor's power or the **N** key
+  in a third of one, and fades away by itself when it's light again. It works like vanilla's night-vision potion, part
+  of the way (the potion makes everything bright; the visor about half as much, so a cave stays a cave). Settings in
+  the same config: `visor_night_vision_on` (what N flips), `visor_night_vision` (strength, 0.3; the potion is 0.6),
+  `visor_vision_tint` (`VISOR` or `WHITE`). Only on your screen; shader packs (Iris) draw their own light and don't
+  show it.
 
 Fuel works like a furnace: the suit burns one item from the fuel slot at a time. It burns whenever
 the suit is powered, piloted or not (the machine mind runs it): standing still uses a quarter of the walking rate, sprinting double, and each
@@ -364,14 +373,15 @@ src/main/java/dev/ajaczero/powerarmor/
     CockpitView*.java        its GeckoLib animatable/renderer (geckolib/models/view, cut from the suit by tools/extract-view-geo.py)
     PowerArmorScreen.java    draws the suit menu (the inventory screen with the suit: preview, flame, status screen, keys)
     SuitKey.java             the menu's slot-sized keys (Power latches pushed in while on; Pack)
-    SuitKeys.java            the suit's own key bindings (the power switch)
+    SuitKeys.java            the suit's own key bindings (the power switch, night vision)
     SuitHud.java             the pilot's HUD (suit readout, compass + clock, the tool's own HUD) + low-fuel beep; moves boss bars
     hud/                     each socket tool's own visor HUD: ToolHud, ToolHuds (item -> HUD, filled in by ClientSetup),
                              HudView (colours, crosshair, world-to-screen, the top right ammo block, dotted flight lines),
                              ChaingunHud, RailCannonHud, TntLauncherHud (drum + the round's arc), EmProjectorHud (box + throw arc)
                              and effect icons out of its way
     SuitVisor.java           the helmet's edge around the first-person view (solid pieces unpowered, only their outline powered)
-    VisorConfig.java         the player's own visor colour (CLIENT config, powerarmor-client.toml)
+    VisorConfig.java         the player's own visor colour and night vision (CLIENT config, powerarmor-client.toml)
+    VisorVision.java         the visor's night vision (raises the lightmap's floor); the lamp (a post effect, parked for an upgrade)
     VisorPower.java          the visor's warm-up and shutdown scan (lines sweeping from the screen's middle)
     ToolInput.java           right click the hand passes on -> socket tool (vanilla's off-hand turn)
     HeldItemLayer.java       draws the pilot's selected item in the suit's right hand (third person)
@@ -392,6 +402,7 @@ src/dev/resources/data/powerarmor/structure/test_pad.nbt   floor used by the Gam
 src/main/resources/
   assets/powerarmor/geckolib/models|animations/entity/, textures/entity/   exported from Blockbench
   assets/powerarmor/textures/gui/power_armor.png      suit menu background (tools/make-gui.py)
+  assets/powerarmor/post_effect/visor_lamp.json, shaders/post/visor_lamp.fsh   the visor lamp (parked: no setting turns it on)
   assets/powerarmor/geckolib/models/view/power_armor_view.geo.json  cockpit viewmodel: tools + gauntlet cut out of the suit model (tools/extract-view-geo.py)
   assets/powerarmor/models/item/chaingun.json         a flat hand-held item, like a vanilla tool (item/handheld)
   assets/powerarmor/items/<item>.json                 which model each item shows (needed since 1.21.4)

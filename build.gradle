@@ -158,6 +158,13 @@ neoForge {
             systemProperty 'powerarmor.autopilot', 'menu'
         }
 
+        // Dev tool: only the visor's sight in the dark (night vision vs the lamp, a cave and a field at midnight;
+        // ap_vision_*.png, run/autopilot_vision.csv), ~40 s.
+        autopilotVision {
+            client()
+            systemProperty 'powerarmor.autopilot', 'vision'
+        }
+
         // Dev tool: live-tunes the cockpit viewmodel (see AutoPilot.viewTuner); stays open until closed.
         autopilotView {
             client()

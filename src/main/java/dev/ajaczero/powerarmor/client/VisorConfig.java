@@ -22,6 +22,29 @@ public final class VisorConfig {
             .translation("powerarmor.configuration.visor_colour")
             .define("visor_colour", DEFAULT_COLOUR, v -> v instanceof String s && parse(s) >= 0);
 
+    /** What the visor can do in the dark (VisorVision). The game uses NIGHT_VISION (or OFF, the key); the lamp is parked
+     *  for a later upgrade (user, 2026-10-27), only the dev scene turns it on. */
+    public enum Vision { OFF, NIGHT_VISION, LAMP, BOTH }
+
+    /** Whose colour the night vision takes: the visor's (night-vision goggles) or none (plain grey, like the potion). */
+    public enum VisionTint { VISOR, WHITE }
+
+    public static final ModConfigSpec.BooleanValue NIGHT_VISION_ON = B
+            .comment("Night vision on or off: the powered visor lifts the dark around you when it's dark (caves, nights).",
+                    "The night vision key (N) flips it; the HUD shows NV under the compass while it's on. Only on your screen.")
+            .translation("powerarmor.configuration.visor_night_vision_on")
+            .define("visor_night_vision_on", true);
+
+    public static final ModConfigSpec.DoubleValue NIGHT_VISION = B
+            .comment("How far the night vision lifts the dark, 0..1 (vanilla's potion is about 0.6: everything bright).")
+            .translation("powerarmor.configuration.visor_night_vision")
+            .defineInRange("visor_night_vision", 0.3, 0.0, 1.0);
+
+    public static final ModConfigSpec.EnumValue<VisionTint> VISION_TINT = B
+            .comment("The night vision's colour: VISOR (the visor colour, like night-vision goggles) or WHITE.")
+            .translation("powerarmor.configuration.visor_vision_tint")
+            .defineEnum("visor_vision_tint", VisionTint.VISOR);
+
     public static final ModConfigSpec SPEC = B.build();
 
     /** The configured colour as 0xRRGGBB (the default if the file holds something unreadable). */

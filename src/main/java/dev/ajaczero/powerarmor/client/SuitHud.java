@@ -51,7 +51,8 @@ import org.jetbrains.annotations.Nullable;
  *   <li>Top centre, under the helmet's brow, as terminal text: a compass tape (one character per 5 degrees) with a
  *   {@code ^} under the heading, the suit's coordinates to its left and the time to its right. Like the vanilla items
  *   the compass and clock only work in the overworld: elsewhere the tape spins and the time reads {@code --:--} (the
- *   coordinates work everywhere).</li>
+ *   coordinates work everywhere). Under the {@code ^}, NV while the visor's night vision is switched on (N key,
+ *   {@link VisorVision}): in the visor colour while it lifts the dark, faint while it waits for the dark.</li>
  * </ul>
  * Everything is in the one visor colour (user's pick, 2026-10-27, after orange warnings and red criticals: see
  * {@link HudView#label}). How urgent a readout is ({@link HudAlert}) inverts its label like an old terminal: a solid
@@ -94,8 +95,10 @@ public final class SuitHud {
     private static final int CELL = 6, TAPE = 31, DEGREES_PER_CELL = 5, TAPE_Y = 12, READOUT_Y = 21;
     /** Vanilla's boss bars start at y 12 and its effect icons at y 1 (the top right): moved down this far under the
      *  compass and the top right corner (the chaingun's readout, client/hud/ChaingunHud) while the HUD is up (user's
-     *  pick A, 2026-10-27: vanilla's own bars, moved). */
-    private static final int BOSS_SHIFT = 30, EFFECTS_SHIFT = 62;
+     *  pick A, 2026-10-27: vanilla's own bars, moved), clear of the night vision row too. */
+    private static final int BOSS_SHIFT = 39, EFFECTS_SHIFT = 62;
+    /** The night vision indicator's row, under the compass's readout row (user, 2026-10-27). */
+    private static final int NIGHT_VISION_Y = 30;
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
@@ -207,7 +210,7 @@ public final class SuitHud {
      * (right), in fixed-width cells like a terminal (user, 2026-10-27: the heading in degrees and the day counter went,
      * the coordinates took the heading's place). The tape moves a whole cell (5 degrees) at a time. Compass headings
      * count from north clockwise; Minecraft's yaw counts from south (0 south, 90 west), hence the 180. Returns what the
-     * readout row says (for the autopilot's log).
+     * readout row says, then the night vision row ({@code NV}, {@code NV~} on standby) (for the autopilot's log).
      */
     private static String compassAndClock(GuiGraphicsExtractor g, Minecraft mc, PowerArmorEntity suit, Font font, int main,
                                           int faint, DeltaTracker delta) {
@@ -257,7 +260,16 @@ public final class SuitHud {
             clock = "--:--";
         }
         cells(g, font, clock, xc + 3 * CELL, READOUT_Y, faint);
-        return coords + " " + clock;
+        // Night vision (VisorVision), centred under the ^: NV in the visor colour while it lifts the dark, faint while
+        // it's switched on but not needed (light around you), nothing while switched off (the N key)
+        VisorVision.Indicator nv = VisorVision.indicator();
+        String nvText = "";
+        if (nv != VisorVision.Indicator.NONE) {
+            nvText = Component.translatable("hud.powerarmor.night_vision").getString();
+            cells(g, font, nvText, xc + CELL / 2 - nvText.length() * CELL / 2, NIGHT_VISION_Y, nv == VisorVision.Indicator.ACTIVE ? main : faint);
+            nvText = " " + nvText + (nv == VisorVision.Indicator.ACTIVE ? "" : "~");
+        }
+        return coords + " " + clock + nvText;
     }
 
     /** A string in fixed 6 px cells, each character centred in its cell (Minecraft's font is proportional). */

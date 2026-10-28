@@ -112,6 +112,8 @@ public final class AutoPilot {
     private static final boolean HUD_ONLY = "hud".equals(System.getProperty("powerarmor.autopilot"));
     /** "menu" mode: only the suit's inventory screen scene (MenuScene: E inside, F swaps, the power switch), ~25 s. */
     private static final boolean MENU_ONLY = "menu".equals(System.getProperty("powerarmor.autopilot"));
+    /** "vision" mode: only the visor's sight in the dark (VisionScene: night vision vs the lamp, in a cave and a field), ~40 s. */
+    private static final boolean VISION_ONLY = "vision".equals(System.getProperty("powerarmor.autopilot"));
     // The main script's sections, each starting where the one before ends (its length is the difference). Case labels
     // in script() count from their section's start, so a step added to one section only changes that section's length
     // here; every later section (and the mech scenes, MECH_START) moves along by itself. Screenshot names keep the
@@ -209,6 +211,10 @@ public final class AutoPilot {
             }
         } else if (MENU_ONLY) {
             if (!MenuScene.step(mc, tick++)) {
+                mc.stop();
+            }
+        } else if (VISION_ONLY) {
+            if (!VisionScene.step(mc, tick++)) {
                 mc.stop();
             }
         } else {
@@ -1368,7 +1374,12 @@ public final class AutoPilot {
             engineRunning = false;
             menuStart = m + 1;
         }
-        if (!engineRunning && m >= menuStart && !MenuScene.step(mc, m - menuStart)) {
+        if (!engineRunning && menuRunning && m >= menuStart && !MenuScene.step(mc, m - menuStart)) {
+            menuRunning = false;
+            visionStart = m + 1;
+        }
+        // the visor's night vision last (it moves to its own cave 200 blocks east and turns the night on)
+        if (!menuRunning && m >= visionStart && !VisionScene.step(mc, m - visionStart)) {
             mc.stop();
         }
         if (m >= 10 && m < 420) {
@@ -1387,6 +1398,8 @@ public final class AutoPilot {
     private static int helmetStart = Integer.MAX_VALUE;
     private static boolean helmetRunning = true;
     private static int paintStart = Integer.MAX_VALUE;
+    private static boolean menuRunning = true;
+    private static int visionStart = Integer.MAX_VALUE;
     private static boolean paintRunning = true;
     private static int engineStart = Integer.MAX_VALUE;
     private static boolean engineRunning = true;
