@@ -51,8 +51,9 @@ import org.jetbrains.annotations.Nullable;
  *   <li>Top centre, under the helmet's brow, as terminal text: a compass tape (one character per 5 degrees) with a
  *   {@code ^} under the heading, the suit's coordinates to its left and the time to its right. Like the vanilla items
  *   the compass and clock only work in the overworld: elsewhere the tape spins and the time reads {@code --:--} (the
- *   coordinates work everywhere). Under the {@code ^}, NV while the visor's night vision is switched on (N key,
- *   {@link VisorVision}): in the visor colour while it lifts the dark, faint while it waits for the dark.</li>
+ *   coordinates work everywhere). At the right end of that row, under the tape's end, NV while the visor's night vision
+ *   is switched on (N key, {@link VisorVision}): in the visor colour while it lifts the dark, faint while it waits for
+ *   the dark.</li>
  * </ul>
  * Everything is in the one visor colour (user's pick, 2026-10-27, after orange warnings and red criticals: see
  * {@link HudView#label}). How urgent a readout is ({@link HudAlert}) inverts its label like an old terminal: a solid
@@ -95,10 +96,8 @@ public final class SuitHud {
     private static final int CELL = 6, TAPE = 31, DEGREES_PER_CELL = 5, TAPE_Y = 12, READOUT_Y = 21;
     /** Vanilla's boss bars start at y 12 and its effect icons at y 1 (the top right): moved down this far under the
      *  compass and the top right corner (the chaingun's readout, client/hud/ChaingunHud) while the HUD is up (user's
-     *  pick A, 2026-10-27: vanilla's own bars, moved), clear of the night vision row too. */
-    private static final int BOSS_SHIFT = 39, EFFECTS_SHIFT = 62;
-    /** The night vision indicator's row, under the compass's readout row (user, 2026-10-27). */
-    private static final int NIGHT_VISION_Y = 30;
+     *  pick A, 2026-10-27: vanilla's own bars, moved). */
+    private static final int BOSS_SHIFT = 30, EFFECTS_SHIFT = 62;
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
@@ -260,13 +259,14 @@ public final class SuitHud {
             clock = "--:--";
         }
         cells(g, font, clock, xc + 3 * CELL, READOUT_Y, faint);
-        // Night vision (VisorVision), centred under the ^: NV in the visor colour while it lifts the dark, faint while
-        // it's switched on but not needed (light around you), nothing while switched off (the N key)
+        // Night vision (VisorVision) on the same row, at its right end, under the tape's last cells (user, 2026-10-27):
+        // NV in the visor colour while it lifts the dark, faint while it's switched on but not needed (light around
+        // you), nothing while switched off (the N key)
         VisorVision.Indicator nv = VisorVision.indicator();
         String nvText = "";
         if (nv != VisorVision.Indicator.NONE) {
             nvText = Component.translatable("hud.powerarmor.night_vision").getString();
-            cells(g, font, nvText, xc + CELL / 2 - nvText.length() * CELL / 2, NIGHT_VISION_Y, nv == VisorVision.Indicator.ACTIVE ? main : faint);
+            cells(g, font, nvText, x0 + (TAPE - nvText.length()) * CELL, READOUT_Y, nv == VisorVision.Indicator.ACTIVE ? main : faint);
             nvText = " " + nvText + (nv == VisorVision.Indicator.ACTIVE ? "" : "~");
         }
         return coords + " " + clock + nvText;
