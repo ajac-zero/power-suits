@@ -118,12 +118,21 @@ GAUNT = {
 # at the toe), west the inner; the left boot mirrors them.
 PAL = {'A': (0x58, 0x60, 0x6a), 'B': (0x75, 0x7c, 0x85), 'C': (0x9f, 0xa4, 0xa9), 'D': (0x3c, 0x42, 0x4c),
        'K': (0x4c, 0x55, 0x59), 'M': (0x1f, 0x23, 0x26)}
+# The tread: lines across the sole (along x) every other row, run out to the edges so their ends are the notches on
+# the outer / inner sides; the back meets a line, so its bottom row is a plain strip. The face UVs run: east back ->
+# front, west front -> back, north outer -> inner, the sole's rows back -> front and columns inner -> outer; hence
+# west's notches start a pixel later than east's. The front's bottom row is the sole's front row seen edge on: only its
+# corners are fixed (they meet the side notches), the rest is the front's design: a toe lug across the toe's foot, its
+# end the sole's front line (picked from drafts plain / toe lug / bumper / riveted).
 SIDE = ['ABBABC', 'AAAAAC', 'DDDDDD', 'KKKKKK', 'MMMMMM', 'KMKMKM']
+FRONT = ['ABBBBC', 'ACCCCC', 'DDDDDD', 'KKKKKK', 'MMMMMM', 'MKKKKM']   # the steel toe, its seam, the sole and toe lug
+assert FRONT[-1][0] == FRONT[-1][-1] == 'M', "the front row's corners meet the side notches"
 BOOT = {
-    'north': ['ABBBBC', 'ACCCCC', 'DDDDDD', 'KKKKKK', 'MMMMMM', 'KMKMKM'],   # the toe
-    'east': SIDE, 'south': SIDE, 'west': SIDE,
+    'north': FRONT,
+    'south': SIDE[:5] + ['KKKKKK'],
+    'east': SIDE, 'west': SIDE[:5] + ['MKMKMK'],
     'up': ['AAAAAA'] + ['AMMMMA'] * 4 + ['AAAAAA'],                            # shows round his leg: a rim, dark inside
-    'down': ['MMMMMM', 'MKKKKM', 'MMMMMM', 'MKKKKM', 'MMMMMM', 'MKKKKM'],     # the tread
+    'down': ['KKKKKK', 'MMMMMM'] * 2 + ['KKKKKK', FRONT[-1][::-1]],            # the tread, rows back -> front
 }
 FACES = ('north', 'east', 'south', 'west', 'up', 'down')
 # where each painted face sits in the texture: right of the swatches, one row per cube (u, v, w, h)
