@@ -45,7 +45,11 @@ knowledge lives in the project skills and their references (read the one that ma
   republishes the page; details in `power-suits-runs.md`). v1.1.0 (2026-10-28) is the first public release (GitHub + Modrinth).
 
 ## Setup
-Java 25 from Homebrew (`brew install openjdk@25`) is keg-only. Every shell needs:
+**In an Amp orb** (Linux) `.agents/setup` has already installed the pinned JDK (`JAVA_HOME` is set in login shells), the Gradle
+dependencies, Blockbench and its MCP plugin; `amp orb services ensure` starts Blockbench headless (`.amp/services.yaml`,
+`.agents/blockbench-mcp`) on `localhost:3000/bb-mcp`. The `caffeinate` / Homebrew advice below is for the maintainer's Mac.
+
+On a Mac: Java 25 from Homebrew (`brew install openjdk@25`) is keg-only. Every shell needs:
 ```sh
 export JAVA_HOME=$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home
 ```

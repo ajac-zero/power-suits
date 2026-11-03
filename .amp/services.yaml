@@ -1,0 +1,5 @@
+services:
+  blockbench:
+    # Blockbench desktop under Xvfb with the MCP plugin: http://localhost:3000/bb-mcp (what .pi/mcp.json points at).
+    command: .agents/blockbench-mcp
+    port: 3000

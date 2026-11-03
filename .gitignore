@@ -49,3 +49,6 @@ marketing/out/*_raw.png
 marketing/out/*.tiles/
 marketing/.cache/
 .taste-skill/
+
+### Amp orbs ###
+.amp/portals/*

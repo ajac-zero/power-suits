@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Orb setup: pinned JDK 25 + Gradle dependencies (the mod build), Blockbench + its MCP plugin (the model work),
+# and the Python imaging libraries the art/tooling scripts use. Idempotent; warm runs skip everything installed.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+step() { printf '\n==> %s (%s)\n' "$1" "$(date +%T)"; }
+
+# --- system packages (Blockbench's Electron runtime, a virtual display, python imaging) ---
+step "apt packages"
+pkgs=(xvfb xdotool libgtk-3-0 libnotify4 libnss3 libxss1 libxtst6 xdg-utils libatspi2.0-0 libsecret-1-0 libgbm1
+      libasound2 python3-pil python3-numpy python3-shapely)
+missing=()
+for p in "${pkgs[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
+if [ ${#missing[@]} -gt 0 ]; then
+  sudo apt-get update -qq
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}"
+fi
+
+# --- JDK: the exact Temurin the release workflow pins (tools/jdk.env) ---
+step "JDK"
+set -a; . tools/jdk.env; set +a
+JDK_DIR="$HOME/.local/jdk/$JDK_RELEASE"
+if [ ! -x "$JDK_DIR/bin/java" ]; then
+  tmp=$(mktemp -d)
+  curl -fsSL -o "$tmp/jdk.tar.gz" "$JDK_URL"
+  echo "$JDK_SHA256  $tmp/jdk.tar.gz" | sha256sum -c -
+  mkdir -p "$JDK_DIR"
+  tar -xzf "$tmp/jdk.tar.gz" -C "$JDK_DIR" --strip-components=1
+  rm -rf "$tmp"
+fi
+# Amp and services run in non-interactive login shells: put JAVA_HOME there (rewritten if the pin moves).
+marker="# power-suits JDK"
+touch "$HOME/.bash_profile"
+sed -i "/^$marker/,/^# end power-suits JDK/d" "$HOME/.bash_profile"
+cat >> "$HOME/.bash_profile" <<PROFILE
+$marker
+export JAVA_HOME="$JDK_DIR"
+export PATH="\$JAVA_HOME/bin:\$PATH"
+# end power-suits JDK
+PROFILE
+export JAVA_HOME="$JDK_DIR" PATH="$JDK_DIR/bin:$PATH"
+
+# --- Gradle distribution, Minecraft/NeoForge/GeckoLib dependencies (the slow part), compiles main + dev ---
+step "gradle dependencies"
+./gradlew --no-daemon --console=plain classes devClasses 2>&1 | tail -5 || true
+./gradlew --stop >/dev/null 2>&1 || true
+
+# --- Blockbench desktop + the MCP plugin ---
+step "Blockbench"
+BB_VERSION=5.2.2
+if [ ! -x /opt/Blockbench/blockbench ] || ! dpkg -s blockbench 2>/dev/null | grep -q "^Version: $BB_VERSION"; then
+  tmp=$(mktemp -d)
+  curl -fsSL -o "$tmp/bb.deb" "https://github.com/JannisX11/blockbench/releases/download/v$BB_VERSION/Blockbench_$BB_VERSION.deb"
+  sudo dpkg -i "$tmp/bb.deb" >/dev/null
+  rm -rf "$tmp"
+fi
+# Start it once so the plugin is registered in ~/.config/Blockbench; the config is then part of the snapshot and
+# every later launch (.amp/services.yaml: service "blockbench") loads the MCP server by itself.
+.agents/blockbench-mcp --register-only
+echo "Blockbench MCP registered"

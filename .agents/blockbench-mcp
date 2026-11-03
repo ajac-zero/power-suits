@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Runs Blockbench (with its MCP plugin on localhost:3000/bb-mcp) headless under Xvfb, in the foreground.
+# Used by .amp/services.yaml (service "blockbench") and by .agents/setup, which runs it once so the plugin is
+# registered in ~/.config/Blockbench and survives in the snapshot. Software GL: orbs have no GPU.
+set -euo pipefail
+
+PLUGIN_URL=https://jasonjgardner.github.io/blockbench-mcp-plugin/mcp.js
+CONF="$HOME/.config/Blockbench"
+PLUGIN="$CONF/plugins/mcp.js"
+MCP_PORT=${MCP_PORT:-3000}
+CDP_PORT=${CDP_PORT:-9222}
+export DISPLAY=${BB_DISPLAY:-:99}
+
+mkdir -p "$CONF/plugins"
+[ -s "$PLUGIN" ] || curl -fsSL -o "$PLUGIN" "$PLUGIN_URL"
+# Pre-approve the permission prompts (process + network) so the plugin loads without a dialog nobody can click.
+[ -f "$CONF/plugin_permissions.json" ] || echo '{"mcp":{"allowed":{"process":true,"net":true}}}' > "$CONF/plugin_permissions.json"
+
+pids=()
+cleanup() { kill "${pids[@]}" 2>/dev/null || true; wait 2>/dev/null || true; }
+trap cleanup EXIT
+trap 'exit 0' TERM INT
+
+# A stale lock (orb woke from a snapshot) would stop Blockbench from starting.
+rm -f "$CONF"/Singleton*
+pgrep -x Xvfb >/dev/null || { Xvfb "$DISPLAY" -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & pids+=($!); sleep 1; }
+
+/opt/Blockbench/blockbench --no-sandbox --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader \
+  --remote-debugging-port="$CDP_PORT" >/tmp/blockbench.log 2>&1 &
+pids+=($!)
+
+up() { curl -s -m 3 -o /dev/null -X POST "http://localhost:$MCP_PORT/bb-mcp" -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"probe","version":"1"}}}'; }
+
+# Once registered, Blockbench starts the plugin by itself. Only the very first launch has to register it.
+for _ in $(seq 40); do up && break; sleep 1; done
+if ! up; then
+  echo "plugin not running; registering it"
+  node - "$CDP_PORT" "$PLUGIN" <<'JS'
+const [port, path] = process.argv.slice(2);
+const page = (await (await fetch(`http://localhost:${port}/json`)).json()).find(p => p.title === 'Blockbench');
+const ws = new WebSocket(page.webSocketDebuggerUrl);
+await new Promise(r => ws.onopen = r);
+ws.onmessage = e => { const m = JSON.parse(e.data); if (m.id === 1) { console.log(JSON.stringify(m.result.result)); process.exit(0); } };
+ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { awaitPromise: true, returnByValue: true,
+  expression: `new Plugin("mcp").loadFromFile({name:"mcp.js",path:${JSON.stringify(path)}}, false).then(()=>"loaded")` } }));
+JS
+fi
+
+# Setup mode: plugin is registered, stop here so Blockbench exits cleanly and flushes its config.
+[ "${1:-}" = --register-only ] && { up && exit 0 || exit 1; }
+wait "${pids[-1]}"
