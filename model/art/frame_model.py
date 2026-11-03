@@ -4,7 +4,8 @@
 Run: python3 model/art/frame_model.py        (writes ../power_frame.bbmodel; no dependencies)
 
 Scale: 1 px = 1/16 block, Steve exactly as vanilla (4x12x4 limbs, 8x12x4 torso, 8^3 head, 32 px tall), standing on 3 px
-mechanical feet (the leg frame's footprint, like the fists on the arm frame; his soles at y 3). The frame is a hollow cage around him: every limb is two thin posts on the OUTER
+mechanical feet (the leg frame's footprint; his soles at y 3), and wearing the big suit's gauntlets, sized down (a cuff over his
+forearm, a fist over his hand: 2 px past it). The frame is a hollow cage around him: every limb is two thin posts on the OUTER
 side joined by front and back bands 1 px outside the limb; the inner side stays open (the neighbouring
 limb / torso is there). Each limb frame is 5 px wide, 1 px wider than his limb. The rest pose is open (ARM_SPLAY, LEG_SPLAY).
 Clearance to Steve is 0, never an overlap: see check() at the bottom (it also keeps the limbs' frames apart).
@@ -93,11 +94,56 @@ def paint_swatches(px, y0):
                 a = 150 if k == 'glass' else 255
                 px[y0 + y][SWX + i * 4 + x] = (min(c[0] + s, 255), min(c[1] + s, 255), min(c[2] + s, 255), a)
 
-def model_tex():   # Steve's real skin at 0,0 + the frame's swatches
+# ---------------------------------------------------------------- gauntlet art, taken from the big suit
+# The gauntlet is the big suit's (power_suit.bbmodel): a banded cuff (forearm_r, 8x7x8) over a slate fist (fist_r, 7x5x7),
+# sized down to the frame's arm (cuff 6x5x6, fist 5x4x5). Its art is the suit's own painted faces, resampled by picking
+# columns / rows (not scaling), so the bands, seams and finger lines stay whole pixels. The suit's texture is its grey
+# base (paint swaps the steel shades), so the frame's gauntlets are that grey too.
+SUIT = os.path.join(HERE, '..', 'power_suit.bbmodel')
+# per cube: the suit cube, the frame size per face (w, h), and which of the suit face's columns / rows to keep
+GAUNT = {
+    'cuff': ('forearm_r', {
+        'north': ([0, 1, 3, 4, 5, 7], [0, 1, 2, 3, 5]), 'east': ([0, 1, 3, 4, 5, 7], [0, 1, 2, 3, 5]),
+        'south': ([0, 1, 3, 4, 5, 7], [0, 1, 2, 3, 5]), 'west': ([0, 1, 3, 4, 5, 7], [0, 1, 2, 3, 5]),
+        'up': ([0, 1, 2, 5, 6, 7], [0, 1, 2, 5, 6, 7]), 'down': ([0, 1, 3, 4, 6, 7], [0, 1, 3, 4, 6, 7])}),
+    'fist': ('fist_r', {
+        'north': ([0, 1, 3, 5, 6], [0, 2, 3, 4]), 'east': ([0, 1, 3, 5, 6], [0, 2, 3, 4]),
+        'south': ([0, 1, 3, 5, 6], [0, 2, 3, 4]), 'west': ([0, 1, 2, 3, 6], [0, 2, 3, 4]),
+        'up': ([0, 1, 3, 5, 6], [0, 1, 3, 5, 6]), 'down': ([0, 1, 3, 5, 6], [1, 2, 3, 4, 5])}),
+}
+FACES = ('north', 'east', 'south', 'west', 'up', 'down')
+# where each painted face sits in the texture: right of the swatches, one row per cube (u, v, w, h)
+GAUNT_UV = {}
+for row, (part, (_, picks)) in enumerate(GAUNT.items()):
+    u = SWX
+    for f in FACES:
+        w, h = len(picks[f][0]), len(picks[f][1])
+        GAUNT_UV[part, f] = (u, 8 + row * 8, w, h)
+        u += w
+
+def paint_gauntlet(px):
+    m = json.load(open(SUIT))
+    img = unpng(base64.b64decode(m['textures'][0]['source'].split(',', 1)[1]))
+    assert len(img[0]) == m['resolution']['width'], 'suit texture and UV resolution differ'
+    els = {e['name']: e for e in m['elements']}
+    for part, (src, picks) in GAUNT.items():
+        for f in FACES:
+            u0, v0, u1, v1 = (int(c) for c in els[src]['faces'][f]['uv'])
+            face = [img[v][min(u0, u1):max(u0, u1)] for v in range(min(v0, v1), max(v0, v1))]
+            if u1 < u0: face = [r[::-1] for r in face]        # as it shows on the suit (its UV flips applied)
+            if v1 < v0: face = face[::-1]
+            cols, rows = picks[f]
+            u, v, w, h = GAUNT_UV[part, f]
+            for j, sy in enumerate(rows):
+                for i, sx_ in enumerate(cols):
+                    px[v + j][u + i] = face[sy][sx_]
+
+def model_tex():   # Steve's real skin at 0,0 + the frame's swatches + the gauntlet art
     px = [[(0, 0, 0, 0)] * TW for _ in range(TH)]
     for y, row in enumerate(steve_skin()):
         px[y][:len(row)] = row
     paint_swatches(px, SWY)
+    paint_gauntlet(px)
     return png(TW, TH, px)
 
 def b64(b): return 'data:image/png;base64,' + base64.b64encode(b).decode()
@@ -133,6 +179,18 @@ def cube(g, name, a, b, mat='mid', raw=False):
     elements.append(e)
     e['_g'] = g
     g['children'].append(e['uuid'])
+    return e
+
+def painted(g, side, part, name, a, b):
+    """A gauntlet cube (right side coordinates) with its art; the left one is the mirror image (east / west swap,
+    every face's u reversed), so both arms read the same."""
+    r = side == 'r'
+    e = cube(g, name, *((a, b) if r else mir(a, b)))
+    e['_shell'] = True
+    for f in FACES:
+        src = f if r else {'east': 'west', 'west': 'east'}.get(f, f)
+        u, v, w, h = GAUNT_UV[part, src]
+        e['faces'][f] = {'uv': [u, v, u + w, v + h] if r else [u + w, v, u, v + h], 'texture': 0}
     return e
 
 def steve(g, name, a, b, box):
@@ -230,13 +288,17 @@ for side in ('r', 'l'):
     foot['rotation'] = [0, 0, -LEG_SPLAY * s]
     p = group(f'pilot_{nm}_leg', (2 * s, 14, 0), leg)
     steve(p, f'st_leg_{side}', *sx((0, 2, -2), (4, 14, 2)), STEVE[f'leg_{side}'])
-    # arm: Steve's arm x 4..8, shoulder pivot (±6, 26); the fist extends 3 px past his hand (y 14)
+    # arm: Steve's arm x 4..8 (his hand at the bottom, y 14), shoulder pivot (±6, 26)
     arm = group(f'{nm}_arm', (6 * s, 26, 0), torso)
     arm['rotation'] = [0, 0, ARM_SPLAY * s]   # (with legs at 3, under 5 the fist hits the leg: check() fails)
     AX = 9   # the arm cage: x 4..9 around his arm's 4..8
-    segment(arm, side, 'arm', 4, AX, 14, 26, bar=False, mid=20)
+    # The gauntlet (the big suit's, sized down): a 6x5x6 cuff over his forearm and a 5x4x5 fist over his hand, so it
+    # adds 2 px of length, not a whole fist. The fist sits centred on his hand (0.5 px round it); the cuff is 1 px
+    # wider than the cage outside and stops 0.5 px from his arm inside (1 px there would cut the torso at the splay).
+    painted(arm, side, 'fist', f'fr_fist_{side}', (3.5, 12, -2.5), (8.5, 16, 2.5))
+    painted(arm, side, 'cuff', f'fr_cuff_{side}', (3.5, 16, -3), (9.5, 21, 3))
+    segment(arm, side, 'arm', 4, AX, 21, 26, bar=False)   # the cage carries on above the cuff
     cube(arm, f'fr_pauldron_{side}', *sx((4.5, 26, -3), (AX + 0.5, 27, 3)), 'dark')   # joins the front and back bands over his shoulder
-    cube(arm, f'fr_fist_{side}', *sx((4, 11, -3), (AX, 14, 3)), 'dark')            # the arm frame's footprint, 3 px past his hand
     p = group(f'pilot_{nm}_arm', (6 * s, 26, 0), arm)
     steve(p, f'st_arm_{side}', *sx((4, 14, -2), (8, 26, 2)), STEVE[f'arm_{side}'])
 
@@ -287,6 +349,9 @@ def check():
             fa, fb = a['name'].startswith('fr_'), b['name'].startswith('fr_')
             if not (fa or fb): continue                                   # Steve against himself: vanilla's business
             if fa and fb and limb(a) == limb(b): continue                 # one limb's frame is built touching itself
+            if limb(a) == limb(b) and (a.get('_shell') or b.get('_shell')):   # a shell round his part: must enclose it
+                sh, st = (a, b) if a.get('_shell') else (b, a)
+                if all(sh['from'][i] <= st['from'][i] - 0.25 and sh['to'][i] >= st['to'][i] + 0.25 for i in (0, 2)): continue
             if overlap(W[a['uuid']], W[b['uuid']]): bad.append((a['name'], b['name']))
     return bad
 
@@ -309,6 +374,7 @@ if __name__ == '__main__':
         g.pop('_parent', None)
     for e in elements:
         e.pop('_g', None)
+        e.pop('_shell', None)
     model = {
         'meta': {'format_version': '5.0', 'model_format': 'bedrock', 'box_uv': False},
         'name': 'power_frame', 'model_identifier': 'power_frame', 'visible_box': [4, 4.5, 1.75],
