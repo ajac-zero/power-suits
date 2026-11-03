@@ -4,7 +4,7 @@
 Run: python3 model/art/frame_model.py        (writes ../power_frame.bbmodel; no dependencies)
 
 Scale: 1 px = 1/16 block, Steve exactly as vanilla (4x12x4 limbs, 8x12x4 torso, 8^3 head, 32 px tall), standing on 3 px
-mechanical feet (the leg frame's footprint; his soles at y 3), and wearing the big suit's gauntlets, sized down (a cuff over his
+boots (his soles at y 3; 6x6x6, the gauntlet cuff's footprint), and wearing the big suit's gauntlets, sized down (a cuff over his
 forearm, a fist over his hand: 2 px past it). The frame is a hollow cage around him: every limb is two thin posts on the OUTER
 side joined by front and back bands 1 px outside the limb; the inner side stays open (the neighbouring
 limb / torso is there). Each limb frame is 5 px wide, 1 px wider than his limb. The rest pose is open (ARM_SPLAY, LEG_SPLAY).
@@ -111,6 +111,20 @@ GAUNT = {
         'south': ([0, 1, 3, 5, 6], [0, 2, 3, 4]), 'west': ([0, 1, 2, 3, 6], [0, 2, 3, 4]),
         'up': ([0, 1, 3, 5, 6], [0, 1, 3, 5, 6]), 'down': ([0, 1, 3, 5, 6], [1, 2, 3, 4, 5])}),
 }
+# The boots have their own art (the fist's read as hands on feet), in the suit's colours (sampled from forearm_r /
+# fist_r): a platform boot, a steel upper (the gauntlet cuff's top band, a brighter toe in front) over a seam and a thick
+# three-row slate sole, lugs underneath (picked from drafts A slate / B steel sabaton / C mechanical ankle / D platform).
+# One letter per texel; rows top to bottom as the face shows. East is the outer side of the right boot (its last column
+# at the toe), west the inner; the left boot mirrors them.
+PAL = {'A': (0x58, 0x60, 0x6a), 'B': (0x75, 0x7c, 0x85), 'C': (0x9f, 0xa4, 0xa9), 'D': (0x3c, 0x42, 0x4c),
+       'K': (0x4c, 0x55, 0x59), 'M': (0x1f, 0x23, 0x26)}
+SIDE = ['ABBABC', 'AAAAAC', 'DDDDDD', 'KKKKKK', 'MMMMMM', 'KMKMKM']
+BOOT = {
+    'north': ['ABBBBC', 'ACCCCC', 'DDDDDD', 'KKKKKK', 'MMMMMM', 'KMKMKM'],   # the toe
+    'east': SIDE, 'south': SIDE, 'west': SIDE,
+    'up': ['AAAAAA'] + ['AMMMMA'] * 4 + ['AAAAAA'],                            # shows round his leg: a rim, dark inside
+    'down': ['MMMMMM', 'MKKKKM', 'MMMMMM', 'MKKKKM', 'MMMMMM', 'MKKKKM'],     # the tread
+}
 FACES = ('north', 'east', 'south', 'west', 'up', 'down')
 # where each painted face sits in the texture: right of the swatches, one row per cube (u, v, w, h)
 GAUNT_UV = {}
@@ -119,7 +133,12 @@ for row, (part, (_, picks)) in enumerate(GAUNT.items()):
     for f in FACES:
         w, h = len(picks[f][0]), len(picks[f][1])
         GAUNT_UV[part, f] = (u, 8 + row * 8, w, h)
+        assert u + w <= TW
         u += w
+u = SWX
+for f in FACES:
+    GAUNT_UV['boot', f] = (u, 8 + len(GAUNT) * 8, len(BOOT[f][0]), len(BOOT[f]))
+    u += len(BOOT[f][0])
 
 def paint_gauntlet(px):
     m = json.load(open(SUIT))
@@ -137,6 +156,11 @@ def paint_gauntlet(px):
             for j, sy in enumerate(rows):
                 for i, sx_ in enumerate(cols):
                     px[v + j][u + i] = face[sy][sx_]
+    for f in FACES:
+        u, v, w, h = GAUNT_UV['boot', f]
+        for j, line in enumerate(BOOT[f]):
+            for i, ch in enumerate(line):
+                px[v + j][u + i] = PAL[ch] + (255,)
 
 def model_tex():   # Steve's real skin at 0,0 + the frame's swatches + the gauntlet art
     px = [[(0, 0, 0, 0)] * TW for _ in range(TH)]
@@ -181,11 +205,11 @@ def cube(g, name, a, b, mat='mid', raw=False):
     g['children'].append(e['uuid'])
     return e
 
-def painted(g, side, part, name, a, b):
+def painted(g, side, part, name, a, b, raw=False):
     """A gauntlet cube (right side coordinates) with its art; the left one is the mirror image (east / west swap,
     every face's u reversed), so both arms read the same."""
     r = side == 'r'
-    e = cube(g, name, *((a, b) if r else mir(a, b)))
+    e = cube(g, name, *((a, b) if r else mir(a, b)), raw=raw)
     e['_shell'] = True
     for f in FACES:
         src = f if r else {'east': 'west', 'west': 'east'}.get(f, f)
@@ -276,16 +300,16 @@ for side in ('r', 'l'):
     # Each limb's frame is 1 px wider than Steve's limb (4 -> 5), all of it on the outer side: the other leg / the torso
     # leave no room inside.
     LX = 5   # the leg cage: x 0..5 around his leg's 0..4
-    # the cage stops 0.5 px under the hip pivot (y 14): its top band's outer end rises as the leg splays, the belt is above
-    segment(leg, side, 'leg', 0, LX, 2, 13.5, bar=False, mid=8)
+    # The boot, after the gauntlet: 6x6x6 (the gauntlet cuff's footprint) round his foot, 3 px under his sole and 3 px
+    # up his leg. It turns with the leg, so the sole tilts with the splay (outer edge ~0.3 px up at 3 deg). Inside, it
+    # stops 0.25 px from his leg, where the other leg's would meet it.
+    painted(leg, side, 'boot', f'fr_boot_{side}', (-0.25, 0, -3), (5.75, 6, 3), raw=True)
+    # the cage carries on above the boot; it stops 0.5 px under the hip pivot (y 14): its top band's outer end rises as
+    # the leg splays, the belt is above
+    segment(leg, side, 'leg', 0, LX, 5, 13.5, bar=False)
     # hip pivot: two knobs at the thigh's front and back top corners (the arm hangs where an outer hinge would be)
     cube(leg, f'fr_hip_f_{side}', *sx((LX - 1.5, 12.5, -3.8), (LX, 14.5, -3)), 'hinge')
     cube(leg, f'fr_hip_b_{side}', *sx((LX - 1.5, 12.5, 3), (LX, 14.5, 3.8)), 'hinge')
-    # the mechanical foot: the leg frame's footprint, 3 px tall, turned back by the splay so its sole is flat at rest.
-    # It turns about its inner top corner, so it drops away under Steve's tilted sole instead of cutting into it.
-    foot = cube(leg, f'fr_foot_{side}', *sx((0, 0, -3), (LX, 3, 3)), 'dark', raw=True)
-    foot['origin'] = [0, 3, 0]
-    foot['rotation'] = [0, 0, -LEG_SPLAY * s]
     p = group(f'pilot_{nm}_leg', (2 * s, 14, 0), leg)
     steve(p, f'st_leg_{side}', *sx((0, 2, -2), (4, 14, 2)), STEVE[f'leg_{side}'])
     # arm: Steve's arm x 4..8 (his hand at the bottom, y 14), shoulder pivot (±6, 26)
@@ -341,6 +365,29 @@ def limb(e):
         g = g['_parent']
     return g['name'] if g else 'core'
 
+def turn(e):   # a cube's total turn in world space (its own, then its bones'; all about z)
+    t, g = e.get('rotation', [0, 0, 0])[2], e['_g']
+    while g is not None:
+        t, g = t + g['rotation'][2], g['_parent']
+    return t
+
+def encloses(sh, st, W, margin=0.25):
+    """In the shell's own frame (its world turn undone), Steve's part, cut to the shell's height, sits inside it with
+    `margin` to spare at the sides and front / back (so no face of his lies in a face of the shell: no z-fighting)."""
+    import math
+    margin -= 1e-6
+    a = math.radians(-turn(sh)); c, sn = math.cos(a), math.sin(a)
+    rot = lambda P: [(x * c - y * sn, x * sn + y * c) for x, y in P]
+    S, P = rot(W[sh['uuid']][0]), rot(W[st['uuid']][0])
+    x0, x1 = min(x for x, _ in S), max(x for x, _ in S)
+    y0, y1 = min(y for _, y in S), max(y for _, y in S)
+    xs = [x for x, y in P if y0 <= y <= y1]
+    for (xa, ya), (xb, yb) in zip(P, P[1:] + P[:1]):   # where his outline crosses the shell's top and bottom
+        for yc in (y0, y1):
+            if (ya - yc) * (yb - yc) < 0: xs.append(xa + (xb - xa) * (yc - ya) / (yb - ya))
+    (za, zb), (zc, zd) = W[sh['uuid']][1], W[st['uuid']][1]
+    return (not xs or (min(xs) >= x0 + margin and max(xs) <= x1 - margin)) and za <= zc - margin and zb >= zd + margin
+
 def check():
     W = {e['uuid']: world(e) for e in elements}
     bad = []
@@ -351,7 +398,7 @@ def check():
             if fa and fb and limb(a) == limb(b): continue                 # one limb's frame is built touching itself
             if limb(a) == limb(b) and (a.get('_shell') or b.get('_shell')):   # a shell round his part: must enclose it
                 sh, st = (a, b) if a.get('_shell') else (b, a)
-                if all(sh['from'][i] <= st['from'][i] - 0.25 and sh['to'][i] >= st['to'][i] + 0.25 for i in (0, 2)): continue
+                if st['name'].startswith('fr_') or encloses(sh, st, W): continue
             if overlap(W[a['uuid']], W[b['uuid']]): bad.append((a['name'], b['name']))
     return bad
 
