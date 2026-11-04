@@ -3,11 +3,12 @@
 
 Run: python3 model/art/frame_model.py        (writes ../power_frame.bbmodel; no dependencies)
 
-Scale: 1 px = 1/16 block, Steve exactly as vanilla (4x12x4 limbs, 8x12x4 torso, 8^3 head, 32 px tall), standing on 3 px
-boots (his soles at y 3; 6x6x6, the gauntlet cuff's footprint), and wearing the big suit's gauntlets, sized down (a cuff over his
-forearm, a fist over his hand: 2 px past it). The frame is a hollow cage around him: every limb is two thin posts on the OUTER
-side joined by front and back bands 1 px outside the limb; the inner side stays open (the neighbouring
-limb / torso is there). The arm frames are in line with the gauntlet cuffs, the leg frames 0.5 px wider than his leg. The rest pose is open (ARM_SPLAY, LEG_SPLAY).
+Scale: 1 px = 1/16 block, Steve exactly as vanilla (4x12x4 limbs, 8x12x4 torso, 8^3 head, 32 px tall), standing on
+3 px boots (his soles at y 3; 5x6x5) and wearing the big suit's gauntlets, sized down (a cuff over his forearm, a fist
+over his hand: 2 px past it); boots and gauntlets have the same 5x5 footprint round his 4x4 limbs. The frame is a
+hollow cage around him: every limb's is in line with its gauntlet / boot, two thin posts on the OUTER side joined by
+front and back bands at its ends and a bar along the outer side's top; the inner side stays open (the neighbouring
+limb / torso is there). The rest pose is open (ARM_SPLAY, LEG_SPLAY).
 The torso is an exoskeleton instead: plates on his chest, a spine on his back.
 Clearance to Steve is 0, never an overlap: see check() at the bottom (it also keeps the limbs' frames apart).
 
@@ -124,21 +125,24 @@ GAUNT = {
 # at the toe), west the inner; the left boot mirrors them.
 PAL = {'A': (0x58, 0x60, 0x6a), 'B': (0x75, 0x7c, 0x85), 'C': (0x9f, 0xa4, 0xa9), 'D': (0x3c, 0x42, 0x4c),
        'K': (0x4c, 0x55, 0x59), 'M': (0x1f, 0x23, 0x26)}
+# The boot is 5x6x5: its footprint round his leg is the gauntlet's round his arm (5x5 round 4x4), so the upper's band
+# is the 5 px cuff's (ABABC).
 # The tread: lines across the sole (along x) every other row, run out to the edges so their ends are the notches on
-# the outer / inner sides; the back meets a line, so its bottom row is a plain strip. The face UVs run: east back ->
-# front, west front -> back, north outer -> inner, the sole's rows back -> front and columns inner -> outer; hence
-# west's notches start a pixel later than east's. The front's bottom row is the sole's front row seen edge on: only its
-# corners are fixed (they meet the side notches), the rest is the front's design: a toe lug across the toe's foot, its
-# end the sole's front line (picked from drafts plain / toe lug / bumper / riveted).
-SIDE = ['ABBABC', 'AAAAAC', 'DDDDDD', 'KKKKKK', 'MMMMMM', 'KMKMKM']
-FRONT = ['ABBBBC', 'ACCCCC', 'DDDDDD', 'KKKKKK', 'MMMMMM', 'MKKKKM']   # the steel toe, its seam, the sole and toe lug
+# the outer / inner sides; with 5 rows it starts and ends on a line, so both sides read line / gap / line from back to
+# front and the back's bottom row is the back line, a plain dark strip. The face UVs run: east back -> front, west
+# front -> back, north outer -> inner, the sole's rows back -> front and columns inner -> outer. The front's bottom row
+# is the sole's front row seen edge on: only its corners are fixed (they meet the side notches), the rest is the
+# front's design: a toe lug across the toe's foot, its end the sole's front line (picked from drafts plain / toe lug /
+# bumper / riveted).
+SIDE = ['ABABC', 'AAAAC', 'DDDDD', 'KKKKK', 'MMMMM', 'MKMKM']
+FRONT = ['ABBBC', 'ACCCC', 'DDDDD', 'KKKKK', 'MMMMM', 'MKKKM']   # the steel toe, its seam, the sole and toe lug
 assert FRONT[-1][0] == FRONT[-1][-1] == 'M', "the front row's corners meet the side notches"
 BOOT = {
     'north': FRONT,
-    'south': SIDE[:5] + ['KKKKKK'],
-    'east': SIDE, 'west': SIDE[:5] + ['MKMKMK'],
-    'up': ['AAAAAA'] + ['AMMMMA'] * 4 + ['AAAAAA'],                            # shows round his leg: a rim, dark inside
-    'down': ['KKKKKK', 'MMMMMM'] * 2 + ['KKKKKK', FRONT[-1][::-1]],            # the tread, rows back -> front
+    'south': SIDE[:5] + ['MMMMM'],
+    'east': SIDE, 'west': SIDE,
+    'up': ['AAAAA'] + ['AMMMA'] * 3 + ['AAAAA'],                               # shows round his leg: a rim, dark inside
+    'down': ['MMMMM', 'KKKKK'] * 2 + [FRONT[-1][::-1]],                        # the tread, rows back -> front
 }
 FACES = ('north', 'east', 'south', 'west', 'up', 'down')
 # where each painted face sits in the texture: right of the swatches, one row per cube (u, v, w, h)
@@ -371,32 +375,18 @@ for side in ('r', 'l'):
     # leg: Steve's leg x 0..4, hip pivot (±2, 14); the plate carries his foot at y 2
     leg = group(f'{nm}_leg', (2 * s, 14, 0), root)
     leg['rotation'] = [0, 0, LEG_SPLAY * s]
-    # The leg's frame stands 0.5 px out from his leg, all of it on the outer side (the other leg leaves no room
-    # inside), like the chest's side bars from his torso.
-    LX = 4.5   # the leg cage: x 0..4.5 around his leg's 0..4
-    # The boot, after the gauntlet: 6x6x6 (the gauntlet cuff's footprint) round his foot, 3 px under his sole and 3 px
-    # up his leg. It turns with the leg, so the sole tilts with the splay (outer edge ~0.3 px up at 3 deg). Inside, it
-    # stops 0.25 px from his leg, where the other leg's would meet it.
-    painted(leg, side, 'boot', f'fr_boot_{side}', (-0.25, 0, -3), (5.75, 6, 3), raw=True)
-    # The cage carries on above the boot; it stops 0.5 px under the hip pivot (y 14): its top band's outer end rises as
-    # the leg splays, the belt is above. Front and back alike: a 1 px post on each side (outer and inner edge; the outer
-    # one half over his leg's edge, half past it) and three
-    # bands right across: two flush with the knee hinge's top and bottom, rivets painted where they cross the posts, and
-    # a plain one (solid like the posts) along the cage's top pixel. A 0.5 px bar along the outer side's top joins the
-    # front and back bands (none inside: his leg is there). The posts are cut into pieces between the bands (crossing pieces would z-fight). A flat knee hinge
-    # on the outer side joins the posts, its corners cut off: a 2x4 middle and a 1x2 piece either side.
-    for z0, z1, zn, face in ((-3, -2, 'f', 'north'), (2, 3, 'b', 'south')):
-        cube(leg, f'fr_leg_band_top_{zn}_{side}', *sx((0, 12.5, z0), (LX, 13.5, z1)), 'mid')
-        for bn, y0 in (('hi', 10.5), ('lo', 7.5)):
-            plate(leg, f'fr_leg_band_{bn}_{zn}_{side}', *sx((0, y0, z0), (LX, y0 + 1, z1)), ['MMBBBBBMM'], face, tx=2)
-        for tn, ya, yb in (('hi', 11.5, 12.5), ('mid', 8.5, 10.5), ('lo', 5, 7.5)):
-            cube(leg, f'fr_leg_post_{tn}_{zn}_{side}', *sx((LX - 1, ya, z0), (LX, yb, z1)), 'mid')
-            cube(leg, f'fr_leg_strut_{tn}_{zn}_{side}', *sx((0, ya, z0), (1, yb, z1)), 'mid')
-    cube(leg, f'fr_leg_band_top_side_{side}', *sx((LX - 0.5, 12.5, -2), (LX, 13.5, 2)), 'mid')
-    kf = 'east' if s > 0 else 'west'
-    plate(leg, f'fr_knee_{side}', *sx((LX - 0.5, 7.5, -1), (LX, 11.5, 1)), ['MM', 'CC', 'CC', 'MM'], kf)
-    for zn, z0 in (('f', -2), ('b', 1)):
-        plate(leg, f'fr_knee_{zn}_{side}', *sx((LX - 0.5, 8.5, z0), (LX, 10.5, z0 + 1)), ['M', 'M'], kf)
+    # The boot, after the gauntlet: 5x6x5 round his foot, placed on his leg as the gauntlet is on his arm (0.25 px
+    # inside, 0.75 px outside, 0.5 px front and back), 3 px under his sole and 3 px up his leg. It turns with the leg,
+    # so the sole tilts with the splay (outer edge ~0.25 px up at 3 deg).
+    painted(leg, side, 'boot', f'fr_boot_{side}', (-0.25, 0, -2.5), (4.75, 6, 2.5), raw=True)
+    # The cage above the boot is the arm's (segment): in line with the boot (x ..4.75, z -2.5..2.5), outer posts front and
+    # back, a band across the front and the back at its bottom (on the boot) and top, a bar along the outer side's top;
+    # nothing in between (the knee hinge, middle bands and inner posts went: too busy). It stops 0.5 px under the hip
+    # pivot (y 14): its top band's outer end rises as the leg splays, the belt is above. Inside, the bottom band meets
+    # the boot's wall (x -0.25); the top band stops at x 0, where the other leg's top band is (the splay only parts
+    # them lower down).
+    segment(leg, side, 'leg', 0, 4.75, 5, 13.5, bar=False, zo=2.5, x_in_lo=-0.25)
+    cube(leg, f'fr_leg_band_top_side_{side}', *sx((4.25, 12.5, -2), (4.75, 13.5, 2)), 'mid')
     p = group(f'pilot_{nm}_leg', (2 * s, 14, 0), leg)
     steve(p, f'st_leg_{side}', *sx((0, 2, -2), (4, 14, 2)), STEVE[f'leg_{side}'])
     # arm: Steve's arm x 4..8 (his hand at the bottom, y 14), shoulder pivot (±6, 26)
