@@ -99,16 +99,18 @@ def paint_swatches(px, y0):
                 px[y0 + y][SWX + i * 4 + x] = (min(c[0] + s, 255), min(c[1] + s, 255), min(c[2] + s, 255), a)
 
 # ---------------------------------------------------------------- gauntlet art, taken from the big suit
-# The gauntlet is the big suit's (power_suit.bbmodel): a banded cuff (forearm_r, 8x7x8) over a slate fist (fist_r, 7x5x7),
-# sized down to the frame's arm (cuff 5x5x5, fist 5x4x5: the cuff as wide as the fist, so it leaves room at the chest's side). Its art is the suit's own painted faces, resampled by picking
-# columns / rows (not scaling), so the bands, seams and finger lines stay whole pixels. The suit's texture is its grey
-# base (paint swaps the steel shades), so the frame's gauntlets are that grey too.
+# The gauntlet is the big suit's (power_suit.bbmodel): a banded cuff (forearm_r, 8x7x8) over a slate fist (fist_r,
+# 7x5x7), sized down to the frame's arm (cuff 5x4x5, fist 5x4x5: the cuff as wide as the fist, so it leaves room at the
+# chest's side; 4 tall, its fifth pixel given to the shoulder's cage: two bands, each a riveted row over a dark seam).
+# Its art is the suit's own painted faces, resampled by picking columns / rows (not scaling), so the bands, seams and
+# finger lines stay whole pixels. The suit's texture is its grey base (paint swaps the steel shades), so the frame's
+# gauntlets are that grey too.
 SUIT = os.path.join(HERE, '..', 'power_suit.bbmodel')
 # per cube: the suit cube, the frame size per face (w, h), and which of the suit face's columns / rows to keep
 GAUNT = {
     'cuff': ('forearm_r', {
-        'north': ([0, 1, 3, 6, 7], [0, 1, 2, 3, 5]), 'east': ([0, 1, 3, 6, 7], [0, 1, 2, 3, 5]),
-        'south': ([0, 1, 4, 6, 7], [0, 1, 2, 3, 5]), 'west': ([0, 1, 3, 6, 7], [0, 1, 2, 3, 5]),
+        'north': ([0, 1, 3, 6, 7], [0, 2, 3, 5]), 'east': ([0, 1, 3, 6, 7], [0, 2, 3, 5]),
+        'south': ([0, 1, 4, 6, 7], [0, 2, 3, 5]), 'west': ([0, 1, 3, 6, 7], [0, 2, 3, 5]),
         'up': ([0, 1, 2, 6, 7], [0, 1, 2, 6, 7]), 'down': ([0, 1, 4, 5, 7], [0, 1, 4, 5, 7])}),
     'fist': ('fist_r', {
         'north': ([0, 1, 3, 5, 6], [0, 2, 3, 4]), 'east': ([0, 1, 3, 5, 6], [0, 2, 3, 4]),
@@ -400,16 +402,16 @@ for side in ('r', 'l'):
     # arm: Steve's arm x 4..8 (his hand at the bottom, y 14), shoulder pivot (±6, 26)
     arm = group(f'{nm}_arm', (6 * s, 26, 0), torso)
     arm['rotation'] = [0, 0, ARM_SPLAY * s]   # (with legs at 3, under 5 the fist hits the leg: check() fails)
-    # The gauntlet (the big suit's, sized down): a 5x5x5 cuff over his forearm and a 5x4x5 fist over his hand, so it
+    # The gauntlet (the big suit's, sized down): a 5x4x5 cuff over his forearm and a 5x4x5 fist over his hand, so it
     # adds 2 px of length, not a whole fist. Both have the same footprint: 0.5 px round his arm front and back, 0.25 px
     # inside (the closest encloses() allows: the cuff's top inner corner is what comes closest to the chest's side
     # bar) and 0.75 px outside.
     painted(arm, side, 'fist', f'fr_fist_{side}', (3.75, 12, -2.5), (8.75, 16, 2.5))
-    painted(arm, side, 'cuff', f'fr_cuff_{side}', (3.75, 16, -2.5), (8.75, 21, 2.5))
+    painted(arm, side, 'cuff', f'fr_cuff_{side}', (3.75, 16, -2.5), (8.75, 20, 2.5))
     # The cage carries on above the cuff (no pauldron over it), in line with it: x ..8.75 and z -2.5..2.5 round his
     # arm's 4..8 / -2..2. Inside, its bottom band meets the cuff's wall (x 3.75); its top band stops at x 4, his
     # shoulder's edge: further in it would cut into the chest plate and the shoulder blades.
-    segment(arm, side, 'arm', 4, 8.75, 21, 26, bar=False, zo=2.5, x_in_lo=3.75)
+    segment(arm, side, 'arm', 4, 8.75, 20, 26, bar=False, zo=2.5, x_in_lo=3.75)
     p = group(f'pilot_{nm}_arm', (6 * s, 26, 0), arm)
     steve(p, f'st_arm_{side}', *sx((4, 14, -2), (8, 26, 2)), STEVE[f'arm_{side}'])
 
