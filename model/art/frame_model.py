@@ -15,6 +15,9 @@ Rig: the names and parent chain of power_suit.bbmodel (marine > body > torso > h
 marine > *_leg), so the animation kit and the later armour can reuse them. Steve's limbs are rigid (vanilla), so
 there is no elbow, knee, hand or ankle bone: each limb is one bone. Frame cubes are named fr_*, the pilot's st_*; each bone has a
 `pilot_*` child group holding Steve's part (hide those to see the bare frame). The head has no frame at all: the helmet is armour, added later.
+
+Drafts: give the part an env knob (os.environ.get), then build all its options into one review file with
+frame_drafts.py (hidden proto_* groups, one Blockbench tab); once one is picked, the knob goes and its choice stays.
 """
 import base64, glob, json, os, struct, uuid, zipfile, zlib
 
