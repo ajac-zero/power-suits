@@ -7,7 +7,7 @@ Scale: 1 px = 1/16 block, Steve exactly as vanilla (4x12x4 limbs, 8x12x4 torso, 
 boots (his soles at y 3; 6x6x6, the gauntlet cuff's footprint), and wearing the big suit's gauntlets, sized down (a cuff over his
 forearm, a fist over his hand: 2 px past it). The frame is a hollow cage around him: every limb is two thin posts on the OUTER
 side joined by front and back bands 1 px outside the limb; the inner side stays open (the neighbouring
-limb / torso is there). The arm frames are 1 px wider than his limb, the leg frames 0.5 px. The rest pose is open (ARM_SPLAY, LEG_SPLAY).
+limb / torso is there). The arm frames are in line with the gauntlet cuffs, the leg frames 0.5 px wider than his leg. The rest pose is open (ARM_SPLAY, LEG_SPLAY).
 The torso is an exoskeleton instead: plates on his chest, a spine on his back.
 Clearance to Steve is 0, never an overlap: see check() at the bottom (it also keeps the limbs' frames apart).
 
@@ -338,19 +338,20 @@ cube(body, 'fr_belt_f', (-4, 14, -3), (4, 15, -2), 'dark')
 cube(body, 'fr_belt_b', (-4, 14, 2), (4, 15, 3), 'dark')
 
 # ---------- limbs (right side defined, left mirrored). Steve's limbs don't bend, so each limb is ONE rigid bone.
-def segment(g, side, name, x_in, x_out, ya, yb, bar=True, mid=None):
-    """One cage segment: two outer posts (z -3..-2 / 2..3) with a window bar between, bands at both ends
-    (and a dark band at `mid`, a seam for the eye only)."""
+def segment(g, side, name, x_in, x_out, ya, yb, bar=True, mid=None, zo=3, x_in_lo=None):
+    """One cage segment: two outer posts (z -zo..-2 / 2..zo: in front of and behind his limb) with a window bar
+    between, bands at both ends (and a dark band at `mid`, a seam for the eye only). `x_in_lo`: the bottom band's
+    inner end, if not x_in."""
     n = f'{name}_{side}'
     s = 1 if side == 'r' else -1
     mk = lambda nm, a, b, mat='mid': cube(g, nm, *((a, b) if s > 0 else mir(a, b)), mat)
-    mk(f'fr_{n}_post_f', (x_out - 0.5, ya, -3), (x_out, yb, -2))
-    mk(f'fr_{n}_post_b', (x_out - 0.5, ya, 2), (x_out, yb, 3))
+    mk(f'fr_{n}_post_f', (x_out - 0.5, ya, -zo), (x_out, yb, -2))
+    mk(f'fr_{n}_post_b', (x_out - 0.5, ya, 2), (x_out, yb, zo))
     if bar:
-        mk(f'fr_{n}_bar', (x_out - 0.5, (ya + yb) / 2 - 0.5, -3), (x_out, (ya + yb) / 2 + 0.5, 3), 'dark')
-    for z0, z1, zn in ((-3, -2, 'f'), (2, 3, 'b')):
+        mk(f'fr_{n}_bar', (x_out - 0.5, (ya + yb) / 2 - 0.5, -zo), (x_out, (ya + yb) / 2 + 0.5, zo), 'dark')
+    for z0, z1, zn in ((-zo, -2, 'f'), (2, zo, 'b')):
         mk(f'fr_{n}_band_hi_{zn}', (x_in, yb - 1, z0), (x_out - 0.5, yb, z1), 'mid')
-        mk(f'fr_{n}_band_lo_{zn}', (x_in, ya, z0), (x_out - 0.5, ya + 1, z1), 'mid')
+        mk(f'fr_{n}_band_lo_{zn}', (x_in if x_in_lo is None else x_in_lo, ya, z0), (x_out - 0.5, ya + 1, z1), 'mid')
         if mid is not None:
             mk(f'fr_{n}_band_mid_{zn}', (x_in, mid - 0.5, z0), (x_out - 0.5, mid + 0.5, z1), 'dark')
 
@@ -399,14 +400,16 @@ for side in ('r', 'l'):
     # arm: Steve's arm x 4..8 (his hand at the bottom, y 14), shoulder pivot (±6, 26)
     arm = group(f'{nm}_arm', (6 * s, 26, 0), torso)
     arm['rotation'] = [0, 0, ARM_SPLAY * s]   # (with legs at 3, under 5 the fist hits the leg: check() fails)
-    AX = 9   # the arm cage: x 4..9 around his arm's 4..8
     # The gauntlet (the big suit's, sized down): a 5x5x5 cuff over his forearm and a 5x4x5 fist over his hand, so it
     # adds 2 px of length, not a whole fist. Both have the same footprint: 0.5 px round his arm front and back, 0.25 px
     # inside (the closest encloses() allows: the cuff's top inner corner is what comes closest to the chest's side
     # bar) and 0.75 px outside.
     painted(arm, side, 'fist', f'fr_fist_{side}', (3.75, 12, -2.5), (8.75, 16, 2.5))
     painted(arm, side, 'cuff', f'fr_cuff_{side}', (3.75, 16, -2.5), (8.75, 21, 2.5))
-    segment(arm, side, 'arm', 4, AX, 21, 26, bar=False)   # the cage carries on above the cuff (no pauldron over it)
+    # The cage carries on above the cuff (no pauldron over it), in line with it: x ..8.75 and z -2.5..2.5 round his
+    # arm's 4..8 / -2..2. Inside, its bottom band meets the cuff's wall (x 3.75); its top band stops at x 4, his
+    # shoulder's edge: further in it would cut into the chest plate and the shoulder blades.
+    segment(arm, side, 'arm', 4, 8.75, 21, 26, bar=False, zo=2.5, x_in_lo=3.75)
     p = group(f'pilot_{nm}_arm', (6 * s, 26, 0), arm)
     steve(p, f'st_arm_{side}', *sx((4, 14, -2), (8, 26, 2)), STEVE[f'arm_{side}'])
 
