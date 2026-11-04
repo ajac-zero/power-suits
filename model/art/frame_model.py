@@ -412,6 +412,8 @@ for side in ('r', 'l'):
     # arm's 4..8 / -2..2. Inside, its bottom band meets the cuff's wall (x 3.75); its top band stops at x 4, his
     # shoulder's edge: further in it would cut into the chest plate and the shoulder blades.
     segment(arm, side, 'arm', 4, 8.75, 20, 26, bar=False, zo=2.5, x_in_lo=3.75)
+    # a bar along the outer side's top joins the front and back posts (as on the legs; none inside: his torso is there)
+    cube(arm, f'fr_arm_band_top_side_{side}', *sx((8.25, 25, -2), (8.75, 26, 2)), 'mid')
     p = group(f'pilot_{nm}_arm', (6 * s, 26, 0), arm)
     steve(p, f'st_arm_{side}', *sx((4, 14, -2), (8, 26, 2)), STEVE[f'arm_{side}'])
 
