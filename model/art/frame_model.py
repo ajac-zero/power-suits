@@ -7,7 +7,7 @@ Scale: 1 px = 1/16 block, Steve exactly as vanilla (4x12x4 limbs, 8x12x4 torso, 
 boots (his soles at y 3; 6x6x6, the gauntlet cuff's footprint), and wearing the big suit's gauntlets, sized down (a cuff over his
 forearm, a fist over his hand: 2 px past it). The frame is a hollow cage around him: every limb is two thin posts on the OUTER
 side joined by front and back bands 1 px outside the limb; the inner side stays open (the neighbouring
-limb / torso is there). Each limb frame is 5 px wide, 1 px wider than his limb. The rest pose is open (ARM_SPLAY, LEG_SPLAY).
+limb / torso is there). The arm frames are 1 px wider than his limb, the leg frames 0.5 px. The rest pose is open (ARM_SPLAY, LEG_SPLAY).
 The torso is an exoskeleton instead: plates on his chest, a spine on his back.
 Clearance to Steve is 0, never an overlap: see check() at the bottom (it also keeps the limbs' frames apart).
 
@@ -257,14 +257,15 @@ def pack_plates(v0=31):
 VIEW = {'north': ('east', 'west', 0, 2, 'south'), 'south': ('west', 'east', 0, 2, 'north'),
         'east': ('south', 'north', 2, 0, 'west'), 'west': ('north', 'south', 2, 0, 'east')}
 
-def plate(g, name, a, b, rows, face='north'):
+def plate(g, name, a, b, rows, face='north', tx=1):
     """A plate whose `face` shows `rows` as the viewer sees it (first column on the viewer's left: from the front the
     suit's right, from behind its left, from its right side its back, from its left side its front). Its edges carry
-    the grid's rim: the side faces its outer columns, the top its first row, the bottom its last."""
+    the grid's rim: the side faces its outer columns, the top its first row, the bottom its last. `tx` texels per px
+    across (2 for a plate whose width ends on a half pixel: its grid is drawn in half-pixel columns)."""
     e = cube(g, name, a, b)
     sz = [e['to'][i] - e['from'][i] for i in range(3)]
     left, right, wa, da, opp = VIEW[face]
-    assert (len(rows[0]), len(rows)) == (sz[wa], sz[1]), (name, sz)
+    assert (len(rows[0]), len(rows)) == (sz[wa] * tx, sz[1]), (name, sz)
     d = max(1, round(sz[da]))
     top, bot = (rows[0], rows[-1]) if wa == 0 else ([c * d for c in rows[0]], [c * d for c in rows[-1]])
     e['faces'] = {f: {'uv': uv, 'texture': 0} for f, uv in {
@@ -367,27 +368,28 @@ for side in ('r', 'l'):
     # leg: Steve's leg x 0..4, hip pivot (±2, 14); the plate carries his foot at y 2
     leg = group(f'{nm}_leg', (2 * s, 14, 0), root)
     leg['rotation'] = [0, 0, LEG_SPLAY * s]
-    # Each limb's frame is 1 px wider than Steve's limb (4 -> 5), all of it on the outer side: the other leg / the torso
-    # leave no room inside.
-    LX = 5   # the leg cage: x 0..5 around his leg's 0..4
+    # The leg's frame stands 0.5 px out from his leg, all of it on the outer side (the other leg leaves no room
+    # inside), like the chest's side bars from his torso.
+    LX = 4.5   # the leg cage: x 0..4.5 around his leg's 0..4
     # The boot, after the gauntlet: 6x6x6 (the gauntlet cuff's footprint) round his foot, 3 px under his sole and 3 px
     # up his leg. It turns with the leg, so the sole tilts with the splay (outer edge ~0.3 px up at 3 deg). Inside, it
     # stops 0.25 px from his leg, where the other leg's would meet it.
     painted(leg, side, 'boot', f'fr_boot_{side}', (-0.25, 0, -3), (5.75, 6, 3), raw=True)
     # The cage carries on above the boot; it stops 0.5 px under the hip pivot (y 14): its top band's outer end rises as
-    # the leg splays, the belt is above. Front and back alike: a 1 px post on each side (outer and inner edge) and three
+    # the leg splays, the belt is above. Front and back alike: a 1 px post on each side (outer and inner edge; the outer
+    # one half over his leg's edge, half past it) and three
     # bands right across: two flush with the knee hinge's top and bottom, rivets painted where they cross the posts, and
-    # a plain one (solid like the posts) along the cage's top pixel. A bar along the outer side's top joins the front and back bands (none inside: his
-    # leg is there). The posts are cut into pieces between the bands (crossing pieces would z-fight). A flat knee hinge
+    # a plain one (solid like the posts) along the cage's top pixel. A 0.5 px bar along the outer side's top joins the
+    # front and back bands (none inside: his leg is there). The posts are cut into pieces between the bands (crossing pieces would z-fight). A flat knee hinge
     # on the outer side joins the posts, its corners cut off: a 2x4 middle and a 1x2 piece either side.
     for z0, z1, zn, face in ((-3, -2, 'f', 'north'), (2, 3, 'b', 'south')):
         cube(leg, f'fr_leg_band_top_{zn}_{side}', *sx((0, 12.5, z0), (LX, 13.5, z1)), 'mid')
         for bn, y0 in (('hi', 10.5), ('lo', 7.5)):
-            plate(leg, f'fr_leg_band_{bn}_{zn}_{side}', *sx((0, y0, z0), (LX, y0 + 1, z1)), ['MBBBM'], face)
+            plate(leg, f'fr_leg_band_{bn}_{zn}_{side}', *sx((0, y0, z0), (LX, y0 + 1, z1)), ['MMBBBBBMM'], face, tx=2)
         for tn, ya, yb in (('hi', 11.5, 12.5), ('mid', 8.5, 10.5), ('lo', 5, 7.5)):
             cube(leg, f'fr_leg_post_{tn}_{zn}_{side}', *sx((LX - 1, ya, z0), (LX, yb, z1)), 'mid')
             cube(leg, f'fr_leg_strut_{tn}_{zn}_{side}', *sx((0, ya, z0), (1, yb, z1)), 'mid')
-    cube(leg, f'fr_leg_band_top_side_{side}', *sx((LX - 1, 12.5, -2), (LX, 13.5, 2)), 'mid')
+    cube(leg, f'fr_leg_band_top_side_{side}', *sx((LX - 0.5, 12.5, -2), (LX, 13.5, 2)), 'mid')
     kf = 'east' if s > 0 else 'west'
     plate(leg, f'fr_knee_{side}', *sx((LX - 0.5, 7.5, -1), (LX, 11.5, 1)), ['MM', 'CC', 'CC', 'MM'], kf)
     for zn, z0 in (('f', -2), ('b', 1)):
