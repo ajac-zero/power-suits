@@ -320,6 +320,14 @@ SCAP = ['CCD', 'BMD', 'BMD', 'BMD', 'DDD']   # the left plate, outer edge first:
 for sx, n in ((1, 'r'), (-1, 'l')):
     plate(torso, f'fr_scapula_{n}', (1 * sx, 20, 2), (4 * sx, 25, 3), SCAP if sx < 0 else [r[::-1] for r in SCAP], face='south')
 plate(torso, 'fr_spine', (-1, 15, 2), (1, 25, 3), ['CC', 'MM', 'BA', 'AA', 'MM', 'BA', 'AA', 'MM', 'BA', 'DD'], face='south')
+# Sides: a bar down each side of his chest joins the front frame to the back one (z -2..2, between the front layer and
+# the back layer), 0.5 px thick (x 4..4.5): his arm hangs close to his torso, there's no room for more. Two fit at the
+# 8 deg splay: one level with the chest plate and the shoulder blades (y 21-22: both reach the side there; lower, the
+# cuff is in the way, higher, his arm), one along the belt (y 14-15). The belt bar starts 0.01 px off his side: at the
+# leg's splay its top outer corner rises 0.003 px into it (picked from none / chest bar / chest + belt).
+for sx, n in ((1, 'r'), (-1, 'l')):
+    cube(torso, f'fr_side_chest_{n}', (4 * sx, 21, -2), (4.5 * sx, 22, 2), 'mid')
+    cube(torso, f'fr_side_belt_{n}', (4.01 * sx, 14, -2), (4.5 * sx, 15, 2), 'mid')
 pilot = group('pilot_torso', (0, 14, 0), torso)
 steve(pilot, 'st_torso', (-4, 14, -2), (4, 26, 2), STEVE['torso'])
 
