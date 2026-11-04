@@ -64,9 +64,22 @@ LEG_SPLAY = float(os.environ.get('LEG_SPLAY', 0))
 # hip blocks, arms up to 2.75 out: the gaps were dropped for touching walls, which needed no fillers.)
 # (Tried and not picked, 2026-11-04: a bigger frame, torso 11 x 8 and legs 6 x 6, so armour could replace its boxes
 # in place; with shoulder blocks in it, but pauldrons belong to the armour tiers: copper without, iron with.)
-# Draft knob NECK (px): his head lifted off his torso, the gap a collar ring on the torso (so a helmet sits on a neck,
-# above the chest).
-NECK = float(os.environ.get('NECK', 0))
+# Draft knob HELMET ('none' / 'glass'; 2026-11-04, user): the helmet, armour (not in the frame models), drafted here
+# for its size and visor. The head's size (no neck: a 1 / 2 px neck with a collar ring or a post was tried and
+# dropped): the big suit's, 9 x 9 x 9 like the skin's hat layer (the least that keeps its faces out of his head's
+# planes), its bottom 0.5 px under the neck, tucked into the chest armour as vanilla's helmets tuck into chestplates.
+# Its visor is glass, so his face shows 0.5 px behind it: partly transparent texels (in game a translucent pass of its
+# own), picked over an open slot (the visor lights up in game: the glow needs a pane to sit on). In game the skin's hat
+# layer (hair, hats) must hide under a helmet: it lies in the helmet's planes.
+HELMET = os.environ.get('HELMET', 'none')
+assert HELMET in ('none', 'glass'), HELMET
+# The pane's colour and opacity, RGBA hex (env GLASS to try others): the big suit's visor glass colour (262c34,
+# tools/make-glowmasks.py) at 80 % (2026-11-04, user, over 60 % and a pale blue at 35 % that read washed out): his face
+# a faint silhouette, clear only up close. In game the visor lights up (the glow layer tints it by the suit's state,
+# the HUD colour, green by default): a lit pane is that glow drawn over it at part strength, so his face still shows.
+_hex = lambda h: tuple(int(h[i:i + 2], 16) for i in range(0, len(h), 2))
+GLASS = _hex(os.environ.get('GLASS', '262c34c8'))
+GLINT = _hex(os.environ.get('GLINT', 'e8f4ff78'))   # a glint across it, top left to bottom right
 LEG_OUT = 0.25
 CHEST_X = {'wide': 6.0, 'slim': 5.5}[BUILD]   # the chest's half width
 ARM_OUT = CHEST_X - 3.75                      # the arm box's inner wall (3.75 + ARM_OUT) against the chest's side
@@ -278,10 +291,11 @@ for _f in (_TORSO, _LEG):
     for _k, _rows in _f.items(): assert len({len(r) for r in _rows}) == 1, (_k, _rows)
 
 SUIT_HELMET = ['helmet_shell', 'visor', 'helmet_brow', 'cheek_l', 'cheek_r', 'chin_guard']
-def _helmet():
+def _helmet(visor='painted'):
     """The big suit's helmet (power_suit.bbmodel: a 9 px shell round the pilot's head, a 7x5 visor, the brow band,
     cheeks and chin guard standing 0.75 px proud) as ONE 9x9x9 box: each face is the old helmet seen straight from
-    that side (the front-most cube's face at every texel), so the proud parts are painted flat. Underside slate."""
+    that side (the front-most cube's face at every texel), so the proud parts are painted flat. Underside slate.
+    visor: 'painted' as the old one, 'glass' (HELMET) a tinted pane (GLASS) with a glint."""
     m = json.load(open(SUIT))
     img = unpng(base64.b64decode(m['textures'][0]['source'].split(',', 1)[1]))
     cs = [e for e in m['elements'] if e['name'] in SUIT_HELMET]
@@ -310,7 +324,10 @@ def _helmet():
                 b = (ty - y) / (ty - fy)
                 a = {'north': (tx - c) / (tx - fx) if axis == 0 else 0, 'south': (c - fx) / (tx - fx),
                      'east': (tz - c) / (tz - fz), 'west': (c - fz) / (tz - fz)}[f]
-                row.append(sample(e, f, a, b) + (255,))
+                if e['name'] == 'visor' and visor != 'painted':
+                    row.append(GLASS)
+                else:
+                    row.append(sample(e, f, a, b) + (255,))
             rows.append(row)
         return rows
     faces = {'north': view('north', xs, 0, lambda h: min(h, key=lambda e: e['from'][2])),
@@ -328,6 +345,12 @@ def _helmet():
         top.append(row)
     faces['up'] = top
     faces['down'] = ['k' * n] * n
+    if visor == 'glass':   # the glint: a short diagonal across the pane's top left corner (one across the whole pane
+        # read as a scar on his face)
+        pane = [(i, j) for j, r in enumerate(faces['north']) for i, c in enumerate(r) if c == GLASS]
+        i0, j0 = min(i for i, _ in pane), min(j for _, j in pane)
+        for i, j in pane:
+            if (i - i0) + (j - j0) == 2: faces['north'][j][i] = GLINT
     return faces
 
 # Boxes, right side (the left mirrors), in the frame's numbers (helmet / torso / arms lifted by FY; legs raw, like the
@@ -359,14 +382,6 @@ ARMOR_BOX['leg'] = _dx(ARMOR_BOX['leg'], LEG_OUT)
 PAD_BOX = ((PAD_BOX[0][0] + (0.25 if ARM_OUT == 0.75 else 0), PAD_BOX[0][1], PAD_BOX[0][2]),
            (PAD_BOX[1][0] + ARM_OUT, PAD_BOX[1][1], PAD_BOX[1][2]))
 def _dims(box): return [round(box[1][k] - box[0][k]) for k in range(3)]   # its art's texels (one per px, ~)
-
-def _collar(n):
-    """The collar ring (NECK): a solid band round the neck gap, 9 x n x 9 at 2 texels per px; its top only the ring
-    outside his head (inside, his head's underside is in its plane), its bottom open (the torso box's top)."""
-    W, H = 18, round(2 * n)
-    top = ['#' * W] + ['#' + '.' * (W - 2) + '#'] * (W - 2) + ['#' * W]
-    return {'north': ['#' * W] * H, 'south': ['#' * W] * H, 'east': ['#' * W] * H, 'west': ['#' * W] * H, 'up': top,
-            'down': ['.' * W] * W}
 
 def _legrows(face): return face[:1] + [r for r in face[1:] for _ in range(2)]   # the half-px top row once, the rest twice
 
@@ -439,16 +454,16 @@ SHELLS = {'arm_shell': dict(cage=dict(ARM_ART), below=['fist'], rows=1, up=_rim(
           'leg_shell': dict(cage={f: _legrows(r) for f, r in LEG_ART.items()}, below=['boot'], rows=2, up=['.' * 5] * 5),
           'belt_shell': dict(faces=_belt())}
 SHELLS['chest_shell'], SHELLS['abdomen_shell'] = (dict(faces=f) for f in _torso())
-if NECK: SHELLS['collar_shell'] = dict(faces=_collar(NECK))
 if ARMOR != 'none':
-    SHELLS.update({'helmet_armor': dict(faces=_helmet()), 'torso_armor': dict(faces=_TORSO),
+    SHELLS.update({'helmet_armor': dict(faces=_helmet(HELMET)), 'torso_armor': dict(faces=_TORSO),
                    'arm_armor': dict(faces=(_sleeve if ARM == 'SP' else _pad)(*_dims(ARMOR_BOX['arm']))),
                    'leg_armor': dict(faces=_LEG)})
     if ARM == 'SP': SHELLS['pad_armor'] = dict(faces=_pad(*_dims(PAD_BOX)))
+elif HELMET != 'none': SHELLS['helmet_armor'] = dict(faces=_helmet(HELMET))
 # where each shell's faces sit in the texture (below / beside nothing else), one strip per shell
 SHELL_AT = {'arm_shell': (0, 64), 'leg_shell': (0, 80),
             'torso_armor': (35, 87), 'arm_armor': (35, 101), 'leg_armor': (35, 112), 'helmet_armor': (70, 112),
-            'pad_armor': (78, 101), 'collar_shell': (128, 0)}   # (the collar: right half, NECK's 256 x 128)
+            'pad_armor': (78, 101)}
 def shell_art(part, f):
     """The face's rows: letters ('#' bar, 'T' tucked bar, '.' hole, PAL colours) and (u, v) refs into the source
     canvas for the gauntlet / boot art copied below a limb's cage."""
@@ -465,7 +480,7 @@ def shell_art(part, f):
     return rows
 
 # The torso (out to the legs) and the belt don't fit beside the limbs' strips: a 256 wide texture, those on its right
-# half (like NECK's collar).
+# half.
 TW = 256
 SHELL_AT.update(belt_shell=(128, 32), chest_shell=(128, 80), abdomen_shell=(128, 92))
 
@@ -630,13 +645,11 @@ def mir(a, b): return (-a[0], a[1], a[2]), (-b[0], b[1], b[2])
 root = group('marine', (0, 0, 0), None)
 body = group('body', (0, 14, 0), root)
 torso = group('torso', (0, 14, 0), body)
-head = group('head', (0, 26 + NECK, 0), torso)
+head = group('head', (0, 26, 0), torso)
 
 # ---------- head: no frame. The helmet is a separate armour piece (a later step); the bone is here for it.
-pilot = group('pilot_head', (0, 26 + NECK, 0), head)
-steve(pilot, 'st_head', (-4, 26 + NECK, -4), (4, 34 + NECK, 4), STEVE['head'])
-if NECK:   # the collar ring round the neck gap, on the torso (the head turns inside it)
-    hollow(torso, 'r', 'collar_shell', 'fr_collar', (-4.5, 26, -4.5), (4.5, 26 + NECK, 4.5))
+pilot = group('pilot_head', (0, 26, 0), head)
+steve(pilot, 'st_head', (-4, 26, -4), (4, 34, 4), STEVE['head'])
 
 # ---------- torso: an exoskeleton, not a ribcage: load-bearing members from the belt up to the shoulders, no hoops
 # (its art: _torso()).
@@ -822,14 +835,14 @@ def check():
 
 # ---------------------------------------------------------------- armour (draft)
 # One piece per bone, each in its own group (so a piece can be shown / hidden as one): helmet, torso, arms, legs.
+def _armor(bone, side, piece, name, raw=False, box=None, addon=False):
+    g = next(x for x in groups if x['name'] == bone)
+    ga = next((x for x in groups if x['name'] == f'armor_{bone}'), None) or \
+        group(f'armor_{bone}', [g['origin'][0], g['origin'][1] - FY, g['origin'][2]], g)
+    e = painted(ga, side, f'{piece}_armor', name, *(box or ARMOR_BOX[piece]), raw=raw)
+    e['_armor'] = 'addon' if addon else True   # an add-on (the pauldron) sits on its bone's piece: needn't enclose him
+if 'helmet_armor' in SHELLS: _armor('head', 'r', 'helmet', 'ar_helmet')
 if ARMOR != 'none':
-    def _armor(bone, side, piece, name, raw=False, box=None, addon=False):
-        g = next(x for x in groups if x['name'] == bone)
-        ga = next((x for x in groups if x['name'] == f'armor_{bone}'), None) or \
-            group(f'armor_{bone}', [g['origin'][0], g['origin'][1] - FY, g['origin'][2]], g)
-        e = painted(ga, side, f'{piece}_armor', name, *(box or ARMOR_BOX[piece]), raw=raw)
-        e['_armor'] = 'addon' if addon else True   # an add-on (the pauldron) sits on its bone's piece: needn't enclose him
-    _armor('head', 'r', 'helmet', 'ar_helmet')
     _armor('torso', 'r', 'torso', 'ar_torso')
     for side, nm in (('r', 'right'), ('l', 'left')):
         _armor(f'{nm}_arm', side, 'arm', f'ar_arm_{side}')
