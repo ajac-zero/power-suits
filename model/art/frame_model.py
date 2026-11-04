@@ -72,6 +72,13 @@ LEG_SPLAY = float(os.environ.get('LEG_SPLAY', 0))
 # own), picked over an open slot (the visor lights up in game: the glow needs a pane to sit on). In game the skin's hat
 # layer (hair, hats) must hide under a helmet: it lies in the helmet's planes.
 HELMET = os.environ.get('HELMET', 'none')
+# Shoulder plates (2026-11-04, user: platforms over the shoulders where pauldrons go, as on the Fallout 4 frame): a
+# 1 px plate on top of each arm, on the arm bone, so it swings with the arm and can never clip it (one on the torso
+# would: the arm turns about the top of its shoulder, so a forward swing lifts its top corners up to 2.5 px), and a
+# pauldron mounted on it swings with the arm too. 6 x 6: 1 px past the arm box's outer side, 0.5 front and back
+# (picked over a 5 x 5 cap flush with the arm, which read as the cage's lid, and a 7 x 6 that read as a shelf). Its top
+# also covers his shoulder's top, which showed through the cage's open top.
+PLATE_OUT, PLATE_FB = 1, 0.5
 assert HELMET in ('none', 'glass'), HELMET
 # The pane's colour and opacity, RGBA hex (env GLASS to try others): the big suit's visor glass colour (262c34,
 # tools/make-glowmasks.py) at 80 % (2026-11-04, user, over 60 % and a pale blue at 35 % that read washed out): his face
@@ -460,6 +467,26 @@ if ARMOR != 'none':
                    'leg_armor': dict(faces=_LEG)})
     if ARM == 'SP': SHELLS['pad_armor'] = dict(faces=_pad(*_dims(PAD_BOX)))
 elif HELMET != 'none': SHELLS['helmet_armor'] = dict(faces=_helmet(HELMET))
+
+def _plate():
+    """The shoulder plate at 2 texels per px: a steel plate, its top lit along the front and outer edges, a
+    gunmetal mounting rail across it (front to back) with a dark bolt at each end, bolts in its corners; its sides a lit
+    and a shadowed row. Its underside is open over the arm box (his arm's top and the cage's rim are in its plane),
+    closed where it overhangs."""
+    W, D = round((5 + PLATE_OUT) * 2), round((5 + 2 * PLATE_FB) * 2)   # columns inner -> outer, rows front -> back
+    up = [['V'] * W for _ in range(D)]
+    for i in range(W): up[0][i], up[-1][i] = 'W', 'U'
+    for j in range(D): up[j][0], up[j][-1] = ('U', 'W') if 0 < j < D - 1 else (up[j][0], up[j][-1])
+    rail = W // 2 - 1
+    for j in range(1, D - 1): up[j][rail], up[j][rail + 1] = 'N', 'O'
+    up[1][rail] = up[1][rail + 1] = up[-2][rail] = up[-2][rail + 1] = 'X'
+    for i, j in ((1, 1), (W - 2, 1), (1, D - 2), (W - 2, D - 2)): up[j][i] = 'X'
+    side = lambda n: ['W' * n, 'U' * n]
+    a, b = round(PLATE_FB * 2), round(PLATE_OUT * 2)   # overhang texels front / back and outside
+    down = ['G' * W] * a + ['.' * (W - b) + 'G' * b] * (D - 2 * a) + ['G' * W] * a
+    return {'north': side(W), 'south': side(W), 'east': side(D), 'west': side(D), 'up': [''.join(r) for r in up],
+            'down': down}
+SHELLS['shoulder_plate'] = dict(faces=_plate())
 # where each shell's faces sit in the texture (below / beside nothing else), one strip per shell
 SHELL_AT = {'arm_shell': (0, 64), 'leg_shell': (0, 80),
             'torso_armor': (35, 87), 'arm_armor': (35, 101), 'leg_armor': (35, 112), 'helmet_armor': (70, 112),
@@ -482,7 +509,7 @@ def shell_art(part, f):
 # The torso (out to the legs) and the belt don't fit beside the limbs' strips: a 256 wide texture, those on its right
 # half.
 TW = 256
-SHELL_AT.update(belt_shell=(128, 32), chest_shell=(128, 80), abdomen_shell=(128, 92))
+SHELL_AT.update(belt_shell=(128, 32), chest_shell=(128, 80), abdomen_shell=(128, 92), shoulder_plate=(128, 104))
 
 SHELL_UV, _used = {}, set()
 for part, (u, v) in SHELL_AT.items():
@@ -686,6 +713,9 @@ for side in ('r', 'l'):
     hollow(arm, side, 'arm_shell', f'fr_arm_shell_{side}', (3.75 + ARM_OUT, 10, -2.5), (8.75 + ARM_OUT, 26, 2.5))
     p = group(f'pilot_{nm}_arm', ((6 + ARM_OUT) * s, 26, 0), arm)
     steve(p, f'st_arm_{side}', *sx((4 + ARM_OUT, 14, -2), (4 + AW + ARM_OUT, 26, 2)), STEVE[f'arm_{side}'])
+    # the shoulder plate on the arm box's top, its inner side over the arm box's inner wall
+    painted(arm, side, 'shoulder_plate', f'fr_shoulder_plate_{side}',
+            (3.75 + ARM_OUT, 26, -2.5 - PLATE_FB), (8.75 + ARM_OUT + PLATE_OUT, 27, 2.5 + PLATE_FB))
 
 # ---------------------------------------------------------------- clearance check, in the posed rest pose
 # Every cube in world space (its own rotation, then each bone's, all about z), as an xy quad plus a z range. Fails on
