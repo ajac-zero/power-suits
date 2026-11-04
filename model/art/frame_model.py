@@ -363,16 +363,19 @@ for side in ('r', 'l'):
     # stops 0.25 px from his leg, where the other leg's would meet it.
     painted(leg, side, 'boot', f'fr_boot_{side}', (-0.25, 0, -3), (5.75, 6, 3), raw=True)
     # The cage carries on above the boot; it stops 0.5 px under the hip pivot (y 14): its top band's outer end rises as
-    # the leg splays, the belt is above. 1 px posts on the outer side, bands across the front and back (top, knee,
-    # bottom; a rivet painted at each end), a 1 px strut down the middle of each window, and a flat knee hinge on the
-    # outer side joining the posts (picked from knee rings / struts / both), its corners cut off: a 2x4 middle and a
-    # 1x2 piece either side (three boxes, side by side: overlapping ones would z-fight).
+    # the leg splays, the belt is above. Front and back alike: a 1 px post on each side (outer and inner edge) and three
+    # bands right across: two flush with the knee hinge's top and bottom, rivets painted where they cross the posts, and
+    # a plain one (solid like the posts) along the cage's top pixel. A bar along the outer side's top joins the front and back bands (none inside: his
+    # leg is there). The posts are cut into pieces between the bands (crossing pieces would z-fight). A flat knee hinge
+    # on the outer side joins the posts, its corners cut off: a 2x4 middle and a 1x2 piece either side.
     for z0, z1, zn, face in ((-3, -2, 'f', 'north'), (2, 3, 'b', 'south')):
-        cube(leg, f'fr_leg_post_{zn}_{side}', *sx((LX - 1, 5, z0), (LX, 13.5, z1)), 'mid')
-        for bn, y0 in (('hi', 12.5), ('mid', 9), ('lo', 5)):
-            plate(leg, f'fr_leg_band_{bn}_{zn}_{side}', *sx((0, y0, z0), (LX - 1, y0 + 1, z1)), ['MBBM'], face)
-        cube(leg, f'fr_leg_strut_hi_{zn}_{side}', *sx((1.5, 10, z0), (2.5, 12.5, z1)), 'dark')
-        cube(leg, f'fr_leg_strut_lo_{zn}_{side}', *sx((1.5, 6, z0), (2.5, 9, z1)), 'dark')
+        cube(leg, f'fr_leg_band_top_{zn}_{side}', *sx((0, 12.5, z0), (LX, 13.5, z1)), 'mid')
+        for bn, y0 in (('hi', 10.5), ('lo', 7.5)):
+            plate(leg, f'fr_leg_band_{bn}_{zn}_{side}', *sx((0, y0, z0), (LX, y0 + 1, z1)), ['MBBBM'], face)
+        for tn, ya, yb in (('hi', 11.5, 12.5), ('mid', 8.5, 10.5), ('lo', 5, 7.5)):
+            cube(leg, f'fr_leg_post_{tn}_{zn}_{side}', *sx((LX - 1, ya, z0), (LX, yb, z1)), 'mid')
+            cube(leg, f'fr_leg_strut_{tn}_{zn}_{side}', *sx((0, ya, z0), (1, yb, z1)), 'mid')
+    cube(leg, f'fr_leg_band_top_side_{side}', *sx((LX - 1, 12.5, -2), (LX, 13.5, 2)), 'mid')
     kf = 'east' if s > 0 else 'west'
     plate(leg, f'fr_knee_{side}', *sx((LX - 0.5, 7.5, -1), (LX, 11.5, 1)), ['MM', 'CC', 'CC', 'MM'], kf)
     for zn, z0 in (('f', -2), ('b', 1)):
