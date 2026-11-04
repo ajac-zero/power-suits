@@ -8,6 +8,7 @@ boots (his soles at y 3; 6x6x6, the gauntlet cuff's footprint), and wearing the 
 forearm, a fist over his hand: 2 px past it). The frame is a hollow cage around him: every limb is two thin posts on the OUTER
 side joined by front and back bands 1 px outside the limb; the inner side stays open (the neighbouring
 limb / torso is there). Each limb frame is 5 px wide, 1 px wider than his limb. The rest pose is open (ARM_SPLAY, LEG_SPLAY).
+The torso is an exoskeleton instead: plates on his chest, a spine on his back.
 Clearance to Steve is 0, never an overlap: see check() at the bottom (it also keeps the limbs' frames apart).
 
 Rig: the names and parent chain of power_suit.bbmodel (marine > body > torso > head / *_arm;
@@ -177,6 +178,10 @@ def model_tex():   # Steve's real skin at 0,0 + the frame's swatches + the gaunt
         px[y][:len(row)] = row
     paint_swatches(px, SWY)
     paint_gauntlet(px)
+    for (u, v), rows in PLATE_ART:
+        for j, line in enumerate(rows):
+            for i, ch in enumerate(line):
+                px[v + j][u + i] = PAL[ch] + (255,)
     return png(TW, TH, px)
 
 def b64(b): return 'data:image/png;base64,' + base64.b64encode(b).decode()
@@ -226,6 +231,31 @@ def painted(g, side, part, name, a, b, raw=False):
         e['faces'][f] = {'uv': [u, v, u + w, v + h] if r else [u + w, v, u, v + h], 'texture': 0}
     return e
 
+# Chest plates: flat 1 px plates painted with letter grids (PAL), packed below the boot art.
+PLATE_ART, _plate_at = [], [SWX, 40]
+def _alloc(rows):
+    w, h = len(rows[0]), len(rows)
+    if _plate_at[0] + w > TW: _plate_at[:] = [SWX, _plate_at[1] + 10]
+    u, v = _plate_at
+    assert v + h <= TH, 'out of texture room for plates'
+    PLATE_ART.append(((u, v), rows))
+    _plate_at[0] += w
+    return [u, v, u + w, v + h]
+
+def plate(g, name, a, b, rows):
+    """A plate whose front (north) face shows `rows` (as the viewer sees it: first column on the viewer's left, i.e.
+    the suit's right). Its edges carry the grid's rim: sides its outer columns, top its first row, bottom its last."""
+    e = cube(g, name, a, b)
+    sz = [e['to'][i] - e['from'][i] for i in range(3)]
+    assert (len(rows[0]), len(rows)) == (sz[0], sz[1]), (name, sz)
+    d = max(1, round(sz[2]))
+    e['faces'] = {
+        'north': _alloc(rows), 'south': _alloc([r[::-1] for r in rows]),
+        'east': _alloc([r[0] * d for r in rows]), 'west': _alloc([r[-1] * d for r in rows]),
+        'up': _alloc([rows[0]] * d), 'down': _alloc([rows[-1]] * d)}
+    e['faces'] = {f: {'uv': uv, 'texture': 0} for f, uv in e['faces'].items()}
+    return e
+
 def steve(g, name, a, b, box):
     """Steve's part: a box-UV cube at the skin's (u, v) for a w x h x d box, faces laid out as Blockbench's box UV does
     (east = the part's right side at u, north = front, west, south = back; up / down flipped), so it reads like vanilla."""
@@ -255,14 +285,20 @@ head = group('head', (0, 26, 0), torso)
 pilot = group('pilot_head', (0, 26, 0), head)
 steve(pilot, 'st_head', (-4, 26, -4), (4, 34, 4), STEVE['head'])
 
-# ---------- torso: a ribcage of front and back ribs, spine rack for the engine, the chest core
-for i, y in enumerate((15, 18, 21, 24)):
-    cube(torso, f'fr_rib_f{i}', (-4, y, -3), (4, y + 1, -2), 'mid')
-    cube(torso, f'fr_rib_b{i}', (-4, y, 2), (4, y + 1, 3), 'mid')
+# ---------- torso: an exoskeleton, not a ribcage: load-bearing members from the belt up to the shoulders, no hoops.
+# Nothing on the torso may rise above y 26: Steve's head (8x8) overhangs the torso front and back.
+# Back: a spine column from the belt up to a shoulder-blade bar, carrying the engine rack.
+cube(torso, 'fr_spine', (-1, 15, 2), (1, 24, 3), 'dark')
+cube(torso, 'fr_scapula', (-4, 24, 2), (4, 25, 3), 'mid')
+# Front: a cuirass of plates, 1 px thick, 1 px off his chest (z -3..-2) like the limb bands, under y 26 (his head
+# overhangs the torso). A full-width chest plate over a 6 px abdomen plate (a pixel of his shirt shows either side;
+# picked from twin pecs / breastplate over lames / cuirass, then 6 over 4 px). Struts at the plates' edges hold them:
+# two up from the chest plate's top corners, two down from the abdomen plate's bottom corners to the belt.
+plate(torso, 'fr_cuirass', (-4, 20, -3), (4, 25, -2), ['CCCCCCCC', 'BAAAAAAB', 'BAMAAMAB', 'BAAAAAAB', 'DDDAADDD'])
+plate(torso, 'fr_abdomen', (-3, 16, -3), (3, 20, -2), ['BAAAAB', 'ADAADA', 'BAAAAB', 'DDDDDD'])
 for sx, n in ((1, 'r'), (-1, 'l')):
-    xa, xb = sorted((1.5 * sx - 0.5, 1.5 * sx + 0.5))
-    cube(torso, f'fr_sternum_{n}', (xa, 15, -3), (xb, 25, -2), 'dark')
-cube(torso, 'fr_core', (-1, 20, -3.8), (1, 22.5, -3), 'core')
+    cube(torso, f'fr_strut_hi_{n}', (3 * sx, 25, -3), (4 * sx, 26, -2), 'dark')
+    cube(torso, f'fr_strut_lo_{n}', (2 * sx, 15, -3), (3 * sx, 16, -2), 'dark')
 cube(torso, 'fr_rack', (-3.5, 15.5, 3), (3.5, 24.5, 4), 'dark')                 # the engine socket's back plate
 for sx, n in ((1, 'r'), (-1, 'l')):
     xa, xb = sorted((3.5 * sx, 4.5 * sx))
@@ -330,8 +366,7 @@ for side in ('r', 'l'):
     # wider than the cage outside and stops 0.5 px from his arm inside (1 px there would cut the torso at the splay).
     painted(arm, side, 'fist', f'fr_fist_{side}', (3.5, 12, -2.5), (8.5, 16, 2.5))
     painted(arm, side, 'cuff', f'fr_cuff_{side}', (3.5, 16, -3), (9.5, 21, 3))
-    segment(arm, side, 'arm', 4, AX, 21, 26, bar=False)   # the cage carries on above the cuff
-    cube(arm, f'fr_pauldron_{side}', *sx((4.5, 26, -3), (AX + 0.5, 27, 3)), 'dark')   # joins the front and back bands over his shoulder
+    segment(arm, side, 'arm', 4, AX, 21, 26, bar=False)   # the cage carries on above the cuff (no pauldron over it)
     p = group(f'pilot_{nm}_arm', (6 * s, 26, 0), arm)
     steve(p, f'st_arm_{side}', *sx((4, 14, -2), (8, 26, 2)), STEVE[f'arm_{side}'])
 
