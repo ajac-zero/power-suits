@@ -242,16 +242,18 @@ def _alloc(rows):
     _plate_at[0] += w
     return [u, v, u + w, v + h]
 
-def plate(g, name, a, b, rows):
+def plate(g, name, a, b, rows, back=False):
     """A plate whose front (north) face shows `rows` (as the viewer sees it: first column on the viewer's left, i.e.
-    the suit's right). Its edges carry the grid's rim: sides its outer columns, top its first row, bottom its last."""
+    the suit's right), or with `back` its south face (seen from behind: first column = the suit's left). Its edges
+    carry the grid's rim: sides its outer columns, top its first row, bottom its last."""
     e = cube(g, name, a, b)
     sz = [e['to'][i] - e['from'][i] for i in range(3)]
     assert (len(rows[0]), len(rows)) == (sz[0], sz[1]), (name, sz)
     d = max(1, round(sz[2]))
     e['faces'] = {
-        'north': _alloc(rows), 'south': _alloc([r[::-1] for r in rows]),
-        'east': _alloc([r[0] * d for r in rows]), 'west': _alloc([r[-1] * d for r in rows]),
+        'north' if not back else 'south': _alloc(rows), 'south' if not back else 'north': _alloc([r[::-1] for r in rows]),
+        'east' if not back else 'west': _alloc([r[0] * d for r in rows]),
+        'west' if not back else 'east': _alloc([r[-1] * d for r in rows]),
         'up': _alloc([rows[0]] * d), 'down': _alloc([rows[-1]] * d)}
     e['faces'] = {f: {'uv': uv, 'texture': 0} for f, uv in e['faces'].items()}
     return e
@@ -287,9 +289,6 @@ steve(pilot, 'st_head', (-4, 26, -4), (4, 34, 4), STEVE['head'])
 
 # ---------- torso: an exoskeleton, not a ribcage: load-bearing members from the belt up to the shoulders, no hoops.
 # Nothing on the torso may rise above y 26: Steve's head (8x8) overhangs the torso front and back.
-# Back: a spine column from the belt up to a shoulder-blade bar, carrying the engine rack.
-cube(torso, 'fr_spine', (-1, 15, 2), (1, 24, 3), 'dark')
-cube(torso, 'fr_scapula', (-4, 24, 2), (4, 25, 3), 'mid')
 # Front: a cuirass of plates, 1 px thick, 1 px off his chest (z -3..-2) like the limb bands, under y 26 (his head
 # overhangs the torso). A full-width chest plate over a 6 px abdomen plate (a pixel of his shirt shows either side;
 # picked from twin pecs / breastplate over lames / cuirass, then 6 over 4 px). Struts at the plates' edges hold them:
@@ -299,11 +298,13 @@ plate(torso, 'fr_abdomen', (-3, 16, -3), (3, 20, -2), ['BAAAAB', 'ADAADA', 'BAAA
 for sx, n in ((1, 'r'), (-1, 'l')):
     cube(torso, f'fr_strut_hi_{n}', (3 * sx, 25, -3), (4 * sx, 26, -2), 'dark')
     cube(torso, f'fr_strut_lo_{n}', (2 * sx, 15, -3), (3 * sx, 16, -2), 'dark')
-cube(torso, 'fr_rack', (-3.5, 15.5, 3), (3.5, 24.5, 4), 'dark')                 # the engine socket's back plate
+# Back: two shoulder-blade plates either side of a spine plate, on the back layer (z 2..3), flat: the engine's
+# clamps and the vertebrae are painted, not extruded (picked from the front's plates mirrored / one rack plate / these).
+# Seen from behind, a grid's first column is the suit's left.
+SCAP = ['CCD', 'BMD', 'BMD', 'BMD', 'DDD']   # the left plate, outer edge first: its clamp down the middle
 for sx, n in ((1, 'r'), (-1, 'l')):
-    xa, xb = sorted((3.5 * sx, 4.5 * sx))
-    cube(torso, f'fr_clamp_hi_{n}', (xa, 21, 3), (xb, 23.5, 5), 'hinge')
-    cube(torso, f'fr_clamp_lo_{n}', (xa, 16.5, 3), (xb, 19, 5), 'hinge')
+    plate(torso, f'fr_scapula_{n}', (1 * sx, 20, 2), (4 * sx, 25, 3), SCAP if sx < 0 else [r[::-1] for r in SCAP], back=True)
+plate(torso, 'fr_spine', (-1, 15, 2), (1, 25, 3), ['CC', 'MM', 'BA', 'AA', 'MM', 'BA', 'AA', 'MM', 'BA', 'DD'], back=True)
 pilot = group('pilot_torso', (0, 14, 0), torso)
 steve(pilot, 'st_torso', (-4, 14, -2), (4, 26, 2), STEVE['torso'])
 
