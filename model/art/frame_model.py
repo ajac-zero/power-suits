@@ -353,9 +353,6 @@ for side in ('r', 'l'):
     # the cage carries on above the boot; it stops 0.5 px under the hip pivot (y 14): its top band's outer end rises as
     # the leg splays, the belt is above
     segment(leg, side, 'leg', 0, LX, 5, 13.5, bar=False)
-    # hip pivot: two knobs at the thigh's front and back top corners (the arm hangs where an outer hinge would be)
-    cube(leg, f'fr_hip_f_{side}', *sx((LX - 1.5, 12.5, -3.8), (LX, 14.5, -3)), 'hinge')
-    cube(leg, f'fr_hip_b_{side}', *sx((LX - 1.5, 12.5, 3), (LX, 14.5, 3.8)), 'hinge')
     p = group(f'pilot_{nm}_leg', (2 * s, 14, 0), leg)
     steve(p, f'st_leg_{side}', *sx((0, 2, -2), (4, 14, 2)), STEVE[f'leg_{side}'])
     # arm: Steve's arm x 4..8 (his hand at the bottom, y 14), shoulder pivot (±6, 26)
