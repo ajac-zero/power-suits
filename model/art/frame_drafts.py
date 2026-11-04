@@ -45,7 +45,10 @@ def main(options):
              'primary_selected': False}
         node = {'uuid': g['uuid'], 'isOpen': False, 'children': m['outliner']}
         if draft is None:
-            draft = dict(m, name='frame_draft', model_identifier='frame_draft', elements=[], groups=[], outliner=[], textures=[])
+            # Generic format, not the model's Bedrock: Bedrock is single-texture (Blockbench points every face at the
+            # first texture on load), and each option has its own texture (its plates pack differently).
+            draft = dict(m, name='frame_draft', model_identifier='frame_draft', elements=[], groups=[], outliner=[], textures=[],
+                         meta=dict(m['meta'], model_format='free'))
         draft['elements'] += m['elements']
         draft['groups'] += [g] + m['groups']
         draft['outliner'].append(node)
