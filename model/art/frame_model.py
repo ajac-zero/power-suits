@@ -326,6 +326,8 @@ for sx, n in ((1, 'r'), (-1, 'l')):
 SCAP = ['CCD', 'BMD', 'BMD', 'BMD', 'DDD']   # the left plate, outer edge first: its clamp down the middle
 for sx, n in ((1, 'r'), (-1, 'l')):
     plate(torso, f'fr_scapula_{n}', (1 * sx, 20, 2), (4 * sx, 25, 3), SCAP if sx < 0 else [r[::-1] for r in SCAP], face='south')
+    # a strut up from each plate's outer top corner, like the chest plate's in front
+    cube(torso, f'fr_strut_hi_back_{n}', (3 * sx, 25, 2), (4 * sx, 26, 3), 'dark')
 plate(torso, 'fr_spine', (-1, 15, 2), (1, 25, 3), ['CC', 'MM', 'BA', 'AA', 'MM', 'BA', 'AA', 'MM', 'BA', 'DD'], face='south')
 # Sides: a bar round each side of his chest joins the front frame to the back one, its ends wrapping the corners
 # (z -3..3: flush with the front layer's and the back layer's outer faces). 0.5 px thick (x 4..4.5): his arm hangs
