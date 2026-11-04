@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-"""Builds model/power_frame.bbmodel: the Fallout-style exosuit FRAME (no armour) around a real-scale Steve.
+"""Builds model/power_frame.bbmodel and power_frame_slim.bbmodel: the Fallout-style exosuit FRAME (no armour) around a
+real-scale pilot, Steve (the wide build) or Alex (the slim build, BUILD).
 
-Run: python3 model/art/frame_model.py        (writes ../power_frame.bbmodel; no dependencies)
+Run: python3 model/art/frame_model.py        (writes both into model/; no dependencies; BUILD=wide|slim for one)
 
-Scale: 1 px = 1/16 block, Steve exactly as vanilla (4x12x4 limbs, 8x12x4 torso, 8^3 head, 32 px tall), standing on
-4 px platform soles (5x4x5) with the big suit's fists (sized down, 5x4x5) under his hands: his limbs fit entirely in
-the frame's cage, and the fists and soles are its mechanical ends (2026-11-04, user: his feet stand on the soles, the
-fists start where his hands end), so he stands 4 px up (36 px to his head's top) and the arms reach 4 px past his
-hands. Soles and fists have the same 5x5 footprint round his 4x4 limbs. The frame is a dense, mechanical cage around
-him, from the fist / sole up to the shoulder / hip (no cuffs on the fists or soles: that room is the frame's), in
-line with its fist / sole, closed on all four sides and painted like the Fallout 4 T-45's frame (rails, pistons,
-bolted joint bands: ARM_ART, LEG_ART), the pilot seen through small windows, mostly at his hands and feet. The rest
-pose is open (ARM_SPLAY, LEG_SPLAY).
-The torso is an exoskeleton: plates on his chest, a spine on his back, solid members down its edges, a belt.
+Scale: 1 px = 1/16 block, the pilot exactly as vanilla (4x12x4 limbs, Alex's arms 3 wide, 8x12x4 torso, 8^3 head,
+32 px tall), standing on 4 px platform soles (5x4x5) with the big suit's fists (sized down, 5x4x5) under his hands: his
+limbs fit entirely in the frame's cage, and the fists and soles are its mechanical ends (2026-11-04, user: his feet
+stand on the soles, the fists start where his hands end), so he stands 4 px up (36 px to his head's top) and the arms
+reach 4 px past his hands. Soles and fists have the same 5x5 footprint round his 4x4 limbs. The frame is a dense,
+mechanical cage around him, from the fist / sole up to the shoulder / hip, in line with its fist / sole, closed on all
+four sides and painted after the Fallout 4 T-45's frame (steel members, gunmetal joints, brass bellows, a copper valve
+on the chest: ARM_ART, LEG_ART, _torso), the pilot seen through small windows, mostly at his hands and feet. It stands
+straight: the legs touch like vanilla's, the arms hang off a chest wider than the waist (the spacing, CHEST_X).
+The torso is an exoskeleton: a chest box over an abdomen box, a belt.
 
-SHELLS: every moving part is ONE box round Steve's (an arm: fist and cage; a leg: sole and cage; the torso;
-the belt), its frame painted on the faces and its gaps see-through texels (alpha 0), like the player skin's jacket
+SHELLS: every part is ONE box round the pilot's (an arm: fist and cage; a leg: sole and cage; the chest; the
+abdomen; the belt), its frame painted on the faces and its gaps see-through texels (alpha 0), like the player skin's jacket
 and sleeve layer. So the frame is flat (bars and plates are paint on the box's faces, no thickness of their own) and
 the renderer must draw the faces' backs too (entityCutoutNoCull): through a gap you see the far side's bars.
 Clearance to Steve is 0, never an overlap: see check() at the bottom (it also keeps the parts' solid texels apart).
@@ -31,25 +32,50 @@ frame_drafts.py (hidden proto_* groups, one Blockbench tab); once one is picked,
 import base64, glob, json, os, struct, uuid, zipfile, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.environ.get('FRAME_OUT') or os.path.join(HERE, '..', 'power_frame.bbmodel')
-# The rest pose is OPEN, not Steve's idle: a bulky suit can't close like a body, so the arms hang splayed out and the
-# legs stand apart (degrees, outward; env overrides are for trying values). Steve's limbs turn with their frame bones.
-ARM_SPLAY = float(os.environ.get('ARM_SPLAY', 4))   # 9 before his arms moved out (ARM_OUT): they cleared his torso
-LEG_SPLAY = float(os.environ.get('LEG_SPLAY', 2))   # 3 before his legs moved out
-# Steve's limbs are moved out from his torso (px; 2026-11-04, user): the frame is an entity you climb into and draws him
-# itself, so he needn't be vanilla's shape, and vanilla's arms touch his torso and his legs each other, which pinched
-# every frame and armour part between them. 0.75 is where the frame's arm box meets its torso box at the shoulder (no
-# see-through slit between them; further out needs a shoulder actuator part); the gap between his torso and arm is
-# closed by painted joint bars on both frame boxes (_shoulder_joints). Legs 0.5 each: the belt widens with them.
+# Two BUILDS (2026-11-04, user, like vanilla's wide Steve and slim Alex arms): 'wide' -> power_frame.bbmodel and 'slim'
+# -> power_frame_slim.bbmodel (its pilot Alex). They differ only in the chest's width and so where the arms hang
+# (CHEST_X): limbs, waist, belt, boots, fists and paint are shared, so are the arm, leg and helmet armour; only a
+# torso armour piece needs two widths. The game is to pick by the pilot's skin model. Without BUILD (and FRAME_OUT,
+# which frame_drafts.py sets) the script writes both.
+BUILD = os.environ.get('BUILD')
+if BUILD is None and not os.environ.get('FRAME_OUT'):
+    import subprocess, sys
+    for _b in ('wide', 'slim'):
+        subprocess.run([sys.executable, os.path.abspath(__file__)], env=dict(os.environ, BUILD=_b), check=True)
+    sys.exit()
+BUILD = BUILD or 'wide'
+assert BUILD in ('wide', 'slim'), BUILD
+OUT = os.environ.get('FRAME_OUT') or os.path.join(HERE, '..', 'power_frame' + ('_slim' if BUILD == 'slim' else '') + '.bbmodel')
+# The rest pose is OPEN, not Steve's idle: a bulky suit can't close like a body, so the arms hang away from the torso
+# and the legs stand apart. The splay (degrees, outward; env overrides are for trying values) turns Steve's limbs with
+# their frame bones.
+# 2026-11-04 (user): none. The arms hang straight off a chest wider than the legs (CHEST_X), so the fists clear the
+# legs' sides. (Was arms 9 deg / legs 3 while his limbs touched his torso, then 4 / 2, then 2 / 1 as they moved out.)
+ARM_SPLAY = float(os.environ.get('ARM_SPLAY', 0))
+LEG_SPLAY = float(os.environ.get('LEG_SPLAY', 0))
+# Spacing (2026-11-04, user). The frame is an entity you climb into and draws the pilot itself, so his limbs needn't sit
+# where vanilla's do. Legs 0.25 px out (LEG_OUT), so their frame boxes touch, like vanilla's legs; the waist and belt
+# line up with them (TX, as vanilla's torso with its legs). The torso is split: a chest wider than the waist (CHEST_X,
+# per BUILD) with the arm boxes against its sides (ARM_OUT follows), so the straight arms' fists hang beside the legs
+# with room to spare (wide 1 px, slim 0.5). Parts touch, so the limbs' inner sides (and the torso's sides) are painted
+# without holes: two touching faces lie in one plane and would flicker wherever both are seen, but with solid walls
+# that plane is shut in (the pilot's opaque limb fills each cage 0.25 px from its inner wall). (Until 2026-11-04: arms
+# 0.75 / legs 0.5 with a 4 / 2 deg splay; then gaps of 1 px or more between the boxes, filled by gunmetal shoulder and
+# hip blocks, arms up to 2.75 out: the gaps were dropped for touching walls, which needed no fillers.)
 # (Tried and not picked, 2026-11-04: a bigger frame, torso 11 x 8 and legs 6 x 6, so armour could replace its boxes
 # in place; with shoulder blocks in it, but pauldrons belong to the armour tiers: copper without, iron with.)
 # Draft knob NECK (px): his head lifted off his torso, the gap a collar ring on the torso (so a helmet sits on a neck,
 # above the chest).
 NECK = float(os.environ.get('NECK', 0))
-ARM_OUT = float(os.environ.get('ARM_OUT', 0.75))
-LEG_OUT = float(os.environ.get('LEG_OUT', 0.5))
-TX, TZ = 4.5, 3   # the frame torso box's half width / depth
-# Draft knob: the iron armour over the frame ('none' / 'iron'): helmet, torso, arms, legs. See ARMOR_BOX.
+LEG_OUT = 0.25
+CHEST_X = {'wide': 6.0, 'slim': 5.5}[BUILD]   # the chest's half width
+ARM_OUT = CHEST_X - 3.75                      # the arm box's inner wall (3.75 + ARM_OUT) against the chest's side
+# The room between his torso and the torso boxes' sides is the frame's: painted solid members, the chest closed on top
+# (shoulder platforms) and at the sides.
+TX, TZ = 4.75 + LEG_OUT, 3   # the abdomen box's (the waist's) half width, the torso boxes' half depth
+assert (TX * 2) % 1 == 0 and (CHEST_X * 2) % 1 == 0, (TX, CHEST_X)   # fronts are 2 texels per px: whole texels outside his torso
+# Draft knob: the iron armour over the frame ('none' / 'iron'): helmet, torso, arms, legs. See ARMOR_BOX. Its boxes
+# predate the 2026-11-04 spacing (split chest, touching limbs): check_armor() fails on them until they're refitted.
 ARMOR = os.environ.get('ARMOR', 'none')
 assert ARMOR in ('none', 'iron'), ARMOR
 # Draft knob: the arm piece ('SP': a slim sleeve round the upper arm + a pauldron over it, out to its side, as tall
@@ -59,10 +85,11 @@ assert ARMOR in ('none', 'iron'), ARMOR
 # S, a 6 x 7 x 7 block.
 ARM = os.environ.get('ARM', 'SP')
 assert ARM in ('SP', 'A'), ARM
-STEVE_PNG = 'assets/minecraft/textures/entity/player/wide/steve.png'
+STEVE_PNG = {'wide': 'assets/minecraft/textures/entity/player/wide/steve.png',
+             'slim': 'assets/minecraft/textures/entity/player/slim/alex.png'}[BUILD]
 
 def steve_skin():
-    """Vanilla's default Steve skin, read from the Minecraft jar the build already unpacked (run ./gradlew build once).
+    """Vanilla's default Steve skin (the slim build: Alex's), read from the Minecraft jar the build already unpacked (run ./gradlew build once).
     Its hat / jacket / pants layers are empty, so only the base boxes are modelled (an overlay would clip the frame)."""
     jars = sorted(glob.glob(os.path.join(HERE, '..', '..', 'build', 'moddev', 'artifacts', 'minecraft-patched-*.jar')))
     assert jars, 'no Minecraft jar in build/moddev/artifacts: run ./gradlew build first'
@@ -114,7 +141,8 @@ def png(w, h, px):
     return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)) + \
         chunk(b'IDAT', zlib.compress(raw, 9)) + chunk(b'IEND', b'')
 
-TW, TH = (256 if NECK else 128), 128   # (NECK: its collar's faces don't fit 128) the one texture (Bedrock / GeckoLib models have one): Steve's 64x64 skin top left, the shells below
+TW, TH = 128, 128   # (widened to 256 below) the one texture (Bedrock / GeckoLib models have one): the pilot's
+# 64x64 skin top left, the shells below and right
 # The frame's bar colour (the old cube frame's side faces), with a little pixel grain, no noise.
 BAR = (0x4c, 0x53, 0x5c)
 def bar(i, j): return tuple(min(k + (6 if (i + j) % 3 == 0 else 0), 255) for k in BAR) + (255,)
@@ -187,59 +215,7 @@ def _rim(n):
     """The top face, n x n texels, rows front -> back, columns inner -> outer: the band and bar tops. The bands'
     inner ends tuck (the splay dips them into the chest's struts)."""
     return ['T' + '#' * (n - 1)] + ['.' * (n - 1) + '#'] * (n - 2) + ['T' + '#' * (n - 1)]
-# The torso's plates (letter grids in PAL, as the viewer sees them: from the front the first column is the suit's
-# right, from behind its left). Front: a full-width chest plate (x -4..4, y 22-27) over a 6 px abdomen plate (x -3..3,
-# y 18-22; a pixel of his shirt shows either side; picked from twin pecs / breastplate over lames / cuirass, then 6
-# over 4 px), struts at their edges (x 3-4 up to the top, x 2-3 down to the belt). Back: two shoulder-blade plates
-# (x 1..4, y 22-27: the engine's clamps painted, not extruded) either side of a spine plate (x -1..1, y 17-27), a strut
-# up from each plate's outer top corner. Nothing rises above y 28: Steve's head overhangs the torso front and back.
-CUIRASS = ['CCCCCCCC', 'BAAAAAAB', 'BAMAAMAB', 'BAAAAAAB', 'DDDAADDD']
-ABDOMEN = ['BAAAAB', 'ADAADA', 'BAAAAB', 'DDDDDD']
-SCAP = ['CCD', 'BMD', 'BMD', 'BMD', 'DDD']   # the left plate, outer edge first: its clamp down the middle
-SPINE = ['CC', 'MM', 'BA', 'AA', 'MM', 'BA', 'AA', 'MM', 'BA', 'DD']
-
-def _torso():
-    """The torso box: x -TX..TX (his torso is -4..4; 4.5: the half pixel each side holds the side bars), y 17..28,
-    z -TZ..TZ (3: the plates stand 1 px off his chest and back; now they are paint on the box's front and back). Its
-    front and back have 2 texels per px across, because the plates' edges are on whole pixels and the box's on halves
-    (every plate column is drawn twice); rows are 1 per px, top (y 27-28) first."""
-    W, H, D = round(TX * 4), 11, round(TZ * 2)
-    grid = lambda: [['.'] * W for _ in range(H)]
-    def put(g, row, col, cells):
-        for k, c in enumerate(cells): g[row][col + k] = c
-    dbl = lambda r: ''.join(c * 2 for c in r)
-    fc = lambda x: round((TX - x) * 2)    # the front's column whose texel starts at x (going -x: the viewer's right)
-    bc = lambda x: round((x + TX) * 2)    # the back's column whose texel starts at x (going +x)
-    front, back = grid(), grid()
-    for j, r in enumerate(CUIRASS): put(front, 1 + j, fc(4), dbl(r))
-    for j, r in enumerate(ABDOMEN): put(front, 6 + j, fc(3), dbl(r))
-    for x in (4, -3): put(front, 0, fc(x), '##')         # struts up from the chest plate's corners
-    for x in (3, -2): put(front, 10, fc(x), '##')        # and down from the abdomen plate's to the belt
-    for j, r in enumerate(SCAP): put(back, 1 + j, bc(-4), dbl(r))
-    for j, r in enumerate(SCAP): put(back, 1 + j, bc(1), dbl(r[::-1]))
-    for j, r in enumerate(SPINE): put(back, 1 + j, bc(-1), dbl(r))
-    for x in (-4, 3): put(back, 0, bc(x), '##')          # struts up from the shoulder blades' outer corners
-    # Front: its edges solid members (lit / shadowed), beside the abdomen plate a dark recess with one 1 px window
-    # each side, a bolted bar across the waist over the belt. Back: the edges likewise, under the shoulder blades
-    # a lower-back plate each side of the spine with one 1 px window. Sides: edge members, a bolted side bar round
-    # his chest on the plates' bottom pixel (y 22-23) joining the front frame to the back one, 1 px slits low down
-    # (the top rows open: the arm covers them, and its turned inner side passes there).
-    n = round((TX - 4) * 2) or 1   # the half-px columns outside his torso
-    for g, (lit, shade) in ((front, ('B', 'D')), (back, ('D', 'B'))):
-        for j in range(H):
-            for k in range(n): g[j][k], g[j][-1 - k] = lit, shade
-        g[10] = list('D' * W)
-        for k in range(2, W - 2, 6): g[10][k] = 'C'
-    for j in range(6, 10):
-        for c in (1, 2, W - 3, W - 2): front[j][c] = '.' if j in (7, 8) else 'M'
-    low = ('BBBBBB', 'KK..KK', 'KK..KK', 'DDDDDD')
-    for j, r in enumerate(low): put(back, 6 + j, bc(-4), r); put(back, 6 + j, bc(1), r)
-    side = ['.' * D] * 4 + ['K' + 'D' * (D - 2) + 'K', 'D' + 'C' + 'D' * (D - 4) + 'C' + 'D', 'K' + 'D' * (D - 2) + 'K',
-            'K' + 'D' + '.' * (D - 4) + 'D' + 'K', 'K' + 'D' + '.' * (D - 4) + 'D' + 'K', 'K' + 'D' * (D - 2) + 'K', 'D' * D]
-    return {'north': [''.join(r) for r in front], 'south': [''.join(r) for r in back], 'east': side, 'west': side,
-            'up': ['.' * W] * D, 'down': ['.' * W] * D}
-
-BELT_X = 4.5 + LEG_OUT   # the belt's half width: the torso box's, or as far out as the legs' tops (LEG_OUT)
+BELT_X = TX   # the belt's half width: the torso box's
 def _belt():
     """The belt (the hip, on the body bone: the torso can bend over it): a ring round his pelvis, x +-BELT_X, y 16..17,
     z -3..3; its top and bottom are rims (front and back rows, the half-px side columns)."""
@@ -384,19 +360,6 @@ PAD_BOX = ((PAD_BOX[0][0] + (0.25 if ARM_OUT == 0.75 else 0), PAD_BOX[0][1], PAD
            (PAD_BOX[1][0] + ARM_OUT, PAD_BOX[1][1], PAD_BOX[1][2]))
 def _dims(box): return [round(box[1][k] - box[0][k]) for k in range(3)]   # its art's texels (one per px, ~)
 
-def _shoulder_joints(torso):
-    """With the arms out (ARM_OUT), the gap between his torso and arm is closed by joint bars in the shoulder rows
-    (the top four: his arm leaves his torso below them): the torso box's outer half-pixel columns front and back (the
-    arm's inner rail is in ARM_ART). (Not its side face: edge-on from the front, behind the arm from the side, and its
-    top row would lie in the helmet's side.)"""
-    n = round((TX - 4) * 2)   # the torso box's half-px columns outside his torso
-    for f in ('north', 'south'):
-        rows = [list(r) for r in torso[f]]
-        for j in range(4):
-            for k in range(n): rows[j][k] = rows[j][-1 - k] = '#'
-        torso[f] = [''.join(r) for r in rows]
-    return torso
-
 def _collar(n):
     """The collar ring (NECK): a solid band round the neck gap, 9 x n x 9 at 2 texels per px; its top only the ring
     outside his head (inside, his head's underside is in its plane), its bottom open (the torso box's top)."""
@@ -405,38 +368,85 @@ def _collar(n):
     return {'north': ['#' * W] * H, 'south': ['#' * W] * H, 'east': ['#' * W] * H, 'west': ['#' * W] * H, 'up': top,
             'down': ['.' * W] * W}
 
-# The painted frame, one letter per texel (PAL; '.' a window). Arms: 12 rows of cage over the fist, top
-# (shoulder) first; columns as the frame's faces (north outer -> inner, east back -> front, south inner -> outer, west
-# front -> back). Rails up both edges (lit 'B' / shadowed 'D'), a piston on the upper arm (rod 'C', sleeve 'D') with
-# slits beside it, a bolted elbow band, a forearm frame with one window low down, where his hand is; a dark wrist band
-# over the fist. The inner side (against the torso) is dark and nearly closed.
-ARM_ART = {
-    'north': ['BBBBT', 'BDDDD', 'B.C.D', 'B.C.D', 'B.D.D', 'DKCKD', 'MDDDM', 'KBBBK', 'B...D', 'B...D', 'B...D', 'DDDDD'],
-    'east':  ['BBBBB', 'KKKKK', 'KCKCK', 'KD.DK', 'KD.DK', 'DKCKD', 'MDDDM', 'KBBBK', 'K.D.K', 'K.D.K', 'K.D.K', 'DDDDD'],
-    'west':  ['.....', '.....', 'KD.DK', 'KD.DK', 'KDDDK', 'DKCKD', 'MDDDM', 'KDDDK', 'K.D.K', 'K.D.K', 'K.D.K', 'DDDDD'],
-    'south': ['TBBBB', 'BDDDD', 'B.M.D', 'B.M.D', 'B.M.D', 'DKCKD', 'MDDDM', 'KBBBK', 'B...D', 'B...D', 'B...D', 'DDDDD']}
-# Legs: one row per px from the hip (the top row is half a px: the cage is 11.5 px), drawn at 2 texel rows per px.
-# Thigh frame with slits round a centre strut, a round knee joint (bolt 'C' in a dark ring), a shin frame whose window,
-# right above the sole, shows his shoes; inner side dark.
-LEG_ART = {
-    'north': ['BBBBT', 'BDDDD', 'B.D.D', 'B.D.D', 'BDCDD', 'DBCBD', 'MDCDM', 'DKKKD', 'KBBBK', 'B...D', 'B...D', 'DDDDD'],
-    'east':  ['BBBBB', 'KKKKK', 'KD.DK', 'KD.DK', 'KCKCK', 'DBCBD', 'MDCDM', 'DKKKD', 'KBBBK', 'K.D.K', 'K.D.K', 'DDDDD'],
-    'west':  ['DDDDD', 'KDDDK', 'KDDDK', 'KDDDK', 'KDDDK', 'DKKKD', 'MDDDM', 'DKKKD', 'KDDDK', 'K.D.K', 'K.D.K', 'DDDDD'],
-    'south': ['TBBBB', 'BDDDD', 'B.D.D', 'B.D.D', 'BDDDD', 'DDDDD', 'MMMMM', 'DKKKD', 'KBBBK', 'B...D', 'B...D', 'DDDDD']}
 def _legrows(face): return face[:1] + [r for r in face[1:] for _ in range(2)]   # the half-px top row once, the rest twice
+
+# The paint, after the user's reference (2026-11-04: the threezero 1/6 Fallout 4 T-45 frame figure; it replaced a
+# denser paint of rails and bands). What makes that frame read: light members over a dark inside, the holes in them
+# rimmed with grime (depth without geometry), dark gunmetal at the joints (a bolted hub on the knee's and elbow's outer
+# sides, the knee cap, the wrists, the hips), ribbed brass bellows above the knees and on the upper arms, and on the
+# torso a copper valve in a ring on the chest, a ribbed black column down a brown leather abdomen. The members are the
+# big suit's steel greys (picked over the figure's off-white bone), the accents as the figure's. One letter per texel
+# (PAL; '.' a window, 'T' a tucked bar).
+PAL.update({'N': (0x3a, 0x3d, 0x41), 'O': (0x62, 0x67, 0x6c), 'X': (0x1b, 0x1c, 0x1f),          # gunmetal joints
+            'Q': (0xc0, 0x74, 0x40), 'R': (0x80, 0x44, 0x26),                                        # copper
+            'L': (0x5e, 0x3e, 0x2c), 'H': (0x40, 0x29, 0x1d),                                        # leather
+            'Y': (0xa8, 0x91, 0x60), 'Z': (0x6a, 0x58, 0x38),                                        # brass bellows
+            'W': (0xb4, 0xb9, 0xbe), 'V': (0x87, 0x8e, 0x96), 'U': (0x5f, 0x66, 0x70), 'G': (0x30, 0x34, 0x3a)})  # steel
+GRAIN = set('WVU')   # the members get bar()'s light pixel grain (no noise: random grain read as stone)
+BAR = PAL['V']       # rims and the belt ('#') in the members' colour
+# Arms: 12 rows of cage over the fist, top (shoulder) first; columns as the frame's faces (north outer -> inner, east
+# back -> front, south inner -> outer, west front -> back). Shoulder cap, ribbed bellows on the upper arm, a bolted
+# elbow band (hub on the outer side), the forearm a cage with a dark piston between slits / an oval window where his
+# hand is, gunmetal wrist. The inner side (west: against the chest) has no holes (see the spacing).
+ARM_ART = {
+    'north': ['WWWWT', 'WVVVU', 'YYYYY', 'ZZZZZ', 'YYYYY', 'WVOVU', 'UNXNG', 'WG.GU', 'W...U', 'W...U', 'WG.GU', 'NNNNN'],
+    'east':  ['VVVVW', 'UVVVW', 'YYYYY', 'ZZZZZ', 'YYYYY', 'VNONW', 'UOXOW', 'VNONW', 'V.N.W', 'V.N.W', 'VGNGW', 'NNNNN'],
+    'west':  ['VVVVV', 'UVVVU', 'YYYYY', 'ZZZZZ', 'YYYYY', 'UNNNU', 'UGGGU', 'UGNGU', 'UGNGU', 'UGNGU', 'UVVVU', 'NNNNN'],
+    'south': ['TWWWW', 'UVVVW', 'YYYYY', 'ZZZZZ', 'YYYYY', 'UVOVW', 'GNXNU', 'UG.GW', 'U...W', 'U...W', 'UG.GW', 'NNNNN']}
+# Legs: one row per px from the hip (the top row is half a px: the cage is 11.5 px), drawn at 2 texel rows per px;
+# columns as the arms'. Gunmetal hip band, the thigh a cage round a dark piston, bellows above the knee, the knee a
+# bolted cap in front (an X plate read as a checkerboard at 3 x 3) and a bolted hub outside, the shin a long cage with
+# an oval window over his shoe. The inner side (west: against the other leg) has no holes.
+LEG_ART = {
+    'north': ['NNNNT', 'WVVVU', 'W.N.U', 'YYYYY', 'ZZZZZ', 'WNNNU', 'WNONU', 'WNNNU', 'WVVVU', 'WG.GU', 'W...U', 'UUUUG'],
+    'east':  ['NNNNN', 'UVVVW', 'U.N.W', 'YYYYY', 'ZZZZZ', 'VNONW', 'VOXOW', 'VNONW', 'UVVVW', 'UG.GW', 'U...W', 'GUUUU'],
+    'west':  ['NNNNN', 'UVVVU', 'UGNGU', 'YYYYY', 'ZZZZZ', 'UNNNU', 'UGGGU', 'UNNNU', 'UVVVU', 'UGVGU', 'UGVGU', 'GGGGG'],
+    'south': ['TNNNN', 'UVVVW', 'U.N.W', 'YYYYY', 'ZZZZZ', 'UNNNW', 'UGGGW', 'UNNNW', 'UVVVW', 'UG.GW', 'U...W', 'GUUUU']}
+
+def _torso():
+    """The torso's two boxes, the chest (y 22-28, x +-CHEST_X) over the abdomen (y 17-22, x +-TX), drawn as one face
+    and split: front / back 2 texels per px across (the frame's edge members outside his torso, his torso's 8 px drawn
+    twice each, the other edge), 11 rows (y 27-28 first); sides 6 across. The edge members are wide side struts (no
+    holes: through one you'd look into the empty box beside his torso; grime instead), the sides closed (the arms hang
+    beside them), the chest's top closed outside his torso (shoulder platforms), its underside where it overhangs the
+    abdomen (a ledge).
+    Front: a yoke over the shoulders, a dark ring round a copper valve on the chest, its pipe down into the abdomen: a
+    ribbed black column between brown leather, a 1 px window each side; a bolted waist bar. Back: the yoke, shoulder
+    blades with a window each beside the ribbed spine, leather lower back."""
+    def edge(j):              # the left edge member's row j (outer column first)
+        n = round(((CHEST_X if j < 6 else TX) - 4) * 2)   # its texels: the chest's rows (0-5) are wider
+        if n == 1: return 'V' if j < 10 else 'G'
+        return {0: 'W' * n, 5: 'U' * n, 10: 'G' + 'V' * (n - 1)}.get(j, 'V' + ('G' if 2 <= j <= 3 else 'N' if j >= 6 else 'U') * (n - 2) + 'U')
+    def face(chest): return [edge(j) + ''.join(c * 2 for c in s) + edge(j)[::-1] for j, s in enumerate(chest)]
+    front = face((
+        'WWWWWWWW', 'W.UNNU.W', 'VUNQRNUV', 'VUNRRNUV', 'VG.NN.GV', 'UUURRUUU',
+        'HLXNNXLH', '.LXOOXL.', '.LXNNXL.', 'HLXOOXLH', 'GVOVVOVG'))
+    back = face((
+        'WWWWWWWW', 'VUWNNWUV', 'V.UOOU.V', 'V.UNNU.V', 'VUUOOUUV', 'UGLNNLGU',
+        'LHLOOLHL', 'L.LNNL.L', 'L.LOOL.L', 'LHLNNLHL', 'GVOVVOVG'))
+    side = ['VVVVVV', 'VNNNNV', 'VNNNNV', 'UUUUUU', 'WWWWWW', 'VOVVOV', 'UUUUUU', 'LHGGHL', 'LHGGHL', 'LLLLLL', 'GVVVVG']
+    W, n = len(front[0]), round((CHEST_X - 4) * 2)
+    up = [p * n + '.' * (W - 2 * n) + p * n for p in 'WVVVVU']   # rows front -> back
+    k = round((CHEST_X - TX) * 2)
+    chest = {'north': front[:6], 'south': back[:6], 'east': side[:6], 'west': side[:6], 'up': up,
+             'down': ['U' * k + '.' * (W - 2 * k) + 'U' * k] * 6}
+    w = len(front[6])
+    abdomen = {'north': front[6:], 'south': back[6:], 'east': side[6:], 'west': side[6:], 'up': ['.' * w] * 6,
+               'down': ['.' * w] * 6}
+    return chest, abdomen
 
 SHELLS = {'arm_shell': dict(cage=dict(ARM_ART), below=['fist'], rows=1, up=_rim(10)),
           'leg_shell': dict(cage={f: _legrows(r) for f, r in LEG_ART.items()}, below=['boot'], rows=2, up=['.' * 5] * 5),
-          'torso_shell': dict(faces=_torso()), 'belt_shell': dict(faces=_belt())}
+          'belt_shell': dict(faces=_belt())}
+SHELLS['chest_shell'], SHELLS['abdomen_shell'] = (dict(faces=f) for f in _torso())
 if NECK: SHELLS['collar_shell'] = dict(faces=_collar(NECK))
-if ARM_OUT: _shoulder_joints(SHELLS['torso_shell']['faces'])
 if ARMOR != 'none':
     SHELLS.update({'helmet_armor': dict(faces=_helmet()), 'torso_armor': dict(faces=_TORSO),
                    'arm_armor': dict(faces=(_sleeve if ARM == 'SP' else _pad)(*_dims(ARMOR_BOX['arm']))),
                    'leg_armor': dict(faces=_LEG)})
     if ARM == 'SP': SHELLS['pad_armor'] = dict(faces=_pad(*_dims(PAD_BOX)))
 # where each shell's faces sit in the texture (below / beside nothing else), one strip per shell
-SHELL_AT = {'arm_shell': (0, 64), 'torso_shell': (35, 64), 'leg_shell': (0, 80), 'belt_shell': (35, 80),
+SHELL_AT = {'arm_shell': (0, 64), 'leg_shell': (0, 80),
             'torso_armor': (35, 87), 'arm_armor': (35, 101), 'leg_armor': (35, 112), 'helmet_armor': (70, 112),
             'pad_armor': (78, 101), 'collar_shell': (128, 0)}   # (the collar: right half, NECK's 256 x 128)
 def shell_art(part, f):
@@ -453,6 +463,11 @@ def shell_art(part, f):
         u, v, w, h = GAUNT_UV[b, f]
         rows += [[(u + i, v + j) for i in range(w)] for j in range(h) for _ in range(sp['rows'])]
     return rows
+
+# The torso (out to the legs) and the belt don't fit beside the limbs' strips: a 256 wide texture, those on its right
+# half (like NECK's collar).
+TW = 256
+SHELL_AT.update(belt_shell=(128, 32), chest_shell=(128, 80), abdomen_shell=(128, 92))
 
 SHELL_UV, _used = {}, set()
 for part, (u, v) in SHELL_AT.items():
@@ -476,6 +491,8 @@ def paint_shells(px, src):
                     elif c in ('#', 'T'): px[v + j][u + i] = bar(i, j)
                     elif c in ARMPAL: px[v + j][u + i] = ARMPAL[c] + (255,)
                     elif len(c) == 4: px[v + j][u + i] = c                      # a colour (the helmet's)
+                    elif isinstance(c, str) and c in GRAIN:
+                        px[v + j][u + i] = tuple(min(k + (6 if (i + j) % 3 == 0 else 0), 255) for k in PAL[c]) + (255,)
                     elif isinstance(c, str): px[v + j][u + i] = PAL[c] + (255,)
                     else: px[v + j][u + i] = src[c[1]][c[0]]
 
@@ -604,7 +621,9 @@ def steve(g, name, a, b, box):
     return e
 
 # the 64x64 skin's boxes (u, v, w, h, d); the left limbs have their own areas (not mirrors of the right ones)
-STEVE = {'head': (0, 0, 8, 8, 8), 'torso': (16, 16, 8, 12, 4), 'arm_r': (40, 16, 4, 12, 4), 'arm_l': (32, 48, 4, 12, 4),
+# (the slim build's pilot, Alex, has 3 px arms: on the inner side of the cage, as vanilla's slim arms hug the torso)
+AW = 3 if BUILD == 'slim' else 4
+STEVE = {'head': (0, 0, 8, 8, 8), 'torso': (16, 16, 8, 12, 4), 'arm_r': (40, 16, AW, 12, 4), 'arm_l': (32, 48, AW, 12, 4),
          'leg_r': (0, 16, 4, 12, 4), 'leg_l': (16, 48, 4, 12, 4)}
 def mir(a, b): return (-a[0], a[1], a[2]), (-b[0], b[1], b[2])
 
@@ -621,7 +640,8 @@ if NECK:   # the collar ring round the neck gap, on the torso (the head turns in
 
 # ---------- torso: an exoskeleton, not a ribcage: load-bearing members from the belt up to the shoulders, no hoops
 # (its art: _torso()).
-hollow(torso, 'r', 'torso_shell', 'fr_torso_shell', (-TX, 15, -TZ), (TX, 26, TZ))
+hollow(torso, 'r', 'chest_shell', 'fr_chest_shell', (-CHEST_X, 20, -TZ), (CHEST_X, 26, TZ))
+hollow(torso, 'r', 'abdomen_shell', 'fr_abdomen_shell', (-TX, 15, -TZ), (TX, 20, TZ))
 pilot = group('pilot_torso', (0, 14, 0), torso)
 steve(pilot, 'st_torso', (-4, 14, -2), (4, 26, 2), STEVE['torso'])
 
@@ -652,7 +672,7 @@ for side in ('r', 'l'):
     # allows) and 0.75 px outside.
     hollow(arm, side, 'arm_shell', f'fr_arm_shell_{side}', (3.75 + ARM_OUT, 10, -2.5), (8.75 + ARM_OUT, 26, 2.5))
     p = group(f'pilot_{nm}_arm', ((6 + ARM_OUT) * s, 26, 0), arm)
-    steve(p, f'st_arm_{side}', *sx((4 + ARM_OUT, 14, -2), (8 + ARM_OUT, 26, 2)), STEVE[f'arm_{side}'])
+    steve(p, f'st_arm_{side}', *sx((4 + ARM_OUT, 14, -2), (4 + AW + ARM_OUT, 26, 2)), STEVE[f'arm_{side}'])
 
 # ---------------------------------------------------------------- clearance check, in the posed rest pose
 # Every cube in world space (its own rotation, then each bone's, all about z), as an xy quad plus a z range. Fails on
