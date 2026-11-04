@@ -231,31 +231,43 @@ def painted(g, side, part, name, a, b, raw=False):
         e['faces'][f] = {'uv': [u, v, u + w, v + h] if r else [u + w, v, u, v + h], 'texture': 0}
     return e
 
-# Chest plates: flat 1 px plates painted with letter grids (PAL), packed below the boot art.
-PLATE_ART, _plate_at = [], [SWX, 40]
+# Plates: flat plates painted with letter grids (PAL). Their faces get UVs once every plate is made (pack_plates):
+# identical grids share texels, and they're shelf-packed tallest first into the free texture below the boot art.
+PLATE_ART, _wanted = [], {}
 def _alloc(rows):
-    w, h = len(rows[0]), len(rows)
-    if _plate_at[0] + w > TW: _plate_at[:] = [SWX, _plate_at[1] + 10]
-    u, v = _plate_at
-    assert v + h <= TH, 'out of texture room for plates'
-    PLATE_ART.append(((u, v), rows))
-    _plate_at[0] += w
-    return [u, v, u + w, v + h]
+    uv = []
+    _wanted.setdefault(tuple(rows), []).append(uv)
+    return uv
 
-def plate(g, name, a, b, rows, back=False):
-    """A plate whose front (north) face shows `rows` (as the viewer sees it: first column on the viewer's left, i.e.
-    the suit's right), or with `back` its south face (seen from behind: first column = the suit's left). Its edges
-    carry the grid's rim: sides its outer columns, top its first row, bottom its last."""
+def pack_plates(v0=31):
+    u, v, shelf = SWX, v0, 0
+    for rows in sorted(_wanted, key=lambda r: -len(r)):
+        w, h = len(rows[0]), len(rows)
+        if u + w > TW: u, v, shelf = SWX, v + shelf, 0
+        assert v + h <= TH, 'out of texture room for plates'
+        PLATE_ART.append(((u, v), rows))
+        for uv in _wanted[rows]: uv[:] = [u, v, u + w, v + h]
+        u, shelf = u + w, max(shelf, h)
+
+# For each face a plate can show its grid on: the face whose UV runs along the grid's first column (the viewer's
+# left), the size axes (grid width, thickness) and the opposite face.
+VIEW = {'north': ('east', 'west', 0, 2, 'south'), 'south': ('west', 'east', 0, 2, 'north'),
+        'east': ('south', 'north', 2, 0, 'west'), 'west': ('north', 'south', 2, 0, 'east')}
+
+def plate(g, name, a, b, rows, face='north'):
+    """A plate whose `face` shows `rows` as the viewer sees it (first column on the viewer's left: from the front the
+    suit's right, from behind its left, from its right side its back, from its left side its front). Its edges carry
+    the grid's rim: the side faces its outer columns, the top its first row, the bottom its last."""
     e = cube(g, name, a, b)
     sz = [e['to'][i] - e['from'][i] for i in range(3)]
-    assert (len(rows[0]), len(rows)) == (sz[0], sz[1]), (name, sz)
-    d = max(1, round(sz[2]))
-    e['faces'] = {
-        'north' if not back else 'south': _alloc(rows), 'south' if not back else 'north': _alloc([r[::-1] for r in rows]),
-        'east' if not back else 'west': _alloc([r[0] * d for r in rows]),
-        'west' if not back else 'east': _alloc([r[-1] * d for r in rows]),
-        'up': _alloc([rows[0]] * d), 'down': _alloc([rows[-1]] * d)}
-    e['faces'] = {f: {'uv': uv, 'texture': 0} for f, uv in e['faces'].items()}
+    left, right, wa, da, opp = VIEW[face]
+    assert (len(rows[0]), len(rows)) == (sz[wa], sz[1]), (name, sz)
+    d = max(1, round(sz[da]))
+    top, bot = (rows[0], rows[-1]) if wa == 0 else ([c * d for c in rows[0]], [c * d for c in rows[-1]])
+    e['faces'] = {f: {'uv': uv, 'texture': 0} for f, uv in {
+        face: _alloc(rows), opp: _alloc([r[::-1] for r in rows]),
+        left: _alloc([r[0] * d for r in rows]), right: _alloc([r[-1] * d for r in rows]),
+        'up': _alloc([top] * d if wa == 0 else top), 'down': _alloc([bot] * d if wa == 0 else bot)}.items()}
     return e
 
 def steve(g, name, a, b, box):
@@ -303,8 +315,8 @@ for sx, n in ((1, 'r'), (-1, 'l')):
 # Seen from behind, a grid's first column is the suit's left.
 SCAP = ['CCD', 'BMD', 'BMD', 'BMD', 'DDD']   # the left plate, outer edge first: its clamp down the middle
 for sx, n in ((1, 'r'), (-1, 'l')):
-    plate(torso, f'fr_scapula_{n}', (1 * sx, 20, 2), (4 * sx, 25, 3), SCAP if sx < 0 else [r[::-1] for r in SCAP], back=True)
-plate(torso, 'fr_spine', (-1, 15, 2), (1, 25, 3), ['CC', 'MM', 'BA', 'AA', 'MM', 'BA', 'AA', 'MM', 'BA', 'DD'], back=True)
+    plate(torso, f'fr_scapula_{n}', (1 * sx, 20, 2), (4 * sx, 25, 3), SCAP if sx < 0 else [r[::-1] for r in SCAP], face='south')
+plate(torso, 'fr_spine', (-1, 15, 2), (1, 25, 3), ['CC', 'MM', 'BA', 'AA', 'MM', 'BA', 'AA', 'MM', 'BA', 'DD'], face='south')
 pilot = group('pilot_torso', (0, 14, 0), torso)
 steve(pilot, 'st_torso', (-4, 14, -2), (4, 26, 2), STEVE['torso'])
 
@@ -350,9 +362,21 @@ for side in ('r', 'l'):
     # up his leg. It turns with the leg, so the sole tilts with the splay (outer edge ~0.3 px up at 3 deg). Inside, it
     # stops 0.25 px from his leg, where the other leg's would meet it.
     painted(leg, side, 'boot', f'fr_boot_{side}', (-0.25, 0, -3), (5.75, 6, 3), raw=True)
-    # the cage carries on above the boot; it stops 0.5 px under the hip pivot (y 14): its top band's outer end rises as
-    # the leg splays, the belt is above
-    segment(leg, side, 'leg', 0, LX, 5, 13.5, bar=False)
+    # The cage carries on above the boot; it stops 0.5 px under the hip pivot (y 14): its top band's outer end rises as
+    # the leg splays, the belt is above. 1 px posts on the outer side, bands across the front and back (top, knee,
+    # bottom; a rivet painted at each end), a 1 px strut down the middle of each window, and a flat knee hinge on the
+    # outer side joining the posts (picked from knee rings / struts / both), its corners cut off: a 2x4 middle and a
+    # 1x2 piece either side (three boxes, side by side: overlapping ones would z-fight).
+    for z0, z1, zn, face in ((-3, -2, 'f', 'north'), (2, 3, 'b', 'south')):
+        cube(leg, f'fr_leg_post_{zn}_{side}', *sx((LX - 1, 5, z0), (LX, 13.5, z1)), 'mid')
+        for bn, y0 in (('hi', 12.5), ('mid', 9), ('lo', 5)):
+            plate(leg, f'fr_leg_band_{bn}_{zn}_{side}', *sx((0, y0, z0), (LX - 1, y0 + 1, z1)), ['MBBM'], face)
+        cube(leg, f'fr_leg_strut_hi_{zn}_{side}', *sx((1.5, 10, z0), (2.5, 12.5, z1)), 'dark')
+        cube(leg, f'fr_leg_strut_lo_{zn}_{side}', *sx((1.5, 6, z0), (2.5, 9, z1)), 'dark')
+    kf = 'east' if s > 0 else 'west'
+    plate(leg, f'fr_knee_{side}', *sx((LX - 0.5, 7.5, -1), (LX, 11.5, 1)), ['MM', 'CC', 'CC', 'MM'], kf)
+    for zn, z0 in (('f', -2), ('b', 1)):
+        plate(leg, f'fr_knee_{zn}_{side}', *sx((LX - 0.5, 8.5, z0), (LX, 10.5, z0 + 1)), ['M', 'M'], kf)
     p = group(f'pilot_{nm}_leg', (2 * s, 14, 0), leg)
     steve(p, f'st_leg_{side}', *sx((0, 2, -2), (4, 14, 2)), STEVE[f'leg_{side}'])
     # arm: Steve's arm x 4..8 (his hand at the bottom, y 14), shoulder pivot (±6, 26)
@@ -457,6 +481,7 @@ def tex(name, data, i):
              'internal': True, 'saved': False, 'uuid': uid(), 'source': b64(data)}
 
 if __name__ == '__main__':
+    pack_plates()
     bad = check()
     assert not bad, bad
     for g in groups:
